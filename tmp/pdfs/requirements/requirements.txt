@@ -1,0 +1,3444 @@
+
+===== PAGE 1 =====
+DOCUMENTO DE INGENIERÍA DE
+SOFTW ARE
+SISTEMA DE GESTIÓN OPERATIV A DE
+LAS AULAS DE SOFTW ARE
+Laboratorios de Ingeniería
+Facultad de Ingeniería
+Kevin Rincon
+Agosto 2026
+
+===== PAGE 2 =====
+Índice
+1. Introducción 4
+2. Descripción del Problema 4
+3. Objetivos 5
+3.1. Objetivo General . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+3.2. Objetivos Específicos . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+4. Alcance 5
+4.1. Fuera del Alcance . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 6
+5. Contexto del Negocio 6
+5.1. Organización de la Dependencia . . . . . . . . . . . . . . . . . . . . . . . . 7
+5.2. Recursos Administrados . . . . . . . . . . . . . . . . . . . . . . . . . . . . 7
+5.3. Objetivo Operacional de la Dependencia . . . . . . . . . . . . . . . . . . . 8
+6. Descripción General del Sistema 8
+6.1. Propósito del Sistema . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 8
+6.2. Usuarios del Sistema . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+6.3. Objetivos del Sistema . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+6.4. Módulos Principales . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+6.5. Beneficios Esperados . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9
+7. Procesos del Negocio 10
+7.1. Proceso P01. Importación y Administración de Horarios Académicos . . . . 10
+7.2. Proceso P02. Gestión de Disponibilidad de Aulas . . . . . . . . . . . . . . 11
+7.3. Proceso P03. Control de Asistencia Docente . . . . . . . . . . . . . . . . . 12
+7.4. Proceso P04. Gestión de Prácticas Libres . . . . . . . . . . . . . . . . . . . 13
+7.5. Proceso P05. Gestión de Préstamos Temporales para Docentes . . . . . . . 14
+7.6. Proceso P06. Gestión de Préstamos de Equipos Audiovisuales . . . . . . . 14
+7.7. Proceso P07. Administración del Software Instalado . . . . . . . . . . . . . 16
+7.8. Proceso P08. Gestión de Observaciones . . . . . . . . . . . . . . . . . . . . 16
+7.9. Proceso P09. Gestión de Tareas Operativas . . . . . . . . . . . . . . . . . . 17
+7.10. Proceso P10. Gestión de Limpieza de las Aulas . . . . . . . . . . . . . . . . 18
+7.11. Proceso P11. Gestión de Multas . . . . . . . . . . . . . . . . . . . . . . . . 18
+7.12. Proceso P12. Generación de Formatos e Informes . . . . . . . . . . . . . . 19
+7.13. Proceso P13. Gestión de Credenciales Institucionales . . . . . . . . . . . . 20
+7.14. Proceso P14. Administración de las Aulas de Software . . . . . . . . . . . . 21
+7.15. Proceso P15. Administración de Usuarios . . . . . . . . . . . . . . . . . . . 21
+8. Resumen de Requerimientos Funcionales 22
+9. Requerimientos del Sistema 23
+9.1. Requerimientos Funcionales . . . . . . . . . . . . . . . . . . . . . . . . . . 23
+9.1.1. Gestión de Horarios Académicos . . . . . . . . . . . . . . . . . . . . 23
+9.1.2. Gestión de Disponibilidad de las Aulas . . . . . . . . . . . . . . . . 25
+1
+===== PAGE 3 =====
+9.1.3. Gestión de Asistencia Docente . . . . . . . . . . . . . . . . . . . . . 26
+9.1.4. Gestión de Prácticas Libres . . . . . . . . . . . . . . . . . . . . . . 27
+9.1.5. Gestión de Préstamos Docentes . . . . . . . . . . . . . . . . . . . . 29
+9.1.6. Gestión de Préstamos de Equipos Audiovisuales . . . . . . . . . . . 30
+9.1.7. Gestión del Software Instalado . . . . . . . . . . . . . . . . . . . . . 32
+9.1.8. Gestión de las Aulas de Software . . . . . . . . . . . . . . . . . . . 33
+9.1.9. Gestión de Multas . . . . . . . . . . . . . . . . . . . . . . . . . . . 34
+9.1.10. Gestión de Observaciones . . . . . . . . . . . . . . . . . . . . . . . 35
+9.1.11. Gestión de Limpieza de las Aulas . . . . . . . . . . . . . . . . . . . 36
+9.1.12. Gestión de Tareas Operativas . . . . . . . . . . . . . . . . . . . . . 37
+9.1.13. Gestión de Credenciales y Contraseñas . . . . . . . . . . . . . . . . 38
+9.1.14. Reportes y Generación de Documentos . . . . . . . . . . . . . . . . 40
+9.1.15. Panel Operativo Inteligente . . . . . . . . . . . . . . . . . . . . . . 41
+10.Requerimientos No Funcionales 42
+10.1. RNF01. Rendimiento . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 42
+10.2. RNF02. Disponibilidad . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 43
+10.3. RNF03. Seguridad . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 43
+10.4. RNF04. Usabilidad . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 43
+10.5. RNF05. Auditoría . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 44
+10.6. RNF06. Integridad . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 44
+10.7. RNF07. Compatibilidad . . . . . . . . . . . . . . . . . . . . . . . . . . . . 44
+10.8. RNF08. Escalabilidad . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 45
+10.9. RNF09. Respaldo . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 45
+10.10. RNF10. Mantenibilidad . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 45
+11.Arquitectura del Sistema 46
+11.1. Componentes principales . . . . . . . . . . . . . . . . . . . . . . . . . . . . 46
+11.2. Arquitectura general . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 47
+11.3. Tecnologías de backend . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 49
+11.4. Autenticación y autorización . . . . . . . . . . . . . . . . . . . . . . . . . . 49
+11.5. Acceso a los aplicativos . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 50
+11.6. Comunicación entre APIs . . . . . . . . . . . . . . . . . . . . . . . . . . . 50
+11.7. Comunicación y CORS . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 51
+11.8. Despliegue . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 51
+11.9. Escalabilidad y mantenibilidad . . . . . . . . . . . . . . . . . . . . . . . . . 51
+12.Modelo de Datos 52
+12.1. Entidades principales . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 52
+12.2. Información calculada . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 54
+12.3. Relación entre usuarios y monitores . . . . . . . . . . . . . . . . . . . . . . 54
+12.4. Fuentes y mecanismos de carga de información . . . . . . . . . . . . . . . . 55
+12.5. Historial y trazabilidad . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 55
+12.6. Consideraciones del modelo . . . . . . . . . . . . . . . . . . . . . . . . . . 56
+13.Gestión de Usuarios, Dependencias y Permisos 56
+13.1. Administración de usuarios . . . . . . . . . . . . . . . . . . . . . . . . . . . 57
+13.2. Gestión de permisos . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 57
+2
+===== PAGE 4 =====
+13.3. Cargo y permisos . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 58
+13.4. Acceso por dependencia . . . . . . . . . . . . . . . . . . . . . . . . . . . . 58
+14.Plan de Desarrollo y Organización del Equipo 58
+14.1. Organización del equipo . . . . . . . . . . . . . . . . . . . . . . . . . . . . 58
+14.2. Desarrollo paralelo . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 59
+14.3. Metodología de trabajo . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 60
+14.4. Gestión del backlog . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 61
+14.5. Definición de funcionalidad terminada . . . . . . . . . . . . . . . . . . . . . 61
+14.6. Uso de desarrollo asistido por inteligencia artificial . . . . . . . . . . . . . . 62
+14.7. Cronograma general . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 62
+14.8. Plan inicial por semanas . . . . . . . . . . . . . . . . . . . . . . . . . . . . 63
+14.9. Prueba piloto . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 63
+14.10. Integración entre equipos . . . . . . . . . . . . . . . . . . . . . . . . . . . . 64
+14.11. Control de versiones y revisión de código . . . . . . . . . . . . . . . . . . . 64
+14.12. Seguimiento del proyecto . . . . . . . . . . . . . . . . . . . . . . . . . . . . 65
+3
+===== PAGE 5 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+1 Introducción
+El presente documento describe el análisis, diseño y especificación delSistema de Ges-
+tión Operativa de las Aulas de Software, una solución informática orientada a op-
+timizar los procesos administrativos y operativos desarrollados por la dependencia encar-
+gada de la administración de las Aulas de Software de la Facultad de Ingeniería de la
+Universidad Distrital Francisco José de Caldas.
+Actualmente, gran parte de la operación diaria se realiza mediante un conjunto de hojas
+de cálculo de Microsoft Excel complementadas con registros físicos y tableros manua-
+les, los cuales concentran información relacionada con horarios académicos, asistencia de
+docentes, disponibilidad de aulas, préstamos de prácticas libres, préstamo de equipos au-
+diovisuales, control del software instalado, observaciones operativas y asignación de tareas.
+Aunque esta herramienta ha permitido organizar la información durante varios años,
+el crecimiento de la operación ha incrementado la complejidad de su administración,
+generando procesos manuales repetitivos, validaciones constantes y una alta dependencia
+del conocimiento del personal para la toma de decisiones.
+Como respuesta a esta necesidad, se plantea el desarrollo delSistema de Gestión Ope-
+rativa de las Aulas de Software, cuyo propósito es centralizar la información, automa-
+tizar procesos operativos y proporcionar mecanismos de apoyo para la toma de decisiones,
+permitiendo mejorar la eficiencia, la trazabilidad y la confiabilidad de la gestión realizada
+por la dependencia.
+2 Descripción del Problema
+La administración de las Aulas de Software depende actualmente de múltiples hojas de
+cálculo y registros físicos que concentran la información necesaria para la operación dia-
+ria. Aunque estos recursos cumplen su función, la información se encuentra distribuida
+entre diferentes archivos y procesos independientes, lo que obliga al personal a realizar
+constantes verificaciones manuales antes de ejecutar actividades operativas.
+Procesos como la asignación de aulas para prácticas libres, el préstamo de equipos audiovi-
+suales, la consulta del software instalado, la gestión de observaciones, la programación de
+tareas operativas y la planificación del aseo requieren revisar simultáneamente diferentes
+fuentes de información, incrementando el tiempo de respuesta y la posibilidad de errores.
+Adicionalmente, actividades repetitivas como la generación de formatos institucionales,
+el control de asistencia docente, la actualización de horarios y la consulta de disponibi-
+lidad de las aulas continúan realizándose de forma manual, limitando la capacidad de
+automatización y dificultando la obtención de información consolidada para la toma de
+decisiones.
+Debido a esta situación, surge la necesidad de desarrollar un sistema de información
+que permita integrar los procesos operativos de la dependencia en una única plataforma,
+facilitando la gestión diaria, reduciendo la dependencia de procedimientos manuales y
+proporcionando información confiable para la toma de decisiones.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+ Página 4 de 65
+===== PAGE 6 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+3 Objetivos
+3.1 Objetivo General
+Desarrollar unSistema de Gestión Operativa para las Aulas de Software de la
+Facultad de Ingenieríaque centralice la información operativa, automatice procesos
+administrativos y apoye la toma de decisiones relacionadas con la gestión diaria de los
+laboratorios.
+3.2 Objetivos Específicos
+Centralizar en una única plataforma la información relacionada con horarios, aulas,
+software instalado, préstamos, observaciones y tareas operativas.
+AutomatizarprocesosmanualesasociadosalaoperacióndiariadelasAulasdeSoftware.
+Facilitar la consulta de disponibilidad de las aulas considerando horarios, reservas y
+restricciones operativas.
+Optimizar la gestión de prácticas libres y préstamos de equipos audiovisuales.
+Implementar mecanismos para el control de asistencia docente y el registro de observa-
+ciones operativas.
+Administrar el historial de préstamos y multas de los usuarios.
+Facilitar la planificación y seguimiento de tareas operativas, mantenimiento y limpieza
+de las aulas.
+Generar automáticamente formatos institucionales, fichas SIGUD e informes requeridos
+por la dependencia.
+Proporcionar información consolidada que apoye la toma de decisiones del personal
+encargado de la administración de las Aulas de Software.
+4 Alcance
+El Sistema de Gestión Operativa de las Aulas de Software permitirá administrar de for-
+ma integral los procesos operativos desarrollados por la dependencia encargada de los
+laboratorios de software de la Facultad de Ingeniería.
+El sistema incluirá las siguientes funcionalidades principales:
+Gestión de horarios académicos.
+Gestión de disponibilidad de aulas.
+Gestión de prácticas libres.
+Gestión de préstamos docentes.
+Gestión de préstamos de equipos audiovisuales.
+Gestión del software instalado en las aulas.
+Gestión de observaciones operativas.
+Gestión de asistencia docente.
+Gestión de tareas operativas.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+ Página 5 de 65
+===== PAGE 7 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+Gestión de limpieza de aulas.
+Gestión de multas.
+Generación automática de formatos institucionales (SIGUD).
+Generación de reportes operativos y administrativos.
+4.1 Fuera del Alcance
+La primera versión del sistema no contempla:
+La gestión del inventario institucional general de la Universidad, es decir, el sistema
+patrimonial centralizado que administra la Universidad a nivel institucional (placas, ac-
+tivos fijos, depreciación contable, etc.). El sistema sí administrará el inventario propio
+del Almacén General de las Aulas de Software (equipos de cómputo, equipos audiovisua-
+les y demás recursos descritos en la sección 5.2), en la medida en que dicho inventario es
+necesario para soportar los procesos operativos definidos en este documento (préstamos,
+mantenimiento, disponibilidad).
+La modificación de los horarios académicos oficiales generados por la Universidad, limi-
+tándose únicamente a su importación, validación y administración dentro del sistema.
+La integración directa con el sistema patrimonial institucional (fuera del alcance de esta
+primera versión; ver RNF-028 sobre integración futura mediante API).
+5 Contexto del Negocio
+Las Aulas de Software hacen parte de los Laboratorios de Ingeniería de la Facultad de In-
+geniería de la Universidad Distrital Francisco José de Caldas y constituyen la dependencia
+encargada de administrar, operar y mantener las aulas especializadas de cómputo utiliza-
+das para el desarrollo de actividades académicas de los diferentes proyectos curriculares
+de la Facultad.
+La dependencia también funciona como el Almacén General de las Aulas de Software,
+donde se administran y almacenan los equipos, dispositivos y recursos tecnológicos de
+apoyo requeridos para el funcionamiento de las aulas y el desarrollo de las prácticas
+académicas. Desde esta dependencia se brinda soporte técnico especializado a docentes,
+estudiantesydemásusuarios,garantizandoladisponibilidadyeladecuadofuncionamiento
+de los recursos tecnológicos durante el desarrollo de las actividades académicas.
+Las Aulas de Software administran aproximadamente veinte aulas de cómputo distribui-
+das en diferentes espacios de la Facultad de Ingeniería. Cada una posee características
+particulares en cuanto a capacidad, configuración de hardware, software instalado y re-
+cursos tecnológicos disponibles, con el fin de satisfacer las necesidades de los diferentes
+proyectos curriculares.
+Ademásdelaadministracióndelasaulas,ladependenciadesarrollaactividadespermanen-
+tes relacionadas con el mantenimiento preventivo y correctivo de los equipos de cómputo,
+instalación y actualización de software especializado, preparación de los laboratorios antes
+del inicio de cada periodo académico, administración de inventarios, gestión de recursos
+audiovisuales, atención a usuarios y apoyo técnico durante el desarrollo de las prácticas.
+La operación diaria es desarrollada por un equipo conformado por técnicos, personal
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+ Página 6 de 65
+===== PAGE 8 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+asistencial y monitores, quienes trabajan de manera coordinada para garantizar que las
+Aulas de Software permanezcan disponibles, organizadas y en condiciones óptimas para
+el desarrollo de las actividades académicas.
+Actualmente gran parte de la gestión operativa se realiza mediante hojas de cálculo de
+Microsoft Excel, registros físicos y tableros de control manuales, herramientas que han
+permitido organizar la información durante varios años, pero que presentan limitaciones
+para la administración centralizada de la información, la automatización de procesos y el
+seguimiento de las actividades operativas.
+Actualmente las credenciales institucionales se almacenan en documentos protegidos me-
+diante contraseña. Esto dificulta su administración, actualización y consulta por parte
+del personal autorizado, además de incrementar el riesgo asociado al manejo manual de
+información sensible.
+Con el propósito de optimizar la operación de la dependencia, se propone el desarrollo
+delSistema de Gestión Operativa de las Aulas de Software, una plataforma que
+permitirá centralizar la información, automatizar procesos, facilitar la toma de decisiones
+y mejorar el control sobre los recursos administrados por la dependencia.
+5.1 Organización de la Dependencia
+LaoperacióndelasAulasdeSoftwaresedesarrollamedianteunaestructuraorganizacional
+conformada por diferentes niveles de responsabilidad.
+Profesor encargado de los Laboratorios de Ingeniería.
+Profesional responsable de las Aulas de Software.
+Técnicos de laboratorio.
+Personal asistencial.
+Monitores.
+Losprocesosdocumentadosenesteproyectocorrespondenprincipalmentealasactividades
+realizadas por los técnicos, el personal asistencial y los monitores, quienes constituyen los
+usuarios directos del sistema.
+5.2 Recursos Administrados
+Como parte de su operación, la dependencia administra diferentes recursos físicos, tecno-
+lógicos y de información, entre los que se encuentran:
+Aulas de Software de la Facultad de Ingeniería.
+Equipos de cómputo y sus configuraciones de hardware.
+Software especializado instalado en cada aula.
+Equipos audiovisuales y elementos de apoyo para préstamo.
+Inventario de equipos y recursos tecnológicos.
+Horarios académicos de las Aulas de Software.
+Información de asignaturas, docentes y proyectos curriculares.
+Registro de asistencia docente.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+ Página 7 de 65
+===== PAGE 9 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+Préstamos de prácticas libres para estudiantes.
+Préstamos temporales de aulas para docentes.
+Observaciones y novedades operativas.
+Tareas operativas y de mantenimiento.
+Registro de limpieza de las aulas.
+Historial de préstamos y multas.
+5.3 Objetivo Operacional de la Dependencia
+El principal objetivo de las Aulas de Software consiste en garantizar que las aulas es-
+pecializadas de cómputo se encuentren permanentemente disponibles, actualizadas y en
+condiciones adecuadas para el desarrollo de las actividades académicas de la Facultad de
+Ingeniería.
+Para cumplir este propósito, la dependencia realiza actividades continuas de planeación,
+preparación, mantenimiento, soporte técnico, administración de recursos y atención a
+usuarios, procurando optimizar el uso de las aulas y asegurar la disponibilidad de los
+recursos tecnológicos durante toda la jornada académica.
+6 Descripción General del Sistema
+El Sistema de Gestión Operativa de las Aulas de Software es una plataforma informática
+diseñadaparaapoyarlaadministraciónyoperacióndelasAulasdeSoftwaredelaFacultad
+de Ingeniería de la Universidad Distrital Francisco José de Caldas.
+El sistema permitirá centralizar la información relacionada con la operación diaria de
+la dependencia, automatizando procesos que actualmente se realizan mediante hojas de
+cálculo, registros físicos y tableros manuales. De esta manera se busca mejorar la organiza-
+ción de la información, optimizar los tiempos de respuesta y facilitar la toma de decisiones
+por parte del personal encargado de la administración de las aulas.
+La plataforma estará orientada a integrar en un mismo sistema los diferentes procesos
+operativos desarrollados por la dependencia, permitiendo una administración más eficiente
+de los recursos tecnológicos y de la información asociada a las Aulas de Software.
+Adicionalmente, el sistema incorporará un módulo para la administración segura de cre-
+denciales institucionales. Este módulo permitirá almacenar las contraseñas utilizadas en
+los diferentes servicios administrados por las Aulas de Software (equipos, servidores, apli-
+caciones, dispositivos de red, licencias y demás recursos tecnológicos), garantizando que
+únicamente los usuarios autorizados puedan consultarlas de acuerdo con su rol dentro de
+la organización.
+6.1 Propósito del Sistema
+El propósito principal del sistema es proporcionar una herramienta centralizada que per-
+mita administrar los procesos operativos de las Aulas de Software, reduciendo la ejecución
+deactividadesmanualesyfacilitandoelaccesoalainformaciónnecesariaparaeldesarrollo
+de las labores diarias.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+ Página 8 de 65
+===== PAGE 10 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+6.2 Usuarios del Sistema
+El sistema será utilizado por el personal encargado de la operación de las Aulas de Soft-
+ware.
+Técnicos.
+Personal asistencial.
+Monitores.
+Cada usuario accederá únicamente a las funcionalidades correspondientes a su rol dentro
+de la dependencia.
+6.3 Objetivos del Sistema
+El sistema tendrá como finalidad:
+Centralizar la información operativa de las Aulas de Software.
+Automatizar procesos administrativos y operativos.
+Optimizar la consulta de información.
+Facilitar la toma de decisiones durante la operación diaria.
+Disminuir el uso de registros manuales.
+Mejorar el seguimiento de las actividades realizadas por la dependencia.
+6.4 Módulos Principales
+De manera general, el sistema estará conformado por los siguientes módulos funcionales:
+Gestión de horarios académicos.
+Gestión de disponibilidad de aulas.
+Gestión de prácticas libres.
+Gestión de préstamos de aulas para docentes.
+Gestión de préstamos de equipos audiovisuales.
+Gestión del software instalado en las aulas.
+Gestión de observaciones.
+Gestión de asistencia docente.
+Gestión de tareas operativas.
+Gestión de limpieza de aulas.
+Gestión de multas.
+Generación de formatos e informes.
+6.5 Beneficios Esperados
+Con la implementación del sistema se espera:
+Reducir el tiempo requerido para realizar consultas operativas.
+Disminuir errores derivados de procesos manuales.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+ Página 9 de 65
+===== PAGE 11 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+Centralizar toda la información de la dependencia.
+Facilitar la coordinación de las actividades del personal.
+Mejorar la planificación de tareas operativas.
+Contar con información confiable para la toma de decisiones.
+7 Procesos del Negocio
+La operación de las Aulas de Software se desarrolla mediante un conjunto de procesos
+administrativos, técnicos y operativos que permiten garantizar el correcto funcionamiento
+de las aulas, la disponibilidad de los recursos tecnológicos y la atención oportuna a los
+usuarios.
+Cada proceso representa una actividad propia de la dependencia y se encuentra relacio-
+nado con los demás procesos mediante el intercambio de información. El análisis de estos
+procesos constituye la base para la identificación de los requerimientos funcionales del
+Sistema de Gestión Operativa de las Aulas de Software.
+Los procesos identificados para la primera versión del sistema son los siguientes:
+Proceso Nombre
+P01 Importación y Administración de Horarios Académicos
+P02 Gestión de Disponibilidad de Aulas
+P03 Control de Asistencia Docente
+P04 Gestión de Prácticas Libres
+P05 Gestión de Préstamos Temporales para Docentes
+P06 Gestión de Préstamos de Equipos Audiovisuales
+P07 Administración del Software Instalado
+P08 Gestión de Observaciones
+P09 Gestión de Tareas Operativas
+P10 Gestión de Limpieza de las Aulas
+P11 Gestión de Multas
+P12 Generación de Formatos e Informes
+P13 Gestión de Credenciales Institucionales
+P14 Administración de las Aulas de Software
+P15 Administración de Usuarios
+A continuación se describe cada uno de estos procesos de negocio.
+7.1 Proceso P01. Importación y Administración de Horarios Académicos
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 10 de 65
+===== PAGE 12 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+Objetivo.Registrar y administrar la programación académica oficial correspondiente
+al periodo académico vigente, permitiendo que el sistema disponga de la información
+necesaria para soportar la operación diaria de las Aulas de Software.
+Descripción.
+Al inicio de cada periodo académico la Universidad suministra un archivo con la progra-
+mación oficial de clases. El sistema permitirá importar dicho archivo, validar su estructura
+y almacenar únicamente la información correspondiente a las Aulas de Software.
+Durante las primeras semanas del semestre podrán realizarse nuevas importaciones para
+actualizar cambios realizados por la Universidad, reemplazando la información anterior y
+evitando registros duplicados.
+Actores:Técnico, Personal asistencial.
+Entradas:Archivo oficial de horarios, Periodo académico.
+Flujo Principal
+1. El usuario selecciona el archivo de horarios.
+2. El sistema valida su formato y estructura.
+3. Se filtran únicamente los horarios correspondientes a las Aulas de Software.
+4. Se verifica si ya existe información para el mismo periodo.
+5. Si existe, el sistema solicita autorización para actualizarla.
+6. Se almacenan los nuevos registros.
+7. El sistema presenta un resumen de la importación realizada.
+Reglas de Negocio
+Solo podrá existir un horario activo por periodo académico.
+No se permitirán registros duplicados.
+Si el archivo contiene errores, la importación será cancelada.
+Solo se importarán las aulas administradas por la dependencia.
+Resultado.Los horarios quedan disponibles para todos los procesos del sistema.
+7.2 Proceso P02. Gestión de Disponibilidad de Aulas
+Objetivo.Determinar automáticamente la disponibilidad de las Aulas de Software para
+apoyar la toma de decisiones durante la operación diaria.
+Descripción.
+El sistema calculará continuamente el estado de cada aula utilizando la información pro-
+veniente de los horarios académicos, asistencia docente, préstamos, mantenimientos y
+tareas operativas. Esta información permitirá identificar qué aulas pueden utilizarse en
+cada momento.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 11 de 65
+===== PAGE 13 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+Actores:Técnico, Personal asistencial, Monitor.
+Entradas:Horarios académicos, Asistencia docente, Préstamos registrados, Observacio-
+nes, Tareas operativas.
+Flujo Principal
+1. El sistema consulta el horario vigente.
+2. Verifica si existe una clase programada.
+3. Comprueba la asistencia del docente.
+4. Revisa préstamos, tareas y mantenimientos.
+5. Calcula el estado actual del aula.
+6. Presenta las aulas disponibles y las posibles restricciones.
+Reglas de Negocio
+Un aula ocupada por una clase no podrá prestarse.
+Un aula con mantenimiento no estará disponible.
+Si el docente no asiste, el aula podrá quedar disponible según las reglas establecidas.
+El estado del aula deberá actualizarse automáticamente cuando ocurra algún cambio.
+Resultado.El sistema mantiene actualizada la disponibilidad de todas las Aulas de
+Software.
+7.3 Proceso P03. Control de Asistencia Docente
+Objetivo.Registrar la asistencia de los docentes a las clases programadas y actualizar el
+estado operativo de las aulas.
+Descripción.
+Cuando un docente llegue a solicitar la apertura del aula, el funcionario registrará su
+asistencia en el sistema. En caso de que el docente no se presente dentro del tiempo
+establecido, el aula podrá utilizarse para otras actividades autorizadas.
+Actores:Técnico, Personal asistencial, Monitor.
+Entradas:Horario académico, Registro de asistencia.
+Flujo Principal
+1. El sistema muestra las clases programadas para el bloque actual.
+2. El docente solicita la apertura del aula.
+3. El funcionario registra la asistencia.
+4. El sistema actualiza el estado del aula.
+5. Si el docente no asiste, se registra la inasistencia.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 12 de 65
+===== PAGE 14 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+Reglas de Negocio
+Solo podrá registrarse una asistencia por clase.
+El registro podrá corregirse por un usuario autorizado.
+La asistencia modifica automáticamente la disponibilidad del aula.
+Resultado.La asistencia del docente queda registrada y el estado del aula se actualiza.
+7.4 Proceso P04. Gestión de Prácticas Libres
+Objetivo.Administrar el préstamo temporal de equipos de las Aulas de Software para
+estudiantes.
+Descripción.
+Cuando un estudiante solicite una práctica libre, el sistema verificará si posee multas
+pendientesybuscaráautomáticamentelasaulasdisponiblesquecumplanconlosrequisitos
+solicitados, especialmente el software requerido. Una vez seleccionada el aula, se registrará
+el préstamo y posteriormente la devolución.
+Actores:Técnico, Personal asistencial, Monitor.
+Entradas:Información del estudiante, Software solicitado, Horario actual.
+Flujo Principal
+1. El estudiante solicita una práctica libre.
+2. El sistema verifica multas activas.
+3. Se consulta la disponibilidad de aulas.
+4. El sistema sugiere las aulas compatibles.
+5. El funcionario registra el préstamo.
+6. Al finalizar, se registra la devolución del aula.
+Reglas de Negocio
+No podrán realizar préstamos a estudiantes con multas activas.
+El aula deberá entregarse antes del siguiente bloque académico.
+El sistema calculará automáticamente posibles incumplimientos.
+Solo podrán prestarse aulas disponibles.
+Resultado.El préstamo queda registrado y la disponibilidad del aula se actualiza auto-
+máticamente.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 13 de 65
+===== PAGE 15 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+7.5 Proceso P05. Gestión de Préstamos Temporales para Docentes
+Objetivo.Administrar los préstamos de Aulas de Software solicitados por docentes fuera
+de su programación académica habitual.
+Descripción.
+Cuando un docente requiera utilizar un aula para una actividad especial, el sistema veri-
+ficará la disponibilidad, la capacidad del aula y el software requerido antes de autorizar
+el préstamo.
+Actores:Técnico, Personal asistencial.
+Entradas:Solicitud del docente, Fecha y horario solicitado, Software requerido.
+Flujo Principal
+1. El docente solicita el préstamo.
+2. El sistema verifica disponibilidad.
+3. Se validan capacidad y software.
+4. El funcionario aprueba el préstamo.
+5. El sistema registra la reserva del aula.
+Reglas de Negocio
+No podrán existir conflictos con clases programadas.
+Solo podrán asignarse aulas compatibles con la solicitud.
+El préstamo podrá registrarse por un único bloque o varios bloques consecutivos.
+Resultado.El préstamo docente queda registrado y el aula se reserva para el periodo
+solicitado.
+7.6 Proceso P06. Gestión de Préstamos de Equipos Audiovisuales
+Objetivo.Administrarelpréstamo,devoluciónyseguimientodelosequiposaudiovisuales
+pertenecientes a las Aulas de Software, garantizando su disponibilidad, trazabilidad y una
+distribución equilibrada de su uso.
+Descripción.
+El sistema permitirá registrar el préstamo de equipos audiovisuales como videobeams, ca-
+bles HDMI, adaptadores, controles, extensiones y demás elementos disponibles para prés-
+tamo. Estos equipos podrán ser solicitados por docentes para ser utilizados en cualquier
+aula de la Facultad de Ingeniería, registrando la entrega y devolución de cada elemento.
+Adicionalmente, el sistema llevará un control histórico del uso de cada equipo, permitien-
+do conocer la cantidad de préstamos realizados, el tiempo acumulado de utilización, los
+docentes que más utilizan cada equipo y su estado operativo. Esta información permiti-
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 14 de 65
+===== PAGE 16 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+rá distribuir el uso de los equipos de manera equilibrada, evitando el desgaste excesivo
+de un mismo dispositivo y facilitando la programación de mantenimientos preventivos o
+correctivos cuando sea necesario.
+Actores:Técnico, Personal asistencial, Monitor.
+Entradas:Información del docente, Equipo audiovisual solicitado, Aula donde será uti-
+lizado, Hora de salida, Posterior hora de entrega.
+Flujo Principal
+1. El docente solicita un equipo audiovisual.
+2. El funcionario verifica la disponibilidad de los equipos del tipo solicitado.
+3. El sistema analiza el historial de uso de los equipos disponibles y sugiere el más
+adecuado para realizar el préstamo.
+4. El funcionario registra el préstamo indicando el docente, el aula, el equipo entregado,
+la hora de salida y la hora estimada de devolución.
+5. El docente devuelve el equipo al finalizar su uso.
+6. El funcionario registra la devolución, verifica el estado físico y funcional del equipo y
+confirma la recepción.
+7. El sistema actualiza automáticamente el historial y las estadísticas de utilización del
+equipo.
+Reglas de Negocio
+Solo podrán prestarse equipos que se encuentren disponibles y en buen estado.
+Cadapréstamodeberáregistrarelfuncionarioresponsabledelaentregayelfuncionario
+responsable de la recepción.
+El sistema conservará el historial completo de préstamos realizados para cada equipo.
+El sistema registrará el tiempo de uso de cada préstamo para calcular el tiempo acu-
+mulado de utilización del equipo.
+El sistema contabilizará la cantidad de préstamos realizados por cada equipo audiovi-
+sual.
+El sistema contabilizará la cantidad de préstamos solicitados por cada docente.
+Cuando existan varios equipos disponibles del mismo tipo, el sistema sugerirá preferi-
+blemente el equipo con menor utilización acumulada, con el fin de distribuir el desgaste
+entre todos los equipos.
+Los equipos que se encuentren en mantenimiento, reportados con fallas o fuera de
+servicio no podrán ser prestados.
+El equipo deberá devolverse en el mismo estado en que fue entregado.
+Resultado.El préstamo queda registrado, el estado del equipo es actualizado y el sistema
+registra automáticamente las estadísticas de utilización del equipo y del docente, propor-
+cionando información para el control del inventario, la planificación de mantenimientos y
+la toma de decisiones sobre la administración de los recursos audiovisuales.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 15 de 65
+===== PAGE 17 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+7.7 Proceso P07. Administración del Software Instalado
+Objetivo.Mantener actualizada la información del software instalado en cada Aula de
+Software para facilitar la asignación de aulas según las necesidades académicas.
+Descripción.
+El sistema almacenará el inventario de software disponible en cada aula, permitiendo
+realizar búsquedas rápidas por nombre del software y conocer en qué aulas se encuentra
+instalado. Esta información apoyará procesos como prácticas libres, préstamos docentes
+y planeación académica.
+Actores:Técnico, Personal asistencial.
+Entradas:Información del software, Aula correspondiente, Versión del software.
+Flujo Principal
+1. El usuario consulta o actualiza la información del software.
+2. El sistema registra los cambios realizados.
+3. La información queda disponible para los demás módulos.
+Reglas de Negocio
+Un software podrá estar instalado en varias aulas.
+Cada aula podrá tener múltiples programas instalados.
+Las modificaciones deberán reflejarse inmediatamente en las búsquedas.
+Resultado.El inventario de software permanece actualizado y disponible para consulta.
+7.8 Proceso P08. Gestión de Observaciones
+Objetivo.Registrar y consultar las observaciones operativas relacionadas con cada Aula
+de Software.
+Descripción.
+El sistema permitirá registrar observaciones generales y observaciones semanales asociadas
+a las aulas. Estas podrán utilizarse para informar préstamos especiales, eventos, novedades
+técnicas, restricciones temporales o cualquier información relevante que deba conocer el
+personal antes de utilizar el aula.
+Actores:Técnico, Personal asistencial, Monitor.
+Entradas:Aula, Tipo de observación, Descripción.
+Flujo Principal
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 16 de 65
+===== PAGE 18 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+1. El usuario selecciona el aula.
+2. Registra la observación correspondiente.
+3. El sistema almacena la información.
+4. La observación estará disponible para futuras consultas.
+Reglas de Negocio
+Una observación podrá ser general o semanal.
+Las observaciones podrán modificarse o eliminarse por usuarios autorizados.
+Las observaciones deberán visualizarse antes de realizar operaciones sobre el aula.
+Resultado.Las novedades del aula quedan registradas y disponibles para consulta.
+7.9 Proceso P09. Gestión de Tareas Operativas
+Objetivo.Administrar las actividades técnicas y operativas que deben realizarse en las
+Aulas de Software.
+Descripción.
+El sistema reemplazará el tablero físico utilizado actualmente para asignar tareas. Permiti-
+rá registrar actividades como mantenimientos, revisiones, instalación de software, inventa-
+rios, limpieza técnica y cualquier otra labor operativa. Además, sugerirá automáticamente
+los mejores momentos para ejecutar cada tarea según la disponibilidad de las aulas.
+Actores:Técnico, Personal asistencial, Monitor.
+Entradas:Aula, Actividad a realizar, Prioridad, Responsable.
+Flujo Principal
+1. El usuario registra una nueva tarea.
+2. El sistema analiza la disponibilidad del aula.
+3. Se propone un horario para realizar la actividad.
+4. La tarea es asignada a un responsable.
+5. Una vez finalizada, se registra su ejecución.
+Reglas de Negocio
+No podrán asignarse tareas durante una clase programada.
+Las tareas urgentes tendrán prioridad sobre las demás.
+Una tarea finalizada deberá conservar su historial.
+Resultado.Las actividades operativas quedan organizadas y controladas desde el siste-
+ma.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 17 de 65
+===== PAGE 19 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+7.10 Proceso P10. Gestión de Limpieza de las Aulas
+Objetivo.Planificar y controlar la limpieza periódica de las Aulas de Software.
+Descripción.
+El sistema permitirá identificar diariamente qué aulas pueden entregarse al personal de
+aseo, teniendo en cuenta el uso durante la jornada y el historial de limpiezas realizadas. De
+esta manera se distribuirá la limpieza entre todas las aulas y se evitará repetir la misma
+aula en días consecutivos cuando no sea necesario.
+Actores:Técnico, Personal asistencial.
+Entradas:Estado del aula, Historial de limpieza, Disponibilidad al finalizar la jornada.
+Flujo Principal
+1. El sistema identifica las aulas disponibles al finalizar el día.
+2. Se consulta el historial de limpieza.
+3. El sistema propone las aulas que deberán limpiarse.
+4. El funcionario confirma las aulas seleccionadas.
+5. Se registra la limpieza realizada.
+Reglas de Negocio
+Una misma aula no deberá priorizarse continuamente para limpieza.
+Solo podrán asignarse aulas disponibles.
+El historial de limpieza deberá mantenerse durante todo el periodo académico.
+Resultado.El sistema mantiene actualizado el control de limpieza de todas las Aulas de
+Software.
+7.11 Proceso P11. Gestión de Multas
+Objetivo.Administrar el registro, seguimiento y cumplimiento de las multas impuestas
+a los estudiantes por incumplimiento de las normas de uso de las Aulas de Software.
+Descripción.
+El sistema permitirá registrar multas cuando un estudiante incumpla alguna de las nor-
+mas establecidas para el uso de las Aulas de Software. Además, controlará su estado,
+impedirá nuevos préstamos mientras exista una multa pendiente y permitirá registrar su
+cumplimiento una vez el estudiante entregue el elemento correspondiente.
+Actores:Técnico, Personal asistencial, Monitor.
+Entradas:Estudiante, Motivo de la multa, Descripción, Elemento solicitado para cumplir
+la multa.
+Flujo Principal
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 18 de 65
+===== PAGE 20 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+1. El funcionario selecciona al estudiante.
+2. Registra el motivo de la multa.
+3. El sistema sugiere posibles elementos para cumplirla.
+4. La multa queda registrada como pendiente.
+5. Cuando el estudiante cumple la multa, el funcionario registra su cumplimiento.
+6. El sistema habilita nuevamente al estudiante para solicitar préstamos.
+Reglas de Negocio
+Un estudiante con multas pendientes no podrá solicitar prácticas libres.
+Una multa podrá ser modificada únicamente por usuarios autorizados.
+El sistema conservará el historial de todas las multas registradas.
+La multa permanecerá activa hasta ser marcada como cumplida.
+Resultado.Las multas quedan registradas y controladas durante todo su ciclo de vida.
+7.12 Proceso P12. Generación de Formatos e Informes
+Objetivo.Generar automáticamente los formatos administrativos e informes requeridos
+por la operación de las Aulas de Software.
+Descripción.
+El sistema permitirá generar documentos utilizando la información registrada durante
+la operación diaria, evitando diligenciar formatos manualmente y reduciendo tiempos de
+elaboración de informes.
+Actores:Técnico, Personal asistencial.
+Entradas:Información de préstamos, Información de asistencia, Información de aulas,
+Información de equipos.
+Flujo Principal
+1. El usuario selecciona el tipo de documento.
+2. El sistema consulta la información correspondiente.
+3. Se genera automáticamente el documento.
+4. El usuario podrá visualizarlo, descargarlo o imprimirlo.
+Reglas de Negocio
+Los documentos deberán generarse utilizando únicamente información registrada en el
+sistema.
+Los formatos deberán conservar la estructura institucional correspondiente.
+El sistema permitirá generar informes por rangos de fechas.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 19 de 65
+===== PAGE 21 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+Resultado.Los documentos administrativos quedan disponibles para su consulta, im-
+presión o almacenamiento.
+7.13 Proceso P13. Gestión de Credenciales Institucionales
+Objetivo.Administrar de forma segura las credenciales institucionales utilizadas por las
+Aulas de Software, garantizando que únicamente el personal autorizado pueda consultar-
+las, modificarlas y administrarlas de acuerdo con los permisos asignados a su rol.
+Descripción.
+El sistema permitirá almacenar y administrar las credenciales utilizadas para la operación
+de las Aulas de Software, incluyendo cuentas de equipos de cómputo, servidores, dispo-
+sitivos de red, plataformas institucionales, licencias de software, sistemas de monitoreo y
+demás recursos tecnológicos.
+Las credenciales estarán organizadas por categorías y cada una podrá ser consultada
+únicamente por los usuarios que cuenten con los permisos correspondientes. El sistema
+registrará el historial de modificaciones y consultas realizadas sobre cada credencial, per-
+mitiendo mantener un control de acceso y trazabilidad de la información.
+Actores:Técnico, Personal asistencial, Administrador del sistema.
+Entradas:Nombre de la credencial, Categoría, Usuario, Contraseña, Descripción, Rol o
+usuarios autorizados, Estado de la credencial.
+Flujo Principal
+1. El usuario autorizado accede al módulo de credenciales.
+2. El sistema verifica los permisos asociados a su rol.
+3. El usuario consulta, registra o actualiza una credencial.
+4. El sistema almacena la información de forma segura.
+5. Se registra automáticamente la fecha de modificación, el usuario responsable y la
+operación realizada.
+6. Cuando un usuario consulta una credencial, el sistema registra el acceso para efectos
+de auditoría.
+Reglas de Negocio
+Cada credencial pertenecerá a una única categoría.
+El acceso a las credenciales dependerá del rol asignado al usuario.
+Las contraseñas deberán almacenarse utilizando mecanismos de cifrado seguro.
+Toda consulta, creación, modificación o eliminación de una credencial deberá quedar
+registrada en un historial de auditoría.
+Solo los usuarios autorizados podrán visualizar las contraseñas almacenadas.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 20 de 65
+===== PAGE 22 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+El sistema permitirá desactivar credenciales sin eliminarlas del historial.
+Las credenciales podrán asociarse a equipos, aulas, servidores, aplicaciones o cualquier
+otro recurso administrado por las Aulas de Software.
+Resultado.Las credenciales institucionales quedan almacenadas de forma segura, orga-
+nizadas según su categoría y protegidas mediante permisos de acceso, permitiendo una
+administración centralizada y un control completo sobre su utilización.
+7.14 Proceso P14. Administración de las Aulas de Software
+Objetivo.Administrar la información técnica, física y operativa de cada Aula de Soft-
+ware.
+Descripción.
+El sistema almacenará la información general de cada aula, incluyendo capacidad, ubica-
+ción, proyecto curricular al que pertenece, características del hardware, estado operativo,
+año de adquisición y demás información necesaria para su administración. Esta informa-
+ción servirá como base para los demás procesos del sistema.
+Actores:Técnico, Personal asistencial.
+Entradas:Información del aula, Características del hardware, Estado operativo, Infor-
+mación del proyecto curricular.
+Flujo Principal
+1. El usuario registra o actualiza la información del aula.
+2. El sistema valida los datos ingresados.
+3. La información queda almacenada.
+4. Los demás módulos utilizan esta información cuando sea requerida.
+Reglas de Negocio
+Cada aula deberá tener un identificador único.
+La capacidad del aula deberá mantenerse actualizada.
+El estado operativo influirá en la disponibilidad del aula.
+Solo usuarios autorizados podrán modificar esta información.
+Resultado.La información de las Aulas de Software permanece centralizada y actuali-
+zada.
+7.15 Proceso P15. Administración de Usuarios
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 21 de 65
+===== PAGE 23 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+Objetivo.Administrar los usuarios del sistema y los permisos asociados a cada rol.
+Descripción.
+El sistema permitirá crear, modificar y administrar las cuentas de los usuarios autorizados
+para utilizar la plataforma. Cada usuario dispondrá únicamente de las funcionalidades
+correspondientes a su rol dentro de las Aulas de Software.
+Actores:Administrador del sistema.
+Entradas:Información del usuario, Rol asignado, Estado de la cuenta.
+Flujo Principal
+1. El administrador registra un nuevo usuario.
+2. Asigna el rol correspondiente.
+3. El sistema crea la cuenta.
+4. El usuario podrá acceder únicamente a las funciones autorizadas.
+Reglas de Negocio
+Cada usuario deberá tener una cuenta única.
+Los permisos dependerán del rol asignado.
+Solo el administrador podrá gestionar usuarios.
+El acceso al sistema requerirá autenticación.
+Resultado.Los usuarios quedan registrados y podrán acceder al sistema según sus per-
+misos.
+8 Resumen de Requerimientos Funcionales
+La Tabla 2 presenta el resumen de los módulos funcionales definidos para el Sistema
+de Gestión Operativa de las Aulas de Software y el rango de requerimientos funcionales
+asociados a cada uno.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 22 de 65
+===== PAGE 24 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+Cuadro 2: Resumen de Requerimientos Funcionales
+Proceso Módulo Requerimientos
+P01 Gestión de Horarios Académicos RF-001 – RF-010
+P02 Gestión de Disponibilidad de las Aulas RF-011 – RF-020
+P03 Gestión de Asistencia Docente RF-021 – RF-030
+P04 Gestión de Prácticas Libres RF-031 – RF-048
+P05 Gestión de Préstamos Docentes RF-049 – RF-058
+P06 Gestión de Préstamos de Equipos Audiovisuales RF-059 – RF-071
+P07 Gestión del Software Instalado RF-072 – RF-081
+P08 Gestión de las Aulas de Software RF-082 – RF-091
+P09 Gestión de Multas RF-092 – RF-102
+P10 Gestión de Observaciones RF-103 – RF-110
+P11 Gestión de Limpieza de las Aulas RF-111 – RF-120
+P12 Gestión de Tareas Operativas RF-121 – RF-132
+P13 Gestión de Credenciales y Contraseñas RF-133 – RF-142
+P14 Reportes y Generación de Documentos RF-143 – RF-155
+P15 Panel Operativo Inteligente RF-156 – RF-165
+9 Requerimientos del Sistema
+9.1 Requerimientos Funcionales
+9.1.1. Gestión de Horarios Académicos
+ID Nombre Descripción Prioridad
+RF-001 Importación de
+horarios académi-
+cos
+El sistema deberá permitir importar el
+archivo oficial de horarios académicos su-
+ministrado por la Universidad para el pe-
+riodo académico correspondiente.
+Alta
+RF-002 Validación del ar-
+chivo de horarios
+Antes de realizar la importación, el siste-
+ma deberá validar la estructura, formato
+y consistencia del archivo suministrado
+por la Universidad, identificando errores
+e informando al usuario las inconsisten-
+cias encontradas.
+Alta
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 23 de 65
+===== PAGE 25 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+ID Nombre Descripción Prioridad
+RF-003 Filtrado de hora-
+rios
+El sistema deberá importar únicamente
+los registros correspondientes a las Aulas
+de Software administradas por la depen-
+dencia, descartando automáticamente la
+información perteneciente a otros espa-
+cios académicos.
+Alta
+RF-004 Actualización de
+horarios
+El sistema deberá permitir reemplazar
+la programación académica previamente
+importada cuando la Universidad sumi-
+nistre una nueva versión del archivo co-
+rrespondiente al mismo periodo académi-
+co.
+Alta
+RF-005 Prevención de re-
+gistros duplicados
+El sistema deberá evitar la creación de
+registros duplicados durante la importa-
+ción o actualización de los horarios aca-
+démicos.
+Alta
+RF-006 Gestión de perio-
+dos académicos
+El sistema deberá administrar múltiples
+periodos académicos, permitiendo man-
+tener la información histórica de semes-
+tres anteriores e identificar el periodo que
+se encuentra activo.
+Alta
+RF-007 Visualización de
+horarios
+El sistema deberá mostrar los horarios
+organizados por día, bloque horario y au-
+la, facilitando la consulta durante la ope-
+ración diaria de las Aulas de Software.
+Alta
+RF-008 Consulta de cla-
+ses programadas
+El sistema deberá permitir consultar la
+información de cada clase programada,
+incluyendo asignatura, docente, grupo,
+proyecto curricular, aula, capacidad e
+inscritos.
+Alta
+RF-009 Resumen de im-
+portación
+Al finalizar la importación de horarios,
+el sistema deberá presentar un resumen
+indicando la cantidad de registros proce-
+sados, importados, actualizados y recha-
+zados, junto con las causas de los posibles
+errores detectados.
+Media
+RF-010 Gestión del hora-
+rio vigente
+El sistema deberá utilizar únicamente la
+programación académica correspondien-
+tealperiodoactivoparasoportarlospro-
+cesos operativos de disponibilidad de au-
+las, asistencia docente, préstamos y de-
+más funcionalidades del sistema.
+Alta
+Origen: Proceso P01. Gestión de Horarios Académicos.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 24 de 65
+===== PAGE 26 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+9.1.2. Gestión de Disponibilidad de las Aulas
+ID Nombre Descripción Prioridad
+RF-011 Cálculo automá-
+tico de disponibi-
+lidad
+El sistema deberá calcular automática-
+mente la disponibilidad de cada aula uti-
+lizando la programación académica vi-
+gente,lospréstamosregistrados,losman-
+tenimientos, los eventos y cualquier otra
+actividad que impida su utilización.
+Alta
+RF-012 Consulta de dis-
+ponibilidad
+El sistema deberá permitir consultar la
+disponibilidad de las aulas por día, blo-
+que horario, fecha específica o intervalo
+de tiempo.
+Alta
+RF-013 Identificación de
+ocupación
+Elsistemadeberáindicarelmotivoporel
+cual un aula no se encuentra disponible,
+especificando si corresponde a una clase
+programada, préstamo docente, práctica
+libre, mantenimiento, evento institucio-
+nal u otra actividad registrada.
+Alta
+RF-014 Disponibilidad
+por software
+El sistema deberá permitir consultar las
+aulas disponibles que cuenten con uno o
+varios programas de software requeridos
+por el usuario.
+Alta
+RF-015 Disponibilidad
+por capacidad
+El sistema deberá permitir filtrar las au-
+las disponibles según la capacidad reque-
+rida para la actividad a realizar.
+Alta
+RF-016 Disponibilidad
+por característi-
+cas
+El sistema deberá permitir consultar au-
+las según características específicas, in-
+cluyendo proyecto curricular, ubicación,
+hardware disponible y demás atributos
+registrados.
+Media
+RF-017 Actualización au-
+tomática del esta-
+do
+El sistema deberá actualizar automática-
+mente el estado de disponibilidad de las
+aulas cuando se registre una asistencia
+docente, un préstamo, un mantenimien-
+to, una tarea operativa o cualquier otra
+actividad que modifique su utilización.
+Alta
+RF-018 Sugerencia auto-
+mática de aulas
+El sistema deberá sugerir automática-
+mente las aulas más adecuadas para una
+solicitud de préstamo considerando la
+disponibilidad, el software instalado, la
+capacidad, las restricciones operativas y
+las actividades programadas.
+Alta
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 25 de 65
+===== PAGE 27 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+ID Nombre Descripción Prioridad
+RF-019 Consulta de dis-
+ponibilidad en
+tiempo real
+El sistema deberá reflejar en tiempo real
+cualquier cambio en la disponibilidad de
+las aulas producido por nuevas reservas,
+cancelaciones, asistencias docentes, prés-
+tamos o finalización de actividades.
+Alta
+RF-020 Historial de dis-
+ponibilidad
+El sistema deberá conservar un historial
+de los cambios de disponibilidad de las
+aulas para facilitar consultas posterio-
+res y apoyar la generación de indicadores
+operativos.
+Media
+Origen: Proceso P02. Gestión de Disponibilidad de las Aulas.
+9.1.3. Gestión de Asistencia Docente
+ID Nombre Descripción Prioridad
+RF-021 Consulta automá-
+tica de clases del
+bloque actual
+El sistema deberá mostrar automática-
+mente las clases programadas para el blo-
+que horario vigente, facilitando el control
+de asistencia de los docentes y la apertu-
+ra de las aulas.
+Alta
+RF-022 Registro de asis-
+tencia docente
+El sistema deberá permitir registrar la
+asistencia del docente correspondiente a
+cada clase programada.
+Alta
+RF-023 Registro de in-
+asistencia docente
+Elsistemadeberápermitirregistrarlain-
+asistencia de un docente cuando este no
+se presente dentro del tiempo establecido
+por la dependencia.
+Alta
+RF-024 Modificación del
+estado de asisten-
+cia
+El sistema deberá permitir corregir el es-
+tado de asistencia de un docente cuando
+se haya realizado un registro incorrecto o
+el docente se presente posteriormente.
+Alta
+RF-025 Actualización au-
+tomática de dis-
+ponibilidad
+El sistema deberá actualizar automática-
+menteladisponibilidaddelauladeacuer-
+do con el estado de asistencia registrado
+para el docente.
+Alta
+RF-026 Consulta del esta-
+do de las clases
+El sistema deberá permitir visualizar el
+estado de cada clase programada, indi-
+cando si el docente ya asistió, aún no ha
+sido registrado o fue marcado como au-
+sente.
+Alta
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 26 de 65
+===== PAGE 28 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+ID Nombre Descripción Prioridad
+RF-027 Apertura de aulas El sistema deberá indicar las aulas que
+deben ser abiertas de acuerdo con las cla-
+ses programadas y la asistencia registra-
+da del docente.
+Media
+RF-028 Liberación auto-
+mática de aulas
+El sistema deberá permitir liberar un au-
+la para otros procesos operativos cuando
+el docente haya sido registrado como au-
+sente y se haya cumplido el tiempo defi-
+nido por la dependencia.
+Alta
+RF-029 Consulta históri-
+ca de asistencia
+El sistema deberá conservar el historial
+de asistencia e inasistencia de los docen-
+tes para cada periodo académico.
+Media
+RF-030 Visualización dia-
+ria de clases
+El sistema deberá mostrar de forma or-
+ganizada las clases programadas durante
+la jornada, permitiendo consultar rápida-
+mentelainformacióndeldocente,asigna-
+tura, aula y estado de asistencia.
+Alta
+Origen: Proceso P03. Gestión de Asistencia Docente.
+9.1.4. Gestión de Prácticas Libres
+ID Nombre Descripción Prioridad
+RF-031 Registro de solici-
+tudes de práctica
+libre
+El sistema deberá permitir registrar so-
+licitudes de préstamo de aulas realiza-
+das por estudiantes para el desarrollo de
+prácticas libres.
+Alta
+RF-032 Búsqueda de es-
+tudiantes
+El sistema deberá permitir buscar un es-
+tudiante utilizando su código estudiantil
+o documento de identificación antes de
+realizar el préstamo.
+Alta
+RF-033 Registro de nue-
+vos estudiantes
+Cuando un estudiante no exista en la ba-
+se de datos, el sistema deberá permitir
+registrar su información antes de realizar
+el préstamo.
+Alta
+RF-034 Validación de
+multas
+El sistema deberá verificar automática-
+mente si el estudiante posee multas acti-
+vas antes de autorizar el préstamo de un
+aula.
+Alta
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 27 de 65
+===== PAGE 29 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+ID Nombre Descripción Prioridad
+RF-035 Restricción por
+multas activas
+El sistema no deberá permitir registrar
+un préstamo cuando el estudiante tenga
+multas pendientes de cumplir.
+Alta
+RF-036 Consulta de dis-
+ponibilidaddeau-
+las
+El sistema deberá consultar automática-
+mente las aulas disponibles para el hora-
+rio solicitado.
+Alta
+RF-037 Búsqueda por
+software
+El sistema deberá permitir buscar aulas
+disponibles que cuenten con uno o varios
+programas de software requeridos por el
+estudiante.
+Alta
+RF-038 Sugerencia auto-
+mática de aulas
+El sistema deberá sugerir automática-
+mente las aulas que mejor cumplan con
+los requisitos de disponibilidad, software
+instalado y capacidad requerida.
+Alta
+RF-039 Registro del prés-
+tamo
+El sistema deberá registrar la informa-
+cióndelpréstamo,incluyendoestudiante,
+aula asignada, software requerido, fun-
+cionario responsable, fecha y hora de ini-
+cio.
+Alta
+RF-040 Registro de entra-
+da
+El sistema deberá registrar automática-
+mente la hora de ingreso del estudiante
+al iniciar el préstamo.
+Media
+RF-041 Registro de devo-
+lución
+El sistema deberá permitir registrar la fi-
+nalizacióndelpréstamoindicandolahora
+de entrega del aula.
+Alta
+RF-042 Cálculo del tiem-
+po de uso
+El sistema deberá calcular automática-
+mente la duración del préstamo utilizan-
+do la hora de ingreso y la hora de devo-
+lución.
+Media
+RF-043 Liberación auto-
+mática del aula
+Una vez finalizado el préstamo, el siste-
+ma deberá actualizar automáticamente
+la disponibilidad del aula para permitir
+nuevos préstamos u otras actividades.
+Alta
+RF-044 Registro de obser-
+vaciones del prés-
+tamo
+El sistema deberá permitir registrar ob-
+servaciones relacionadas con el préstamo,
+el estado del aula o cualquier novedad
+presentada durante su utilización.
+Media
+RF-045 Consulta del his-
+torial de présta-
+mos
+El sistema deberá conservar el historial
+de préstamos realizados por cada estu-
+diante, permitiendo consultar fechas, au-
+las utilizadas, software solicitado y obser-
+vaciones registradas.
+Media
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 28 de 65
+===== PAGE 30 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+ID Nombre Descripción Prioridad
+RF-046 Consulta de prés-
+tamos activos
+El sistema deberá mostrar en tiempo
+real los préstamos de prácticas libres que
+se encuentren activos, indicando el estu-
+diante, el aula asignada, la hora de inicio
+y el tiempo transcurrido.
+Alta
+RF-047 Control del tiem-
+po máximo de uso
+El sistema deberá controlar que las prác-
+ticas libres finalicen antes del inicio de
+la siguiente actividad programada para
+el aula, garantizando el tiempo necesario
+para su preparación.
+Alta
+RF-048 Consulta de dis-
+ponibilidad futu-
+ra
+El sistema deberá permitir consultar el
+tiempo disponible de un aula antes del
+inicio de la siguiente clase o actividad
+programada para determinar si es posi-
+ble realizar una práctica libre.
+Alta
+Origen: Proceso P04. Gestión de Prácticas Libres.
+9.1.5. Gestión de Préstamos Docentes
+ID Nombre Descripción Prioridad
+RF-049 Registro de soli-
+citudes de présta-
+mo docente
+El sistema deberá permitir registrar so-
+licitudes de préstamo de aulas realizadas
+por docentes para el desarrollo de clases,
+eventos, capacitaciones u otras activida-
+des académicas.
+Alta
+RF-050 Consulta de dis-
+ponibilidad para
+préstamos docen-
+tes
+El sistema deberá verificar automática-
+mente la disponibilidad del aula durante
+el periodo solicitado antes de aprobar el
+préstamo.
+Alta
+RF-051 Validación de ca-
+pacidad del aula
+El sistema deberá verificar que el aula
+seleccionada cuente con la capacidad su-
+ficiente para el número de asistentes in-
+formado por el docente.
+Alta
+RF-052 Validación de
+software requeri-
+do
+El sistema deberá comprobar que el aula
+seleccionadadispongadelsoftwarereque-
+rido para la actividad solicitada.
+Alta
+RF-053 Registro del prés-
+tamo docente
+El sistema deberá registrar la informa-
+ción del préstamo, incluyendo docente,
+aula, fecha, horario, software requerido,
+motivo del préstamo y funcionario res-
+ponsable.
+Alta
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 29 de 65
+===== PAGE 31 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+ID Nombre Descripción Prioridad
+RF-054 Actualización
+automática de la
+disponibilidad
+Al aprobar un préstamo docente, el sis-
+tema deberá actualizar automáticamente
+la disponibilidad del aula durante el pe-
+riodo reservado.
+Alta
+RF-055 Registro de obser-
+vaciones del prés-
+tamo
+El sistema deberá permitir registrar ob-
+servaciones relacionadas con el préstamo
+docente, incluyendo instrucciones espe-
+ciales o novedades operativas.
+Media
+RF-056 Modificación
+de préstamos
+docentes
+El sistema deberá permitir modificar
+la información de un préstamo docente
+mientras la actividad no haya finalizado.
+Media
+RF-057 Cancelación
+de préstamos
+docentes
+El sistema deberá permitir cancelar prés-
+tamos docentes previamente registrados,
+liberando automáticamente la disponibi-
+lidad del aula.
+Alta
+RF-058 Consulta del his-
+torial de présta-
+mos docentes
+El sistema deberá conservar el historial
+de los préstamos docentes realizados, in-
+cluyendo las modificaciones y cancelacio-
+nes efectuadas.
+Media
+Origen: Proceso P05. Gestión de Préstamos Docentes.
+9.1.6. Gestión de Préstamos de Equipos Audiovisuales
+ID Nombre Descripción Prioridad
+RF-059 Registro de soli-
+citudes de présta-
+mo de equipos au-
+diovisuales
+El sistema deberá permitir registrar soli-
+citudes de préstamo de equipos audiovi-
+suales realizadas por los docentes.
+Alta
+RF-060 Consulta de dis-
+ponibilidad de
+equipos
+El sistema deberá mostrar la disponibili-
+dad de los equipos audiovisuales antes de
+realizar un préstamo.
+Alta
+RF-061 Sugerencia auto-
+mática de equipos
+Cuando existan varios equipos disponi-
+bles del mismo tipo, el sistema deberá
+sugerir el equipo con menor utilización
+acumulada para distribuir el desgaste en-
+tre todos los recursos.
+Alta
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 30 de 65
+===== PAGE 32 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+ID Nombre Descripción Prioridad
+RF-062 Registro del prés-
+tamo audiovisual
+El sistema deberá registrar la informa-
+ción del préstamo, incluyendo docente,
+aula de destino, equipo prestado, fecha,
+hora de salida, hora estimada de devolu-
+ción y funcionario responsable de la en-
+trega.
+Alta
+RF-063 Registro de devo-
+lución
+El sistema deberá permitir registrar la
+devolución de los equipos audiovisuales
+indicando la hora de recepción, el funcio-
+nario responsable y el estado en que fue
+entregado el equipo.
+Alta
+RF-064 Registro del esta-
+do del equipo
+Elsistemadeberápermitirregistrarel es-
+tado físico y funcional del equipo al mo-
+mento de su devolución.
+Alta
+RF-065 Historial de prés-
+tamos
+El sistema deberá conservar el historial
+completo de préstamos realizados para
+cada equipo audiovisual.
+Media
+RF-066 Estadísticas de
+utilización
+El sistema deberá calcular automática-
+mente la cantidad de préstamos realiza-
+dos, el tiempo acumulado de uso y la fre-
+cuencia de utilización de cada equipo au-
+diovisual.
+Media
+RF-067 Estadísticas por
+docente
+Elsistemadeberáregistrarlacantidadde
+préstamos realizados por cada docente y
+permitir consultar dicho historial.
+Media
+RF-068 Control de man-
+tenimiento
+El sistema deberá impedir el préstamo de
+equipos que se encuentren registrados en
+mantenimiento o fuera de servicio.
+Alta
+RF-069 Consulta de dis-
+ponibilidad en
+tiempo real
+El sistema deberá actualizar en tiempo
+real la disponibilidad de los equipos au-
+diovisuales después de cada préstamo o
+devolución.
+Alta
+RF-070 Indicadores de
+utilización
+El sistema deberá generar indicadores
+que permitan identificar los equipos con
+mayor utilización, menor utilización y
+aquellos que requieran mantenimiento
+preventivo por su nivel de uso.
+Media
+RF-071 Consulta de his-
+torial por equipo
+El sistema deberá permitir consultar el
+historial completo de un equipo audio-
+visual, incluyendo préstamos, devolucio-
+nes, mantenimientos y observaciones re-
+gistradas.
+Media
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 31 de 65
+===== PAGE 33 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+Origen: Proceso P06. Gestión de Préstamos de Equipos Audiovisuales.
+9.1.7. Gestión del Software Instalado
+ID Nombre Descripción Prioridad
+RF-072 Importación del
+inventario de
+software
+El sistema deberá permitir importar el
+archivo de inventario de software instala-
+do en las Aulas de Software a partir de
+un archivo en formato Excel.
+Alta
+RF-073 Validación del ar-
+chivo de software
+Antes de realizar la importación, el siste-
+ma deberá validar la estructura y consis-
+tencia del archivo de software, informan-
+do cualquier error encontrado al usuario.
+Alta
+RF-074 Actualización del
+inventario de soft-
+ware
+El sistema deberá permitir actualizar el
+inventario de software instalado cuando
+se importe una nueva versión del archivo
+correspondiente, evitando registros du-
+plicados.
+Alta
+RF-075 Asociación de
+software por aula
+El sistema deberá asociar automática-
+mente cada programa de software con las
+aulas correspondientes según la informa-
+ción contenida en el archivo importado.
+Alta
+RF-076 Consulta de soft-
+ware por aula
+El sistema deberá permitir consultar el
+listadodeprogramasinstaladosenunau-
+la específica.
+Alta
+RF-077 Búsqueda de au-
+las por software
+El sistema deberá permitir buscar las au-
+las que tengan instalado un determinado
+programa de software.
+Alta
+RF-078 Búsqueda por
+múltiples progra-
+mas
+El sistema deberá permitir buscar aulas
+que cumplan simultáneamente con varios
+programas de software requeridos.
+Alta
+RF-079 Visualización del
+inventario de soft-
+ware
+El sistema deberá mostrar el inventario
+de software organizado por aula, inclu-
+yendo información como nombre del pro-
+grama, versión y demás datos disponibles
+en el archivo importado.
+Media
+RF-080 Integración con la
+disponibilidad de
+aulas
+El sistema deberá utilizar la información
+del software instalado para sugerir au-
+tomáticamente las aulas más adecuadas
+durante los procesos de prácticas libres,
+préstamos docentes y demás actividades
+que requieran software específico.
+Alta
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 32 de 65
+===== PAGE 34 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+ID Nombre Descripción Prioridad
+RF-081 Historial de im-
+portaciones
+El sistema deberá conservar un historial
+de las importaciones realizadas del inven-
+tario de software, indicando la fecha, el
+usuario responsable y el resultado de ca-
+da proceso.
+Media
+Origen: Proceso P07. Gestión del Software Instalado.
+9.1.8. Gestión de las Aulas de Software
+ID Nombre Descripción Prioridad
+RF-082 Registro de aulas Elsistemadeberápermitirregistrarlain-
+formación general de cada Aula de Soft-
+ware administrada por la dependencia.
+Alta
+RF-083 Consulta de infor-
+mación de las au-
+las
+El sistema deberá permitir consultar la
+información general de cada aula, inclu-
+yendo ubicación, capacidad, proyecto cu-
+rricular, año de adquisición, marca y mo-
+delo de los equipos.
+Alta
+RF-084 Gestión de las
+características del
+aula
+El sistema deberá almacenar las caracte-
+rísticas técnicas generales de los equipos
+instalados en cada aula, incluyendo pro-
+cesador,memoriaRAM,almacenamiento
+y demás especificaciones definidas por la
+dependencia.
+Alta
+RF-085 Estado operativo
+del aula
+Elsistemadeberápermitirregistrarel es-
+tado operativo de cada aula, indicando
+si se encuentra disponible, en manteni-
+miento, fuera de servicio o pendiente de
+intervención.
+Alta
+RF-086 Registro de reno-
+vación tecnológi-
+ca
+El sistema deberá permitir registrar si un
+aula requiere renovación tecnológica de
+acuerdo con los criterios definidos por la
+dependencia.
+Media
+RF-087 Gestión de capa-
+cidad
+El sistema deberá permitir administrar
+la capacidad máxima de estudiantes de
+cada aula.
+Alta
+RF-088 Asociación con
+proyectos curri-
+culares
+El sistema deberá permitir asociar cada
+aula con uno o varios proyectos curricu-
+lares de la Facultad de Ingeniería.
+Media
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 33 de 65
+===== PAGE 35 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+ID Nombre Descripción Prioridad
+RF-089 Consulta de aulas El sistema deberá permitir buscar aulas
+utilizando diferentes criterios, como nú-
+mero del aula, capacidad, proyecto curri-
+cular, ubicación o estado operativo.
+Alta
+RF-090 Visualización
+consolidada
+El sistema deberá mostrar una ficha con-
+solidada de cada aula con toda la infor-
+mación relevante para su administración.
+Media
+RF-091 Integración con
+otros módulos
+La información de las aulas deberá es-
+tar disponible para los módulos de hora-
+rios, disponibilidad, préstamos, software,
+mantenimiento, limpieza y tareas opera-
+tivas.
+Alta
+Origen: Proceso P08. Gestión de las Aulas de Software.
+9.1.9. Gestión de Multas
+ID Nombre Descripción Prioridad
+RF-092 Registro de mul-
+tas
+El sistema deberá permitir registrar mul-
+tas asociadas a los estudiantes cuando in-
+cumplan las normas establecidas para el
+uso de las Aulas de Software.
+Alta
+RF-093 Catálogo de moti-
+vos de multa
+El sistema deberá permitir seleccionar el
+motivo de la multa a partir de un lista-
+do predefinido y registrar observaciones
+adicionales cuando sea necesario.
+Alta
+RF-094 Registro del
+funcionario res-
+ponsable
+El sistema deberá registrar el funcionario
+que impone la multa, así como la fecha y
+hora del registro.
+Alta
+RF-095 Sugerencia de ele-
+mentos para la
+multa
+El sistema deberá sugerir automática-
+mente elementos de reposición que pue-
+dan utilizarse para cumplir la multa, de
+acuerdo con un listado previamente con-
+figurado por la dependencia.
+Media
+RF-096 Gestión del esta-
+do de la multa
+El sistema deberá administrar el estado
+de cada multa, indicando si se encuentra
+activa, cumplida, anulada o pendiente.
+Alta
+RF-097 Restricción de
+préstamos
+El sistema deberá impedir el registro
+de nuevos préstamos de prácticas libres
+cuando el estudiante tenga multas acti-
+vas.
+Alta
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 34 de 65
+===== PAGE 36 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+ID Nombre Descripción Prioridad
+RF-098 Registro del cum-
+plimiento de la
+multa
+El sistema deberá permitir registrar el
+cumplimiento de una multa indicando los
+elementos entregados, la fecha de recep-
+ción y el funcionario responsable.
+Alta
+RF-099 Historial de mul-
+tas
+El sistema deberá conservar el historial
+completodemultasregistradasparacada
+estudiante.
+Media
+RF-100 Consulta de mul-
+tas
+El sistema deberá permitir consultar las
+multasregistradasutilizandocriteriosco-
+mo estudiante, estado, fecha o motivo.
+Media
+RF-101 Estadísticas de
+incumplimientos
+Elsistemadeberágenerarestadísticasso-
+bre los tipos de incumplimientos más fre-
+cuentes y la cantidad de multas registra-
+das durante un periodo determinado.
+Media
+RF-102 Configuración de
+motivos de multa
+El sistema deberá permitir administrar
+el catálogo de motivos de multa y los ele-
+mentos sugeridos para su cumplimiento.
+Media
+Origen: Proceso P09. Gestión de Multas.
+9.1.10. Gestión de Observaciones
+ID Nombre Descripción Prioridad
+RF-103 Registro de obser-
+vaciones
+El sistema deberá permitir registrar ob-
+servaciones asociadas a un aula.
+Alta
+RF-104 Clasificación de
+observaciones
+El sistema deberá clasificar las observa-
+ciones como generales o temporales, de
+acuerdo con su vigencia.
+Alta
+RF-105 Observaciones
+con vigencia
+El sistema deberá permitir definir un pe-
+riodo de vigencia para las observaciones
+temporales, indicando la fecha y hora de
+inicio y finalización.
+Alta
+RF-106 Visualización au-
+tomática de ob-
+servaciones
+El sistema deberá mostrar automática-
+mente las observaciones vigentes antes de
+realizar cualquier préstamo, apertura o
+actividad relacionada con el aula.
+Alta
+RF-107 Asociación de ob-
+servaciones
+El sistema deberá permitir asociar obser-
+vaciones con aulas, préstamos, eventos o
+actividades específicas.
+Media
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 35 de 65
+===== PAGE 37 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+ID Nombre Descripción Prioridad
+RF-108 Modificación de
+observaciones
+El sistema deberá permitir modificar ob-
+servaciones registradas mientras perma-
+nezcan vigentes.
+Media
+RF-109 Consulta de ob-
+servaciones
+El sistema deberá permitir consultar ob-
+servaciones por aula, fecha, estado o tipo.
+Media
+RF-110 Historial de ob-
+servaciones
+El sistema deberá conservar el historial
+de observaciones registradas para cada
+aula.
+Media
+Origen: Proceso P10. Gestión de Observaciones.
+9.1.11. Gestión de Limpieza de las Aulas
+ID Nombre Descripción Prioridad
+RF-111 Registro de jorna-
+das de limpieza
+El sistema deberá permitir registrar las
+jornadas de limpieza realizadas en cada
+Aula de Software, indicando la fecha, ho-
+ra y funcionario responsable del registro.
+Alta
+RF-112 Programación de
+limpieza
+El sistema deberá sugerir diariamente las
+aulas que pueden ser asignadas al perso-
+nal de servicios generales para realizar la
+limpieza, teniendo en cuenta su disponi-
+bilidad operativa.
+Alta
+RF-113 Validación de dis-
+ponibilidad
+El sistema deberá verificar que un aula
+notengaclases,préstamos,eventos,man-
+tenimientos u otras actividades progra-
+madas antes de asignarla para limpieza.
+Alta
+RF-114 Distribuciónequi-
+librada de limpie-
+za
+El sistema deberá distribuir las jornadas
+de limpieza entre todas las aulas, procu-
+rando que todas reciban mantenimiento
+periódico y evitando seleccionar repeti-
+damente la misma aula.
+Alta
+RF-115 Consulta del esta-
+do de limpieza
+El sistema deberá permitir consultar la
+fechadelaúltimalimpiezarealizadapara
+cada aula.
+Media
+RF-116 Matriz visual de
+limpieza
+El sistema deberá generar una matriz vi-
+sual que muestre las jornadas de limpieza
+realizadas por aula y por fecha.
+Alta
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 36 de 65
+===== PAGE 38 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+ID Nombre Descripción Prioridad
+RF-117 Registro de nove-
+dades durante la
+limpieza
+El sistema deberá permitir registrar no-
+vedades detectadas durante la limpieza,
+como daños físicos, equipos faltantes o
+anomalías encontradas.
+Media
+RF-118 Historial de lim-
+pieza
+El sistema deberá conservar el historial
+de las jornadas de limpieza realizadas pa-
+ra cada aula.
+Media
+RF-119 Indicadores de
+limpieza
+El sistema deberá generar indicadores so-
+bre la frecuencia de limpieza de las aulas
+y aquellas que presenten mayor tiempo
+sin mantenimiento.
+Media
+RF-120 Integración con la
+disponibilidad
+Las jornadas de limpieza registradas de-
+berán ser consideradas por el módulo de
+disponibilidad para evitar conflictos con
+otras actividades.
+Alta
+Origen: Proceso P11. Gestión de Limpieza de las Aulas.
+9.1.12. Gestión de Tareas Operativas
+ID Nombre Descripción Prioridad
+RF-121 Registro de tareas
+operativas
+El sistema deberá permitir registrar ta-
+reas operativas asociadas a una o varias
+Aulas de Software.
+Alta
+RF-122 Clasificación de
+tareas
+El sistema deberá permitir clasificar las
+tareas según su tipo, como mantenimien-
+to preventivo, mantenimiento correcti-
+vo, instalación de software, clonación de
+equipos, revisión técnica, actualización
+tecnológica, inventario u otras activida-
+des.
+Alta
+RF-123 Asignación de
+responsables
+El sistema deberá permitir asignar res-
+ponsables para la ejecución de cada tarea
+operativa.
+Alta
+RF-124 Priorización de
+tareas
+El sistema deberá permitir establecer
+prioridades para las tareas operativas, di-
+ferenciando entre críticas, altas, medias y
+bajas.
+Alta
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 37 de 65
+===== PAGE 39 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+ID Nombre Descripción Prioridad
+RF-125 Sugerencia auto-
+mática de ejecu-
+ción
+El sistema deberá sugerir automática-
+mente los momentos más adecuados para
+ejecutar una tarea operativa consideran-
+do la disponibilidad de las aulas involu-
+cradas.
+Alta
+RF-126 Prevención de
+conflictos
+El sistema deberá impedir la programa-
+ción de tareas operativas cuando estas in-
+terfieran con clases, préstamos, eventos o
+actividades previamente registradas.
+Alta
+RF-127 Gestión del esta-
+do de las tareas
+El sistema deberá administrar el estado
+de las tareas operativas, indicando si se
+encuentran pendientes, en proceso, sus-
+pendidas o finalizadas.
+Alta
+RF-128 Registro de ejecu-
+ción
+El sistema deberá permitir registrar el
+inicio y finalización de cada tarea ope-
+rativa, así como las observaciones corres-
+pondientes.
+Alta
+RF-129 Historial de ta-
+reas
+El sistema deberá conservar el historial
+completo de las tareas operativas ejecu-
+tadas sobre cada aula.
+Media
+RF-130 Vista tipo tablero El sistema deberá presentar las tareas
+operativas mediante un tablero visual or-
+ganizado por aulas y estados, facilitan-
+do el seguimiento de las actividades pen-
+dientes.
+Alta
+RF-131 Indicadores de
+ejecución
+El sistema deberá generar indicadores
+relacionados con las tareas operativas,
+incluyendo tiempos de ejecución, tareas
+pendientes, tareas finalizadas y produc-
+tividad.
+Media
+RF-132 Integración con la
+disponibilidad
+Las tareas operativas deberán modificar
+automáticamente la disponibilidad de las
+aulas cuando su ejecución impida la uti-
+lización normal de las mismas.
+Alta
+Origen: Proceso P12. Gestión de Tareas Operativas.
+9.1.13. Gestión de Credenciales y Contraseñas
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 38 de 65
+===== PAGE 40 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+ID Nombre Descripción Prioridad
+RF-133 Registro de cre-
+denciales
+El sistema deberá permitir registrar las
+credenciales utilizadas por las Aulas de
+Software para la administración de equi-
+pos, servidores, aplicaciones y demás re-
+cursos tecnológicos.
+Alta
+RF-134 Organización por
+categorías
+El sistema deberá organizar las creden-
+ciales por categorías, como servidores,
+equipos de cómputo, aplicaciones, licen-
+ciamiento, infraestructura de red, servi-
+cios institucionales y otras que sean defi-
+nidas por la dependencia.
+Alta
+RF-135 Control de acceso
+por roles
+El sistema deberá restringir el acceso a
+las credenciales de acuerdo con el rol
+del usuario, permitiendo visualizar úni-
+camente aquellas para las cuales tenga
+autorización.
+Alta
+RF-136 Registro de acce-
+sos
+El sistema deberá registrar todas las con-
+sultas realizadas sobre las credenciales,
+indicando usuario, fecha, hora y recurso
+consultado.
+Alta
+RF-137 Actualización de
+credenciales
+El sistema deberá permitir actualizar las
+credenciales registradas conservando un
+historial de modificaciones.
+Alta
+RF-138 Búsqueda de cre-
+denciales
+El sistema deberá permitir buscar cre-
+denciales utilizando diferentes criterios
+como nombre del recurso, categoría o res-
+ponsable.
+Media
+RF-139 Asociación de res-
+ponsables
+El sistema deberá permitir asociar una o
+varias personas responsables de la admi-
+nistración de cada credencial registrada.
+Media
+RF-140 Estado de las cre-
+denciales
+Elsistemadeberápermitirregistrarel es-
+tado de una credencial, indicando si se
+encuentra vigente, pendiente de actuali-
+zación o fuera de uso.
+Media
+RF-141 Protección de la
+información
+El sistema deberá almacenar las creden-
+ciales mediante mecanismos de protec-
+ción que impidan su visualización por
+usuarios no autorizados.
+Alta
+RF-142 Historialdemodi-
+ficaciones
+El sistema deberá conservar un historial
+de las modificaciones realizadas sobre las
+credenciales, indicando la fecha, el usua-
+rio responsable y el motivo del cambio.
+Media
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 39 de 65
+===== PAGE 41 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+Origen: Proceso P13. Gestión de Credenciales y Contraseñas.
+9.1.14. Reportes y Generación de Documentos
+ID Nombre Descripción Prioridad
+RF-143 Generación de fi-
+chas de prácticas
+libres
+El sistema deberá generar automática-
+mente las fichas correspondientes a las
+prácticas libres utilizando la información
+registrada durante el préstamo.
+Alta
+RF-144 Generación de fi-
+chas de préstamos
+audiovisuales
+El sistema deberá generar automática-
+mente las fichas correspondientes a los
+préstamos de equipos audiovisuales.
+Alta
+RF-145 Generación de re-
+portes mensuales
+El sistema deberá generar reportes men-
+suales consolidados sobre las actividades
+realizadas en las Aulas de Software.
+Alta
+RF-146 Reportes de utili-
+zación de aulas
+El sistema deberá generar reportes rela-
+cionados con la ocupación y utilización
+de las Aulas de Software.
+Media
+RF-147 Reportes de prác-
+ticas libres
+El sistema deberá generar reportes esta-
+dísticos sobre las prácticas libres realiza-
+das.
+Media
+RF-148 Reportes de
+préstamos audio-
+visuales
+El sistema deberá generar reportes rela-
+cionados con la utilización de los equipos
+audiovisuales.
+Media
+RF-149 Reportes de mul-
+tas
+El sistema deberá generar reportes sobre
+las multas registradas, su estado y cum-
+plimiento.
+Media
+RF-150 Exportación de
+información
+El sistema deberá permitir exportar re-
+portes en formatos PDF y Excel.
+Alta
+RF-151 Reportes de soft-
+ware instalado
+El sistema deberá generar reportes del
+software instalado en las Aulas de Soft-
+ware.
+Media
+RF-152 Reportes de man-
+tenimiento y ta-
+reas operativas
+El sistema deberá generar reportes con-
+solidados sobre las tareas operativas eje-
+cutadas en las Aulas de Software.
+Media
+RF-153 Reportes de lim-
+pieza
+El sistema deberá generar reportes re-
+lacionados con las jornadas de limpieza
+realizadas.
+Media
+RF-154 Programación de
+reportes
+El sistema deberá permitir programar la
+generación periódica de determinados re-
+portes administrativos.
+Baja
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 40 de 65
+===== PAGE 42 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+ID Nombre Descripción Prioridad
+RF-155 Panel de indica-
+dores
+El sistema deberá presentar un panel con
+indicadores operativos y estadísticos que
+apoyen la toma de decisiones por parte
+del personal administrativo.
+Alta
+Origen: Proceso P14. Reportes y Generación de Documentos.
+9.1.15. Panel Operativo Inteligente
+ID Nombre Descripción Prioridad
+RF-156 Visualización del
+estado general
+El sistema deberá presentar un panel
+operativo que consolide en tiempo real la
+información más relevante para la admi-
+nistración de las Aulas de Software.
+Alta
+RF-157 Estado de las au-
+las
+El sistema deberá mostrar el estado ac-
+tualdetodaslasaulas,indicandosiseen-
+cuentran en clase, disponibles, en mante-
+nimiento,reservadas,enpréstamoofuera
+de servicio.
+Alta
+RF-158 Próximos cam-
+bios de estado
+El sistema deberá indicar cuáles aulas
+cambiarán de estado durante los próxi-
+mos minutos, mostrando el tiempo res-
+tante para el inicio o finalización de la
+actividad programada.
+Alta
+RF-159 Alertas operati-
+vas
+El sistema deberá mostrar alertas rela-
+cionadas con docentes pendientes por re-
+gistrar asistencia, préstamos próximos a
+finalizar, equipos audiovisuales pendien-
+tes de devolución, tareas críticas y demás
+eventos relevantes.
+Alta
+RF-160 Sugerencias auto-
+máticas
+El sistema deberá sugerir automática-
+mente acciones que puedan ejecutarse
+durante la jornada, considerando la dis-
+ponibilidad de las aulas y las actividades
+pendientes.
+Alta
+RF-161 Tareas operativas
+recomendadas
+El sistema deberá identificar las tareas
+operativas que pueden ejecutarse en el
+momento, indicando el tiempo disponible
+antes de la siguiente actividad programa-
+da para cada aula.
+Alta
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 41 de 65
+===== PAGE 43 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+ID Nombre Descripción Prioridad
+RF-162 Sugerencia de au-
+las para limpieza
+El sistema deberá recomendar las au-
+las que puedan asignarse al personal de
+servicios generales para realizar labores
+de limpieza, considerando el historial de
+aseo y la disponibilidad operativa.
+Alta
+RF-163 Resumen de prés-
+tamos
+El sistema deberá mostrar un resumen de
+los préstamos activos de aulas y equipos
+audiovisuales, indicando aquellos que es-
+tén próximos a finalizar o presenten no-
+vedades.
+Alta
+RF-164 Indicadores ope-
+rativos
+El sistema deberá presentar indicadores
+en tiempo real relacionados con la ocupa-
+ción de las aulas, utilización de recursos,
+préstamos, mantenimientos y demás ac-
+tividades operativas.
+Media
+RF-165 Actualización en
+tiempo real
+El sistema deberá actualizar automática-
+mente la información mostrada en el pa-
+nel operativo conforme se registren cam-
+bios en cualquiera de los módulos del sis-
+tema.
+Alta
+Origen: Proceso P15. Panel Operativo Inteligente.
+10 Requerimientos No Funcionales
+Los requerimientos no funcionales establecen las características de calidad que deberá
+cumplir el Sistema de Gestión Operativa de las Aulas de Software. Estos requisitos definen
+aspectos relacionados con el rendimiento, la seguridad, la disponibilidad, la usabilidad y
+demás atributos necesarios para garantizar una operación confiable, eficiente y acorde con
+las necesidades del Almacén General de las Aulas de Software.
+10.1 RNF01. Rendimiento
+ID Nombre Descripción
+RNF-001 Tiempo de res-
+puesta
+El sistema deberá responder a las consultas
+realizadas por los usuarios en un tiempo infe-
+rior a tres (3) segundos bajo condiciones nor-
+males de operación.
+RNF-002 Búsquedas Lasbúsquedasdeaulas,softwareinstalado,ho-
+rarios, préstamos y docentes deberán ejecutar-
+se de manera inmediata, mostrando resultados
+conforme el usuario realiza la consulta.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 42 de 65
+===== PAGE 44 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+ID Nombre Descripción
+RNF-003 Actualización Lainformación delPanel OperativoInteligente
+deberá actualizarse automáticamente sin nece-
+sidad de recargar manualmente la página.
+RNF-004 Importación de
+archivos
+La importación de archivos de horarios y soft-
+ware instalado deberá procesarse automática-
+mente validando previamente la estructura y
+los datos del archivo.
+10.2 RNF02. Disponibilidad
+ID Nombre Descripción
+RNF-005 Disponibilidad
+del servicio
+El sistema deberá encontrarse disponible du-
+rante toda la jornada de funcionamiento de las
+Aulas de Software.
+RNF-006 Acceso simultá-
+neo
+Elsistemadeberápermitirelaccesoconcurren-
+te de múltiples usuarios sin afectar significati-
+vamente el rendimiento.
+RNF-007 Recuperación Ante una falla del sistema, la información re-
+gistradanodeberáperderseyelserviciodeberá
+restablecerse conservando la integridad de los
+datos almacenados.
+10.3 RNF03. Seguridad
+ID Nombre Descripción
+RNF-008 Autenticación Todos los usuarios deberán autenticarse me-
+diante credenciales antes de acceder al sistema.
+RNF-009 Autorización El acceso a las funcionalidades deberá depen-
+der del rol asignado al usuario.
+RNF-010 Protección de
+contraseñas
+Las credenciales almacenadas por el sistema
+deberán mantenerse cifradas y únicamente po-
+drán ser consultadas por los usuarios autoriza-
+dos.
+RNF-011 Comunicación se-
+gura
+Toda comunicación entre cliente y servidor de-
+berá realizarse mediante protocolos seguros.
+RNF-012 Gestión de sesio-
+nes
+El sistema deberá cerrar automáticamente la
+sesión de un usuario tras un periodo prolonga-
+do de inactividad.
+10.4 RNF04. Usabilidad
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 43 de 65
+===== PAGE 45 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+ID Nombre Descripción
+RNF-013 Facilidad de uso La interfaz deberá ser intuitiva y permitir que
+los usuarios realicen las tareas habituales con
+el menor número posible de acciones.
+RNF-014 Consistencia Todas las interfaces deberán mantener una es-
+tructura visual uniforme.
+RNF-015 Retroalimentación Elsistemadeberáinformarclaramenteelresul-
+tado de cada operación realizada por el usua-
+rio.
+RNF-016 Validación Los errores de entrada deberán mostrarse in-
+dicando exactamente el dato que presenta in-
+consistencias.
+10.5 RNF05. Auditoría
+ID Nombre Descripción
+RNF-017 Registro de accio-
+nes
+El sistema deberá almacenar un historial de las
+operacionescríticasrealizadasporlosusuarios.
+RNF-018 Historial Las modificaciones realizadas sobre horarios,
+préstamos, observaciones, tareas, multas y cre-
+denciales deberán conservar su historial.
+RNF-019 Identificación Cada registro deberá indicar el usuario respon-
+sable, fecha y hora de la operación realizada.
+10.6 RNF06. Integridad
+ID Nombre Descripción
+RNF-020 Consistencia El sistema deberá impedir la generación de re-
+gistros duplicados.
+RNF-021 Validación de da-
+tos
+Toda la información importada desde archivos
+Excel deberá validarse antes de almacenarse.
+RNF-022 Restricciones No podrán eliminarse registros que comprome-
+tan la consistencia histórica del sistema.
+10.7 RNF07. Compatibilidad
+ID Nombre Descripción
+RNF-023 Navegadores El sistema deberá ser compatible con los prin-
+cipales navegadores web actuales.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 44 de 65
+===== PAGE 46 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+ID Nombre Descripción
+RNF-024 Resoluciones La interfaz deberá adaptarse correctamente a
+diferentes resoluciones de pantalla utilizadas
+por el personal administrativo.
+RNF-025 Formatos El sistema deberá soportar la importación y
+exportación de archivos en formato Microsoft
+Excel y PDF.
+10.8 RNF08. Escalabilidad
+ID Nombre Descripción
+RNF-026 Nuevos módulos La arquitectura deberá permitir incorporar
+nuevos módulos sin afectar el funcionamiento
+de los existentes.
+RNF-027 Nuevas aulas El sistema deberá permitir registrar nuevas au-
+las,equiposysoftwaresinrequerirmodificacio-
+nes estructurales.
+RNF-028 Integración La arquitectura deberá facilitar la integración
+con otros sistemas institucionales mediante in-
+terfaces de programación (API).
+10.9 RNF09. Respaldo
+ID Nombre Descripción
+RNF-029 Copias de seguri-
+dad
+La información del sistema deberá respaldarse
+periódicamente para evitar pérdidas de infor-
+mación.
+RNF-030 Recuperación El sistema deberá permitir restaurar la infor-
+mación a partir de las copias de seguridad dis-
+ponibles.
+10.10 RNF10. Mantenibilidad
+ID Nombre Descripción
+RNF-031 Modularidad El sistema deberá desarrollarse mediante una
+arquitectura modular que facilite el manteni-
+miento y la incorporación de nuevas funciona-
+lidades.
+RNF-032 Documentación El sistema deberá contar con documentación
+técnica y de usuario actualizada.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 45 de 65
+===== PAGE 47 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+ID Nombre Descripción
+RNF-033 Calidad del códi-
+go
+El código fuente deberá seguir estándares de
+desarrollo que faciliten su comprensión y man-
+tenimiento.
+11 Arquitectura del Sistema
+La arquitectura del Sistema de Gestión Operativa de las Aulas de Software se plantea
+bajo una estructura modular y desacoplada, orientada a separar la interfaz de usuario, la
+lógica de negocio, la persistencia de la información y los servicios de integración con otros
+aplicativos.
+La solución estará conformada por un frontend común desde el cual el usuario podrá
+accederalosaplicativosparaloscualestengaautorización,unaAPIpropiaparalaGestión
+de Aulas y una API independiente para la Gestión de Monitores.
+Cada aplicativo conservará su propia lógica de negocio y su propia base de datos. La
+información de autenticación, usuarios, roles y permisos será administrada de manera
+centralizada por el Sistema de Gestión de Aulas.
+Esta separación permitirá que cada aplicativo administre únicamente la información co-
+rrespondiente a su dominio, evitando dependencias directas entre bases de datos y facili-
+tando el mantenimiento y evolución futura de la solución.
+11.1 Componentes principales
+La solución estará compuesta por los siguientes componentes principales:
+Frontend:será la interfaz utilizada por los usuarios para seleccionar el aplicativo al
+cual desean ingresar, realizar el proceso de autenticación y utilizar posteriormente las
+funcionalidades disponibles.
+Una vez autenticado y autorizado el usuario, el frontend se comunicará directamente
+con la API correspondiente al aplicativo seleccionado: Gestión de Aulas o Gestión de
+Monitores.
+API de Gestión de Aulas:será desarrollada utilizando NestJS con TypeScript y
+será responsable de implementar la lógica de negocio relacionada con la operación de
+las Aulas de Software.
+Adicionalmente,seráresponsabledelaautenticacióndetodoslosusuariosdelsistemay
+de la administración de usuarios, roles, permisos, dependencias y módulos habilitados.
+Base de datos de Gestión de Aulas:almacenará la información operativa propia
+del sistema, incluyendo usuarios, credenciales de acceso, roles, permisos, dependen-
+cias, aulas, horarios, préstamos, software, equipos audiovisuales, multas, observacio-
+nes, tareas, limpieza, credenciales operativas y demás información correspondiente a
+los procesos definidos.
+Esta base de datos será lafuente única de autenticación y autorizaciónpara los
+usuarios de la solución.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 46 de 65
+===== PAGE 48 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+API de Gestión de Monitores:corresponde al backend del aplicativo existente de
+Monitores y conservará su implementación en Python.
+Su responsabilidad estará limitada a la administración de la información propia de los
+monitores y al registro, consulta y administración de sus horas.
+Esta API no almacenará contraseñas, roles o permisos de acceso de los usuarios.
+Base de datos de Monitores:almacenará exclusivamente la información funcional
+correspondiente a los monitores y sus registros de horas, sin duplicar la información
+de autenticación, roles o permisos administrada por Gestión de Aulas.
+Módulo de autenticación y autorización:estará integrado en la API de Gestión
+de Aulas y será responsable de validar las credenciales de los usuarios y determinar a
+qué aplicativos, módulos y funcionalidades pueden acceder.
+11.2 Arquitectura general
+El frontend funcionará como punto de entrada común para los usuarios.
+Antes de iniciar sesión, el usuario seleccionará el aplicativo al cual desea ingresar, por
+ejemplo Gestión de Aulas o Gestión de Monitores.
+Independientemente del aplicativo seleccionado, las credenciales serán enviadas inicial-
+mente a la API de Gestión de Aulas, debido a que esta administra la fuente única de
+usuarios, autenticación y permisos.
+La API de Gestión de Aulas comprobará:
+que el usuario exista;
+que la cuenta se encuentre habilitada;
+que las credenciales sean válidas;
+que el usuario tenga permiso para acceder al aplicativo seleccionado.
+Si el usuario no cuenta con el permiso correspondiente, el acceso será rechazado.
+Si el usuario se encuentra autorizado, el sistema establecerá el mecanismo de sesión o
+autenticación correspondiente y permitirá el ingreso al aplicativo seleccionado.
+A partir de este momento, el frontend podrá comunicarse directamente con la API co-
+rrespondiente al aplicativo utilizado.
+Para Gestión de Aulas:
+Frontend→API Gestión de Aulas→BD Gestión de Aulas
+Para Gestión de Monitores:
+Frontend→API Monitores→BD Monitores
+La API de Monitores deberá validar que las solicitudes correspondan a un usuario pre-
+viamente autenticado y autorizado para utilizar dicho aplicativo.
+Adicionalmente, podrán existir comunicaciones directas entre las APIs cuando un proceso
+de negocio realmente lo requiera.
+Por ejemplo, cuando se registre un nuevo monitor desde el aplicativo de Gestión de Mo-
+nitores, la API de Monitores podrá realizar una solicitud a la API de Gestión de Aulas
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 47 de 65
+===== PAGE 49 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+para crear el usuario correspondiente.
+De manera similar, cuando un proceso propio de Gestión de Aulas requiera información
+almacenada en el dominio de Monitores, podrá realizar la consulta correspondiente me-
+diante su API.
+En ningún caso una API accederá directamente a la base de datos perteneciente al otro
+aplicativo.
+FRONTEND
+Selección de aplicativo
+API GESTIÓN
+DE AULAS
+Autenticación
+y permisos
+GESTIÓN
+DE AULAS
+NestJS / TypeScript
+API MONITORES
+Python
+BD GESTIÓN
+DE AULAS
+operación, usuarios,
+roles, permisos, auth
+BD MONITORES
+monitores, horas
+login y
+autorización
+si accede a Aulas
+si accede a Monitores
+consultas requeridas
+creación de usuario
+Figura 1: Arquitectura conceptual del sistema. La autenticación y autorización se realizan
+mediante Gestión de Aulas y, posteriormente, el frontend utiliza la API correspondiente
+al aplicativo autorizado. Las líneas punteadas representan comunicaciones internas entre
+APIs cuando un proceso lo requiere.
+La Base de Datos de Gestión de Aulas almacenará tanto la información operativa de
+las Aulas de Software como la información relacionada con usuarios, roles, permisos y
+autenticación.
+Será la única base de datos encargada de almacenar la información necesaria para la
+autenticación de los usuarios.
+La Base de Datos de Monitores permanecerá independiente y estará destinada únicamente
+a la información correspondiente a los monitores y al registro de sus horas.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 48 de 65
+===== PAGE 50 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+De esta manera, cada aplicativo mantiene la responsabilidad sobre su propia información,
+mientras que la autenticación y autorización se mantienen centralizadas.
+11.3 Tecnologías de backend
+La API de Gestión de Aulas será desarrollada utilizandoNestJS con TypeScript,
+aprovechando su estructura modular para organizar los diferentes procesos funcionales
+del sistema.
+La organización modular permitirá separar responsabilidades como autenticación, usua-
+rios, permisos, aulas, horarios, disponibilidad, préstamos, audiovisuales, software, multas,
+tareas, reportes e integraciones externas.
+Cada módulo funcional podrá definir sus propios controladores, servicios, validaciones y
+endpoints, manteniendo las convenciones generales establecidas para la API.
+El aplicativo de Gestión de Monitores conservará su implementación enPython.
+La diferencia de tecnologías entre ambos backends no genera una dependencia técnica,
+debido a que la comunicación se realizará mediante servicios API, utilizando protocolos
+y formatos de intercambio independientes del lenguaje de programación utilizado.
+11.4 Autenticación y autorización
+La autenticación de todos los usuarios será administrada por la API de Gestión de Aulas
+contra su propia base de datos.
+La Base de Datos de Gestión de Aulas será la fuente principal y única de información
+para:
+usuarios;
+correos electrónicos;
+credenciales de acceso;
+roles;
+permisos;
+dependencias;
+módulos habilitados;
+acceso a los aplicativos;
+estado de las cuentas.
+Las contraseñas de los usuarios no deberán almacenarse en texto plano. La base de datos
+almacenará únicamente su representación mediante un mecanismo seguro de hash.
+El sistema podrá utilizar el correo electrónico registrado para realizar procesos de verifi-
+cación, activación o recuperación de las cuentas.
+El flujo general de autenticación será:
+Seleccionar aplicativo→Ingresar credenciales→Validar usuario→Validar
+permiso→Autorizar o rechazar acceso
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 49 de 65
+===== PAGE 51 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+Todo usuario del sistema, incluidos los monitores, se autenticará utilizando este mismo
+mecanismo.
+Cuando una persona se registre como monitor desde el aplicativo de Gestión de Monitores,
+la API de Monitores solicitará a la API de Gestión de Aulas la creación del usuario
+correspondiente.
+De forma independiente se creará el registro funcional del monitor en la Base de Datos
+de Monitores.
+La relación entre ambos registros podrá mantenerse mediante un identificador compartido
+o referencia lógica definida durante la implementación.
+Una vez autenticado el usuario, se establecerá un mecanismo de sesión o token que permita
+identificarlo durante las solicitudes posteriores.
+Dicho mecanismo deberá poder ser validado por la API correspondiente al aplicativo
+utilizado, evitando la necesidad de realizar un segundo inicio de sesión.
+11.5 Acceso a los aplicativos
+El usuario seleccionará inicialmente el aplicativo al cual desea ingresar.
+La API de Gestión de Aulas validará si la cuenta posee autorización para acceder al
+aplicativo seleccionado.
+Por ejemplo, un técnico podrá tener acceso a Gestión de Aulas pero no a Gestión de
+Monitores.
+Si dicho usuario selecciona Gestión de Monitores, el sistema deberá rechazar el acceso
+antes de permitir el uso de las funcionalidades de ese aplicativo.
+Si se encuentra autorizado, podrá ingresar y el frontend comenzará a consumir directa-
+mente los servicios ofrecidos por la API de Monitores.
+La validación de permisos deberá realizarse en los componentes backend correspondientes.
+La ocultación de botones, menús o aplicaciones en el frontend será utilizada únicamente
+como apoyo a la experiencia de usuario y no sustituirá las validaciones de seguridad
+realizadas por las APIs.
+11.6 Comunicación entre APIs
+La comunicación directa entre la API de Gestión de Aulas y la API de Monitores se
+utilizará únicamente cuando un proceso requiera información o acciones propias del otro
+dominio.
+Entre los casos inicialmente contemplados se encuentran:
+Gestión de Aulas hacia Monitores:consulta de información relacionada con mo-
+nitores o sus registros de horas cuando sea requerida por un proceso del sistema.
+Monitores hacia Gestión de Aulas:solicitud de creación del usuario correspon-
+diente cuando se registre un nuevo monitor.
+Estas comunicaciones se realizarán mediante contratos de API claramente definidos.
+Ninguna de las aplicaciones deberá consultar o modificar directamente las tablas perte-
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 50 de 65
+===== PAGE 52 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+necientes a la base de datos del otro sistema.
+11.7 Comunicación y CORS
+La comunicación entre el frontend y las APIs se realizará mediante HTTP o HTTPS.
+Debido a que el frontend podrá consumir tanto la API de Gestión de Aulas como la API
+de Monitores, ambas APIs deberán configurar adecuadamente sus políticas CORS cuando
+se encuentren publicadas en un origen diferente al utilizado por el frontend.
+Laspolíticasdeberánpermitirúnicamentelosorígenesautorizadosparautilizarelsistema.
+CORS será utilizado como un mecanismo de control aplicado por el navegador y no como
+el mecanismo de comunicación entre los componentes.
+La comunicación directa entre la API de Gestión de Aulas y la API de Monitores será
+realizada entre servidores y, por lo tanto, no dependerá de CORS.
+11.8 Despliegue
+Los diferentes componentes de la solución podrán ser desplegados dentro del servidor
+destinado para el sistema.
+Conceptualmente, el despliegue estará compuesto por:
+frontend;
+API de Gestión de Aulas;
+API de Gestión de Monitores;
+Base de Datos de Gestión de Aulas;
+Base de Datos de Monitores.
+Los componentes podrán ejecutarse como servicios independientes dentro de la misma
+infraestructura, permitiendo administrar su despliegue, actualización y configuración de
+forma separada.
+Las comunicaciones internas entre servicios podrán realizarse dentro de la infraestructura
+del servidor cuando corresponda, limitando la exposición externa de componentes que no
+requieran acceso público.
+11.9 Escalabilidad y mantenibilidad
+La arquitectura modular deberá permitir incorporar nuevas funcionalidades sin afectar
+significativamente los procesos existentes.
+Cada módulo del backend deberá mantener responsabilidades claramente definidas y evi-
+tar dependencias innecesarias con otros módulos.
+Los equipos responsables de cada módulo podrán implementar su lógica de negocio, per-
+sistencia y endpoints correspondientes, utilizando las convenciones generales establecidas
+para el proyecto.
+La integración mediante APIs permitirá incorporar en el futuro nuevos aplicativos o ser-
+vicios sin requerir acceso directo a las bases de datos existentes.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 51 de 65
+===== PAGE 53 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+Asimismo, el uso de contratos de API permitirá que diferentes aplicativos puedan utilizar
+tecnologías o lenguajes de programación distintos, siempre que mantengan los formatos y
+servicios definidos para la comunicación.
+12 Modelo de Datos
+El modelo de datos define la información que será gestionada por el Sistema de Gestión
+Operativa de las Aulas de Software y las relaciones conceptuales existentes entre los
+diferentes elementos que participan en los procesos de la dependencia.
+El modelo se plantea de forma modular, de manera que la información pueda ser organi-
+zada de acuerdo con los procesos funcionales definidos para el sistema. La implementación
+física de las tablas, llaves, índices, cardinalidades y restricciones será definida durante la
+etapa de desarrollo.
+Como se describió en la sección de Arquitectura, el Sistema de Gestión de Aulas cuenta
+con una base de datos propia que almacena tanto la información operativa de las Aulas de
+Software como la información de usuarios, autenticación, roles y permisos. La información
+propia de los monitores continúa siendo administrada por el aplicativo de Monitores y su
+respectiva base de datos, evitando el acceso directo entre bases de datos y la duplicación
+innecesaria de información.
+12.1 Entidades principales
+Las principales entidades conceptuales identificadas para el Sistema de Gestión de Aulas
+son las siguientes:
+Usuario:representa a las personas autorizadas para utilizar el sistema (incluye tanto a
+los usuarios administrativos como a los monitores). Contiene la información necesaria
+para la identificación y autenticación del usuario, como nombre de usuario, correo
+electrónico, contraseña almacenada mediante un mecanismo seguro de hash, estado,
+dependencia y demás información administrativa.
+Rol:representa una agrupación general de responsabilidades o permisos que puede
+utilizarse como base para la configuración de acceso de los usuarios.
+Permiso:representa una autorización específica para acceder o realizar determinadas
+operaciones dentro del sistema. Los permisos podrán ser asignados de acuerdo con las
+funciones reales de cada usuario, evitando que el acceso dependa exclusivamente de su
+cargo contractual.
+Módulo:representa cada una de las áreas funcionales disponibles dentro del sistema,
+como aulas, horarios, préstamos, audiovisuales, software, multas, tareas, credenciales,
+reportes o monitores.
+Dependencia:representa las diferentes áreas o dependencias a las que puede pertene-
+cer un usuario. Inicialmente se contemplan Aulas de Software, Eléctrica y Electrónica
+y Física.
+Aula:representa cada espacio físico administrado por las Aulas de Software. Contiene
+información como identificación, ubicación, capacidad y características generales del
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 52 de 65
+===== PAGE 54 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+aula.
+PeriodoAcadémico:representa el periodo académico al cual pertenece una progra-
+mación de clases, permitiendo diferenciar semestres, intersemestrales u otros periodos
+establecidos por la Universidad.
+ClaseProgramada:representa cada registro de la programación académica importa-
+da desde los archivos oficiales de horarios. Contiene información como día, hora, aula,
+grupo, asignatura, proyecto curricular, docente y cantidad de estudiantes inscritos.
+Docente:representa a los profesores asociados a las clases programadas y a los pro-
+cesos de préstamo de aulas o equipos audiovisuales.
+Asignatura:representa las asignaturas asociadas a la programación académica.
+ProyectoCurricular:representa el proyecto curricular relacionado con una asigna-
+tura, aula o programación académica cuando corresponda.
+AsistenciaDocente:registra la confirmación de asistencia o inasistencia de un do-
+cente a una clase programada. Esta información será utilizada por el sistema para
+apoyar el cálculo de disponibilidad de las aulas.
+Estudiante:representa a los estudiantes que utilizan los servicios de práctica libre y
+que pueden estar asociados a multas o restricciones de uso.
+Software:representa las aplicaciones y programas disponibles o requeridos para el
+desarrollo de actividades académicas.
+AulaSoftware:representa la asociación entre un aula y el software disponible o ins-
+talado en ella, permitiendo realizar consultas por aula o por aplicación.
+PrácticaLibre:representaelpréstamodeespaciosoestacionesrealizadoaestudiantes
+durante los periodos en los que un aula se encuentra disponible. Registra información
+como estudiante, aula, hora de ingreso, devolución y estado del préstamo.
+PréstamoDocente:representa una reserva o préstamo temporal de un aula realizado
+a un docente fuera de la programación académica ordinaria o como modificación de
+esta.
+EquipoAudiovisual:representa los recursos disponibles para préstamo, como video-
+beams, cables HDMI, adaptadores, controles, extensiones y demás elementos relacio-
+nados.
+PréstamoAudiovisual:representa cada operación de préstamo de equipos audiovi-
+suales realizada a un docente. Incluye información del responsable, aula de destino,
+fecha y hora de salida, devolución estimada, devolución real y estado general del prés-
+tamo.
+DetallePréstamoAudiovisual:representa los equipos individuales asociados a un
+préstamo audiovisual, permitiendo que una misma operación incluya varios elementos.
+Multa:representa una sanción no monetaria asociada a un estudiante por incumpli-
+miento de las normas establecidas para el uso de las Aulas de Software.
+MotivoMulta:representa el catálogo de motivos por los cuales puede generarse una
+multa, como retrasos en la devolución, consumo de alimentos, uso inadecuado de los
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 53 de 65
+===== PAGE 55 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+espacios o incumplimiento de las reglas establecidas.
+Observación:registranovedades,situaciones,eventos,advertenciasoacontecimientos
+relevantes identificados durante la operación diaria de las aulas.
+Tarea:representa las actividades operativas, técnicas o de mantenimiento que deben
+ser realizadas por el personal.
+Limpieza:registra las actividades de limpieza realizadas en las diferentes aulas, per-
+mitiendo consultar el historial de atención de cada espacio.
+CredencialOperativa:representa las credenciales utilizadas para administrar equi-
+pos, servidores, licencias, dispositivos de red u otros recursos tecnológicos de la depen-
+dencia. Estas credenciales son diferentes de las contraseñas utilizadas por los usuarios
+para iniciar sesión en el sistema.
+AccesoCredencial:representa las autorizaciones específicas para consultar o admi-
+nistrar determinadas credenciales operativas, permitiendo establecer controles más res-
+trictivos que los permisos generales de acceso al módulo.
+12.2 Información calculada
+No toda la información presentada por el sistema deberá almacenarse directamente como
+una entidad independiente.
+La disponibilidad de las aulas será calculada dinámicamente a partir de la información
+existente en otros procesos, incluyendo principalmente:
+programación académica;
+asistencia docente;
+préstamos docentes;
+prácticas libres;
+bloqueos o indisponibilidades;
+tareas o mantenimientos que afecten el uso del espacio;
+fecha y hora actual.
+Por esta razón, la disponibilidad se considera una regla o servicio de negocio del sistema
+y no un valor que deba ser registrado manualmente de forma permanente en la base de
+datos.
+De manera similar, el panel operativo, los indicadores y algunos reportes serán construidos
+a partir de la información almacenada en las diferentes entidades del sistema.
+12.3 Relación entre usuarios y monitores
+Toda persona registrada como monitor corresponde también a unUsuariodel Sistema
+de Gestión de Aulas, ya que ese es el único mecanismo de autenticación del sistema (ver
+Arquitectura, sección de Autenticación y autorización). Al registrar un monitor desde el
+aplicativo de Monitores, se crea el usuario correspondiente en la base de datos de Gestión
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 54 de 65
+===== PAGE 56 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+de Aulas y, de forma independiente, el registro funcional del monitor en la base de datos
+de Monitores.
+Para mantener esta relación entre ambos registros sin generar dependencia directa entre
+bases de datos, se utilizará un identificador externo que permita asociar conceptualmente
+elUsuariode Gestión de Aulas con su correspondiente registro en la base de datos de
+Monitores. Debido a que la información pertenece a bases de datos independientes, esta
+relación no requerirá una llave foránea directa entre ambas bases de datos.
+12.4 Fuentes y mecanismos de carga de información
+La información del sistema podrá ser incorporada mediante diferentes mecanismos depen-
+diendo del proceso.
+Entre las principales fuentes de información se contemplan:
+Registro manual:utilizado para operaciones realizadas durante la jornada, como
+préstamos, devoluciones, asistencia docente, observaciones, tareas, multas y registros
+de limpieza.
+Carga mediante archivos de Excel:utilizada para información que ya es suminis-
+trada mediante archivos estructurados, como la programación académica oficial y la
+información de software disponible en las aulas.
+Integración mediante API:utilizada para consultar información de monitores (Au-
+las→Monitores) y para crear el usuario correspondiente cuando se registra un nuevo
+monitor (Monitores→Aulas).
+Los archivos de Excel deberán ser procesados mediante mecanismos de validación antes
+de incorporar la información a la base de datos.
+El sistema deberá identificar registros incompletos, inconsistentes, duplicados o archivos
+cuya estructura no corresponda con el formato esperado.
+Cuando se realicen nuevas cargas válidas, la información deberá actualizarse sin generar
+duplicados ni registros obsoletos derivados de importaciones anteriores.
+12.5 Historial y trazabilidad
+El modelo deberá permitir conservar el historial de las operaciones relevantes realizadas
+dentro del sistema.
+En particular, deberá ser posible consultar la evolución de procesos como:
+préstamos y devoluciones;
+asistencia docente;
+multas;
+observaciones;
+tareas;
+actividades de limpieza;
+cambios en credenciales operativas;
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 55 de 65
+===== PAGE 57 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+modificaciones realizadas sobre información crítica.
+Las operaciones que requieran auditoría deberán permitir identificar, cuando corresponda,
+el usuario responsable, la fecha y la hora de realización.
+12.6 Consideraciones del modelo
+El modelo de datos deberá permitir la ampliación futura del sistema sin requerir modifi-
+caciones estructurales importantes.
+En particular, deberá facilitar la incorporación de nuevos:
+módulos;
+usuarios;
+permisos;
+dependencias;
+aulas;
+equipos;
+tipos de préstamo;
+procesos operativos.
+El diseño deberá evitar la duplicación innecesaria de información y mantener separadas
+las responsabilidades correspondientes a Gestión de Aulas y Gestión de Monitores.
+Elmodelopresentadoenestaetapacorrespondeaunadefiniciónconceptual. Laestructura
+física definitiva de las bases de datos será establecida durante la implementación, de
+acuerdo con las necesidades técnicas del backend y las relaciones identificadas entre las
+entidades.
+13 Gestión de Usuarios, Dependencias y Permisos
+Esta sección describe el proceso funcional de administración de usuarios: el formulario de
+administración, las reglas para asignar dependencias y permisos, y la relación entre cargo
+y acceso. El mecanismo técnico de autenticación y la base de datos que lo soporta ya se
+describieron en la sección de Arquitectura.
+Los usuarios podrán pertenecer a diferentes dependencias de la Facultad de Ingeniería.
+Inicialmente se contemplan las siguientes dependencias:
+Aulas de Software.
+Eléctrica y Electrónica.
+Física.
+Cada usuario contará con información básica como nombre, nombre de usuario, correo
+electrónico, contraseña, dependencia, cargo y estado.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 56 de 65
+===== PAGE 58 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+13.1 Administración de usuarios
+El usuario con permisos de administración podrá crear, modificar, desactivar y consultar
+usuarios mediante un formulario destinado para este propósito.
+El formulario permitirá registrar la información básica del usuario y seleccionar la depen-
+dencia a la que pertenece. Adicionalmente, permitirá seleccionar de manera individual los
+módulos a los cuales tendrá acceso.
+Los usuarios correspondientes a monitores no se crean desde este formulario: se generan
+automáticamentecuandoseregistraelmonitordesdeelaplicativodeGestióndeMonitores
+(ver Arquitectura y Modelo de Datos). El administrador de Gestión de Aulas sí podrá,
+posteriormente, ajustar los permisos de ese usuario si el monitor requiere acceso a módulos
+adicionales.
+Los permisos no estarán determinados exclusivamente por el cargo del usuario. Esto per-
+mitirá adaptar el sistema a los diferentes tipos de contratación y a los cambios en las
+funciones asignadas al personal sin necesidad de modificar la estructura del sistema.
+13.2 Gestión de permisos
+Los permisos estarán asociados directamente con las funcionalidades del sistema. De es-
+ta manera, un usuario podrá tener acceso a uno o varios módulos dependiendo de las
+funciones que tenga asignadas.
+Entre los módulos que podrán ser administrados mediante permisos se encuentran:
+Dashboard.
+Gestión de horarios.
+Gestión de aulas.
+Prácticas libres.
+Préstamos docentes.
+Equipos audiovisuales.
+Software instalado.
+Multas.
+Observaciones.
+Limpieza.
+Tareas operativas.
+Gestión de monitores.
+Credenciales.
+Reportes.
+Administración del sistema.
+El administrador podrá seleccionar los módulos que estarán disponibles para cada usuario
+desde el formulario de administración.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 57 de 65
+===== PAGE 59 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+13.3 Cargo y permisos
+El cargo del usuario se almacenará como información administrativa y de identificación,
+pero no será utilizado como único criterio para determinar los permisos de acceso.
+Esta separación permitirá que personas con cargos diferentes puedan tener los mismos
+permisos, o que personas con el mismo cargo puedan tener diferentes responsabilidades
+dentro del sistema.
+Porejemplo, dos usuariosque pertenezcan ala mismadependenciapodrántener diferentes
+permisos de acuerdo con las funciones específicas asignadas a cada uno.
+13.4 Acceso por dependencia
+La dependencia permitirá identificar el área a la que pertenece cada usuario y facilitará
+la organización y administración de los permisos.
+Inicialmente se contemplan las dependencias de Aulas de Software, Eléctrica y Electrónica
+y Física. La estructura deberá permitir agregar nuevas dependencias en el futuro sin
+modificar la arquitectura principal del sistema.
+14 Plan de Desarrollo y Organización del Equipo
+El desarrollo del Sistema de Gestión Operativa de las Aulas de Software será realizado
+por un equipo de ocho integrantes, organizados en diferentes frentes de trabajo con el
+propósito de desarrollar funcionalidades de manera paralela y reducir el tiempo necesario
+para disponer de una primera versión funcional.
+Debidoaquelosintegrantesdelequipononecesariamentecoincidenenlosmismoshorarios
+de trabajo, se utilizará una metodología de desarrollo ágil basada en Scrum, adaptada a las
+condicionesdelproyectoycomplementadaconmecanismosdecomunicaciónyseguimiento
+asíncronos.
+El proyecto tendrá una duración máxima estimada de tres meses para alcanzar una versión
+funcional, probada y desplegable. No obstante, se buscará disponer de una primera versión
+utilizable y comenzar pruebas piloto antes de finalizar el segundo mes de desarrollo.
+14.1 Organización del equipo
+Para permitir el desarrollo paralelo, el equipo se dividirá inicialmente en cuatro frentes
+de trabajo.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 58 de 65
+===== PAGE 60 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+Frente Personas Responsabilidad inicial
+Frontend 2 Construcción de la interfaz de usuario a partir del
+prototipo desarrollado en Figma y Aplicativo de
+Monitores, incluyendo navegación, componentes
+visuales, formularios y conexión progresiva con las
+APIs correspondientes. El frontend utilizará la API
+de Gestión de Aulas para autenticación y validación
+de permisos y, una vez autorizado el usuario, se
+comunicará con la API correspondiente al aplicativo
+o módulo utilizado.
+Core operativo 3 Desarrollo integral de los módulos que conforman el
+núcleo operativo del sistema, incluyendo su lógica de
+negocio, persistencia, endpoints y pruebas.
+Inicialmente comprenderá aulas, horarios, asistencia
+docente, disponibilidad, prácticas libres, préstamos
+docentes y demás procesos directamente relacionados
+con el cálculo de disponibilidad y la operación diaria.
+Módulos
+paralelos
+2 Desarrollo integral de módulos con menor
+dependencia del núcleo operativo. Inicialmente se
+trabajará sobre la gestión y préstamos de equipos
+audiovisuales. Posteriormente, los integrantes podrán
+continuar con software, multas, credenciales u otros
+módulos pendientes y apoyar la integración del núcleo
+cuando sea necesario.
+Plataforma e
+integración
+1 Implementación de los componentes transversales del
+sistema, incluyendo autenticación, usuarios, roles,
+permisos, configuración base de NestJS, mecanismos
+comunes de autorización, integración entre Gestión de
+Aulas y Gestión de Monitores y adecuación de la API
+existente de Monitores. También será responsable de
+establecer y mantener las convenciones comunes
+utilizadas por las APIs y apoyar a los demás frentes
+durante los procesos de integración.
+Cuadro 28: Distribución inicial del equipo de desarrollo.
+Esta distribución no será permanente. Los integrantes podrán ser redistribuidos entre los
+diferentes frentes de acuerdo con el avance del proyecto, las dependencias desbloqueadas
+y las prioridades definidas para cada iteración.
+14.2 Desarrollo paralelo
+La arquitectura definida permite desarrollar diferentes componentes de manera paralela.
+Algunas funcionalidades presentan una dependencia directa entre sí y deberán ser coor-
+dinadas principalmente por el equipo encargado del núcleo operativo.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 59 de 65
+===== PAGE 61 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+Entre estas funcionalidades se encuentran:
+programación académica;
+asistencia docente;
+disponibilidad de aulas;
+prácticas libres;
+préstamos docentes;
+observaciones o bloqueos que afecten la disponibilidad;
+panel operativo.
+Otras funcionalidades presentan un menor nivel de dependencia respecto al núcleo y po-
+drán desarrollarse paralelamente, entre ellas:
+préstamos de equipos audiovisuales;
+gestión de software;
+usuarios y permisos;
+integración con Monitores;
+multas;
+credenciales operativas.
+Los módulos de tareas, limpieza, reportes e indicadores podrán comenzar una vez se
+encuentren disponibles las estructuras de información necesarias para su funcionamiento.
+14.3 Metodología de trabajo
+El proyecto utilizará una metodología basada en Scrum con iteraciones cortas.
+Debido al tiempo disponible y a la necesidad de obtener retroalimentación rápidamente,
+se utilizarán inicialmentesprints de una semana.
+Cada sprint tendrá como objetivo entregar funcionalidades utilizables e integradas, evi-
+tando desarrollar durante largos periodos componentes aislados que únicamente sean in-
+tegrados al finalizar el proyecto.
+Las actividades principales de cada sprint serán:
+Planificación:selección de los requerimientos y funcionalidades que serán desarrolla-
+dos durante la semana.
+Desarrollo:implementación de las tareas asignadas por los diferentes frentes de tra-
+bajo.
+Seguimiento asíncrono:cada integrante registrará periódicamente el trabajo reali-
+zado, el trabajo siguiente y los posibles bloqueos encontrados.
+Integración continua:las funcionalidades terminadas serán integradas progresiva-
+mente durante el sprint.
+Revisión:al finalizar la iteración se comprobará el funcionamiento de las funcionali-
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 60 de 65
+===== PAGE 62 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+dades desarrolladas.
+Ajuste del backlog:los errores, nuevas necesidades o modificaciones identificadas
+serán incorporados y priorizados para las siguientes iteraciones.
+14.4 Gestión del backlog
+Los 165 requerimientos funcionales definidos serán utilizados como base para construir y
+priorizar el backlog del proyecto.
+Sin embargo, el avance no será medido únicamente mediante la cantidad de requerimien-
+tos implementados, debido a que diferentes requerimientos pueden presentar niveles de
+complejidad considerablemente distintos.
+Los requerimientos serán agrupados en funcionalidades o flujos operativos que puedan ser
+utilizados y evaluados de extremo a extremo.
+Por ejemplo, el flujo de disponibilidad requiere la integración de varios elementos:
+Horario→Asistencia Docente→Estado del Aula→Disponibilidad→Préstamo
+Por esta razón, se priorizará la entrega de procesos completamente funcionales sobre la
+implementación aislada de requerimientos individuales.
+14.5 Definición de funcionalidad terminada
+Una funcionalidad no será considerada terminada únicamente porque su código haya sido
+implementado.
+Para considerar una funcionalidad finalizada deberá cumplir, cuando corresponda, con los
+siguientes criterios:
+lógica de backend implementada;
+persistencia de información implementada;
+endpoint o contrato de API definido;
+validaciones correspondientes implementadas;
+permisos de acceso aplicados;
+frontend conectado con la API real;
+manejo básico de errores;
+pruebas básicas realizadas;
+código integrado a la rama principal de desarrollo;
+revisión del código por otro integrante del equipo.
+Este criterio permitirá que el porcentaje de avance represente funcionalidades realmente
+utilizables y no únicamente código desarrollado.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 61 de 65
+===== PAGE 63 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+14.6 Uso de desarrollo asistido por inteligencia artificial
+El equipo podrá utilizar herramientas de desarrollo asistido por inteligencia artificial,
+incluyendo Codex, para apoyar actividades como generación de código, pruebas, refacto-
+rización, documentación y análisis de errores.
+Estas herramientas serán consideradas mecanismos de apoyo y aceleración del desarrollo,
+pero el código generado deberá ser revisado antes de incorporarse a la versión principal
+del sistema.
+La indisponibilidad temporal o los límites de utilización de estas herramientas no deberán
+detener completamente el trabajo del equipo. Durante estos periodos podrán realizarse
+actividades como:
+revisión de código;
+diseño de contratos de API;
+pruebas manuales y automatizadas;
+documentación;
+validación de requerimientos;
+revisión del modelo de datos;
+preparación de tareas posteriores;
+revisión e integración de cambios desarrollados por otros miembros.
+14.7 Cronograma general
+El proyecto tendrá como objetivo alcanzar una versión funcional completa en un periodo
+máximo aproximado de doce semanas.
+El cronograma general se plantea en tres etapas.
+Periodo Objetivo principal
+Mes 1 Construcción de la base técnica del sistema y desarrollo de los
+principales módulos independientes y componentes que alimentarán el
+núcleo operativo.
+Mes 2 Finalización del núcleo operativo, integración de módulos,
+construcción del panel de operación y preparación de una primera
+versión suficientemente completa para realizar pruebas piloto.
+Mes 3 Ejecución y ampliación del piloto, corrección de errores, incorporación
+de funcionalidades faltantes, pruebas, optimización, documentación y
+preparación de la versión estable.
+Cuadro 29: Plan general de ejecución del proyecto.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 62 de 65
+===== PAGE 64 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+14.8 Plan inicial por semanas
+Como referencia inicial, se propone la siguiente distribución. Esta planificación podrá
+modificarse durante el proyecto de acuerdo con los resultados obtenidos en cada sprint.
+Semana Objetivo principal
+1 Configuración de repositorios, estructura del backend en NestJS, base de
+datos, frontend inicial, autenticación, usuarios, permisos y definición de
+contratos de API.
+2 Administración de aulas, estructura de horarios, componentes
+principales del frontend e inicio del módulo de audiovisuales.
+3 Importación y administración de horarios, software por aula y
+continuación del flujo completo de préstamos audiovisuales.
+4 Asistencia docente, estados de aula y primera versión del motor de
+disponibilidad.
+5 Prácticas libres, estudiantes, multas y préstamos docentes.
+6 Observaciones, tareas operativas, limpieza e integración progresiva del
+panel operativo.
+7 Dashboard operativo, integración con Monitores, credenciales y
+funcionalidades pendientes de los módulos desarrollados.
+8 Integración general, pruebas internas y preparación de una primera
+versión piloto.
+9 Inicio del piloto con usuarios y operación controlada. Registro y
+priorización de errores y mejoras identificadas.
+10 Corrección de incidencias del piloto, reportes y funcionalidades
+pendientes.
+11 Pruebas generales, mejoras de seguridad, rendimiento, usabilidad y
+estabilización de la solución.
+12 Correcciones finales, documentación técnica, preparación del despliegue
+y versión estable del sistema.
+Cuadro 30: Planificación inicial del desarrollo por semanas.
+14.9 Prueba piloto
+La prueba piloto deberá realizarse tan pronto como exista un conjunto de procesos sufi-
+cientemente integrado para representar la operación real de las Aulas de Software.
+Se establece como objetivo disponer de una versión interna utilizable aproximadamente
+entre las semanas seis y ocho e iniciar el piloto formal a más tardar durante el segundo
+mes de desarrollo.
+La prueba podrá comenzar con un número reducido de aulas, usuarios y procesos, permi-
+tiendo observar el comportamiento del sistema antes de extender su uso a la totalidad de
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 63 de 65
+===== PAGE 65 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+la dependencia.
+Durante el piloto se registrarán:
+errores funcionales;
+reglas de negocio que requieran ajustes;
+dificultades de uso;
+problemas de rendimiento;
+requerimientos que necesiten modificaciones;
+funcionalidades adicionales consideradas necesarias.
+Los resultados del piloto tendrán prioridad dentro del backlog de los sprints posteriores.
+14.10 Integración entre equipos
+Para evitar que el desarrollo paralelo genere componentes incompatibles, los equipos de-
+berán acordar previamente los contratos utilizados entre frontend y backend.
+Los endpoints deberán definir como mínimo:
+ruta;
+método HTTP;
+parámetros de entrada;
+estructura de las respuestas;
+códigos de respuesta;
+permisos requeridos.
+El frontend podrá comenzar el desarrollo de una funcionalidad utilizando datos simulados
+cuando la API correspondiente aún no se encuentre disponible, siempre que el contrato
+esperado haya sido definido previamente.
+Posteriormente, los datos simulados deberán ser reemplazados por las solicitudes a la API
+real dentro del mismo proceso de desarrollo.
+14.11 Control de versiones y revisión de código
+El código fuente será administrado mediante un sistema de control de versiones.
+El trabajo será realizado mediante ramas de desarrollo asociadas a funcionalidades o
+tareas específicas, evitando realizar modificaciones directamente sobre la rama estable del
+proyecto.
+Antes de integrar cambios relevantes, estos deberán ser revisados por al menos otro inte-
+grante del equipo.
+Las integraciones deberán realizarse con frecuencia para evitar acumulaciones de cambios
+y conflictos de gran tamaño entre diferentes módulos.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 64 de 65
+===== PAGE 66 =====
+Documento de Ingeniería de Software Versión: 1.0
+Laboratorios de Ingeniería Facultad de
+Ingeniería 16/08/2026
+14.12 Seguimiento del proyecto
+El seguimiento se realizará principalmente mediante el estado de las funcionalidades in-
+cluidas en cada sprint.
+Se utilizarán estados similares a:
+Pendiente→En desarrollo→En revisión→En pruebas→Terminado
+Los bloqueos que afecten una dependencia entre equipos deberán ser reportados lo antes
+posible para evitar que un frente de desarrollo permanezca detenido durante periodos
+prolongados.
+La planificación será revisada al finalizar cada sprint. Por lo tanto, el cronograma presen-
+tado representa una guía inicial y podrá ser adaptado sin modificar el objetivo general
+de disponer de una versión completa y estable en un periodo máximo aproximado de tres
+meses.
+Soporte Aulas de Software
+Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
+Teléfono: 3239300 Ext. 1625
+adminsalas@udistrital.edu.co licenciamientoing@udistrital.edu.co
+Página 65 de 65

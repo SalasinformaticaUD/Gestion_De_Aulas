@@ -1,0 +1,406 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+enum EstadoCuenta { 
+  ACTIVA 
+  INACTIVA 
+  BLOQUEADA 
+}
+enum EstadoAula {
+  OPERATIVA
+  MANTENIMIENTO
+  FUERA_DE_SERVICIO
+}
+
+enum EstadoAsistencia {
+  PENDIENTE
+  ASISTIO
+  AUSENTE
+}
+
+enum EstadoPrestamo {
+  SOLICITADO
+  APROBADO
+  ACTIVO
+  DEVUELTO
+  CANCELADO
+  VENCIDO
+}
+
+enum EstadoEquipo {
+  DISPONIBLE
+  PRESTADO
+  MANTENIMIENTO
+  FUERA_DE_SERVICIO
+}
+
+enum EstadoMulta {
+  ACTIVA
+  CUMPLIDA
+  ANULADA
+}
+
+enum EstadoTarea {
+  PENDIENTE
+  EN_PROCESO
+  COMPLETADA
+  CANCELADA
+}
+
+enum EstadoCredencial {
+  ACTIVA
+  INACTIVA
+}
+
+enum TipoObservacion {
+  GENERAL
+  SEMANAL
+  NOVEDAD
+  RESTRICCION
+}
+
+// Identidad, autorización y auditoría
+model Usuario {
+  id              String          @id @default(uuid()) @db.Uuid
+  nombreCompleto  String
+  nombreUsuario   String          @unique
+  correo          String          @unique
+  passwordHash    String
+  cargo           String?
+  estado          EstadoCuenta    @default(ACTIVA)
+  dependenciaId   String?         @db.Uuid
+  dependencia     Dependencia?    @relation(fields: [dependenciaId], references: [id])
+  roles           UsuarioRol[]
+  asistencias     AsistenciaDocente[] @relation("RegistroAsistencia")
+  tareasAsignadas Tarea[]         @relation("ResponsableTarea")
+  auditorias      Auditoria[]
+  accesosCredencial AccesoCredencial[]
+  creadoEn        DateTime        @default(now())
+  actualizadoEn   DateTime        @updatedAt
+}
+
+model Dependencia {
+  id       String    @id @default(uuid()) @db.Uuid
+  nombre   String    @unique
+  activa   Boolean   @default(true)
+  usuarios Usuario[]
+}
+
+model Rol {
+  id          String       @id @default(uuid()) @db.Uuid
+  nombre      String       @unique
+  descripcion String?
+  usuarios    UsuarioRol[]
+  permisos    RolPermiso[]
+}
+
+model Permiso {
+  id          String       @id @default(uuid()) @db.Uuid
+  codigo      String       @unique
+  descripcion String?
+  moduloId    String       @db.Uuid
+  modulo      Modulo       @relation(fields: [moduloId], references: [id])
+  roles       RolPermiso[]
+}
+
+model Modulo {
+  id       String    @id @default(uuid()) @db.Uuid
+  codigo   String    @unique
+  nombre   String
+  activo   Boolean   @default(true)
+  permisos Permiso[]
+}
+
+model UsuarioRol {
+  usuarioId String  @db.Uuid
+  rolId     String  @db.Uuid
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  rol       Rol     @relation(fields: [rolId], references: [id], onDelete: Cascade)
+  @@id([usuarioId, rolId])
+}
+
+model RolPermiso {
+  rolId     String  @db.Uuid
+  permisoId String  @db.Uuid
+  rol       Rol     @relation(fields: [rolId], references: [id], onDelete: Cascade)
+  permiso   Permiso @relation(fields: [permisoId], references: [id], onDelete: Cascade)
+  @@id([rolId, permisoId])
+}
+
+model Auditoria {
+  id           String   @id @default(uuid()) @db.Uuid
+  usuarioId    String?  @db.Uuid
+  usuario      Usuario? @relation(fields: [usuarioId], references: [id])
+  entidad      String
+  entidadId    String
+  accion       String
+  datosPrevios Json?
+  datosNuevos  Json?
+  creadoEn     DateTime @default(now())
+  @@index([entidad, entidadId])
+}
+
+// Catálogos académicos y aulas
+model Aula {
+  id                    String              @id @default(uuid()) @db.Uuid
+  codigo                String              @unique
+  ubicacion             String
+  capacidad             Int
+  caracteristicas       Json?
+  estado                EstadoAula          @default(OPERATIVA)
+  proyectoCurricularId  String?             @db.Uuid
+  proyectoCurricular    ProyectoCurricular? @relation(fields: [proyectoCurricularId], references: [id])
+  softwares             AulaSoftware[]
+  clases                ClaseProgramada[]
+  practicasLibres       PracticaLibre[]
+  prestamosDocentes     PrestamoDocente[]
+  prestamosAudiovisuales PrestamoAudiovisual[]
+  observaciones         Observacion[]
+  tareas                Tarea[]
+  limpiezas             Limpieza[]
+  creadoEn              DateTime            @default(now())
+  actualizadoEn         DateTime            @updatedAt
+}
+
+model PeriodoAcademico {
+  id          String             @id @default(uuid()) @db.Uuid
+  nombre      String             @unique
+  fechaInicio DateTime
+  fechaFin    DateTime
+  activo      Boolean            @default(false)
+  clases      ClaseProgramada[]
+}
+
+model ProyectoCurricular {
+  id          String             @id @default(uuid()) @db.Uuid
+  nombre      String             @unique
+  aulas       Aula[]
+  asignaturas Asignatura[]
+  clases      ClaseProgramada[]
+}
+
+model Asignatura {
+  id                   String              @id @default(uuid()) @db.Uuid
+  codigo               String              @unique
+  nombre               String
+  proyectoCurricularId String?             @db.Uuid
+  proyectoCurricular   ProyectoCurricular? @relation(fields: [proyectoCurricularId], references: [id])
+  clases               ClaseProgramada[]
+}
+
+model Docente {
+  id                      String                   @id @default(uuid()) @db.Uuid
+  documento               String?                  @unique
+  nombre                  String
+  correo                  String?                  @unique
+  clases                  ClaseProgramada[]
+  prestamos               PrestamoDocente[]
+  prestamosAudiovisuales  PrestamoAudiovisual[]
+}
+
+model ClaseProgramada {
+  id                   String              @id @default(uuid()) @db.Uuid
+  periodoId            String              @db.Uuid
+  aulaId               String              @db.Uuid
+  docenteId            String              @db.Uuid
+  asignaturaId         String              @db.Uuid
+  proyectoCurricularId String?             @db.Uuid
+  diaSemana            Int
+  horaInicio           DateTime            @db.Time(0)
+  horaFin              DateTime            @db.Time(0)
+  grupo                String
+  inscritos            Int?
+  periodo              PeriodoAcademico    @relation(fields: [periodoId], references: [id])
+  aula                 Aula                @relation(fields: [aulaId], references: [id])
+  docente              Docente             @relation(fields: [docenteId], references: [id])
+  asignatura           Asignatura          @relation(fields: [asignaturaId], references: [id])
+  proyectoCurricular   ProyectoCurricular? @relation(fields: [proyectoCurricularId], references: [id])
+  asistencias          AsistenciaDocente[]
+  @@index([periodoId, aulaId, diaSemana])
+}
+
+model AsistenciaDocente {
+  id              String            @id @default(uuid()) @db.Uuid
+  claseId         String            @db.Uuid
+  registradoPorId String?           @db.Uuid
+  estado          EstadoAsistencia  @default(PENDIENTE)
+  registradaEn    DateTime?
+  observacion     String?
+  clase           ClaseProgramada   @relation(fields: [claseId], references: [id])
+  registradoPor   Usuario?          @relation("RegistroAsistencia", fields: [registradoPorId], references: [id])
+  @@index([claseId])
+}
+
+model Software {
+  id          String         @id @default(uuid()) @db.Uuid
+  nombre      String
+  version     String?
+  descripcion String?
+  aulas       AulaSoftware[]
+  @@unique([nombre, version])
+}
+
+model AulaSoftware {
+  aulaId      String   @db.Uuid
+  softwareId  String   @db.Uuid
+  instaladoEn DateTime @default(now())
+  aula        Aula     @relation(fields: [aulaId], references: [id], onDelete: Cascade)
+  software    Software @relation(fields: [softwareId], references: [id], onDelete: Cascade)
+  @@id([aulaId, softwareId])
+}
+
+// Usuarios externos, préstamos y sanciones
+model Estudiante {
+  id        String          @id @default(uuid()) @db.Uuid
+  codigo    String          @unique
+  nombre    String
+  correo    String?         @unique
+  practicas PracticaLibre[]
+  multas    Multa[]
+}
+
+model PracticaLibre {
+  id           String         @id @default(uuid()) @db.Uuid
+  estudianteId String         @db.Uuid
+  aulaId       String         @db.Uuid
+  inicio       DateTime
+  finEstimada  DateTime?
+  finReal      DateTime?
+  estado       EstadoPrestamo @default(ACTIVO)
+  estudiante   Estudiante     @relation(fields: [estudianteId], references: [id])
+  aula         Aula           @relation(fields: [aulaId], references: [id])
+  @@index([aulaId, inicio])
+}
+
+model PrestamoDocente {
+  id        String         @id @default(uuid()) @db.Uuid
+  docenteId String         @db.Uuid
+  aulaId    String         @db.Uuid
+  inicio    DateTime
+  fin       DateTime
+  estado    EstadoPrestamo @default(SOLICITADO)
+  motivo    String?
+  docente   Docente        @relation(fields: [docenteId], references: [id])
+  aula      Aula           @relation(fields: [aulaId], references: [id])
+  @@index([aulaId, inicio, fin])
+}
+
+model EquipoAudiovisual {
+  id               String                       @id @default(uuid()) @db.Uuid
+  codigoInventario String                       @unique
+  nombre           String
+  tipo             String
+  estado           EstadoEquipo                 @default(DISPONIBLE)
+  observacion      String?
+  detallesPrestamo DetallePrestamoAudiovisual[]
+}
+
+model PrestamoAudiovisual {
+  id                 String                       @id @default(uuid()) @db.Uuid
+  docenteId          String                       @db.Uuid
+  aulaId             String?                      @db.Uuid
+  salidaEn           DateTime
+  devolucionEstimada DateTime
+  devolucionReal     DateTime?
+  estado             EstadoPrestamo               @default(ACTIVO)
+  docente            Docente                      @relation(fields: [docenteId], references: [id])
+  aula               Aula?                        @relation(fields: [aulaId], references: [id])
+  detalles           DetallePrestamoAudiovisual[]
+  @@index([estado, salidaEn])
+}
+
+model DetallePrestamoAudiovisual {
+  prestamoId       String               @db.Uuid
+  equipoId         String               @db.Uuid
+  estadoSalida     String?
+  estadoDevolucion String?
+  prestamo         PrestamoAudiovisual @relation(fields: [prestamoId], references: [id], onDelete: Cascade)
+  equipo           EquipoAudiovisual   @relation(fields: [equipoId], references: [id])
+  @@id([prestamoId, equipoId])
+}
+
+model MotivoMulta {
+  id          String  @id @default(uuid()) @db.Uuid
+  nombre      String  @unique
+  descripcion String?
+  multas      Multa[]
+}
+
+model Multa {
+  id           String       @id @default(uuid()) @db.Uuid
+  estudianteId String       @db.Uuid
+  motivoId     String       @db.Uuid
+  estado       EstadoMulta  @default(ACTIVA)
+  fecha        DateTime     @default(now())
+  descripcion  String?
+  estudiante   Estudiante   @relation(fields: [estudianteId], references: [id])
+  motivo       MotivoMulta  @relation(fields: [motivoId], references: [id])
+}
+
+// Operación diaria y credenciales institucionales
+model Observacion {
+  id           String          @id @default(uuid()) @db.Uuid
+  aulaId       String          @db.Uuid
+  tipo         TipoObservacion @default(GENERAL)
+  contenido    String
+  vigenteHasta DateTime?
+  aula         Aula            @relation(fields: [aulaId], references: [id])
+  creadoEn     DateTime        @default(now())
+}
+
+model Tarea {
+  id                   String      @id @default(uuid()) @db.Uuid
+  aulaId               String?     @db.Uuid
+  responsableId        String?     @db.Uuid
+  titulo               String
+  descripcion          String?
+  estado               EstadoTarea @default(PENDIENTE)
+  afectaDisponibilidad Boolean     @default(false)
+  inicio               DateTime?
+  fin                  DateTime?
+  aula                 Aula?       @relation(fields: [aulaId], references: [id])
+  responsable          Usuario?    @relation("ResponsableTarea", fields: [responsableId], references: [id])
+}
+
+model Limpieza {
+  id          String   @id @default(uuid()) @db.Uuid
+  aulaId      String   @db.Uuid
+  realizadaEn DateTime @default(now())
+  observacion String?
+  aula        Aula     @relation(fields: [aulaId], references: [id])
+}
+
+model CredencialOperativa {
+  id             String            @id @default(uuid()) @db.Uuid
+  nombre         String
+  categoria      String
+  usuario        String?
+  secretoCifrado String
+  descripcion    String?
+  estado         EstadoCredencial  @default(ACTIVA)
+  accesos        AccesoCredencial[]
+  creadoEn       DateTime          @default(now())
+  actualizadoEn  DateTime          @updatedAt
+}
+
+model AccesoCredencial {
+  credencialId String               @db.Uuid
+  usuarioId    String               @db.Uuid
+  puedeVer     Boolean              @default(false)
+  puedeEditar  Boolean              @default(false)
+  credencial   CredencialOperativa  @relation(fields: [credencialId], references: [id], onDelete: Cascade)
+  usuario      Usuario               @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  @@id([credencialId, usuarioId])
+}
