@@ -87,6 +87,8 @@ model Usuario {
   tareasAsignadas Tarea[]         @relation("ResponsableTarea")
   auditorias      Auditoria[]
   accesosCredencial AccesoCredencial[]
+  prestamosAudiovisualesEntregados PrestamoAudiovisual[] @relation("EntregaPrestamoAudiovisual")
+  prestamosAudiovisualesRecibidos  PrestamoAudiovisual[] @relation("RecepcionPrestamoAudiovisual")
   creadoEn        DateTime        @default(now())
   actualizadoEn   DateTime        @updatedAt
 }
@@ -298,37 +300,72 @@ model PrestamoDocente {
 }
 
 model EquipoAudiovisual {
-  id               String                       @id @default(uuid()) @db.Uuid
-  codigoInventario String                       @unique
+  id               String                           @id @default(uuid()) @db.Uuid
+  codigoInventario String                           @unique
   nombre           String
   tipo             String
-  estado           EstadoEquipo                 @default(DISPONIBLE)
-  observacion      String?
+  estado           EstadoEquipo                     @default(DISPONIBLE)
   detallesPrestamo DetallePrestamoAudiovisual[]
+  mantenimientos   MantenimientoEquipoAudiovisual[]
+  observaciones    ObservacionEquipoAudiovisual[]
+
+  @@index([estado, tipo])
 }
 
 model PrestamoAudiovisual {
   id                 String                       @id @default(uuid()) @db.Uuid
   docenteId          String                       @db.Uuid
-  aulaId             String?                      @db.Uuid
-  salidaEn           DateTime
+  aulaId             String                       @db.Uuid
+  entregadoPorId     String?                      @db.Uuid
+  recibidoPorId      String?                      @db.Uuid
+  salidaEn           DateTime?
   devolucionEstimada DateTime
   devolucionReal     DateTime?
-  estado             EstadoPrestamo               @default(ACTIVO)
-  docente            Docente                      @relation(fields: [docenteId], references: [id])
-  aula               Aula?                        @relation(fields: [aulaId], references: [id])
+  estado             EstadoPrestamo               @default(SOLICITADO)
+  docente            Docente                      @relation(fields: [docenteId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  aula               Aula                         @relation(fields: [aulaId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  entregadoPor       Usuario?                     @relation("EntregaPrestamoAudiovisual", fields: [entregadoPorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  recibidoPor        Usuario?                     @relation("RecepcionPrestamoAudiovisual", fields: [recibidoPorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   detalles           DetallePrestamoAudiovisual[]
+
   @@index([estado, salidaEn])
+  @@index([docenteId, salidaEn])
+  @@index([aulaId, salidaEn])
 }
 
 model DetallePrestamoAudiovisual {
-  prestamoId       String               @db.Uuid
-  equipoId         String               @db.Uuid
-  estadoSalida     String?
-  estadoDevolucion String?
-  prestamo         PrestamoAudiovisual @relation(fields: [prestamoId], references: [id], onDelete: Cascade)
-  equipo           EquipoAudiovisual   @relation(fields: [equipoId], references: [id])
+  prestamoId                String              @db.Uuid
+  equipoId                  String              @db.Uuid
+  estadoFisicoSalida        String?
+  estadoFuncionalSalida     String?
+  estadoFisicoDevolucion    String?
+  estadoFuncionalDevolucion String?
+  prestamo                  PrestamoAudiovisual @relation(fields: [prestamoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  equipo                    EquipoAudiovisual   @relation(fields: [equipoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
   @@id([prestamoId, equipoId])
+  @@index([equipoId])
+}
+
+model MantenimientoEquipoAudiovisual {
+  id          String            @id @default(uuid()) @db.Uuid
+  equipoId    String            @db.Uuid
+  inicioEn    DateTime
+  finEn       DateTime?
+  observacion String?
+  equipo      EquipoAudiovisual @relation(fields: [equipoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([equipoId, inicioEn])
+}
+
+model ObservacionEquipoAudiovisual {
+  id        String            @id @default(uuid()) @db.Uuid
+  equipoId  String            @db.Uuid
+  contenido String
+  creadoEn  DateTime          @default(now())
+  equipo    EquipoAudiovisual @relation(fields: [equipoId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([equipoId, creadoEn])
 }
 
 model MotivoMulta {

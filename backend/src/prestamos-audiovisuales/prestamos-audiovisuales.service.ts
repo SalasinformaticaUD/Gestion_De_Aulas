@@ -1,29 +1,18 @@
 import { Injectable } from '@nestjs/common';
-import { CreatePrestamosAudiovisualeDto } from './dto/create-prestamos-audiovisuale.dto';
-import { UpdatePrestamosAudiovisualeDto } from './dto/update-prestamos-audiovisuale.dto';
+import { CreatePrestamoAudiovisualDto } from './dto/create-prestamo-audiovisual.dto';
 
 @Injectable()
 export class PrestamosAudiovisualesService {
-  create(createPrestamosAudiovisualeDto: CreatePrestamosAudiovisualeDto) {
-    return 'This action adds a new prestamosAudiovisuale';
+  create(createPrestamoAudiovisualDto: CreatePrestamoAudiovisualDto) {
+    void createPrestamoAudiovisualDto;
+    return 'This action adds a new prestamo audiovisual';
   }
 
   findAll() {
-    return `This action returns all prestamosAudiovisuales`;
+    return 'This action returns all prestamos audiovisuales';
   }
 
   findOne(id: string) {
-    return `This action returns a #${id} prestamosAudiovisuale`;
-  }
-
-  update(
-    id: string,
-    updatePrestamosAudiovisualeDto: UpdatePrestamosAudiovisualeDto,
-  ) {
-    return `This action updates a #${id} prestamosAudiovisuale`;
-  }
-
-  remove(id: string) {
-    return `This action removes a #${id} prestamosAudiovisuale`;
+    return `This action returns a #${id} prestamo audiovisual`;
   }
 }

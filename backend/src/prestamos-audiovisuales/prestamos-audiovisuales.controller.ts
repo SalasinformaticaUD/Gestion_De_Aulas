@@ -1,15 +1,6 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { PrestamosAudiovisualesService } from './prestamos-audiovisuales.service';
-import { CreatePrestamosAudiovisualeDto } from './dto/create-prestamos-audiovisuale.dto';
-import { UpdatePrestamosAudiovisualeDto } from './dto/update-prestamos-audiovisuale.dto';
+import { CreatePrestamoAudiovisualDto } from './dto/create-prestamo-audiovisual.dto';
 
 @Controller('prestamos-audiovisuales')
 export class PrestamosAudiovisualesController {
@@ -18,11 +9,9 @@ export class PrestamosAudiovisualesController {
   ) {}
 
   @Post()
-  create(
-    @Body() createPrestamosAudiovisualeDto: CreatePrestamosAudiovisualeDto,
-  ) {
+  create(@Body() createPrestamoAudiovisualDto: CreatePrestamoAudiovisualDto) {
     return this.prestamosAudiovisualesService.create(
-      createPrestamosAudiovisualeDto,
+      createPrestamoAudiovisualDto,
     );
   }
 
@@ -34,21 +23,5 @@ export class PrestamosAudiovisualesController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.prestamosAudiovisualesService.findOne(id);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updatePrestamosAudiovisualeDto: UpdatePrestamosAudiovisualeDto,
-  ) {
-    return this.prestamosAudiovisualesService.update(
-      id,
-      updatePrestamosAudiovisualeDto,
-    );
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.prestamosAudiovisualesService.remove(id);
   }
 }
