@@ -1,5 +1,4 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
-import { jest } from '@jest/globals';
 import { EstadoAsistencia } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service';
 import { AsistenciaDocenteService } from './asistencia-docente.service';

@@ -16,7 +16,7 @@ El objetivo no es cambiar la arquitectura completa ni introducir patrones academ
 - [X] Implementar por flujo funcional completo, no por archivos aislados.
 - [X] Todo endpoint nuevo o modificado debe tener DTO, validacion, manejo de errores y prueba basica.
 - [X] Todo acceso a base de datos debe pasar por `PrismaService`.
-- [ ] La disponibilidad se calcula, no se guarda como tabla permanente.
+- [X] La disponibilidad se calcula en bloques de dos horas al consultar las salas, no se guarda como tabla permanente.
 - [X] No integrar directamente con la base de Gestion de Monitores.
 - [X] Cada fase debe cerrar con `npm test -- --runInBand` y `npx tsc --noEmit --incremental false`.
 
@@ -185,23 +185,23 @@ Objetivo: entregar la primera version calculada de disponibilidad.
 
 ### 5.1 Fuentes del calculo
 
-- [ ] Estado operativo del aula (`Aula.estado`).
-- [ ] Clases programadas (`ClaseProgramada`).
-- [ ] Asistencia docente cuando aplique.
-- [ ] Practicas libres activas.
-- [ ] Prestamos docentes activos/aprobados.
-- [ ] Observaciones vigentes de tipo restriccion.
-- [ ] Tareas que afectan disponibilidad.
+- [X] Estado operativo del aula (`Aula.estado`).
+- [X] Clases programadas (`ClaseProgramada`).
+- [X] Asistencia docente cuando aplique.
+- [X] Practicas libres activas.
+- [X] Prestamos docentes activos/aprobados.
+- [X] Observaciones vigentes de tipo restriccion.
+- [X] Tareas que afectan disponibilidad.
 
 ### 5.2 Contratos
 
-- [ ] `GET /disponibilidad-aulas?fecha=&horaInicio=&horaFin=`
-- [ ] `GET /disponibilidad-aulas/:aulaId?fecha=&horaInicio=&horaFin=`
+- [X] `GET /disponibilidad-aulas?fecha=&horaInicio=&horaFin=`
+- [X] `GET /disponibilidad-aulas/:aulaId?fecha=&horaInicio=&horaFin=`
 - [ ] `GET /disponibilidad-aulas/resumen-dia?fecha=`
 
 ### 5.3 Modelo de respuesta
 
-- [ ] Definir shape estable:
+- [X] Definir shape estable:
   - aula;
   - estadoCalculado: disponible, ocupada, reservada, mantenimiento, bloqueada;
   - motivo;
@@ -209,13 +209,13 @@ Objetivo: entregar la primera version calculada de disponibilidad.
   - siguienteActividad;
   - fuentes que explican el resultado.
 - [X] No crear tabla de disponibilidad.
-- [ ] No mutar datos desde endpoints de disponibilidad.
+- [X] No mutar datos desde endpoints de disponibilidad.
 
 ### 5.4 Servicio
 
-- [ ] Crear funciones privadas para consultar cada fuente.
-- [ ] Normalizar rangos de tiempo.
-- [ ] Resolver conflictos por prioridad:
+- [X] Crear funciones privadas para consultar cada fuente.
+- [X] Normalizar rangos de tiempo.
+- [X] Resolver conflictos por prioridad:
   - aula fuera de servicio o mantenimiento;
   - restriccion vigente;
   - clase programada;
@@ -223,14 +223,14 @@ Objetivo: entregar la primera version calculada de disponibilidad.
   - practica libre;
   - tarea que afecta disponibilidad;
   - disponible.
-- [ ] Devolver explicacion legible para frontend y panel operativo.
+- [X] Devolver explicacion legible para frontend y panel operativo.
 
 ### 5.5 Pruebas
 
-- [ ] Tests unitarios con datasets en memoria/mocks.
+- [X] Tests unitarios con datasets en memoria/mocks.
 - [ ] E2E con aula, clase y prestamo docente.
-- [ ] Caso sin actividades debe retornar disponible.
-- [ ] Caso aula en mantenimiento debe prevalecer sobre horario.
+- [X] Caso sin actividades debe retornar disponible.
+- [X] Caso aula en mantenimiento debe prevalecer sobre horario.
 
 Criterio de cierre: el frontend puede construir un calendario de disponibilidad sin inferir reglas propias.
 

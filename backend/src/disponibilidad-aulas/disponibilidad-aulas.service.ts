@@ -1,26 +1,374 @@
-import { Injectable } from '@nestjs/common';
-import { CreateDisponibilidadAulaDto } from './dto/create-disponibilidad-aula.dto';
-import { UpdateDisponibilidadAulaDto } from './dto/update-disponibilidad-aula.dto';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  EstadoAsistencia,
+  EstadoAula,
+  EstadoPrestamo,
+  EstadoTarea,
+  TipoObservacion,
+} from '../../generated/prisma/enums.js';
+import { PrismaService } from '../prisma/prisma.service';
+import { ConsultarDisponibilidadDto } from './dto/consultar-disponibilidad.dto';
+
+type EstadoCalculado =
+  'disponible' | 'ocupada' | 'reservada' | 'mantenimiento' | 'bloqueada';
+
+type FuenteDisponibilidad = {
+  tipo:
+    | 'estado-aula'
+    | 'restriccion'
+    | 'clase-programada'
+    | 'prestamo-docente'
+    | 'practica-libre'
+    | 'tarea-operativa';
+  id: string;
+  descripcion: string;
+  estado?: string;
+};
+
+type BloqueDosHoras = {
+  fecha: string;
+  horaInicio: string;
+  horaFin: string;
+  inicio: Date;
+  fin: Date;
+  horaInicioPrisma: Date;
+  horaFinPrisma: Date;
+  fechaPrisma: Date;
+  inicioDia: Date;
+  finDia: Date;
+  diaSemana: number;
+};
+
+type AulaBase = {
+  id: string;
+  codigo: string;
+  ubicacion: string;
+  capacidad: number;
+  estado: EstadoAula;
+};
 
 @Injectable()
 export class DisponibilidadAulasService {
-  create(createDisponibilidadAulaDto: CreateDisponibilidadAulaDto) {
-    return 'This action adds a new disponibilidadAula';
+  constructor(private readonly prisma: PrismaService) {}
+
+  async findAll(query: ConsultarDisponibilidadDto) {
+    const bloque = this.normalizarBloque(query);
+    const aulas = await this.prisma.aula.findMany({
+      select: {
+        id: true,
+        codigo: true,
+        ubicacion: true,
+        capacidad: true,
+        estado: true,
+      },
+      orderBy: { codigo: 'asc' },
+    });
+
+    return Promise.all(
+      aulas.map((aula) => this.calcularDisponibilidad(aula, bloque)),
+    );
   }
 
-  findAll() {
-    return `This action returns all disponibilidadAulas`;
+  async findOne(aulaId: string, query: ConsultarDisponibilidadDto) {
+    const bloque = this.normalizarBloque(query);
+    const aula = await this.prisma.aula.findUnique({
+      where: { id: aulaId },
+      select: {
+        id: true,
+        codigo: true,
+        ubicacion: true,
+        capacidad: true,
+        estado: true,
+      },
+    });
+
+    if (!aula) {
+      throw new NotFoundException(`No existe aula con id ${aulaId}.`);
+    }
+
+    return this.calcularDisponibilidad(aula, bloque);
   }
 
-  findOne(id: string) {
-    return `This action returns a #${id} disponibilidadAula`;
+  private async calcularDisponibilidad(aula: AulaBase, bloque: BloqueDosHoras) {
+    const [restriccion, clase, prestamo, practica, tarea] = await Promise.all([
+      this.buscarRestriccion(aula.id, bloque),
+      this.buscarClase(aula.id, bloque),
+      this.buscarPrestamoDocente(aula.id, bloque),
+      this.buscarPracticaLibre(aula.id, bloque),
+      this.buscarTarea(aula.id, bloque),
+    ]);
+
+    const fuentes: FuenteDisponibilidad[] = [];
+
+    if (aula.estado !== EstadoAula.OPERATIVA) {
+      fuentes.push({
+        tipo: 'estado-aula',
+        id: aula.id,
+        descripcion:
+          aula.estado === EstadoAula.MANTENIMIENTO
+            ? 'El aula se encuentra en mantenimiento.'
+            : 'El aula se encuentra fuera de servicio.',
+        estado: aula.estado,
+      });
+    }
+
+    if (restriccion) {
+      fuentes.push({
+        tipo: 'restriccion',
+        id: restriccion.id,
+        descripcion: restriccion.contenido,
+        estado: restriccion.tipo,
+      });
+    }
+
+    if (clase) {
+      const asistencia = clase.asistencias[0];
+      const detalleAsistencia = asistencia
+        ? ` Asistencia docente: ${asistencia.estado}.`
+        : ' Asistencia docente pendiente de registro.';
+      fuentes.push({
+        tipo: 'clase-programada',
+        id: clase.id,
+        descripcion: `Clase ${clase.asignatura.nombre}, grupo ${clase.grupo}, docente ${clase.docente.nombre}.${detalleAsistencia}`,
+        estado: asistencia?.estado ?? EstadoAsistencia.PENDIENTE,
+      });
+    }
+
+    if (prestamo) {
+      fuentes.push({
+        tipo: 'prestamo-docente',
+        id: prestamo.id,
+        descripcion: prestamo.motivo
+          ? `Préstamo docente: ${prestamo.motivo}`
+          : `Préstamo del docente ${prestamo.docente.nombre}.`,
+        estado: prestamo.estado,
+      });
+    }
+
+    if (practica) {
+      fuentes.push({
+        tipo: 'practica-libre',
+        id: practica.id,
+        descripcion: `Práctica libre del estudiante ${practica.estudiante.codigo}.`,
+        estado: practica.estado,
+      });
+    }
+
+    if (tarea) {
+      fuentes.push({
+        tipo: 'tarea-operativa',
+        id: tarea.id,
+        descripcion: tarea.titulo,
+        estado: tarea.estado,
+      });
+    }
+
+    const decision = this.resolverPrioridad({
+      aula,
+      restriccion: Boolean(restriccion),
+      clase: Boolean(clase),
+      prestamo: Boolean(prestamo),
+      practica: Boolean(practica),
+      tarea: Boolean(tarea),
+    });
+
+    return {
+      aula,
+      bloque: {
+        fecha: bloque.fecha,
+        horaInicio: bloque.horaInicio,
+        horaFin: bloque.horaFin,
+        duracionHoras: 2,
+      },
+      estadoCalculado: decision.estado,
+      motivo: decision.motivo,
+      bloqueActual: fuentes[0] ?? null,
+      siguienteActividad: null,
+      fuentes,
+      calculadoEn: new Date(),
+      persistido: false,
+    };
   }
 
-  update(id: string, updateDisponibilidadAulaDto: UpdateDisponibilidadAulaDto) {
-    return `This action updates a #${id} disponibilidadAula`;
+  private resolverPrioridad(input: {
+    aula: AulaBase;
+    restriccion: boolean;
+    clase: boolean;
+    prestamo: boolean;
+    practica: boolean;
+    tarea: boolean;
+  }): { estado: EstadoCalculado; motivo: string } {
+    if (input.aula.estado === EstadoAula.MANTENIMIENTO) {
+      return {
+        estado: 'mantenimiento',
+        motivo: 'El estado operativo del aula tiene prioridad.',
+      };
+    }
+    if (input.aula.estado === EstadoAula.FUERA_DE_SERVICIO) {
+      return {
+        estado: 'bloqueada',
+        motivo: 'El aula está fuera de servicio.',
+      };
+    }
+    if (input.restriccion) {
+      return {
+        estado: 'bloqueada',
+        motivo: 'Existe una restricción operativa vigente.',
+      };
+    }
+    if (input.clase) {
+      return {
+        estado: 'ocupada',
+        motivo: 'Existe una clase programada durante el bloque.',
+      };
+    }
+    if (input.prestamo) {
+      return {
+        estado: 'reservada',
+        motivo: 'Existe un préstamo docente aprobado o activo.',
+      };
+    }
+    if (input.practica) {
+      return {
+        estado: 'reservada',
+        motivo: 'Existe una práctica libre activa.',
+      };
+    }
+    if (input.tarea) {
+      return {
+        estado: 'bloqueada',
+        motivo: 'Existe una tarea operativa que afecta la disponibilidad.',
+      };
+    }
+    return {
+      estado: 'disponible',
+      motivo: 'No existen actividades ni restricciones para el bloque.',
+    };
   }
 
-  remove(id: string) {
-    return `This action removes a #${id} disponibilidadAula`;
+  private buscarRestriccion(aulaId: string, bloque: BloqueDosHoras) {
+    return this.prisma.observacion.findFirst({
+      where: {
+        aulaId,
+        tipo: TipoObservacion.RESTRICCION,
+        creadoEn: { lt: bloque.fin },
+        OR: [{ vigenteHasta: null }, { vigenteHasta: { gt: bloque.inicio } }],
+      },
+      orderBy: { creadoEn: 'desc' },
+    });
+  }
+
+  private buscarClase(aulaId: string, bloque: BloqueDosHoras) {
+    if (bloque.diaSemana < 1 || bloque.diaSemana > 6) {
+      return Promise.resolve(null);
+    }
+
+    return this.prisma.claseProgramada.findFirst({
+      where: {
+        aulaId,
+        diaSemana: bloque.diaSemana,
+        horaInicio: { lt: bloque.horaFinPrisma },
+        horaFin: { gt: bloque.horaInicioPrisma },
+        periodo: {
+          fechaInicio: { lte: bloque.finDia },
+          fechaFin: { gte: bloque.inicioDia },
+        },
+      },
+      include: {
+        docente: true,
+        asignatura: true,
+        asistencias: {
+          where: { fecha: bloque.fechaPrisma },
+          take: 1,
+        },
+      },
+      orderBy: { horaInicio: 'asc' },
+    });
+  }
+
+  private buscarPrestamoDocente(aulaId: string, bloque: BloqueDosHoras) {
+    return this.prisma.prestamoDocente.findFirst({
+      where: {
+        aulaId,
+        estado: { in: [EstadoPrestamo.APROBADO, EstadoPrestamo.ACTIVO] },
+        inicio: { lt: bloque.fin },
+        fin: { gt: bloque.inicio },
+      },
+      include: { docente: true },
+      orderBy: { inicio: 'asc' },
+    });
+  }
+
+  private buscarPracticaLibre(aulaId: string, bloque: BloqueDosHoras) {
+    return this.prisma.practicaLibre.findFirst({
+      where: {
+        aulaId,
+        estado: EstadoPrestamo.ACTIVO,
+        inicio: { lt: bloque.fin },
+        OR: [
+          { finReal: { gt: bloque.inicio } },
+          {
+            finReal: null,
+            OR: [{ finEstimada: null }, { finEstimada: { gt: bloque.inicio } }],
+          },
+        ],
+      },
+      include: { estudiante: true },
+      orderBy: { inicio: 'asc' },
+    });
+  }
+
+  private buscarTarea(aulaId: string, bloque: BloqueDosHoras) {
+    return this.prisma.tarea.findFirst({
+      where: {
+        aulaId,
+        afectaDisponibilidad: true,
+        estado: { in: [EstadoTarea.PENDIENTE, EstadoTarea.EN_PROCESO] },
+        AND: [
+          { OR: [{ inicio: null }, { inicio: { lt: bloque.fin } }] },
+          { OR: [{ fin: null }, { fin: { gt: bloque.inicio } }] },
+        ],
+      },
+      orderBy: { inicio: 'asc' },
+    });
+  }
+
+  private normalizarBloque(query: ConsultarDisponibilidadDto): BloqueDosHoras {
+    const horaInicio = Number(query.horaInicio.slice(0, 2));
+    const horaFin = Number(query.horaFin.slice(0, 2));
+
+    if (horaInicio % 2 !== 0) {
+      throw new BadRequestException(
+        'horaInicio debe estar alineada a una hora par para formar bloques de dos horas.',
+      );
+    }
+
+    if (horaFin - horaInicio !== 2) {
+      throw new BadRequestException(
+        'El rango de disponibilidad debe durar exactamente dos horas.',
+      );
+    }
+
+    const fechaPrisma = new Date(`${query.fecha}T00:00:00.000Z`);
+    const inicio = new Date(`${query.fecha}T${query.horaInicio}:00.000-05:00`);
+    const fin = new Date(`${query.fecha}T${query.horaFin}:00.000-05:00`);
+
+    return {
+      fecha: query.fecha,
+      horaInicio: query.horaInicio,
+      horaFin: query.horaFin,
+      inicio,
+      fin,
+      horaInicioPrisma: new Date(Date.UTC(1970, 0, 1, horaInicio, 0, 0)),
+      horaFinPrisma: new Date(Date.UTC(1970, 0, 1, horaFin, 0, 0)),
+      fechaPrisma,
+      inicioDia: new Date(`${query.fecha}T00:00:00.000Z`),
+      finDia: new Date(`${query.fecha}T23:59:59.999Z`),
+      diaSemana: fechaPrisma.getUTCDay(),
+    };
   }
 }

@@ -1,50 +1,38 @@
 import {
   Controller,
   Get,
-  Post,
-  Body,
-  Patch,
   Param,
-  Delete,
+  ParseUUIDPipe,
+  Query,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { DisponibilidadAulasService } from './disponibilidad-aulas.service';
-import { CreateDisponibilidadAulaDto } from './dto/create-disponibilidad-aula.dto';
-import { UpdateDisponibilidadAulaDto } from './dto/update-disponibilidad-aula.dto';
+import { ConsultarDisponibilidadDto } from './dto/consultar-disponibilidad.dto';
 
 @Controller('disponibilidad-aulas')
+@UsePipes(
+  new ValidationPipe({
+    transform: true,
+    whitelist: true,
+    forbidNonWhitelisted: true,
+  }),
+)
 export class DisponibilidadAulasController {
   constructor(
     private readonly disponibilidadAulasService: DisponibilidadAulasService,
   ) {}
 
-  @Post()
-  create(@Body() createDisponibilidadAulaDto: CreateDisponibilidadAulaDto) {
-    return this.disponibilidadAulasService.create(createDisponibilidadAulaDto);
-  }
-
   @Get()
-  findAll() {
-    return this.disponibilidadAulasService.findAll();
+  findAll(@Query() query: ConsultarDisponibilidadDto) {
+    return this.disponibilidadAulasService.findAll(query);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.disponibilidadAulasService.findOne(id);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateDisponibilidadAulaDto: UpdateDisponibilidadAulaDto,
+  @Get(':aulaId')
+  findOne(
+    @Param('aulaId', ParseUUIDPipe) aulaId: string,
+    @Query() query: ConsultarDisponibilidadDto,
   ) {
-    return this.disponibilidadAulasService.update(
-      id,
-      updateDisponibilidadAulaDto,
-    );
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.disponibilidadAulasService.remove(id);
+    return this.disponibilidadAulasService.findOne(aulaId, query);
   }
 }
