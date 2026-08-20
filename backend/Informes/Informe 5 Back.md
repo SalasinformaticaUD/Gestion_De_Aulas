@@ -1,7 +1,7 @@
 # Informe 5 - Backend
 
 FECHA: 20/08/2026  
-MONITOR: Ivan Felipe Prado Blanco 8:00 am - 10:00am // 2:00pm - 4:00pm
+MONITORES: Ivan Felipe Prado Blanco 8:00 am - 10:00am // 2:00pm - 4:00pm; Kaleth Molina Diaz
 
 ## AVANCES:
 
