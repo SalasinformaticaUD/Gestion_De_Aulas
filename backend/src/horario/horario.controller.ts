@@ -1,42 +1,68 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
+import { CreateClaseProgramadaDto } from './dto/create-clase-programada.dto';
+import { CreatePeriodoAcademicoDto } from './dto/create-periodo-academico.dto';
+import { FindClasesDto } from './dto/find-clases.dto';
+import { UpdateClaseProgramadaDto } from './dto/update-clase-programada.dto';
 import { HorarioService } from './horario.service';
-import { CreateHorarioDto } from './dto/create-horario.dto';
-import { UpdateHorarioDto } from './dto/update-horario.dto';
 
 @Controller('horario')
+@UsePipes(
+  new ValidationPipe({
+    transform: true,
+    whitelist: true,
+    forbidNonWhitelisted: true,
+  }),
+)
 export class HorarioController {
   constructor(private readonly horarioService: HorarioService) {}
 
-  @Post()
-  create(@Body() createHorarioDto: CreateHorarioDto) {
-    return this.horarioService.create(createHorarioDto);
+  @Get('periodos')
+  findPeriodos() {
+    return this.horarioService.findPeriodos();
   }
 
-  @Get()
-  findAll() {
-    return this.horarioService.findAll();
+  @Post('periodos')
+  createPeriodo(@Body() dto: CreatePeriodoAcademicoDto) {
+    return this.horarioService.createPeriodo(dto);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.horarioService.findOne(id);
+  @Patch('periodos/:id/activar')
+  activarPeriodo(@Param('id', ParseUUIDPipe) id: string) {
+    return this.horarioService.activarPeriodo(id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateHorarioDto: UpdateHorarioDto) {
-    return this.horarioService.update(id, updateHorarioDto);
+  @Get('clases')
+  findClases(@Query() filters: FindClasesDto) {
+    return this.horarioService.findClases(filters);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.horarioService.remove(id);
+  @Post('clases')
+  createClase(@Body() dto: CreateClaseProgramadaDto) {
+    return this.horarioService.createClase(dto);
+  }
+
+  @Patch('clases/:id')
+  updateClase(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateClaseProgramadaDto,
+  ) {
+    return this.horarioService.updateClase(id, dto);
+  }
+
+  @Delete('clases/:id')
+  removeClase(@Param('id', ParseUUIDPipe) id: string) {
+    return this.horarioService.removeClase(id);
   }
 }
