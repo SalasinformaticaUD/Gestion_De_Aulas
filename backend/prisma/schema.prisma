@@ -241,6 +241,7 @@ model ClaseProgramada {
 model AsistenciaDocente {
   id              String           @id @default(uuid()) @db.Uuid
   claseId         String           @db.Uuid
+  fecha           DateTime         @default(now()) @db.Date
   registradoPorId String?          @db.Uuid
   estado          EstadoAsistencia @default(PENDIENTE)
   registradaEn    DateTime?
@@ -248,7 +249,8 @@ model AsistenciaDocente {
   clase           ClaseProgramada  @relation(fields: [claseId], references: [id])
   registradoPor   Usuario?         @relation("RegistroAsistencia", fields: [registradoPorId], references: [id])
 
-  @@index([claseId])
+  @@unique([claseId, fecha])
+  @@index([fecha, estado])
 }
 
 model Software {

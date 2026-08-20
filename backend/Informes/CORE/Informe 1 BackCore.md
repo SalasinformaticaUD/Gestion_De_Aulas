@@ -91,4 +91,4 @@ MONITOR: Pablo Garzon Gomez
 * Preparar el registro de `registradoPorId` para integrarlo con el usuario autenticado cuando la infraestructura de autenticación esté disponible.
 * Preparar la consulta de asistencias pendientes del día para el futuro panel operativo.
 * Agregar pruebas unitarias de estados y duplicados, y pruebas E2E de registro y consulta por clase.
-* No iniciar disponibilidad, prácticas libres, préstamos docentes, observaciones o panel operativo durante ese siguiente paso.
+* No iniciar disponibilidad, prácticas libres, préstamos docentes, observaciones o panel operativo durante ese siguiente paso.   

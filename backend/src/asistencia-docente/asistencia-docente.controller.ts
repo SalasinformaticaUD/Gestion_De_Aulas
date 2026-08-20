@@ -1,17 +1,28 @@
 import {
+  Body,
   Controller,
   Get,
-  Post,
-  Body,
-  Patch,
   Param,
-  Delete,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { AsistenciaDocenteService } from './asistencia-docente.service';
 import { CreateAsistenciaDocenteDto } from './dto/create-asistencia-docente.dto';
 import { UpdateAsistenciaDocenteDto } from './dto/update-asistencia-docente.dto';
+import { FindAsistenciasDto } from './dto/find-asistencias.dto';
 
 @Controller('asistencia-docente')
+@UsePipes(
+  new ValidationPipe({
+    transform: true,
+    whitelist: true,
+    forbidNonWhitelisted: true,
+  }),
+)
 export class AsistenciaDocenteController {
   constructor(
     private readonly asistenciaDocenteService: AsistenciaDocenteService,
@@ -23,25 +34,20 @@ export class AsistenciaDocenteController {
   }
 
   @Get()
-  findAll() {
-    return this.asistenciaDocenteService.findAll();
+  findAll(@Query() filters: FindAsistenciasDto) {
+    return this.asistenciaDocenteService.findAll(filters);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.asistenciaDocenteService.findOne(id);
+  @Get('clase/:claseId')
+  findByClass(@Param('claseId', ParseUUIDPipe) claseId: string) {
+    return this.asistenciaDocenteService.findByClass(claseId);
   }
 
   @Patch(':id')
   update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateAsistenciaDocenteDto: UpdateAsistenciaDocenteDto,
   ) {
     return this.asistenciaDocenteService.update(id, updateAsistenciaDocenteDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.asistenciaDocenteService.remove(id);
   }
 }
