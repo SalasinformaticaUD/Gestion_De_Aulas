@@ -10,15 +10,15 @@ El objetivo no es cambiar la arquitectura completa ni introducir patrones academ
 
 ## 0. Reglas del frente
 
-- [ ] Trabajar sobre la estructura actual de `backend/src/<modulo>`.
-- [ ] Mantener los nombres de rutas ya creados cuando sean correctos para no romper al frontend.
-- [ ] No eliminar controladores ni modulos existentes sin coordinar con los otros frentes.
-- [ ] Implementar por flujo funcional completo, no por archivos aislados.
-- [ ] Todo endpoint nuevo o modificado debe tener DTO, validacion, manejo de errores y prueba basica.
-- [ ] Todo acceso a base de datos debe pasar por `PrismaService`.
+- [X] Trabajar sobre la estructura actual de `backend/src/<modulo>`.
+- [X] Mantener los nombres de rutas ya creados cuando sean correctos para no romper al frontend.
+- [X] No eliminar controladores ni modulos existentes sin coordinar con los otros frentes.
+- [X] Implementar por flujo funcional completo, no por archivos aislados.
+- [X] Todo endpoint nuevo o modificado debe tener DTO, validacion, manejo de errores y prueba basica.
+- [X] Todo acceso a base de datos debe pasar por `PrismaService`.
 - [ ] La disponibilidad se calcula, no se guarda como tabla permanente.
-- [ ] No integrar directamente con la base de Gestion de Monitores.
-- [ ] Cada fase debe cerrar con `npm test -- --runInBand` y `npx tsc --noEmit --incremental false`.
+- [X] No integrar directamente con la base de Gestion de Monitores.
+- [X] Cada fase debe cerrar con `npm test -- --runInBand` y `npx tsc --noEmit --incremental false`.
 
 ---
 
@@ -26,11 +26,11 @@ El objetivo no es cambiar la arquitectura completa ni introducir patrones academ
 
 Antes de implementar reglas del core, el frente de Plataforma debe entregar:
 
-- [ ] `PrismaModule` global o importable.
-- [ ] `PrismaService` conectado a `DATABASE_URL`.
+- [X] `PrismaModule` global o importable.
+- [X] `PrismaService` conectado a `DATABASE_URL`.
 - [ ] `ValidationPipe` global con `whitelist`, `transform` y `forbidNonWhitelisted` si el equipo lo aprueba.
 - [ ] Filtro global de excepciones o formato comun de error.
-- [ ] DTOs con `class-validator` disponible.
+- [X] DTOs con `class-validator` disponible.
 - [ ] Auth basica con usuario autenticado en request.
 - [ ] Decorador o helper para usuario actual.
 - [ ] Guard de permisos por modulo, aunque al inicio se pueda usar en modo permisivo.
@@ -45,9 +45,9 @@ Objetivo: reemplazar el stub del modulo `aulas` por CRUD real y estable.
 
 ### 2.1 Contrato del modulo
 
-- [ ] Revisar el modelo `Aula` en `prisma/schema.prisma`.
-- [ ] Definir respuesta publica de aula sin exponer campos internos innecesarios.
-- [ ] Documentar endpoints esperados:
+- [X] Revisar el modelo `Aula` en `prisma/schema.prisma`.
+- [X] Definir respuesta publica de aula sin exponer campos internos innecesarios.
+- [X] Documentar endpoints esperados:
   - `POST /aulas`
   - `GET /aulas`
   - `GET /aulas/:id`
@@ -57,31 +57,31 @@ Objetivo: reemplazar el stub del modulo `aulas` por CRUD real y estable.
 
 ### 2.2 DTOs y validaciones
 
-- [ ] Completar `CreateAulaDto`.
-- [ ] Completar `UpdateAulaDto` usando `PartialType`.
-- [ ] Validar `codigo` como string requerido y unico.
-- [ ] Validar `ubicacion` como string requerido.
-- [ ] Validar `capacidad` como entero positivo.
-- [ ] Validar `estado` contra `EstadoAula`.
-- [ ] Validar `proyectoCurricularId` como UUID opcional.
-- [ ] Definir si `caracteristicas` se recibe como JSON libre o estructura controlada.
+- [X] Completar `CreateAulaDto`.
+- [X] Completar `UpdateAulaDto` usando `PartialType`.
+- [X] Validar `codigo` como string requerido y unico.
+- [X] Validar `ubicacion` como string requerido.
+- [X] Validar `capacidad` como entero positivo.
+- [X] Validar `estado` contra `EstadoAula`.
+- [X] Validar `proyectoCurricularId` como UUID opcional.
+- [X] Definir si `caracteristicas` se recibe como JSON libre o estructura controlada.
 
 ### 2.3 Servicio con Prisma
 
-- [ ] Inyectar `PrismaService` en `AulasService`.
-- [ ] Implementar `create` con control de codigo duplicado.
-- [ ] Implementar `findAll` con filtros opcionales por estado, piso/ubicacion y proyecto curricular.
-- [ ] Implementar `findOne` con `NotFoundException` cuando no exista.
-- [ ] Implementar `update` validando existencia previa.
-- [ ] Implementar `remove` con decision explicita:
+- [X] Inyectar `PrismaService` en `AulasService`.
+- [X] Implementar `create` con control de codigo duplicado.
+- [X] Implementar `findAll` con filtros opcionales por estado, piso/ubicacion y proyecto curricular.
+- [X] Implementar `findOne` con `NotFoundException` cuando no exista.
+- [X] Implementar `update` validando existencia previa.
+- [X] Implementar `remove` con decision explicita:
   - opcion MVP: bloquear eliminacion si tiene clases, prestamos, observaciones o tareas asociadas;
   - opcion estable: convertir a `FUERA_DE_SERVICIO` si no se quiere perder trazabilidad.
-- [ ] Incluir relaciones necesarias para software e informacion operativa solo cuando el endpoint lo requiera.
+- [X] Incluir relaciones necesarias para software e informacion operativa solo cuando el endpoint lo requiera.
 
 ### 2.4 Pruebas
 
-- [ ] Unit tests de `AulasService` con `PrismaService` mockeado.
-- [ ] E2E minimo:
+- [X] Unit tests de `AulasService` con `PrismaService` mockeado.
+- [X] E2E minimo:
   - crear aula;
   - listar aulas;
   - consultar por id;
@@ -98,45 +98,45 @@ Objetivo: implementar la base del modulo `horario`, incluyendo periodos, asignat
 
 ### 3.1 Alcance inicial
 
-- [ ] Implementar CRUD/consulta de periodos academicos.
-- [ ] Implementar carga manual o importacion inicial de clases programadas.
-- [ ] Asociar cada clase con aula, docente, asignatura y periodo.
-- [ ] Evitar modificar horarios oficiales fuera del sistema; el sistema administra la copia importada.
+- [X] Implementar CRUD/consulta de periodos academicos.
+- [X] Implementar carga manual o importacion inicial de clases programadas.
+- [X] Asociar cada clase con aula, docente, asignatura y periodo.
+- [X] Evitar modificar horarios oficiales fuera del sistema; el sistema administra la copia importada.
 
 ### 3.2 Contratos propuestos
 
-- [ ] `GET /horario/periodos`
-- [ ] `POST /horario/periodos`
-- [ ] `PATCH /horario/periodos/:id/activar`
-- [ ] `GET /horario/clases?aulaId=&periodoId=&diaSemana=`
-- [ ] `POST /horario/clases`
-- [ ] `PATCH /horario/clases/:id`
-- [ ] `DELETE /horario/clases/:id`
+- [X] `GET /horario/periodos`
+- [X] `POST /horario/periodos`
+- [X] `PATCH /horario/periodos/:id/activar`
+- [X] `GET /horario/clases?aulaId=&periodoId=&diaSemana=`
+- [X] `POST /horario/clases`
+- [X] `PATCH /horario/clases/:id`
+- [X] `DELETE /horario/clases/:id`
 - [ ] `POST /horario/importar` para carga por lote cuando el formato este definido.
 
 ### 3.3 DTOs
 
-- [ ] `CreatePeriodoAcademicoDto`: nombre, fechaInicio, fechaFin, activo.
-- [ ] `CreateClaseProgramadaDto`: periodoId, aulaId, docenteId, asignaturaId, proyectoCurricularId, diaSemana, horaInicio, horaFin, grupo, inscritos.
-- [ ] `UpdateClaseProgramadaDto`.
-- [ ] Validar UUIDs.
-- [ ] Validar que `diaSemana` este en rango acordado, por ejemplo 1 a 6.
-- [ ] Validar que `horaInicio < horaFin`.
-- [ ] Validar que una clase no se cruce con otra clase activa en la misma aula, dia y periodo.
+- [X] `CreatePeriodoAcademicoDto`: nombre, fechaInicio, fechaFin, activo.
+- [X] `CreateClaseProgramadaDto`: periodoId, aulaId, docenteId, asignaturaId, proyectoCurricularId, diaSemana, horaInicio, horaFin, grupo, inscritos.
+- [X] `UpdateClaseProgramadaDto`.
+- [X] Validar UUIDs.
+- [X] Validar que `diaSemana` este en rango acordado, por ejemplo 1 a 6.
+- [X] Validar que `horaInicio < horaFin`.
+- [X] Validar que una clase no se cruce con otra clase activa en la misma aula, dia y periodo.
 
 ### 3.4 Servicio
 
-- [ ] Inyectar `PrismaService` en `HorarioService`.
-- [ ] Implementar consultas por periodo, aula y dia.
+- [X] Inyectar `PrismaService` en `HorarioService`.
+- [X] Implementar consultas por periodo, aula y dia.
 - [ ] Implementar upsert o creacion previa de docente/asignatura si el equipo decide importar datos sin catalogos completos.
 - [ ] Implementar transaccion para carga por lote.
-- [ ] Devolver errores claros para conflictos de horario.
+- [X] Devolver errores claros para conflictos de horario.
 
 ### 3.5 Pruebas
 
-- [ ] Unit tests de validacion de cruces.
-- [ ] E2E de creacion de periodo y clase.
-- [ ] E2E de conflicto por solapamiento.
+- [X] Unit tests de validacion de cruces.
+- [X] E2E de creacion de periodo y clase.
+- [X] E2E de conflicto por solapamiento.
 
 Criterio de cierre: `GET /horario/clases` puede alimentar la vista semanal del frontend.
 
@@ -148,32 +148,32 @@ Objetivo: registrar asistencia real asociada a clases programadas.
 
 ### 4.1 Contratos
 
-- [ ] `GET /asistencia-docente?fecha=&aulaId=&estado=`
-- [ ] `POST /asistencia-docente`
-- [ ] `PATCH /asistencia-docente/:id`
-- [ ] `GET /asistencia-docente/clase/:claseId`
+- [X] `GET /asistencia-docente?fecha=&aulaId=&estado=`
+- [X] `POST /asistencia-docente`
+- [X] `PATCH /asistencia-docente/:id`
+- [X] `GET /asistencia-docente/clase/:claseId`
 
 ### 4.2 Reglas
 
-- [ ] Solo se registra asistencia sobre una `ClaseProgramada` existente.
-- [ ] Una clase no debe tener multiples registros activos de asistencia para el mismo bloque operativo, salvo que se defina historial.
-- [ ] Estado permitido: `PENDIENTE`, `ASISTIO`, `AUSENTE`.
+- [X] Solo se registra asistencia sobre una `ClaseProgramada` existente.
+- [X] Una clase no debe tener multiples registros activos de asistencia para el mismo bloque operativo, salvo que se defina historial.
+- [X] Estado permitido: `PENDIENTE`, `ASISTIO`, `AUSENTE`.
 - [ ] Guardar `registradoPorId` desde el usuario autenticado cuando auth este disponible.
-- [ ] Permitir observacion breve.
+- [X] Permitir observacion breve.
 
 ### 4.3 Implementacion
 
-- [ ] Completar DTOs.
-- [ ] Implementar servicio con Prisma.
-- [ ] Validar existencia de clase.
-- [ ] Validar existencia de usuario registrador si se recibe manualmente durante MVP.
-- [ ] Preparar consulta de asistencias pendientes del dia para el panel operativo.
+- [X] Completar DTOs.
+- [X] Implementar servicio con Prisma.
+- [X] Validar existencia de clase.
+- [X] Validar existencia de usuario registrador si se recibe manualmente durante MVP.
+- [X] Preparar consulta de asistencias pendientes del dia para el panel operativo.
 
 ### 4.4 Pruebas
 
-- [ ] Unit tests de estados y duplicados.
-- [ ] E2E de registro de asistencia.
-- [ ] E2E de consulta por clase.
+- [X] Unit tests de estados y duplicados.
+- [X] E2E de registro de asistencia.
+- [X] E2E de consulta por clase.
 
 Criterio de cierre: disponibilidad puede considerar ausencia docente como senal operativa segun regla aprobada.
 
@@ -208,7 +208,7 @@ Objetivo: entregar la primera version calculada de disponibilidad.
   - bloqueActual;
   - siguienteActividad;
   - fuentes que explican el resultado.
-- [ ] No crear tabla de disponibilidad.
+- [X] No crear tabla de disponibilidad.
 - [ ] No mutar datos desde endpoints de disponibilidad.
 
 ### 5.4 Servicio
@@ -388,10 +388,10 @@ Al final de cada sprint:
 - [ ] Revisar contratos publicados por Plataforma.
 - [ ] Actualizar `backend/src/MODULES.md` si se agregaron rutas o responsabilidades.
 - [ ] Ejecutar migraciones pendientes en entorno local.
-- [ ] Ejecutar `npm test -- --runInBand`.
-- [ ] Ejecutar `npx tsc --noEmit --incremental false`.
+- [X] Ejecutar `npm test -- --runInBand`.
+- [X] Ejecutar `npx tsc --noEmit --incremental false`.
 - [ ] Probar manualmente los endpoints principales con REST client, Postman o curl.
-- [ ] Reportar rutas listas para que frontend cambie datos mock por datos reales.
+- [X] Reportar rutas listas para que frontend cambie datos mock por datos reales.
 
 ---
 
