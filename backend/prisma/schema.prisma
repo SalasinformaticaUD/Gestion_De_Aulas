@@ -4,20 +4,21 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  moduleFormat = "cjs"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-
-enum EstadoCuenta { 
-  ACTIVA 
-  INACTIVA 
-  BLOQUEADA 
+enum EstadoCuenta {
+  ACTIVA
+  INACTIVA
+  BLOQUEADA
 }
+
 enum EstadoAula {
   OPERATIVA
   MANTENIMIENTO
@@ -73,24 +74,24 @@ enum TipoObservacion {
 
 // Identidad, autorización y auditoría
 model Usuario {
-  id              String          @id @default(uuid()) @db.Uuid
-  nombreCompleto  String
-  nombreUsuario   String          @unique
-  correo          String          @unique
-  passwordHash    String
-  cargo           String?
-  estado          EstadoCuenta    @default(ACTIVA)
-  dependenciaId   String?         @db.Uuid
-  dependencia     Dependencia?    @relation(fields: [dependenciaId], references: [id])
-  roles           UsuarioRol[]
-  asistencias     AsistenciaDocente[] @relation("RegistroAsistencia")
-  tareasAsignadas Tarea[]         @relation("ResponsableTarea")
-  auditorias      Auditoria[]
-  accesosCredencial AccesoCredencial[]
+  id                               String                @id @default(uuid()) @db.Uuid
+  nombreCompleto                   String
+  nombreUsuario                    String                @unique
+  correo                           String                @unique
+  passwordHash                     String
+  cargo                            String?
+  estado                           EstadoCuenta          @default(ACTIVA)
+  dependenciaId                    String?               @db.Uuid
+  dependencia                      Dependencia?          @relation(fields: [dependenciaId], references: [id])
+  roles                            UsuarioRol[]
+  asistencias                      AsistenciaDocente[]   @relation("RegistroAsistencia")
+  tareasAsignadas                  Tarea[]               @relation("ResponsableTarea")
+  auditorias                       Auditoria[]
+  accesosCredencial                AccesoCredencial[]
   prestamosAudiovisualesEntregados PrestamoAudiovisual[] @relation("EntregaPrestamoAudiovisual")
   prestamosAudiovisualesRecibidos  PrestamoAudiovisual[] @relation("RecepcionPrestamoAudiovisual")
-  creadoEn        DateTime        @default(now())
-  actualizadoEn   DateTime        @updatedAt
+  creadoEn                         DateTime              @default(now())
+  actualizadoEn                    DateTime              @updatedAt
 }
 
 model Dependencia {
@@ -130,6 +131,7 @@ model UsuarioRol {
   rolId     String  @db.Uuid
   usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   rol       Rol     @relation(fields: [rolId], references: [id], onDelete: Cascade)
+
   @@id([usuarioId, rolId])
 }
 
@@ -138,6 +140,7 @@ model RolPermiso {
   permisoId String  @db.Uuid
   rol       Rol     @relation(fields: [rolId], references: [id], onDelete: Cascade)
   permiso   Permiso @relation(fields: [permisoId], references: [id], onDelete: Cascade)
+
   @@id([rolId, permisoId])
 }
 
@@ -151,43 +154,44 @@ model Auditoria {
   datosPrevios Json?
   datosNuevos  Json?
   creadoEn     DateTime @default(now())
+
   @@index([entidad, entidadId])
 }
 
 // Catálogos académicos y aulas
 model Aula {
-  id                    String              @id @default(uuid()) @db.Uuid
-  codigo                String              @unique
-  ubicacion             String
-  capacidad             Int
-  caracteristicas       Json?
-  estado                EstadoAula          @default(OPERATIVA)
-  proyectoCurricularId  String?             @db.Uuid
-  proyectoCurricular    ProyectoCurricular? @relation(fields: [proyectoCurricularId], references: [id])
-  softwares             AulaSoftware[]
-  clases                ClaseProgramada[]
-  practicasLibres       PracticaLibre[]
-  prestamosDocentes     PrestamoDocente[]
+  id                     String                @id @default(uuid()) @db.Uuid
+  codigo                 String                @unique
+  ubicacion              String
+  capacidad              Int
+  caracteristicas        Json?
+  estado                 EstadoAula            @default(OPERATIVA)
+  proyectoCurricularId   String?               @db.Uuid
+  proyectoCurricular     ProyectoCurricular?   @relation(fields: [proyectoCurricularId], references: [id])
+  softwares              AulaSoftware[]
+  clases                 ClaseProgramada[]
+  practicasLibres        PracticaLibre[]
+  prestamosDocentes      PrestamoDocente[]
   prestamosAudiovisuales PrestamoAudiovisual[]
-  observaciones         Observacion[]
-  tareas                Tarea[]
-  limpiezas             Limpieza[]
-  creadoEn              DateTime            @default(now())
-  actualizadoEn         DateTime            @updatedAt
+  observaciones          Observacion[]
+  tareas                 Tarea[]
+  limpiezas              Limpieza[]
+  creadoEn               DateTime              @default(now())
+  actualizadoEn          DateTime              @updatedAt
 }
 
 model PeriodoAcademico {
-  id          String             @id @default(uuid()) @db.Uuid
-  nombre      String             @unique
+  id          String            @id @default(uuid()) @db.Uuid
+  nombre      String            @unique
   fechaInicio DateTime
   fechaFin    DateTime
-  activo      Boolean            @default(false)
+  activo      Boolean           @default(false)
   clases      ClaseProgramada[]
 }
 
 model ProyectoCurricular {
-  id          String             @id @default(uuid()) @db.Uuid
-  nombre      String             @unique
+  id          String            @id @default(uuid()) @db.Uuid
+  nombre      String            @unique
   aulas       Aula[]
   asignaturas Asignatura[]
   clases      ClaseProgramada[]
@@ -203,13 +207,13 @@ model Asignatura {
 }
 
 model Docente {
-  id                      String                   @id @default(uuid()) @db.Uuid
-  documento               String?                  @unique
-  nombre                  String
-  correo                  String?                  @unique
-  clases                  ClaseProgramada[]
-  prestamos               PrestamoDocente[]
-  prestamosAudiovisuales  PrestamoAudiovisual[]
+  id                     String                @id @default(uuid()) @db.Uuid
+  documento              String?               @unique
+  nombre                 String
+  correo                 String?               @unique
+  clases                 ClaseProgramada[]
+  prestamos              PrestamoDocente[]
+  prestamosAudiovisuales PrestamoAudiovisual[]
 }
 
 model ClaseProgramada {
@@ -230,27 +234,30 @@ model ClaseProgramada {
   asignatura           Asignatura          @relation(fields: [asignaturaId], references: [id])
   proyectoCurricular   ProyectoCurricular? @relation(fields: [proyectoCurricularId], references: [id])
   asistencias          AsistenciaDocente[]
+
   @@index([periodoId, aulaId, diaSemana])
 }
 
 model AsistenciaDocente {
-  id              String            @id @default(uuid()) @db.Uuid
-  claseId         String            @db.Uuid
-  registradoPorId String?           @db.Uuid
-  estado          EstadoAsistencia  @default(PENDIENTE)
+  id              String           @id @default(uuid()) @db.Uuid
+  claseId         String           @db.Uuid
+  registradoPorId String?          @db.Uuid
+  estado          EstadoAsistencia @default(PENDIENTE)
   registradaEn    DateTime?
   observacion     String?
-  clase           ClaseProgramada   @relation(fields: [claseId], references: [id])
-  registradoPor   Usuario?          @relation("RegistroAsistencia", fields: [registradoPorId], references: [id])
+  clase           ClaseProgramada  @relation(fields: [claseId], references: [id])
+  registradoPor   Usuario?         @relation("RegistroAsistencia", fields: [registradoPorId], references: [id])
+
   @@index([claseId])
 }
 
 model Software {
   id          String         @id @default(uuid()) @db.Uuid
   nombre      String
-  version     String?
+  version     String
   descripcion String?
   aulas       AulaSoftware[]
+
   @@unique([nombre, version])
 }
 
@@ -260,7 +267,9 @@ model AulaSoftware {
   instaladoEn DateTime @default(now())
   aula        Aula     @relation(fields: [aulaId], references: [id], onDelete: Cascade)
   software    Software @relation(fields: [softwareId], references: [id], onDelete: Cascade)
+
   @@id([aulaId, softwareId])
+  @@index([softwareId])
 }
 
 // Usuarios externos, préstamos y sanciones
@@ -283,6 +292,7 @@ model PracticaLibre {
   estado       EstadoPrestamo @default(ACTIVO)
   estudiante   Estudiante     @relation(fields: [estudianteId], references: [id])
   aula         Aula           @relation(fields: [aulaId], references: [id])
+
   @@index([aulaId, inicio])
 }
 
@@ -296,6 +306,7 @@ model PrestamoDocente {
   motivo    String?
   docente   Docente        @relation(fields: [docenteId], references: [id])
   aula      Aula           @relation(fields: [aulaId], references: [id])
+
   @@index([aulaId, inicio, fin])
 }
 
@@ -376,14 +387,14 @@ model MotivoMulta {
 }
 
 model Multa {
-  id           String       @id @default(uuid()) @db.Uuid
-  estudianteId String       @db.Uuid
-  motivoId     String       @db.Uuid
-  estado       EstadoMulta  @default(ACTIVA)
-  fecha        DateTime     @default(now())
+  id           String      @id @default(uuid()) @db.Uuid
+  estudianteId String      @db.Uuid
+  motivoId     String      @db.Uuid
+  estado       EstadoMulta @default(ACTIVA)
+  fecha        DateTime    @default(now())
   descripcion  String?
-  estudiante   Estudiante   @relation(fields: [estudianteId], references: [id])
-  motivo       MotivoMulta  @relation(fields: [motivoId], references: [id])
+  estudiante   Estudiante  @relation(fields: [estudianteId], references: [id])
+  motivo       MotivoMulta @relation(fields: [motivoId], references: [id])
 }
 
 // Operación diaria y credenciales institucionales
@@ -420,24 +431,25 @@ model Limpieza {
 }
 
 model CredencialOperativa {
-  id             String            @id @default(uuid()) @db.Uuid
+  id             String             @id @default(uuid()) @db.Uuid
   nombre         String
   categoria      String
   usuario        String?
   secretoCifrado String
   descripcion    String?
-  estado         EstadoCredencial  @default(ACTIVA)
+  estado         EstadoCredencial   @default(ACTIVA)
   accesos        AccesoCredencial[]
-  creadoEn       DateTime          @default(now())
-  actualizadoEn  DateTime          @updatedAt
+  creadoEn       DateTime           @default(now())
+  actualizadoEn  DateTime           @updatedAt
 }
 
 model AccesoCredencial {
-  credencialId String               @db.Uuid
-  usuarioId    String               @db.Uuid
-  puedeVer     Boolean              @default(false)
-  puedeEditar  Boolean              @default(false)
-  credencial   CredencialOperativa  @relation(fields: [credencialId], references: [id], onDelete: Cascade)
-  usuario      Usuario               @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  credencialId String              @db.Uuid
+  usuarioId    String              @db.Uuid
+  puedeVer     Boolean             @default(false)
+  puedeEditar  Boolean             @default(false)
+  credencial   CredencialOperativa @relation(fields: [credencialId], references: [id], onDelete: Cascade)
+  usuario      Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
   @@id([credencialId, usuarioId])
 }
