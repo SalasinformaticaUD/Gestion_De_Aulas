@@ -1,7 +1,7 @@
 # Informe 3 - BackCore
 
 FECHA: 20/08/2026  
-MONITOR: Pablo Garzon Gomez
+MONITOR: Ivan Felipe Prado Blanco 8:00am - 10:00am // 2:00pm - 4:00pm
 
 ## AVANCES
 
