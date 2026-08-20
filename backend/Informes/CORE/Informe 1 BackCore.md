@@ -6,8 +6,6 @@ MONITOR: Pablo Garzon Gomez
 
 ## AVANCES
 
-* Se confirmó que el CRUD real de aulas y la base funcional de períodos y clases no existían en ninguna rama local o remota disponible.
-* Se completó el primer paso del plan del Core: administración real de aulas con Prisma.
 * El módulo `aulas` permite crear, listar, consultar, actualizar y eliminar aulas mediante las rutas REST definidas en el plan.
 * Se implementaron validaciones de código, ubicación, capacidad, características, estado y proyecto curricular.
 * El listado de aulas permite filtrar por estado, ubicación y proyecto curricular, e incluye el proyecto y el software instalado.
@@ -81,7 +79,7 @@ MONITOR: Pablo Garzon Gomez
 
 ## SIGUIENTE PASO
 
-* Continuar con el tercer paso del plan: implementar asistencia docente asociada a clases programadas.
+* Implementar asistencia docente asociada a clases programadas.
 * Crear y validar los contratos:
   * `GET /asistencia-docente?fecha=&aulaId=&estado=`;
   * `POST /asistencia-docente`;
