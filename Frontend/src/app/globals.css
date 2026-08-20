@@ -20,3 +20,124 @@
 @media (max-width:560px) { .room-list { grid-template-columns:1fr; }.room-detail-header { gap:14px; }.room-title-row h2 { font-size:18px; }.room-actions { align-items:stretch; flex-direction:column; }.room-actions .button-primary,.room-actions .button-secondary { width:100%; }.room-information { grid-template-columns:1fr; }.room-info-wide { grid-column:auto; }.room-tabs button { padding:0 13px; }.workstation-grid { grid-template-columns:repeat(5,1fr); }.workstation-tab { padding:16px; }.software-list { grid-template-columns:1fr; }.history-list { padding:16px; }.history-list article { grid-template-columns:1fr; gap:5px; }.history-list span { text-align:left; }.rooms-heading p { max-width:300px; } }
 
 .room-selection-empty { display:grid; min-height:142px; place-items:center; padding:24px; border:1px solid var(--line); border-radius:var(--radius); color:var(--muted); background:#fff; font-size:.78rem; text-align:center; }
+
+/* Préstamos de equipos audiovisuales */
+.button-secondary { display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }
+.page-kicker { display:block; margin-bottom:5px; color:var(--primary); font-size:10px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; }
+.audiovisual-heading { align-items:center; margin-bottom:18px; }
+.audiovisual-new { min-height:39px; padding:0 16px; }
+.audiovisual-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:16px; }
+.audiovisual-metric { position:relative; overflow:hidden; min-height:91px; padding:15px 17px; border:1px solid var(--line); border-radius:var(--radius); background:#fff; }
+.audiovisual-metric span { display:block; color:var(--muted); font-size:11px; font-weight:650; }
+.audiovisual-metric strong { display:block; margin-top:8px; font-size:25px; line-height:1; }
+.audiovisual-metric i { position:absolute; right:15px; bottom:15px; width:8px; height:8px; border-radius:50%; background:#737984; box-shadow:0 0 0 5px #eff1f4; }
+.audiovisual-metric-success i { background:#16a34a; box-shadow:0 0 0 5px #dcfce7; }
+.audiovisual-metric-warning i { background:#d97706; box-shadow:0 0 0 5px #fef3c7; }
+.audiovisual-metric-danger i { background:#dc2626; box-shadow:0 0 0 5px #fee2e2; }
+.audiovisual-notice { min-height:42px; display:flex; align-items:center; justify-content:space-between; gap:14px; padding:9px 13px; margin-bottom:14px; border:1px solid #b6e9d1; border-radius:7px; color:#07684f; background:#eafaf2; font-size:12px; font-weight:650; }
+.audiovisual-notice button { border:0; color:inherit; background:transparent; font-size:18px; }
+.audiovisual-view-tabs { display:flex; gap:4px; width:max-content; max-width:100%; margin-bottom:12px; padding:4px; border:1px solid var(--line); border-radius:8px; background:#eceef1; }
+.audiovisual-view-tabs button { min-height:32px; padding:0 13px; border:0; border-radius:5px; color:var(--muted); background:transparent; font-size:12px; }
+.audiovisual-view-tabs button.is-active { color:var(--ink); background:#fff; box-shadow:0 1px 3px rgba(18,24,40,.1); font-weight:750; }
+.audiovisual-view-tabs button span { display:inline-grid; place-items:center; min-width:20px; height:18px; margin-left:5px; border-radius:9px; color:#666c75; background:#e9ebef; font-size:9px; }
+.audiovisual-toolbar { display:flex; align-items:flex-end; gap:10px; padding:13px 15px; border:1px solid var(--line); border-bottom:0; border-radius:var(--radius) var(--radius) 0 0; background:#fff; }
+.audiovisual-toolbar .field { min-width:148px; }
+.audiovisual-toolbar .field select { height:36px; }
+.audiovisual-search { min-width:220px; max-width:370px; height:36px; flex:1; display:flex; align-items:center; gap:8px; padding:0 10px; border:1px solid var(--line); border-radius:7px; background:#f8f9fb; }
+.audiovisual-search input { width:100%; border:0; outline:0; background:transparent; font-size:12px; }
+.audiovisual-results { margin:0 0 10px auto; color:var(--muted); font-size:10px; white-space:nowrap; }
+.audiovisual-card { overflow:hidden; border:1px solid var(--line); border-radius:0 0 var(--radius) var(--radius); background:#fff; }
+.audiovisual-view-tabs + .audiovisual-card { border-radius:var(--radius); }
+.audiovisual-table { width:100%; min-width:1050px; border-collapse:collapse; font-size:12px; }
+.audiovisual-table th { padding:11px 14px; color:#9297a1; background:#18191c; font-size:9px; font-weight:800; letter-spacing:.08em; text-align:left; text-transform:uppercase; white-space:nowrap; }
+.audiovisual-table td { padding:11px 14px; border-bottom:1px solid var(--line); vertical-align:middle; }
+.audiovisual-table tbody tr:nth-child(even) { background:#fafafa; }
+.audiovisual-table tbody tr:last-child td { border-bottom:0; }
+.audiovisual-table td>strong,.audiovisual-table td>small { display:block; }
+.audiovisual-table td>small { max-width:240px; margin-top:4px; color:var(--muted); font-size:9px; }
+.inventory-code { color:var(--primary); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; }
+.equipment-type { display:inline-block; padding:3px 7px; border:1px solid var(--line); border-radius:4px; color:#515762; background:#f2f3f5; font-size:10px; }
+.equipment-status { display:inline-flex; align-items:center; gap:5px; padding:4px 8px; border-radius:4px; font-size:10px; font-weight:750; white-space:nowrap; }
+.equipment-status i { width:5px; height:5px; border-radius:50%; background:currentColor; }
+.equipment-status-disponible { color:#078839; background:#dcfce7; }
+.equipment-status-prestado { color:#b45d00; background:#fef3c7; }
+.equipment-status-mantenimiento { color:#ce2030; background:#fee2e2; }
+.equipment-status-fuera-de-servicio { color:#555b65; background:#e5e7eb; }
+.usage-track { width:64px; height:3px; display:block; margin-top:5px; overflow:hidden; border-radius:3px; background:#e3e5e9; }
+.usage-track i { height:100%; display:block; border-radius:inherit; background:var(--primary); }
+.usage-track i.is-danger { background:#dc2626; }
+.table-empty { color:#a2a6ad; }
+.table-action { min-height:27px; padding:0 10px; border:0; border-radius:5px; color:#fff; font-size:10px; font-weight:750; white-space:nowrap; }
+.table-action-primary { background:var(--primary); }
+.table-action-success { background:#16803c; }
+.table-action-muted { border:1px solid var(--line); color:#555b65; background:#fff; }
+.audiovisual-empty { height:100px; color:var(--muted); text-align:center; }
+.usage-notice { display:flex; align-items:center; gap:10px; padding:11px 14px; margin-top:13px; border:1px solid #bfdbfe; border-radius:7px; color:#1e4c91; background:#eaf2ff; font-size:11px; }
+.usage-notice>span { width:19px; height:19px; flex:0 0 auto; display:grid; place-items:center; border-radius:50%; color:#fff; background:#246bc8; font-family:serif; font-weight:800; }
+.usage-notice p { margin:0; line-height:1.4; }
+.loans-table { min-width:940px; }
+.loans-table td:first-child small,.loans-table td:nth-child(2) small { display:block; margin-top:4px; color:var(--muted); font-size:9px; }
+.loan-equipment-list { display:flex; flex-wrap:wrap; gap:4px; }
+.loan-equipment-list span { padding:3px 6px; border:1px solid var(--line); border-radius:4px; color:#4d535c; background:#f4f5f6; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:9px; font-weight:750; }
+.loan-status { display:inline-block; padding:4px 8px; border-radius:4px; font-size:10px; font-weight:750; }
+.loan-status-activo { color:#175cc4; background:#dbeafe; }
+.loan-status-vencido { color:#ce2030; background:#fee2e2; }
+.loan-status-devuelto { color:#078839; background:#dcfce7; }
+.loan-status-cancelado { color:#555b65; background:#e5e7eb; }
+.loan-status-solicitado,.loan-status-aprobado { color:#b45d00; background:#fef3c7; }
+.loan-actions { display:flex; gap:5px; }
+.modal-backdrop { position:fixed; z-index:80; inset:0; display:grid; place-items:center; padding:20px; background:rgba(9,10,12,.56); }
+.audiovisual-dialog { width:min(640px,100%); max-height:calc(100vh - 40px); overflow:auto; border-radius:11px; background:#fff; box-shadow:0 24px 70px rgba(0,0,0,.28); }
+.audiovisual-dialog>header { position:sticky; z-index:2; top:0; display:flex; align-items:center; justify-content:space-between; gap:20px; padding:16px 19px; color:#fff; background:#18191c; }
+.audiovisual-dialog>header h2 { margin:0; font-size:15px; }
+.audiovisual-dialog>header p { margin:4px 0 0; color:#aeb3bd; font-size:10px; }
+.audiovisual-dialog>header button { width:29px; height:29px; border:0; border-radius:5px; color:#d7d9dd; background:#303238; font-size:18px; }
+.audiovisual-dialog form { display:grid; gap:15px; padding:19px; }
+.dialog-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.dialog-field { display:grid; gap:5px; }
+.dialog-field-wide { grid-column:1/-1; }
+.dialog-field>span,.equipment-picker legend,.return-equipment legend { color:var(--muted); font-size:9px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.dialog-field input,.dialog-field select,.dialog-field textarea,.return-equipment select { width:100%; min-height:37px; padding:7px 10px; border:1px solid var(--line); border-radius:6px; outline:0; color:var(--ink); background:#f8f9fb; font:inherit; font-size:12px; }
+.dialog-field input:focus,.dialog-field select:focus,.dialog-field textarea:focus,.return-equipment select:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(165,16,34,.1); }
+.equipment-picker,.return-equipment { min-width:0; padding:0; margin:0; border:0; }
+.equipment-picker legend,.return-equipment legend { width:100%; margin-bottom:7px; }
+.equipment-picker legend b { float:right; display:grid; place-items:center; min-width:20px; height:18px; border-radius:9px; color:#fff; background:var(--primary); font-size:9px; }
+.equipment-picker>div { max-height:216px; display:grid; grid-template-columns:1fr 1fr; gap:6px; overflow-y:auto; }
+.equipment-picker label { min-width:0; display:flex; align-items:center; gap:8px; padding:8px 9px; border:1px solid var(--line); border-radius:6px; background:#fff; cursor:pointer; }
+.equipment-picker label.is-selected { border-color:rgba(165,16,34,.55); background:#fff5f6; }
+.equipment-picker input { flex:0 0 auto; accent-color:var(--primary); }
+.equipment-picker label>span { min-width:0; overflow:hidden; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
+.equipment-picker strong { margin-right:6px; color:var(--primary); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
+.equipment-picker small { display:block; margin:3px 0 0; color:var(--muted); font-size:9px; }
+.audiovisual-dialog footer { display:flex; justify-content:flex-end; gap:8px; padding-top:2px; }
+.audiovisual-dialog footer button { min-height:36px; padding:0 14px; }
+.dialog-cancel { border:1px solid var(--line); border-radius:7px; color:#555b65; background:#f8f9fb; font-size:11px; font-weight:750; }
+.return-dialog { width:min(570px,100%); }
+.return-equipment { display:grid; gap:7px; }
+.return-equipment label { display:grid; grid-template-columns:minmax(0,1fr) 205px; align-items:center; gap:10px; padding:10px; border:1px solid var(--line); border-radius:7px; }
+.return-equipment label>span { min-width:0; font-size:11px; }
+.return-equipment label strong { display:block; margin-bottom:3px; color:var(--primary); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:10px; }
+@media (max-width:980px) {
+  .audiovisual-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .audiovisual-toolbar { flex-wrap:wrap; }
+  .audiovisual-search { max-width:none; flex:1 1 100%; }
+  .audiovisual-results { margin-left:0; }
+  .audiovisual-toolbar .field { flex:1; }
+}
+@media (max-width:620px) {
+  .audiovisual-heading { align-items:stretch; }
+  .audiovisual-new { width:100%; }
+  .audiovisual-metrics { gap:8px; }
+  .audiovisual-metric { min-height:80px; padding:13px; }
+  .audiovisual-metric strong { font-size:22px; }
+  .audiovisual-toolbar { align-items:stretch; padding:11px; }
+  .audiovisual-toolbar .field { flex:1 1 100%; }
+  .audiovisual-results { margin:0; }
+  .usage-notice { align-items:flex-start; }
+  .dialog-grid,.equipment-picker>div { grid-template-columns:1fr; }
+  .dialog-field-wide { grid-column:auto; }
+  .return-equipment label { grid-template-columns:1fr; }
+  .audiovisual-dialog form { padding:15px; }
+  .audiovisual-dialog footer { align-items:stretch; flex-direction:column-reverse; }
+  .audiovisual-dialog footer button { width:100%; }
+}

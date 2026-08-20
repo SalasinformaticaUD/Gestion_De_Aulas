@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { rooms } from "@/features/aulas/data/rooms";
 import type { Room, RoomStatus } from "@/features/aulas/types";
@@ -63,7 +64,7 @@ export function RoomsView() {
         {selectedRoom ? <section className="room-detail" aria-labelledby="room-title">
           <header className="room-detail-header">
             <div><div className="room-title-row"><h2 id="room-title">Aula {selectedRoom.code}</h2><StatusBadge status={selectedRoom.status} /></div><p>Piso {selectedRoom.floor} · {selectedRoom.capacity} puestos · {selectedRoom.software.length} aplicaciones instaladas</p></div>
-            <div className="room-actions"><button className="button-secondary" type="button">Audiovisuales</button><button className="button-primary" type="button">Registrar práctica libre</button></div>
+            <div className="room-actions"><Link className="button-secondary" href={`/audiovisuales?aula=${selectedRoom.code}`}>Audiovisuales</Link><button className="button-primary" type="button">Registrar práctica libre</button></div>
           </header>
 
           <div className="room-tabs" role="tablist" aria-label="Detalles del aula">
