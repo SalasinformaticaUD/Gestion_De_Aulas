@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuthTokenService } from './auth-token.service';
 import { UsuarioAutenticado } from './auth.types';
 import { LoginDto } from './dto/login.dto';
+import { AuthResponseDto } from './dto/auth-response.dto';
 import { PasswordHashService } from './password-hash.service';
 
 const usuarioAutenticadoInclude = {
@@ -31,7 +32,7 @@ export class AuthService {
     private readonly tokens: AuthTokenService,
   ) {}
 
-  async login(dto: LoginDto) {
+  async login(dto: LoginDto): Promise<AuthResponseDto> {
     const identificador = dto.identificador.trim();
     const usuario = await this.prisma.usuario.findFirst({
       where: {
@@ -51,11 +52,25 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas.');
     }
 
-    const token = this.tokens.sign(usuario.id);
+    const usuarioAutenticado = this.toAuthenticatedUser(usuario);
+    const token = this.tokens.sign({
+      sub: usuarioAutenticado.id,
+      nombreUsuario: usuarioAutenticado.nombreUsuario,
+      dependenciaId: usuarioAutenticado.dependencia?.id ?? null,
+      roles: usuarioAutenticado.roles,
+      permisos: usuarioAutenticado.permisos,
+    });
     return {
       ...token,
       tokenType: 'Bearer',
-      usuario: this.toAuthenticatedUser(usuario),
+      usuario: usuarioAutenticado,
+      aplicaciones: {
+        puedeAccederAulas: usuarioAutenticado.modulos.some(
+          (codigo) => codigo !== 'MONITORES',
+        ),
+        puedeAccederMonitores: usuarioAutenticado.modulos.includes('MONITORES'),
+        urlMonitores: process.env.MONITORES_API_URL?.trim() || null,
+      },
     };
   }
 

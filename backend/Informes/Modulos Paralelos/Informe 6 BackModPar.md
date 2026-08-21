@@ -130,11 +130,11 @@ MONITOR: Kaleth Molina Diaz
 
 * No modificar módulos ajenos a `software` salvo para correcciones puntuales verificadas de compilación, pruebas o lint.
 
-* NO HACER PUSH
+* IMPORTANTE: NO HACER PUSH bajo ninguna circunstancia en esta etapa.
 
 ## SIGUIENTE PASO:
 
-* Publicar los cambios locales de `main` en el remoto mediante `git push`, si corresponde.
+* Mantener los cambios únicamente de forma local hasta que el equipo autorice explícitamente la publicación.
 
 * Revisar si debe generarse una migración formal para los cambios de Prisma relacionados con `ImportacionSoftware`.
 
@@ -202,4 +202,4 @@ La rama `main` quedó con el merge de `software_instalado` aplicado localmente m
 6f08319 Merge branch 'software_instalado' into main
 ```
 
-Estado: Merge completado localmente. Pendiente publicar en remoto si se requiere.
+Estado: Merge completado localmente. IMPORTANTE: NO HACER PUSH. Los cambios deben permanecer locales hasta nueva autorización.

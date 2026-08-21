@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { CreateAulaDto } from './dto/create-aula.dto';
@@ -9,6 +10,7 @@ import { UpdateAulaDto } from './dto/update-aula.dto';
 import { FindAulasDto } from './dto/find-aulas.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { Aula, HistorialAula } from './entities/aula.entity';
+import { AuditoriaService } from '../auditoria/auditoria.service';
 
 type PrismaError = { code?: unknown };
 
@@ -87,9 +89,12 @@ type AulaPublicaSource = Prisma.AulaGetPayload<{
 
 @Injectable()
 export class AulasService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly auditoria?: AuditoriaService,
+  ) {}
 
-  async create(createAulaDto: CreateAulaDto) {
+  async create(createAulaDto: CreateAulaDto, usuarioId?: string) {
     if (createAulaDto.proyectoCurricularId) {
       await this.ensureProyectoCurricularExists(
         createAulaDto.proyectoCurricularId,
@@ -97,9 +102,17 @@ export class AulasService {
     }
 
     try {
-      return await this.prisma.aula.create({
+      const aula = await this.prisma.aula.create({
         data: this.normalizeCreateInput(createAulaDto),
       });
+      await this.auditoria?.registrar({
+        usuarioId,
+        entidad: 'Aula',
+        entidadId: aula.id,
+        accion: 'CREATE',
+        datosNuevos: aula,
+      });
+      return aula;
     } catch (error: unknown) {
       this.throwKnownPersistenceError(error);
       throw error;
@@ -138,8 +151,11 @@ export class AulasService {
     return this.toPublicResponse(aula);
   }
 
-  async update(id: string, updateAulaDto: UpdateAulaDto) {
-    await this.ensureAulaExists(id);
+  async update(id: string, updateAulaDto: UpdateAulaDto, usuarioId?: string) {
+    const previa = await this.prisma.aula.findUnique({ where: { id } });
+    if (!previa) {
+      throw new NotFoundException(`No existe aula con id ${id}.`);
+    }
 
     if (updateAulaDto.proyectoCurricularId) {
       await this.ensureProyectoCurricularExists(
@@ -148,17 +164,26 @@ export class AulasService {
     }
 
     try {
-      return await this.prisma.aula.update({
+      const aula = await this.prisma.aula.update({
         where: { id },
         data: this.normalizeUpdateInput(updateAulaDto),
       });
+      await this.auditoria?.registrar({
+        usuarioId,
+        entidad: 'Aula',
+        entidadId: id,
+        accion: 'UPDATE',
+        datosPrevios: previa,
+        datosNuevos: aula,
+      });
+      return aula;
     } catch (error: unknown) {
       this.throwKnownPersistenceError(error);
       throw error;
     }
   }
 
-  async remove(id: string) {
+  async remove(id: string, usuarioId?: string) {
     const aula = await this.prisma.aula.findUnique({
       where: { id },
       select: {
@@ -190,7 +215,15 @@ export class AulasService {
       );
     }
 
-    return this.prisma.aula.delete({ where: { id } });
+    const eliminada = await this.prisma.aula.delete({ where: { id } });
+    await this.auditoria?.registrar({
+      usuarioId,
+      entidad: 'Aula',
+      entidadId: id,
+      accion: 'DELETE',
+      datosPrevios: eliminada,
+    });
+    return eliminada;
   }
 
   private async ensureAulaExists(id: string): Promise<void> {

@@ -66,6 +66,9 @@ guardarse con `PasswordHashService`, que utiliza `scrypt`; nunca se admite texto
 - `GET /auth/me`: requiere `Authorization: Bearer <token>` y devuelve el usuario actual,
   sus roles, permisos y módulos habilitados sin exponer `passwordHash`.
 
+El logout es local: el frontend debe borrar el token almacenado. No se conserva una
+lista de revocación durante el MVP.
+
 Variables de entorno:
 
 - `AUTH_TOKEN_SECRET`: secreto de firma obligatorio en producción.
@@ -74,6 +77,38 @@ Variables de entorno:
   `false` para facilitar la integración progresiva.
 - `PERMISSIONS_MODE`: `permissive` durante integración o `strict` para exigir los
   módulos asignados mediante roles y permisos.
+
+## Configuración y base de datos
+
+Copie `.env.example` como `.env` y defina al menos `DATABASE_URL`, `PORT`,
+`FRONTEND_URL`, `NODE_ENV`, `JWT_SECRET` y `JWT_EXPIRES_IN`. En producción la
+aplicación valida `DATABASE_URL`, `FRONTEND_URL` y `JWT_SECRET` al iniciar.
+
+Las rutas actuales se conservan sin prefijo `/api` para mantener compatibilidad. CORS
+solo acepta los orígenes indicados en `FRONTEND_URL` (separados por coma) y
+`GET /health` responde `{ "status": "ok" }`.
+
+```bash
+# generar el cliente y aplicar migraciones
+npm run prisma:generate
+npm run prisma:migrate
+
+# cargar los catálogos idempotentes: dependencias, módulos y permisos
+npm run prisma:seed
+
+# despliegue y exploración de una base ya existente
+npm run prisma:deploy
+npm run prisma:studio
+```
+
+El seed registra las dependencias iniciales, los 15 módulos funcionales, el módulo de
+integración `MONITORES`, sus permisos y el usuario `admin` con rol `ADMINISTRADOR`.
+Debe definir `ADMIN_INITIAL_PASSWORD` antes de ejecutarlo. Los permisos incluyen
+`LEER`, `CREAR`, `ACTUALIZAR`, `ELIMINAR`, `APROBAR` y `EXPORTAR` por módulo.
+
+Prisma 7 usa el generador `prisma-client` con salida local en `generated/prisma`.
+Se conserva esta configuración porque coincide con el adaptador PostgreSQL actual y
+evita cambiar las migraciones ya creadas.
 
 ## Deployment
 

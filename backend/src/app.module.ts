@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { HorarioModule } from './horario/horario.module';
 import { DisponibilidadAulasModule } from './disponibilidad-aulas/disponibilidad-aulas.module';
@@ -20,9 +21,12 @@ import { RolesModule } from './roles/roles.module';
 import { PermisosModule } from './permisos/permisos.module';
 import { DependenciasModule } from './dependencias/dependencias.module';
 import { AuditoriaModule } from './auditoria/auditoria.module';
+import { HealthModule } from './health/health.module';
+import { IntegracionesModule } from './integraciones/integraciones.module';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
     AuthModule,
     HorarioModule,
     DisponibilidadAulasModule,
@@ -44,6 +48,8 @@ import { AuditoriaModule } from './auditoria/auditoria.module';
     PermisosModule,
     DependenciasModule,
     AuditoriaModule,
+    HealthModule,
+    IntegracionesModule,
   ],
 })
 export class AppModule {}

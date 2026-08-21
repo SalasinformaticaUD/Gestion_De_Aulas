@@ -1,45 +1,23 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
+import { RequireModule } from '../auth/decorators/require-module.decorator';
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 import { AuditoriaService } from './auditoria.service';
-import { CreateAuditoriaDto } from './dto/create-auditoria.dto';
-import { UpdateAuditoriaDto } from './dto/update-auditoria.dto';
+import { FindAuditoriaDto } from './dto/find-auditoria.dto';
 
+@RequireModule('ADMINISTRACION')
 @Controller('auditoria')
 export class AuditoriaController {
   constructor(private readonly auditoriaService: AuditoriaService) {}
 
-  @Post()
-  create(@Body() createAuditoriaDto: CreateAuditoriaDto) {
-    return this.auditoriaService.create(createAuditoriaDto);
-  }
-
   @Get()
-  findAll() {
-    return this.auditoriaService.findAll();
+  @RequirePermissions('ADMINISTRACION_LEER')
+  findAll(@Query() filters: FindAuditoriaDto) {
+    return this.auditoriaService.findAll(filters);
   }
 
   @Get(':id')
+  @RequirePermissions('ADMINISTRACION_LEER')
   findOne(@Param('id') id: string) {
     return this.auditoriaService.findOne(id);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateAuditoriaDto: UpdateAuditoriaDto,
-  ) {
-    return this.auditoriaService.update(id, updateAuditoriaDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.auditoriaService.remove(id);
   }
 }

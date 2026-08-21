@@ -10,13 +10,13 @@ Este frente debe avanzar primero porque desbloquea al Core operativo y a los Mod
 
 ## 0. Reglas del frente
 
-- [ ] No cambiar rutas funcionales existentes sin documentarlo y coordinarlo.
-- [ ] No conectar directamente a la base de datos de Gestion de Monitores.
-- [ ] No almacenar datos propios de Monitores dentro de esta base, salvo identificadores externos necesarios para integracion por API.
-- [ ] Proteger credenciales, tokens y secretos desde el inicio.
-- [ ] Cada cambio transversal debe incluir una prueba smoke o e2e minima.
-- [ ] Todo contrato comun debe quedar documentado en `backend/docs` o `backend/src/MODULES.md`.
-- [ ] Cerrar cada fase con `npm test -- --runInBand` y `npx tsc --noEmit --incremental false`.
+- [X] No cambiar rutas funcionales existentes sin documentarlo y coordinarlo.
+- [X] No conectar directamente a la base de datos de Gestion de Monitores.
+- [X] No almacenar datos propios de Monitores dentro de esta base, salvo identificadores externos necesarios para integracion por API.
+- [X] Proteger credenciales, tokens y secretos desde el inicio.
+- [X] Cada cambio transversal debe incluir una prueba smoke o e2e minima.
+- [X] Todo contrato comun debe quedar documentado en `backend/docs` o `backend/src/MODULES.md`.
+- [X] Cerrar cada fase con `npm test -- --runInBand` y `npx tsc --noEmit --incremental false`.
 
 ---
 
@@ -26,36 +26,36 @@ Objetivo: convertir la app Nest en una API consistente y lista para crecimiento.
 
 ### 1.1 Configuracion de entorno
 
-- [ ] Instalar y configurar `@nestjs/config`.
-- [ ] Crear `.env.example` en `backend`.
-- [ ] Definir variables minimas:
-  - `DATABASE_URL`
-  - `PORT`
-  - `JWT_SECRET`
-  - `JWT_EXPIRES_IN`
-  - `FRONTEND_URL`
-  - `NODE_ENV`
-  - `MONITORES_API_URL` si aplica para integracion futura
-- [ ] Validar variables con un helper propio o libreria aprobada por el equipo.
-- [ ] Garantizar que `.env` no se versiona.
+- [X] Instalar y configurar `@nestjs/config`.
+- [X] Crear `.env.example` en `backend`.
+- [X] Definir variables minimas:
+  - [X] `DATABASE_URL`
+  - [X] `PORT`
+  - [X] `JWT_SECRET`
+  - [X] `JWT_EXPIRES_IN`
+  - [X] `FRONTEND_URL`
+  - [X] `NODE_ENV`
+  - [X] `MONITORES_API_URL` si aplica para integracion futura
+- [X] Validar variables con un helper propio o libreria aprobada por el equipo.
+- [X] Garantizar que `.env` no se versiona.
 
 ### 1.2 Bootstrap de API
 
-- [ ] Configurar `app.setGlobalPrefix('api')` o decidir explicitamente mantener rutas sin prefijo.
-- [ ] Habilitar CORS restringido a `FRONTEND_URL`.
-- [ ] Registrar `ValidationPipe` global:
-  - `whitelist: true`
-  - `transform: true`
-  - `forbidNonWhitelisted: true` si no rompe integracion inicial
-- [ ] Crear filtro global de excepciones con respuesta uniforme.
-- [ ] Definir formato de exito recomendado: objeto directo o `{ data }`, pero uno solo para todo el backend.
-- [ ] Crear endpoint `GET /health` o `GET /api/health`.
+- [X] Configurar `app.setGlobalPrefix('api')` o decidir explicitamente mantener rutas sin prefijo.
+- [X] Habilitar CORS restringido a `FRONTEND_URL`.
+- [X] Registrar `ValidationPipe` global:
+  - [X] `whitelist: true`
+  - [X] `transform: true`
+  - [X] `forbidNonWhitelisted: true` si no rompe integracion inicial
+- [X] Crear filtro global de excepciones con respuesta uniforme.
+- [X] Definir formato de exito recomendado: objeto directo o `{ data }`, pero uno solo para todo el backend.
+- [X] Crear endpoint `GET /health` o `GET /api/health`.
 
 ### 1.3 Pruebas
 
-- [ ] Ajustar e2e actual para health y 404 raiz segun la decision de prefijo.
-- [ ] Verificar arranque con `npm run start:dev`.
-- [ ] Verificar tipos con `npx tsc --noEmit --incremental false`.
+- [X] Ajustar e2e actual para health y 404 raiz segun la decision de prefijo.
+- [X] Verificar arranque con `npm run start:dev`.
+- [X] Verificar tipos con `npx tsc --noEmit --incremental false`.
 
 Criterio de cierre: cualquier modulo nuevo hereda validacion, CORS, errores y configuracion.
 
@@ -67,36 +67,36 @@ Objetivo: centralizar el acceso a base de datos y evitar que cada modulo invente
 
 ### 2.1 Crear modulo compartido
 
-- [ ] Crear `backend/src/prisma/prisma.module.ts`.
-- [ ] Crear `backend/src/prisma/prisma.service.ts`.
-- [ ] Extender `PrismaClient` desde el cliente generado por Prisma.
-- [ ] Implementar `onModuleInit` para conectar.
-- [ ] Implementar `enableShutdownHooks` o manejo equivalente para cierre ordenado.
-- [ ] Exportar `PrismaService` desde `PrismaModule`.
-- [ ] Importar `PrismaModule` en `AppModule` o marcarlo como global.
+- [X] Crear `backend/src/prisma/prisma.module.ts`.
+- [X] Crear `backend/src/prisma/prisma.service.ts`.
+- [X] Extender `PrismaClient` desde el cliente generado por Prisma.
+- [X] Implementar `onModuleInit` para conectar.
+- [X] Implementar `enableShutdownHooks` o manejo equivalente para cierre ordenado.
+- [X] Exportar `PrismaService` desde `PrismaModule`.
+- [X] Importar `PrismaModule` en `AppModule` o marcarlo como global.
 
 ### 2.2 Ajustar Prisma 7
 
-- [ ] Confirmar que `prisma/schema.prisma` genera cliente en `generated/prisma`.
-- [ ] Confirmar ruta real de import para el `PrismaClient`.
-- [ ] Si se prefiere convencion mas comun, evaluar cambiar generator a `prisma-client-js` y documentarlo antes de tocar migraciones.
-- [ ] Verificar que `prisma.config.ts` toma `DATABASE_URL`.
+- [X] Confirmar que `prisma/schema.prisma` genera cliente en `generated/prisma`.
+- [X] Confirmar ruta real de import para el `PrismaClient`.
+- [X] Si se prefiere convencion mas comun, evaluar cambiar generator a `prisma-client-js` y documentarlo antes de tocar migraciones.
+- [X] Verificar que `prisma.config.ts` toma `DATABASE_URL`.
 
 ### 2.3 Scripts y flujo de base de datos
 
-- [ ] Agregar scripts al `package.json` si faltan:
-  - `prisma:generate`
-  - `prisma:migrate`
-  - `prisma:deploy`
-  - `prisma:studio`
-- [ ] Documentar comandos para desarrollo local.
-- [ ] Crear seed inicial cuando auth y permisos esten listos.
+- [X] Agregar scripts al `package.json` si faltan:
+  - [X] `prisma:generate`
+  - [X] `prisma:migrate`
+  - [X] `prisma:deploy`
+  - [X] `prisma:studio`
+- [X] Documentar comandos para desarrollo local.
+- [X] Crear seed inicial cuando auth y permisos esten listos.
 
 ### 2.4 Pruebas
 
-- [ ] Test unitario simple de `PrismaService` con mock si no hay DB.
-- [ ] Smoke test que arranque `AppModule` con `PrismaModule`.
-- [ ] Validar que los servicios funcionales puedan inyectarlo sin ciclos.
+- [X] Test unitario simple de `PrismaService` con mock si no hay DB.
+- [X] Smoke test que arranque `AppModule` con `PrismaModule`.
+- [X] Validar que los servicios funcionales puedan inyectarlo sin ciclos.
 
 Criterio de cierre: Core y Paralelos pueden reemplazar stubs por consultas reales.
 
@@ -108,32 +108,32 @@ Objetivo: evitar incompatibilidades entre equipos.
 
 ### 3.1 Convenciones
 
-- [ ] Definir si la API usa prefijo `/api`.
-- [ ] Definir plural/singular de rutas. Recomendacion: conservar rutas actuales y no renombrar durante MVP salvo errores claros.
-- [ ] Definir paginacion comun:
-  - `page`
-  - `limit`
-  - `total`
-  - `items`
-- [ ] Definir filtros por query string.
-- [ ] Definir formato de fechas en ISO 8601.
-- [ ] Definir uso de UUID como string.
+- [X] Definir si la API usa prefijo `/api`.
+- [X] Definir plural/singular de rutas. Recomendacion: conservar rutas actuales y no renombrar durante MVP salvo errores claros.
+- [X] Definir paginacion comun:
+  - [X] `page`
+  - [X] `limit`
+  - [X] `total`
+  - [X] `items`
+- [X] Definir filtros por query string.
+- [X] Definir formato de fechas en ISO 8601.
+- [X] Definir uso de UUID como string.
 
 ### 3.2 Errores
 
-- [ ] 400 para validacion.
-- [ ] 401 para no autenticado.
-- [ ] 403 para sin permiso.
-- [ ] 404 para recurso inexistente.
-- [ ] 409 para conflicto de negocio, por ejemplo horario cruzado.
-- [ ] 500 para error inesperado sin filtrar secretos.
+- [X] 400 para validacion.
+- [X] 401 para no autenticado.
+- [X] 403 para sin permiso.
+- [X] 404 para recurso inexistente.
+- [X] 409 para conflicto de negocio, por ejemplo horario cruzado.
+- [X] 500 para error inesperado sin filtrar secretos.
 
 ### 3.3 Documentacion
 
-- [ ] Crear tabla de endpoints por modulo.
-- [ ] Incluir permisos requeridos por endpoint.
-- [ ] Incluir ejemplo de request/response para los endpoints consumidos por frontend.
-- [ ] Mantener `backend/src/MODULES.md` como mapa tecnico y `backend/docs` como plan/contratos.
+- [X] Crear tabla de endpoints por modulo.
+- [X] Incluir permisos requeridos por endpoint.
+- [X] Incluir ejemplo de request/response para los endpoints consumidos por frontend.
+- [X] Mantener `backend/src/MODULES.md` como mapa tecnico y `backend/docs` como plan/contratos.
 
 Criterio de cierre: frontend puede conectar sin depender de leer servicios internos.
 
@@ -145,50 +145,50 @@ Objetivo: implementar los modulos transversales antes de proteger operaciones.
 
 ### 4.1 Dependencias
 
-- [ ] Completar DTOs de `dependencias`.
-- [ ] Implementar CRUD real con Prisma.
-- [ ] Evitar borrar dependencias con usuarios asociados.
-- [ ] Seed inicial:
-  - Aulas de Software
-  - Electrica y Electronica
-  - Fisica
+- [X] Completar DTOs de `dependencias`.
+- [X] Implementar CRUD real con Prisma.
+- [X] Evitar borrar dependencias con usuarios asociados.
+- [X] Seed inicial:
+  - [X] Aulas de Software
+  - [X] Electrica y Electronica
+  - [X] Fisica
 
 ### 4.2 Modulos y permisos
 
-- [ ] Crear seed de `Modulo` con los modulos del documento:
-  - dashboard
-  - horarios
-  - aulas
-  - disponibilidad
-  - practicas-libres
-  - prestamos-docentes
-  - audiovisuales
-  - software
-  - observaciones
-  - limpieza
-  - tareas
-  - multas
-  - credenciales
-  - reportes
-  - administracion
-- [ ] Crear permisos por accion minima: leer, crear, actualizar, eliminar, aprobar, exportar.
-- [ ] Implementar `permisos` con consultas por modulo.
-- [ ] Implementar `roles` con asignacion de permisos.
+- [X] Crear seed de `Modulo` con los modulos del documento:
+  - [X] dashboard
+  - [X] horarios
+  - [X] aulas
+  - [X] disponibilidad
+  - [X] practicas-libres
+  - [X] prestamos-docentes
+  - [X] audiovisuales
+  - [X] software
+  - [X] observaciones
+  - [X] limpieza
+  - [X] tareas
+  - [X] multas
+  - [X] credenciales
+  - [X] reportes
+  - [X] administracion
+- [X] Crear permisos por accion minima: leer, crear, actualizar, eliminar, aprobar, exportar.
+- [X] Implementar `permisos` con consultas por modulo.
+- [X] Implementar `roles` con asignacion de permisos.
 
 ### 4.3 Usuarios
 
-- [ ] Completar DTOs de `usuarios`.
-- [ ] Implementar crear usuario con password hasheada.
-- [ ] Implementar listado con filtros por estado, dependencia y rol.
-- [ ] Implementar desactivacion, no borrado fisico.
-- [ ] Implementar asignacion de roles.
-- [ ] Evitar devolver `passwordHash` en respuestas.
+- [X] Completar DTOs de `usuarios`.
+- [X] Implementar crear usuario con password hasheada.
+- [X] Implementar listado con filtros por estado, dependencia y rol.
+- [X] Implementar desactivacion, no borrado fisico.
+- [X] Implementar asignacion de roles.
+- [X] Evitar devolver `passwordHash` en respuestas.
 
 ### 4.4 Pruebas
 
-- [ ] Unit tests de usuarios sin exponer password.
-- [ ] E2E de crear dependencia, rol, permiso y usuario.
-- [ ] E2E de desactivar usuario.
+- [X] Unit tests de usuarios sin exponer password.
+- [X] E2E de crear dependencia, rol, permiso y usuario.
+- [X] E2E de desactivar usuario.
 
 Criterio de cierre: existe administracion basica para autenticar y autorizar.
 
@@ -200,47 +200,47 @@ Objetivo: reemplazar el login simulado del frontend por auth real.
 
 ### 5.1 Dependencias
 
-- [ ] Instalar `@nestjs/jwt`.
-- [ ] Instalar libreria de hash aprobada, por ejemplo `bcryptjs`.
-- [ ] Definir si se usara Passport o guard JWT propio simple.
+- [X] Instalar `@nestjs/jwt`.
+- [X] Instalar libreria de hash aprobada, por ejemplo `bcryptjs`.
+- [X] Definir si se usara Passport o guard JWT propio simple.
 
 ### 5.2 DTOs
 
-- [ ] `LoginDto`: usuario/correo y contrasena.
-- [ ] `AuthResponseDto` o mapper: token, usuario, permisos, aplicaciones habilitadas.
-- [ ] No devolver hash ni datos sensibles.
+- [X] `LoginDto`: usuario/correo y contrasena.
+- [X] `AuthResponseDto` o mapper: token, usuario, permisos, aplicaciones habilitadas.
+- [X] No devolver hash ni datos sensibles.
 
 ### 5.3 Servicio
 
-- [ ] Buscar usuario por `nombreUsuario` o `correo`.
-- [ ] Validar estado `ACTIVA`.
-- [ ] Comparar contrasena hasheada.
-- [ ] Firmar JWT con `sub`, `nombreUsuario`, `dependenciaId`, roles y permisos resumidos.
-- [ ] Devolver permisos por modulo para Gestion de Aulas.
-- [ ] Preparar respuesta para selector de aplicativos:
-  - puedeAccederAulas
-  - puedeAccederMonitores
-  - urlMonitores si aplica
+- [X] Buscar usuario por `nombreUsuario` o `correo`.
+- [X] Validar estado `ACTIVA`.
+- [X] Comparar contrasena hasheada.
+- [X] Firmar JWT con `sub`, `nombreUsuario`, `dependenciaId`, roles y permisos resumidos.
+- [X] Devolver permisos por modulo para Gestion de Aulas.
+- [X] Preparar respuesta para selector de aplicativos:
+  - [X] puedeAccederAulas
+  - [X] puedeAccederMonitores
+  - [X] urlMonitores si aplica
 
 ### 5.4 Guards y decoradores
 
-- [ ] Crear `JwtAuthGuard`.
-- [ ] Crear `CurrentUser` decorator.
-- [ ] Crear `PermissionsGuard`.
-- [ ] Crear `RequirePermissions` decorator.
-- [ ] Permitir modo temporal sin permisos solo durante integracion inicial si el equipo lo necesita, pero documentarlo.
+- [X] Crear `JwtAuthGuard`.
+- [X] Crear `CurrentUser` decorator.
+- [X] Crear `PermissionsGuard`.
+- [X] Crear `RequirePermissions` decorator.
+- [X] Permitir modo temporal sin permisos solo durante integracion inicial si el equipo lo necesita, pero documentarlo.
 
 ### 5.5 Endpoints
 
-- [ ] `POST /auth/login`
-- [ ] `GET /auth/me`
-- [ ] `POST /auth/logout` si se decide manejar lista de revocacion; si no, documentar logout frontend.
+- [X] `POST /auth/login`
+- [X] `GET /auth/me`
+- [X] `POST /auth/logout` si se decide manejar lista de revocacion; si no, documentar logout frontend.
 
 ### 5.6 Pruebas
 
-- [ ] Unit tests de login exitoso.
-- [ ] Unit tests de password invalida.
-- [ ] E2E de ruta protegida con y sin token.
+- [X] Unit tests de login exitoso.
+- [X] Unit tests de password invalida.
+- [X] E2E de ruta protegida con y sin token.
 
 Criterio de cierre: frontend puede reemplazar `saveDemoSession` por token real.
 
@@ -253,26 +253,26 @@ Objetivo: registrar operaciones criticas sin duplicar codigo en cada modulo.
 ### 6.1 Alcance MVP
 
 - [ ] Registrar cambios en usuarios, roles, permisos, aulas, horarios, prestamos, credenciales y multas.
-- [ ] Guardar usuarioId, entidad, entidadId, accion, datosPrevios y datosNuevos.
-- [ ] No registrar secretos en texto plano.
+- [X] Guardar usuarioId, entidad, entidadId, accion, datosPrevios y datosNuevos.
+- [X] No registrar secretos en texto plano.
 
 ### 6.2 Implementacion
 
-- [ ] Completar `AuditoriaService`.
-- [ ] Crear metodo `registrar`.
-- [ ] Crear helper para sanitizar campos sensibles.
-- [ ] Definir acciones estandar: CREATE, UPDATE, DELETE, DISABLE, APPROVE, CANCEL, LOGIN.
+- [X] Completar `AuditoriaService`.
+- [X] Crear metodo `registrar`.
+- [X] Crear helper para sanitizar campos sensibles.
+- [X] Definir acciones estandar: CREATE, UPDATE, DELETE, DISABLE, APPROVE, CANCEL, LOGIN.
 - [ ] Integrar manualmente en servicios criticos durante MVP.
 
 ### 6.3 Endpoints
 
-- [ ] `GET /auditoria?entidad=&entidadId=&usuarioId=&desde=&hasta=`
-- [ ] Proteger solo para administradores.
+- [X] `GET /auditoria?entidad=&entidadId=&usuarioId=&desde=&hasta=`
+- [X] Proteger solo para administradores.
 
 ### 6.4 Pruebas
 
-- [ ] Unit test de sanitizacion.
-- [ ] Unit test de registro.
+- [X] Unit test de sanitizacion.
+- [X] Unit test de registro.
 - [ ] E2E de consulta protegida.
 
 Criterio de cierre: operaciones criticas quedan trazables para la prueba piloto.
@@ -285,30 +285,30 @@ Objetivo: preparar comunicacion por API sin mezclar bases de datos.
 
 ### 7.1 Principios
 
-- [ ] Gestion de Aulas autentica y autoriza.
-- [ ] Gestion de Monitores conserva su propia API y base.
-- [ ] La comunicacion se hace por HTTP/API.
-- [ ] No crear migraciones para tablas internas de Monitores en este backend.
+- [X] Gestion de Aulas autentica y autoriza.
+- [X] Gestion de Monitores conserva su propia API y base.
+- [X] La comunicacion se hace por HTTP/API.
+- [X] No crear migraciones para tablas internas de Monitores en este backend.
 - [ ] Usar identificadores externos cuando se necesite relacion logica.
 
 ### 7.2 Cliente HTTP
 
-- [ ] Crear modulo `integraciones`.
-- [ ] Crear `MonitoresClientService`.
-- [ ] Leer `MONITORES_API_URL` desde config.
-- [ ] Definir timeouts y manejo de errores.
-- [ ] Crear DTOs de respuesta esperada, no usar `any`.
+- [X] Crear modulo `integraciones`.
+- [X] Crear `MonitoresClientService`.
+- [X] Leer `MONITORES_API_URL` desde config.
+- [X] Definir timeouts y manejo de errores.
+- [X] Crear DTOs de respuesta esperada, no usar `any`.
 
 ### 7.3 Endpoints puente
 
-- [ ] `GET /integraciones/monitores/estado`
-- [ ] `GET /integraciones/monitores/usuario/:usuarioExternoId` si se requiere.
-- [ ] Evitar endpoints que repliquen toda la API de Monitores sin necesidad.
+- [X] `GET /integraciones/monitores/estado`
+- [X] `GET /integraciones/monitores/usuario/:usuarioExternoId` si se requiere.
+- [X] Evitar endpoints que repliquen toda la API de Monitores sin necesidad.
 
 ### 7.4 Pruebas
 
-- [ ] Unit tests con HTTP mockeado.
-- [ ] E2E de estado con servicio mock si no existe API real disponible.
+- [X] Unit tests con HTTP mockeado.
+- [X] E2E de estado con servicio mock si no existe API real disponible.
 
 Criterio de cierre: el selector de aplicativos puede validar acceso sin acoplar bases.
 
@@ -327,13 +327,13 @@ Objetivo: preparar una version interna utilizable.
 - [ ] CORS permite el frontend local.
 - [ ] Health endpoint responde.
 - [ ] Migraciones corren desde cero.
-- [ ] Seeds minimos crean permisos, roles y usuario administrador inicial.
+- [X] Seeds minimos crean permisos, roles y usuario administrador inicial.
 
 ### 8.2 Checklist de pruebas
 
 - [ ] `npm test -- --runInBand`.
 - [ ] `npm run test:e2e`.
-- [ ] `npx tsc --noEmit --incremental false`.
+- [X] `npx tsc --noEmit --incremental false`.
 - [ ] Smoke manual:
   - login;
   - crear aula;
@@ -345,10 +345,10 @@ Objetivo: preparar una version interna utilizable.
 ### 8.3 Documentacion
 
 - [ ] Actualizar README del backend.
-- [ ] Documentar variables de entorno.
+- [X] Documentar variables de entorno.
 - [ ] Documentar flujo de migraciones.
 - [ ] Documentar usuario admin inicial.
-- [ ] Documentar contratos minimos para frontend.
+- [X] Documentar contratos minimos para frontend.
 
 Criterio de cierre: los otros frentes pueden integrar sin depender de conocimiento informal.
 

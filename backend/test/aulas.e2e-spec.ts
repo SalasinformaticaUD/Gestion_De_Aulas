@@ -6,6 +6,7 @@ import { EstadoAula } from '../generated/prisma/enums.js';
 import { AulasModule } from '../src/aulas/aulas.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { configureApp } from '../src/configure-app';
+import { AuditoriaService } from '../src/auditoria/auditoria.service';
 
 describe('AulasController (e2e)', () => {
   const aulaId = '00000000-0000-4000-8000-000000000001';
@@ -48,6 +49,8 @@ describe('AulasController (e2e)', () => {
     })
       .overrideProvider(PrismaService)
       .useValue(prisma)
+      .overrideProvider(AuditoriaService)
+      .useValue({ registrar: jest.fn() })
       .compile();
 
     app = moduleFixture.createNestApplication();

@@ -1,28 +1,75 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { AuditoriaService } from '../auditoria/auditoria.service';
 import { CreatePermisoDto } from './dto/create-permiso.dto';
 import { UpdatePermisoDto } from './dto/update-permiso.dto';
 
 @Injectable()
 export class PermisosService {
-  create(createPermisoDto: CreatePermisoDto) {
-    void createPermisoDto;
-    return 'This action adds a new permiso';
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly auditoria?: AuditoriaService,
+  ) {}
+
+  async create(dto: CreatePermisoDto, usuarioId?: string) {
+    const permiso = await this.prisma.permiso.create({
+      data: dto,
+      include: { modulo: true },
+    });
+    await this.auditoria?.registrar({
+      usuarioId,
+      entidad: 'Permiso',
+      entidadId: permiso.id,
+      accion: 'CREATE',
+      datosNuevos: permiso,
+    });
+    return permiso;
   }
 
   findAll() {
-    return `This action returns all permisos`;
+    return this.prisma.permiso.findMany({
+      include: { modulo: true },
+      orderBy: { codigo: 'asc' },
+    });
   }
 
-  findOne(id: string) {
-    return `This action returns a #${id} permiso`;
+  async findOne(id: string) {
+    const permiso = await this.prisma.permiso.findUnique({
+      where: { id },
+      include: { modulo: true },
+    });
+    if (!permiso) throw new NotFoundException('Permiso no encontrado.');
+    return permiso;
   }
 
-  update(id: string, updatePermisoDto: UpdatePermisoDto) {
-    void updatePermisoDto;
-    return `This action updates a #${id} permiso`;
+  async update(id: string, dto: UpdatePermisoDto, usuarioId?: string) {
+    const previo = await this.findOne(id);
+    const permiso = await this.prisma.permiso.update({
+      where: { id },
+      data: dto,
+      include: { modulo: true },
+    });
+    await this.auditoria?.registrar({
+      usuarioId,
+      entidad: 'Permiso',
+      entidadId: id,
+      accion: 'UPDATE',
+      datosPrevios: previo,
+      datosNuevos: permiso,
+    });
+    return permiso;
   }
 
-  remove(id: string) {
-    return `This action removes a #${id} permiso`;
+  async remove(id: string, usuarioId?: string) {
+    const previo = await this.findOne(id);
+    const permiso = await this.prisma.permiso.delete({ where: { id } });
+    await this.auditoria?.registrar({
+      usuarioId,
+      entidad: 'Permiso',
+      entidadId: id,
+      accion: 'DELETE',
+      datosPrevios: previo,
+    });
+    return permiso;
   }
 }

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import bcrypt from 'bcryptjs';
+import { scryptSync, timingSafeEqual } from 'node:crypto';
 
 const PREFIJO = 'scrypt';
 const LONGITUD_CLAVE = 64;
@@ -7,12 +8,12 @@ const LONGITUD_CLAVE = 64;
 @Injectable()
 export class PasswordHashService {
   hash(password: string): string {
-    const salt = randomBytes(16).toString('hex');
-    const derivedKey = scryptSync(password, salt, LONGITUD_CLAVE);
-    return `${PREFIJO}$${salt}$${derivedKey.toString('hex')}`;
+    return bcrypt.hashSync(password, 12);
   }
 
   verify(password: string, storedHash: string): boolean {
+    if (storedHash.startsWith('$2'))
+      return bcrypt.compareSync(password, storedHash);
     const [prefix, salt, encodedHash, extra] = storedHash.split('$');
     if (prefix !== PREFIJO || !salt || !encodedHash || extra !== undefined) {
       return false;

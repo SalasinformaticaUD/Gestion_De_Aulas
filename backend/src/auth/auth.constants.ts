@@ -1,6 +1,7 @@
 export const IS_PUBLIC_KEY = 'auth:is-public';
 export const REQUIRE_AUTH_KEY = 'auth:required';
 export const REQUIRED_MODULE_KEY = 'auth:required-module';
+export const REQUIRED_PERMISSIONS_KEY = 'auth:required-permissions';
 
 export const MODULOS = {
   AULAS: 'AULAS',

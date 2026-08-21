@@ -12,6 +12,10 @@ export type UsuarioAutenticado = {
 
 export type TokenPayload = {
   sub: string;
+  nombreUsuario: string;
+  dependenciaId: string | null;
+  roles: string[];
+  permisos: string[];
   iat: number;
   exp: number;
 };

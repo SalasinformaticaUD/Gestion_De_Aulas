@@ -3,12 +3,14 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { EstadoPrestamo } from '../../generated/prisma/enums.js';
 import { DisponibilidadAulasService } from '../disponibilidad-aulas/disponibilidad-aulas.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePrestamosDocenteDto } from './dto/create-prestamos-docente.dto';
 import { FindPrestamosDocentesDto } from './dto/find-prestamos-docentes.dto';
+import { AuditoriaService } from '../auditoria/auditoria.service';
 
 type BloqueDisponibilidad = {
   fecha: string;
@@ -38,18 +40,27 @@ export class PrestamosDocentesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly disponibilidad: DisponibilidadAulasService,
+    @Optional() private readonly auditoria?: AuditoriaService,
   ) {}
 
-  async create(dto: CreatePrestamosDocenteDto) {
+  async create(dto: CreatePrestamosDocenteDto, usuarioId?: string) {
     await this.validarDocente(dto.docenteId);
     const bloque = this.normalizarBloque(dto.inicio, dto.fin);
     await this.validarDisponibilidad(dto.aulaId, bloque);
     const data = this.construirDatosPrestamo(dto);
 
-    return this.prisma.prestamoDocente.create({
+    const prestamo = await this.prisma.prestamoDocente.create({
       data,
       include: { docente: true, aula: true },
     });
+    await this.auditoria?.registrar({
+      usuarioId,
+      entidad: 'PrestamoDocente',
+      entidadId: prestamo.id,
+      accion: 'CREATE',
+      datosNuevos: prestamo,
+    });
+    return prestamo;
   }
 
   findAll(filters: FindPrestamosDocentesDto) {
@@ -100,7 +111,7 @@ export class PrestamosDocentesService {
     });
   }
 
-  async approve(id: string) {
+  async approve(id: string, usuarioId?: string) {
     const prestamo = await this.obtenerParaCambioEstado(id);
     if (prestamo.estado !== EstadoPrestamo.SOLICITADO) {
       throw new ConflictException(
@@ -129,10 +140,16 @@ export class PrestamosDocentesService {
       );
     }
 
-    return this.actualizarEstado(id, EstadoPrestamo.APROBADO);
+    return this.actualizarEstado(
+      id,
+      EstadoPrestamo.APROBADO,
+      'APPROVE',
+      usuarioId,
+      prestamo,
+    );
   }
 
-  async cancel(id: string) {
+  async cancel(id: string, usuarioId?: string) {
     const prestamo = await this.obtenerParaCambioEstado(id);
     if (
       prestamo.estado !== EstadoPrestamo.SOLICITADO &&
@@ -142,10 +159,16 @@ export class PrestamosDocentesService {
         'Solo se pueden cancelar préstamos solicitados o aprobados.',
       );
     }
-    return this.actualizarEstado(id, EstadoPrestamo.CANCELADO);
+    return this.actualizarEstado(
+      id,
+      EstadoPrestamo.CANCELADO,
+      'CANCEL',
+      usuarioId,
+      prestamo,
+    );
   }
 
-  async finish(id: string) {
+  async finish(id: string, usuarioId?: string) {
     const prestamo = await this.obtenerParaCambioEstado(id);
     if (
       prestamo.estado !== EstadoPrestamo.APROBADO &&
@@ -155,7 +178,13 @@ export class PrestamosDocentesService {
         'Solo se pueden finalizar préstamos aprobados o activos.',
       );
     }
-    return this.actualizarEstado(id, EstadoPrestamo.DEVUELTO);
+    return this.actualizarEstado(
+      id,
+      EstadoPrestamo.DEVUELTO,
+      'UPDATE',
+      usuarioId,
+      prestamo,
+    );
   }
 
   private async validarDocente(id: string): Promise<void> {
@@ -193,12 +222,27 @@ export class PrestamosDocentesService {
     return prestamo;
   }
 
-  private actualizarEstado(id: string, estado: EstadoPrestamo) {
-    return this.prisma.prestamoDocente.update({
+  private async actualizarEstado(
+    id: string,
+    estado: EstadoPrestamo,
+    accion: 'APPROVE' | 'CANCEL' | 'UPDATE',
+    usuarioId?: string,
+    previo?: PrestamoParaEstado,
+  ) {
+    const prestamo = await this.prisma.prestamoDocente.update({
       where: { id },
       data: { estado },
       include: { docente: true, aula: true },
     });
+    await this.auditoria?.registrar({
+      usuarioId,
+      entidad: 'PrestamoDocente',
+      entidadId: id,
+      accion,
+      datosPrevios: previo,
+      datosNuevos: prestamo,
+    });
+    return prestamo;
   }
 
   private construirDatosPrestamo(

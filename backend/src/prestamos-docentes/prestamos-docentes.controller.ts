@@ -11,6 +11,8 @@ import {
 import { PrestamosDocentesService } from './prestamos-docentes.service';
 import { MODULOS } from '../auth/auth.constants';
 import { RequireModule } from '../auth/decorators/require-module.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { UsuarioAutenticado } from '../auth/auth.types';
 import { CreatePrestamosDocenteDto } from './dto/create-prestamos-docente.dto';
 import { FindPrestamosDocentesDto } from './dto/find-prestamos-docentes.dto';
 
@@ -22,8 +24,14 @@ export class PrestamosDocentesController {
   ) {}
 
   @Post()
-  create(@Body() createPrestamosDocenteDto: CreatePrestamosDocenteDto) {
-    return this.prestamosDocentesService.create(createPrestamosDocenteDto);
+  create(
+    @Body() createPrestamosDocenteDto: CreatePrestamosDocenteDto,
+    @CurrentUser() usuario?: UsuarioAutenticado,
+  ) {
+    return this.prestamosDocentesService.create(
+      createPrestamosDocenteDto,
+      usuario?.id,
+    );
   }
 
   @Get()
@@ -37,17 +45,26 @@ export class PrestamosDocentesController {
   }
 
   @Patch(':id/aprobar')
-  approve(@Param('id', ParseUUIDPipe) id: string) {
-    return this.prestamosDocentesService.approve(id);
+  approve(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() usuario?: UsuarioAutenticado,
+  ) {
+    return this.prestamosDocentesService.approve(id, usuario?.id);
   }
 
   @Patch(':id/cancelar')
-  cancel(@Param('id', ParseUUIDPipe) id: string) {
-    return this.prestamosDocentesService.cancel(id);
+  cancel(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() usuario?: UsuarioAutenticado,
+  ) {
+    return this.prestamosDocentesService.cancel(id, usuario?.id);
   }
 
   @Patch(':id/finalizar')
-  finish(@Param('id', ParseUUIDPipe) id: string) {
-    return this.prestamosDocentesService.finish(id);
+  finish(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() usuario?: UsuarioAutenticado,
+  ) {
+    return this.prestamosDocentesService.finish(id, usuario?.id);
   }
 }
