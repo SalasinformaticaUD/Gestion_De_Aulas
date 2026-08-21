@@ -42,7 +42,7 @@ describe('AsistenciaDocenteService', () => {
   it('crea una asistencia pendiente por defecto', async () => {
     prisma.asistenciaDocente.create.mockResolvedValue({ id: asistenciaId });
 
-    await service.create({ claseId, fecha: '2026-08-20' });
+    await service.create({ claseId, fecha: '2026-08-20' }, usuarioId);
 
     expect(prisma.asistenciaDocente.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -51,6 +51,7 @@ describe('AsistenciaDocenteService', () => {
           fecha: new Date('2026-08-20T00:00:00.000Z'),
           estado: EstadoAsistencia.PENDIENTE,
           registradaEn: null,
+          registradoPorId: usuarioId,
         },
       }),
     );
@@ -60,7 +61,7 @@ describe('AsistenciaDocenteService', () => {
     prisma.claseProgramada.findUnique.mockResolvedValue(null);
 
     await expect(
-      service.create({ claseId, fecha: '2026-08-20' }),
+      service.create({ claseId, fecha: '2026-08-20' }, usuarioId),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
@@ -68,19 +69,15 @@ describe('AsistenciaDocenteService', () => {
     prisma.asistenciaDocente.findUnique.mockResolvedValue({ id: asistenciaId });
 
     await expect(
-      service.create({ claseId, fecha: '2026-08-20' }),
+      service.create({ claseId, fecha: '2026-08-20' }, usuarioId),
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
-  it('valida el usuario registrador cuando se recibe durante el MVP', async () => {
+  it('valida el usuario autenticado que registra la asistencia', async () => {
     prisma.usuario.findUnique.mockResolvedValue(null);
 
     await expect(
-      service.create({
-        claseId,
-        fecha: '2026-08-20',
-        registradoPorId: usuarioId,
-      }),
+      service.create({ claseId, fecha: '2026-08-20' }, usuarioId),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 

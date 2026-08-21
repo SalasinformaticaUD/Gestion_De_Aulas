@@ -20,10 +20,9 @@ describe('AulasController (e2e)', () => {
         aulas.push(aula);
         return aula;
       }),
-      findMany: jest.fn(() => aulas),
-      findUnique: jest.fn(
-        ({ where }: { where: { id: string } }) =>
-          aulas.find((aula) => aula.id === where.id) ?? null,
+      findMany: jest.fn(() => aulas.map(toPublicSource)),
+      findUnique: jest.fn(({ where }: { where: { id: string } }) =>
+        toPublicSource(aulas.find((aula) => aula.id === where.id)),
       ),
       update: jest.fn(
         ({
@@ -74,7 +73,19 @@ describe('AulasController (e2e)', () => {
     await request(app.getHttpServer())
       .get('/aulas')
       .expect(200)
-      .expect(({ body }) => expect(body).toHaveLength(1));
+      .expect(({ body }: { body: AulaResponse[] }) => {
+        expect(body).toHaveLength(1);
+        expect(body[0]).toMatchObject({
+          codigo: 'LAB-01',
+          ubicacion: 'Piso 2',
+          piso: 2,
+          capacidad: 25,
+          estado: EstadoAula.OPERATIVA,
+          caracteristicas: null,
+          software: [],
+          historial: [],
+        });
+      });
 
     await request(app.getHttpServer())
       .get(`/aulas/${aulaId}`)
@@ -119,8 +130,32 @@ type AulaMock = {
   capacidad?: unknown;
 };
 
+function toPublicSource(aula?: AulaMock) {
+  return aula
+    ? {
+        ...aula,
+        caracteristicas: null,
+        proyectoCurricular: null,
+        softwares: [],
+        observaciones: [],
+        tareas: [],
+        limpiezas: [],
+        practicasLibres: [],
+        prestamosDocentes: [],
+        creadoEn: new Date('2026-01-01T00:00:00.000Z'),
+        actualizadoEn: new Date('2026-08-21T00:00:00.000Z'),
+      }
+    : null;
+}
+
 type AulaResponse = {
   id: string;
   codigo: string;
+  ubicacion: string;
+  piso: number | null;
+  capacidad: number;
   estado: EstadoAula;
+  caracteristicas: unknown;
+  software: unknown[];
+  historial: unknown[];
 };

@@ -1,4 +1,4 @@
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { EstadoPrestamo } from '../../generated/prisma/enums.js';
 import { DisponibilidadAulasService } from '../disponibilidad-aulas/disponibilidad-aulas.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -28,6 +28,7 @@ describe('PracticasLibresService', () => {
       findMany: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
     },
     estudiante: { findUnique: jest.fn() },
   };
@@ -92,5 +93,110 @@ describe('PracticasLibresService', () => {
         finReal: '2026-08-20T09:45:00-05:00',
       }),
     ).resolves.toMatchObject({ estado: EstadoPrestamo.DEVUELTO });
+  });
+
+  it('consulta un estudiante con multas y prácticas recientes', async () => {
+    prisma.estudiante.findUnique.mockResolvedValue({
+      id: 'estudiante-id',
+      codigo: dto.codigoEstudiante,
+      multas: [],
+      practicas: [],
+    });
+
+    await expect(
+      service.findStudent(dto.codigoEstudiante),
+    ).resolves.toMatchObject({ codigo: dto.codigoEstudiante });
+    expect(prisma.estudiante.findUnique).toHaveBeenCalledWith({
+      where: { codigo: dto.codigoEstudiante },
+      include: {
+        multas: { where: { estado: 'ACTIVA' } },
+        practicas: { orderBy: { inicio: 'desc' }, take: 10 },
+      },
+    });
+  });
+
+  it('retorna 404 al consultar un estudiante inexistente', async () => {
+    prisma.estudiante.findUnique.mockResolvedValue(null);
+
+    await expect(service.findStudent('99999999')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('cancela una práctica activa y registra su fecha real de cierre', async () => {
+    prisma.practicaLibre.findUnique.mockResolvedValue({
+      estado: EstadoPrestamo.ACTIVO,
+    });
+    prisma.practicaLibre.update.mockResolvedValue({
+      id: 'practica-id',
+      estado: EstadoPrestamo.CANCELADO,
+    });
+
+    await expect(service.cancel('practica-id')).resolves.toMatchObject({
+      estado: EstadoPrestamo.CANCELADO,
+    });
+    expect(prisma.practicaLibre.update).toHaveBeenCalledWith({
+      where: { id: 'practica-id' },
+      data: {
+        estado: EstadoPrestamo.CANCELADO,
+        // Jest expone este matcher asimétrico con tipo público `any`.
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        finReal: expect.any(Date),
+      },
+      include: { estudiante: true, aula: true },
+    });
+  });
+
+  it('marca como vencidas las prácticas activas que superaron su fin estimado', async () => {
+    prisma.practicaLibre.updateMany.mockResolvedValue({ count: 1 });
+    prisma.practicaLibre.findMany.mockResolvedValue([]);
+
+    await service.findAll({ estado: EstadoPrestamo.VENCIDO });
+
+    expect(prisma.practicaLibre.updateMany).toHaveBeenCalledWith({
+      where: {
+        estado: EstadoPrestamo.ACTIVO,
+        finReal: null,
+        // Jest expone este matcher asimétrico con tipo público `any`.
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        finEstimada: { lt: expect.any(Date) },
+      },
+      data: { estado: EstadoPrestamo.VENCIDO },
+    });
+    expect(prisma.practicaLibre.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        // Jest expone este matcher asimétrico con tipo público `any`.
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        where: expect.objectContaining({ estado: EstadoPrestamo.VENCIDO }),
+      }),
+    );
+  });
+
+  it('permite finalizar una práctica vencida como devolución tardía', async () => {
+    prisma.practicaLibre.findUnique.mockResolvedValue({
+      estado: EstadoPrestamo.VENCIDO,
+      finEstimada: new Date('2026-08-20T15:00:00.000Z'),
+      finReal: null,
+    });
+    prisma.practicaLibre.update.mockResolvedValue({
+      id: 'practica-id',
+      estado: EstadoPrestamo.DEVUELTO,
+    });
+
+    await expect(service.finish('practica-id', {})).resolves.toMatchObject({
+      estado: EstadoPrestamo.DEVUELTO,
+    });
+  });
+
+  it('impide cancelar una práctica que ya venció', async () => {
+    prisma.practicaLibre.findUnique.mockResolvedValue({
+      estado: EstadoPrestamo.VENCIDO,
+      finEstimada: new Date('2026-08-20T15:00:00.000Z'),
+      finReal: null,
+    });
+
+    await expect(service.cancel('practica-id')).rejects.toBeInstanceOf(
+      ConflictException,
+    );
   });
 });

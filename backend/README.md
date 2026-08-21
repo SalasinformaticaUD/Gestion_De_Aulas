@@ -57,6 +57,24 @@ $ npm run test:e2e
 $ npm run test:cov
 ```
 
+## Autenticación básica
+
+La API autentica contra el modelo `Usuario` de Prisma. Las contraseñas nuevas deben
+guardarse con `PasswordHashService`, que utiliza `scrypt`; nunca se admite texto plano.
+
+- `POST /auth/login`: recibe `identificador` (usuario o correo) y `password`.
+- `GET /auth/me`: requiere `Authorization: Bearer <token>` y devuelve el usuario actual,
+  sus roles, permisos y módulos habilitados sin exponer `passwordHash`.
+
+Variables de entorno:
+
+- `AUTH_TOKEN_SECRET`: secreto de firma obligatorio en producción.
+- `AUTH_TOKEN_TTL_SECONDS`: duración del token; por defecto 28 800 segundos.
+- `AUTH_REQUIRED`: `true` obliga autenticación global; fuera de producción inicia en
+  `false` para facilitar la integración progresiva.
+- `PERMISSIONS_MODE`: `permissive` durante integración o `strict` para exigir los
+  módulos asignados mediante roles y permisos.
+
 ## Deployment
 
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.

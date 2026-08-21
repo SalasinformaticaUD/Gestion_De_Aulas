@@ -1,8 +1,11 @@
 import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
 import { DisponibilidadAulasService } from './disponibilidad-aulas.service';
+import { MODULOS } from '../auth/auth.constants';
+import { RequireModule } from '../auth/decorators/require-module.decorator';
 import { ConsultarDisponibilidadDto } from './dto/consultar-disponibilidad.dto';
 import { ConsultarResumenDiaDto } from './dto/consultar-resumen-dia.dto';
 
+@RequireModule(MODULOS.DISPONIBILIDAD_AULAS)
 @Controller('disponibilidad-aulas')
 export class DisponibilidadAulasController {
   constructor(

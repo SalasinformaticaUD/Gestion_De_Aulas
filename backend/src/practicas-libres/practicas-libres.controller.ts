@@ -9,10 +9,14 @@ import {
   Query,
 } from '@nestjs/common';
 import { PracticasLibresService } from './practicas-libres.service';
+import { MODULOS } from '../auth/auth.constants';
+import { RequireModule } from '../auth/decorators/require-module.decorator';
 import { CreatePracticasLibreDto } from './dto/create-practicas-libre.dto';
 import { FinalizarPracticaLibreDto } from './dto/finalizar-practica-libre.dto';
 import { FindPracticasLibresDto } from './dto/find-practicas-libres.dto';
+import { FindEstudianteParamDto } from './dto/find-estudiante-param.dto';
 
+@RequireModule(MODULOS.PRACTICAS_LIBRES)
 @Controller('practicas-libres')
 export class PracticasLibresController {
   constructor(
@@ -30,8 +34,8 @@ export class PracticasLibresController {
   }
 
   @Get('estudiantes/:codigo')
-  findStudent(@Param('codigo') codigo: string) {
-    return this.practicasLibresService.findStudent(codigo);
+  findStudent(@Param() params: FindEstudianteParamDto) {
+    return this.practicasLibresService.findStudent(params.codigo);
   }
 
   @Patch(':id/finalizar')

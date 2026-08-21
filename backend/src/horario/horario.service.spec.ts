@@ -13,10 +13,11 @@ type PrismaMock = {
     findUnique: jest.Mock;
     updateMany: jest.Mock;
     update: jest.Mock;
+    delete: jest.Mock;
   };
   aula: { findUnique: jest.Mock };
-  docente: { findUnique: jest.Mock };
-  asignatura: { findUnique: jest.Mock };
+  docente: { findUnique: jest.Mock; upsert: jest.Mock };
+  asignatura: { findUnique: jest.Mock; upsert: jest.Mock };
   proyectoCurricular: { findUnique: jest.Mock };
   claseProgramada: {
     create: jest.Mock;
@@ -45,13 +46,16 @@ describe('HorarioService', () => {
         findUnique: jest.fn().mockResolvedValue({ id: periodoId }),
         updateMany: jest.fn(),
         update: jest.fn(),
+        delete: jest.fn(),
       },
       aula: { findUnique: jest.fn().mockResolvedValue({ id: aulaId }) },
       docente: {
         findUnique: jest.fn().mockResolvedValue({ id: docenteId }),
+        upsert: jest.fn(),
       },
       asignatura: {
         findUnique: jest.fn().mockResolvedValue({ id: asignaturaId }),
+        upsert: jest.fn(),
       },
       proyectoCurricular: { findUnique: jest.fn() },
       claseProgramada: {
@@ -110,6 +114,74 @@ describe('HorarioService', () => {
     await expect(service.activarPeriodo(periodoId)).rejects.toBeInstanceOf(
       NotFoundException,
     );
+  });
+
+  it('consulta un período por id y retorna 404 cuando no existe', async () => {
+    prisma.periodoAcademico.findUnique
+      .mockResolvedValueOnce({ id: periodoId, _count: { clases: 0 } })
+      .mockResolvedValueOnce(null);
+
+    await expect(service.findPeriodo(periodoId)).resolves.toMatchObject({
+      id: periodoId,
+    });
+    await expect(service.findPeriodo(periodoId)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('actualiza un período y conserva un único período activo', async () => {
+    prisma.periodoAcademico.findUnique.mockResolvedValue({
+      id: periodoId,
+      nombre: '2026-3',
+      fechaInicio: new Date('2026-08-01T00:00:00.000Z'),
+      fechaFin: new Date('2026-12-01T00:00:00.000Z'),
+      activo: false,
+    });
+    prisma.periodoAcademico.update.mockResolvedValue({
+      id: periodoId,
+      nombre: '2026-3 actualizado',
+      activo: true,
+    });
+
+    await service.updatePeriodo(periodoId, {
+      nombre: ' 2026-3 actualizado ',
+      activo: true,
+    });
+
+    expect(prisma.periodoAcademico.updateMany).toHaveBeenCalledWith({
+      where: { activo: true, id: { not: periodoId } },
+      data: { activo: false },
+    });
+    expect(prisma.periodoAcademico.update).toHaveBeenCalledWith({
+      where: { id: periodoId },
+      data: { nombre: '2026-3 actualizado', activo: true },
+    });
+  });
+
+  it('rechaza fechas inválidas al actualizar parcialmente un período', async () => {
+    prisma.periodoAcademico.findUnique.mockResolvedValue({
+      id: periodoId,
+      fechaInicio: new Date('2026-08-01T00:00:00.000Z'),
+      fechaFin: new Date('2026-12-01T00:00:00.000Z'),
+    });
+
+    await expect(
+      service.updatePeriodo(periodoId, { fechaInicio: '2027-01-01' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('bloquea eliminar un período con clases y elimina uno vacío', async () => {
+    prisma.periodoAcademico.findUnique
+      .mockResolvedValueOnce({ id: periodoId, _count: { clases: 1 } })
+      .mockResolvedValueOnce({ id: periodoId, _count: { clases: 0 } });
+    prisma.periodoAcademico.delete.mockResolvedValue({ id: periodoId });
+
+    await expect(service.removePeriodo(periodoId)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    await expect(service.removePeriodo(periodoId)).resolves.toEqual({
+      id: periodoId,
+    });
   });
 
   it('crea una clase con horas normalizadas para Prisma', async () => {
@@ -193,5 +265,138 @@ describe('HorarioService', () => {
       }),
       select: { id: true },
     });
+  });
+
+  it('importa un lote completo dentro de una transaccion', async () => {
+    prisma.claseProgramada.create
+      .mockResolvedValueOnce({ id: 'clase-1' })
+      .mockResolvedValueOnce({ id: 'clase-2' });
+
+    const result = await service.importar({
+      formato: 'JSON_V1',
+      periodoId,
+      nombreArchivo: 'horario-2026-3.json',
+      clases: [
+        {
+          aulaId,
+          docenteId,
+          asignaturaId,
+          diaSemana: 1,
+          horaInicio: '08:00',
+          horaFin: '10:00',
+          grupo: '020-81',
+        },
+        {
+          aulaId,
+          docenteId,
+          asignaturaId,
+          diaSemana: 2,
+          horaInicio: '10:00',
+          horaFin: '12:00',
+          grupo: '020-82',
+        },
+      ],
+    });
+
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma.claseProgramada.create).toHaveBeenCalledTimes(2);
+    expect(result).toMatchObject({
+      formato: 'JSON_V1',
+      totalRecibidas: 2,
+      totalCreadas: 2,
+    });
+  });
+
+  it('identifica la fila que causa conflicto durante la importacion', async () => {
+    prisma.claseProgramada.create.mockResolvedValue({ id: 'clase-1' });
+    prisma.claseProgramada.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 'clase-1' });
+
+    await expect(
+      service.importar({
+        formato: 'JSON_V1',
+        periodoId,
+        clases: [
+          {
+            aulaId,
+            docenteId,
+            asignaturaId,
+            diaSemana: 1,
+            horaInicio: '08:00',
+            horaFin: '10:00',
+            grupo: '020-81',
+          },
+          {
+            aulaId,
+            docenteId,
+            asignaturaId,
+            diaSemana: 1,
+            horaInicio: '09:00',
+            horaFin: '11:00',
+            grupo: '020-82',
+          },
+        ],
+      }),
+    ).rejects.toThrow('Fila 2:');
+  });
+
+  it('crea o actualiza docente y asignatura embebidos en JSON_V2', async () => {
+    const docenteCreadoId = '00000000-0000-4000-8000-000000000010';
+    const asignaturaCreadaId = '00000000-0000-4000-8000-000000000011';
+    prisma.docente.upsert.mockResolvedValue({ id: docenteCreadoId });
+    prisma.asignatura.upsert.mockResolvedValue({ id: asignaturaCreadaId });
+    prisma.claseProgramada.create.mockResolvedValue({ id: 'clase-id' });
+
+    await service.importar({
+      formato: 'JSON_V2',
+      periodoId,
+      clases: [
+        {
+          aulaId,
+          docente: {
+            documento: ' 123456 ',
+            nombre: ' Docente Nuevo ',
+            correo: 'DOCENTE@UDISTRITAL.EDU.CO',
+          },
+          asignatura: {
+            codigo: ' SIS-101 ',
+            nombre: ' Programación I ',
+          },
+          diaSemana: 1,
+          horaInicio: '08:00',
+          horaFin: '10:00',
+          grupo: '020-81',
+        },
+      ],
+    });
+
+    expect(prisma.docente.upsert).toHaveBeenCalledWith({
+      where: { documento: '123456' },
+      update: {
+        nombre: 'Docente Nuevo',
+        correo: 'docente@udistrital.edu.co',
+      },
+      create: {
+        documento: '123456',
+        nombre: 'Docente Nuevo',
+        correo: 'docente@udistrital.edu.co',
+      },
+      select: { id: true },
+    });
+    expect(prisma.asignatura.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { codigo: 'SIS-101' },
+      }),
+    );
+    expect(prisma.claseProgramada.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        data: expect.objectContaining({
+          docenteId: docenteCreadoId,
+          asignaturaId: asignaturaCreadaId,
+        }),
+      }),
+    );
   });
 });

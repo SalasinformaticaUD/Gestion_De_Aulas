@@ -1,67 +1,85 @@
-# Informe 4 - BackCore
+# Informe 3 - BackCore
 
 FECHA: 20/08/2026  
-MONITOR: Juan Esteban Cañon Solorza 4:00 pm - 8:00 pm  
- 
+MONITOR: Ivan Felipe Prado Blanco 8:00am - 10:00am // 2:00pm - 4:00pm
+
 ## AVANCES
 
-* Se continuó desde los pendientes documentados en el Informe 3, sin modificar los Informes 1, 2 o 3 ni reorganizar nuevamente las carpetas de informes.
-* Se configuró globalmente `ValidationPipe` con `transform`, `whitelist` y `forbidNonWhitelisted`, se verificó su uso en las suites E2E del Core y se retiraron los pipes locales duplicados.
-* Se agregó un filtro global de excepciones con una respuesta uniforme que incluye código HTTP, mensaje, tipo de error, ruta y fecha del evento.
-* Se completó la continuación de disponibilidad pendiente en el Informe 3:
-  * `GET /disponibilidad-aulas/resumen-dia?fecha=`;
-  * rango operativo inicial de `06:00` a `22:00`, configurable mediante variables de entorno;
-  * ocho bloques diarios de dos horas;
-  * cálculo de `siguienteActividad` desde clases, préstamos, prácticas, restricciones y tareas futuras;
-  * prueba E2E que combina clase y préstamo docente y confirma la prioridad de la clase.
-* Se implementó el flujo real de prácticas libres con Prisma: creación o consulta del estudiante, bloqueo por multa activa, validación de disponibilidad, creación transaccional, filtros, consulta del estudiante, finalización y cancelación.
-* Se eliminó el cliente Prisma privado del módulo `software`; `SoftwareService` ahora utiliza el `PrismaService` compartido del backend.
-* Se comprobó la conexión con la instancia PostgreSQL configurada. Prisma reconoce la base `Aulas`, el esquema `public` y las migraciones del proyecto.
-* Se reemplazó el scaffolding de préstamos docentes por un flujo real con Prisma y los contratos de solicitud, consulta, aprobación, cancelación y finalización.
-* Los préstamos validan docente existente, aula operativa, bloque de dos horas, disponibilidad y ausencia de cruces con préstamos aprobados o activos.
-* Se exportó una consulta reutilizable de préstamos aprobados o activos del día para el futuro panel operativo.
-* Se actualizaron únicamente las casillas efectivamente resueltas en `backend/docs/01-plan-core-operativo.md`.
+* Se continuó el recorrido progresivo de `backend/docs/01-plan-core-operativo.md` desde las reglas generales del frente.
+* Se resolvió la regla: "La disponibilidad se calcula, no se guarda como tabla permanente".
+* La regla quedó actualizada con `[X]` en el plan del Core y se documentó que el cálculo se realiza en bloques de dos horas.
+* Se reemplazó el scaffolding CRUD de `disponibilidad-aulas` por un módulo de consulta de solo lectura.
+* Se eliminaron los DTOs vacíos `CreateDisponibilidadAulaDto` y `UpdateDisponibilidadAulaDto`.
+* Se creó `ConsultarDisponibilidadDto` para validar fecha, hora de inicio y hora de finalización.
+* Los bloques deben durar exactamente dos horas, comenzar en una hora par y usar horas completas con formato `HH:00`.
+* Las fechas y horas operativas se interpretan para la zona horaria `America/Bogota`.
+* Se implementaron los contratos:
+  * `GET /disponibilidad-aulas?fecha=&horaInicio=&horaFin=`;
+  * `GET /disponibilidad-aulas/:aulaId?fecha=&horaInicio=&horaFin=`.
+* Se retiraron las rutas `POST`, `PATCH` y `DELETE` de disponibilidad.
+* `DisponibilidadAulasService` utiliza el `PrismaService` compartido y calcula el estado al momento de cada consulta.
+* El cálculo revisa las siguientes fuentes:
+  * estado operativo del aula;
+  * restricciones vigentes;
+  * clases programadas;
+  * asistencia docente de la fecha;
+  * préstamos docentes aprobados o activos;
+  * prácticas libres activas;
+  * tareas operativas que afectan disponibilidad.
+* Se implementó la prioridad: estado físico del aula, restricción, clase, préstamo docente, práctica libre, tarea operativa y disponible.
+* Una asistencia docente en estado `AUSENTE` se incluye como señal explicativa, pero no libera automáticamente el aula.
+* La respuesta incluye aula, bloque evaluado, estado calculado, motivo, fuente prioritaria, fuentes encontradas, fecha del cálculo y el indicador `persistido: false`.
+* Se confirmó que no existe modelo, tabla ni migración de disponibilidad en Prisma.
+* Se agregaron pruebas unitarias para disponibilidad sin actividades, prioridad de mantenimiento, ausencia docente, consulta de todas las aulas y validación de bloques.
+* Se agregaron pruebas E2E para consultas generales e individuales, validación de entrada y ausencia de endpoints de escritura.
+* Se ajustó la importación de Jest en una prueba previa de asistencia docente para conservar compatibilidad con TypeScript durante la verificación general.
 
 ## FUNCIONA
 
-* La validación y el formato de errores se aplican globalmente al backend.
-* Disponibilidad calcula consultas por bloque, resumen diario y próxima actividad sin persistir resultados.
-* Prácticas libres consume el motor central de disponibilidad y protege el registro frente a multas activas.
-* Los préstamos docentes se crean en estado `SOLICITADO`, pueden aprobarse, cancelarse o finalizarse según su estado y bloquean aprobaciones cruzadas.
-* `GET /prestamos-docentes` permite filtrar por estado, fecha, docente y aula, con resultados ordenados para consumo operativo.
-* Todos los módulos revisados utilizan el `PrismaService` compartido; ya no existe un cliente Prisma privado en `software`.
-* Las 8 suites unitarias finalizan correctamente: 45 pruebas aprobadas.
-* Las 7 suites E2E finalizan correctamente: 21 pruebas aprobadas.
-* TypeScript, ESLint sobre los archivos modificados y `npm run build` finalizan sin errores.
+* La disponibilidad se calcula dinámicamente y no se persiste.
+* Se puede consultar la disponibilidad de todas las salas para un bloque de dos horas.
+* Se puede consultar una sala específica mediante UUID.
+* Los bloques con duración diferente de dos horas son rechazados.
+* Los bloques que comienzan en horas impares son rechazados.
+* Un aula sin actividades ni restricciones retorna `disponible`.
+* Un aula en mantenimiento retorna `mantenimiento` aunque tenga una clase programada.
+* Una clase programada retorna el aula como `ocupada` y expone la señal de asistencia correspondiente.
+* Las restricciones y tareas pueden bloquear el aula.
+* Los préstamos docentes y prácticas libres pueden reservar el aula.
+* El controlador de disponibilidad solo expone operaciones `GET`.
+* Las 6 suites unitarias finalizan correctamente: 33 pruebas aprobadas.
+* Las 5 suites E2E finalizan correctamente: 13 pruebas aprobadas.
+* Prettier, TypeScript, ESLint y `npm run build` finalizan sin errores.
 
 ## NO FUNCIONA
 
-* La migración `20260820140000_add_fecha_asistencia_docente` está creada, pero continúa pendiente de aplicación en la instancia PostgreSQL local.
-* Las pruebas del Core todavía utilizan Prisma simulado; no existe una base PostgreSQL exclusiva y aislada para pruebas automatizadas.
-* La ausencia docente continúa sin liberar automáticamente el aula porque esa decisión operativa no ha sido aprobada.
-* Las prácticas libres no cambian automáticamente a `VENCIDO` al superar su hora estimada.
-* Préstamos docentes todavía no registra auditoría porque el módulo transversal de auditoría conserva su scaffolding.
-* Auth, usuario actual y permisos siguen pendientes; por ello asistencia y operaciones auditables no obtienen todavía el usuario desde la petición.
-* Observaciones operativas, tareas operativas y panel operativo conservan flujos incompletos o scaffolding.
+* `GET /disponibilidad-aulas/resumen-dia?fecha=` todavía no está implementado.
+* No está definido el rango operativo diario que se dividirá en bloques de dos horas para construir el resumen del día.
+* `siguienteActividad` permanece en `null`; todavía no se busca la próxima actividad posterior al bloque consultado.
+* Falta una prueba E2E que combine aula, clase y préstamo docente dentro del mismo escenario de prioridad.
+* Las pruebas nuevas utilizan Prisma simulado y no validan el cálculo contra una base PostgreSQL exclusiva para pruebas.
+* La ausencia docente no libera el aula porque esa decisión operativa todavía no ha sido aprobada.
+* Los módulos reales de prácticas libres, préstamos docentes, observaciones y tareas todavía deben completar sus propios flujos; disponibilidad ya puede leer sus registros cuando existan.
+* El `ValidationPipe` todavía no está configurado globalmente para todo el backend.
 
 ## NO MODIFICAR
 
-* No crear una tabla o migración para persistir disponibilidad.
-* No volver a agregar operaciones de escritura al controlador de disponibilidad.
-* No aceptar bloques distintos de dos horas ni bloques que comiencen en una hora impar.
-* No cambiar la prioridad de disponibilidad ni liberar aulas por ausencia docente sin aprobación operativa.
-* No duplicar la lógica de disponibilidad dentro de prácticas libres, préstamos docentes o panel operativo.
-* No crear servicios Prisma privados por módulo; todos deben utilizar `backend/src/prisma/prisma.service.ts`.
-* No aplicar migraciones ni modificar datos locales durante pruebas automatizadas sin una base exclusiva de pruebas.
-* No reorganizar nuevamente `backend/Informes`; la estructura actual por frentes ya está realizada.
-* No modificar los Informes 1, 2 o 3 para incorporar avances posteriores.
+* No crear una tabla, modelo o migración para guardar resultados de disponibilidad.
+* No volver a agregar endpoints `POST`, `PATCH` o `DELETE` al módulo de disponibilidad.
+* No aceptar bloques con duración diferente de dos horas.
+* No aceptar bloques que comiencen en una hora impar.
+* No cambiar la prioridad de las fuentes sin acordar primero la regla operativa.
+* No liberar automáticamente un aula por ausencia docente sin aprobación del equipo responsable.
+* No duplicar estas reglas dentro de prácticas libres, préstamos docentes o panel operativo; esos módulos deben consumir el servicio del Core.
+* No reemplazar el `PrismaService` compartido con un servicio Prisma privado para disponibilidad.
+* No modificar el Informe 1 BackCore; los avances posteriores deben continuar en los informes siguientes.
 
 ## SIGUIENTE PASO
 
-* Continuar con la Semana 6 del plan: observaciones operativas que afectan disponibilidad.
-* Implementar los contratos de consulta, creación, actualización y cierre lógico de observaciones.
-* Diferenciar observaciones informativas de restricciones vigentes y conservar trazabilidad histórica.
-* Exponer un método reutilizable para consultar restricciones vigentes sin duplicar reglas en disponibilidad.
-* Agregar pruebas unitarias de vigencia y una prueba E2E de creación y consulta por aula.
-* Mantener pendientes la auditoría de préstamos y el usuario autenticado hasta que los módulos transversales estén disponibles.
-* Acordar con el equipo responsable la regla de ausencia docente y la política de vencimiento automático antes de cambiar esos comportamientos.
+* Continuar desde el inicio del plan con el siguiente punto pendiente: configurar un `ValidationPipe` global.
+* Registrar en `main.ts` las opciones `transform`, `whitelist` y `forbidNonWhitelisted`.
+* Verificar mediante pruebas E2E que la validación global conserve el comportamiento de aulas, horario, asistencia y disponibilidad.
+* Retirar configuraciones locales duplicadas únicamente después de verificar la configuración global.
+* No avanzar al filtro global de excepciones hasta cerrar la validación global.
+* Como continuación posterior de disponibilidad, acordar el rango operativo diario antes de implementar `resumen-dia` y calcular `siguienteActividad`.
+* Nota para el próximo monitor: revisar que `backend/Informes` esté organizado en las tres carpetas correspondientes a Core operativo, Plataforma e integración y Módulos paralelos solamente si esa reorganización todavía no se ha completado. No mover nuevamente los informes si la estructura ya está correcta.

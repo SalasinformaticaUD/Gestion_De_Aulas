@@ -1,72 +1,94 @@
-# Informe 2 - BackCore
+# Informe 1 - BackCore
 
 FECHA: 20/08/2026  
+TURNO: 10:00 a. m. - 14:00 p. m.  
 MONITOR: Pablo Garzon Gomez
 
 ## AVANCES
 
-* Se continuó el flujo establecido por el Informe 1 con el tercer paso del plan del Core: asistencia docente asociada a clases programadas.
-* Se reemplazó el CRUD genérico de asistencia por los contratos específicos:
-  * `GET /asistencia-docente?fecha=&aulaId=&estado=`;
-  * `POST /asistencia-docente`;
-  * `PATCH /asistencia-docente/:id`;
-  * `GET /asistencia-docente/clase/:claseId`.
-* Se agregó `fecha` al modelo `AsistenciaDocente` para identificar la ocurrencia diaria de una clase semanal.
-* Se creó la migración `20260820140000_add_fecha_asistencia_docente` con una restricción única para `(claseId, fecha)` y un índice para consultas por fecha y estado.
-* Los DTOs validan clase, fecha en formato `YYYY-MM-DD`, estado, usuario registrador opcional y observación de hasta 500 caracteres.
-* Se verifica que la clase programada exista antes de registrar o consultar asistencias.
-* Durante el MVP, si se recibe manualmente `registradoPorId`, se verifica que el usuario exista.
-* Se evita más de un registro para la misma clase y fecha tanto desde el servicio como mediante la restricción única de PostgreSQL.
-* Los estados permitidos son `PENDIENTE`, `ASISTIO` y `AUSENTE`.
-* Los registros pendientes mantienen `registradaEn` en `null`; al confirmar asistencia o ausencia se guarda automáticamente el momento del registro.
-* La consulta general permite filtrar por fecha, aula y estado, preparando la consulta de pendientes del día para el panel operativo.
-* La consulta por clase devuelve el historial ordenado desde la fecha más reciente.
-* El endpoint de actualización no permite cambiar la clase ni la fecha, protegiendo la identidad del bloque operativo.
-* Se agregaron pruebas unitarias y E2E para creación, estados, referencias inexistentes, duplicados, filtros, historial, actualización y validación de entrada.
+* El módulo `aulas` permite crear, listar, consultar, actualizar y eliminar aulas mediante las rutas REST definidas en el plan.
+* Se implementaron validaciones de código, ubicación, capacidad, características, estado y proyecto curricular.
+* El listado de aulas permite filtrar por estado, ubicación y proyecto curricular, e incluye el proyecto y el software instalado.
+* Se controla el código duplicado, la inexistencia de aulas o proyectos y la eliminación de aulas con historial operativo.
+* Cuando un aula tiene clases, prácticas, préstamos, observaciones o tareas asociadas, no se elimina físicamente y debe cambiarse a `FUERA_DE_SERVICIO`.
+* Se creó un `PrismaModule` global y un `PrismaService` compartido para los módulos del Core.
+* Se completó el segundo paso del plan: base real de períodos académicos y clases programadas dentro de `horario`.
+* Se reemplazó el CRUD genérico de horario por los contratos específicos:
+  * `GET /horario/periodos`;
+  * `POST /horario/periodos`;
+  * `PATCH /horario/periodos/:id/activar`;
+  * `GET /horario/clases?aulaId=&periodoId=&diaSemana=`;
+  * `POST /horario/clases`;
+  * `PATCH /horario/clases/:id`;
+  * `DELETE /horario/clases/:id`.
+* Los períodos validan nombre, fecha de inicio, fecha de finalización y estado activo.
+* Se valida que la fecha de inicio de un período sea anterior a su fecha de finalización.
+* La creación o activación de un período desactiva los demás dentro de una transacción, manteniendo un único período activo.
+* Las clases programadas validan período, aula, docente, asignatura, proyecto curricular opcional, día de semana, rango horario, grupo e inscritos.
+* El día de semana se limita al rango 1 a 6 y las horas admiten los formatos `HH:mm` y `HH:mm:ss`.
+* Se valida que todas las entidades relacionadas existan antes de crear o actualizar una clase.
+* Se valida que la hora de inicio sea anterior a la hora de fin.
+* Se bloquean clases solapadas en la misma aula, período y día; los bloques contiguos sí están permitidos.
+* La edición excluye la propia clase al comprobar cruces de horario.
+* La consulta de clases permite filtros por aula, período y día, e incluye los datos relacionados necesarios para la vista semanal.
+* La eliminación de una clase se bloquea si ya tiene asistencias asociadas, conservando la trazabilidad.
+* Se retiraron los DTOs genéricos vacíos de horario y se sustituyeron por DTOs específicos y validados.
+* La carga por lote `POST /horario/importar` no se implementó porque el plan la condiciona a que el equipo defina primero el formato de importación.
+* Se agregaron pruebas unitarias y E2E de aulas, períodos, activación, clases, validación de rangos y conflictos por solapamiento.
 
 ## FUNCIONA
 
-* La asistencia docente usa persistencia Prisma y ya no devuelve textos de scaffolding.
-* Solo se puede registrar asistencia sobre una clase programada existente.
-* Una clase admite un único registro por fecha y puede conservar historial en fechas diferentes.
-* Las asistencias pueden consultarse por fecha, aula, estado y clase programada.
-* Los cambios a `ASISTIO` o `AUSENTE` registran automáticamente el momento de confirmación.
-* Los errores de duplicado y referencias inexistentes se convierten en respuestas HTTP claras.
-* El esquema Prisma actualizado es válido y el cliente fue regenerado.
-* Las 5 suites unitarias finalizan correctamente: 27 pruebas aprobadas.
-* Las 4 suites E2E finalizan correctamente: 10 pruebas aprobadas.
-* Prettier, TypeScript, ESLint y `npm run build` finalizan sin errores.
+* El CRUD de aulas usa persistencia Prisma y ya no devuelve textos de scaffolding.
+* La creación y actualización de aulas validan los datos y rechazan campos no definidos.
+* El listado de aulas admite filtros y las consultas incluyen proyecto curricular y software instalado.
+* La eliminación de aulas protege su historial operativo.
+* Los períodos académicos pueden crearse, consultarse y activarse.
+* Solo un período académico queda activo después de crear o activar otro período.
+* Las clases programadas pueden crearse, consultarse con filtros, actualizarse y eliminarse.
+* Los rangos de fecha y hora se validan antes de acceder a persistencia.
+* Las clases no pueden cruzarse en la misma aula, período y día.
+* Los errores de duplicado, referencias inexistentes, rangos inválidos y conflictos se convierten en respuestas HTTP claras.
+* Las 4 suites unitarias finalizan correctamente: 20 pruebas aprobadas.
+* Las 3 suites E2E finalizan correctamente: 7 pruebas aprobadas.
+* `npx tsc --noEmit --incremental false`, ESLint y `npm run build` finalizan sin errores.
 
 ## NO FUNCIONA
 
 * No se ejecutaron pruebas manuales contra la instancia PostgreSQL configurada; las pruebas automatizadas usan Prisma simulado para no modificar datos locales.
-* La migración de asistencia está creada, pero todavía no se aplicó sobre la instancia PostgreSQL local.
-* `registradoPorId` todavía no se obtiene automáticamente del usuario autenticado porque la infraestructura de autenticación no está integrada con este flujo.
+* No existe todavía un formato acordado para importar clases por lote, por lo cual `/horario/importar` permanece pendiente.
+* El módulo de horario valida docentes, asignaturas y proyectos existentes, pero no crea ni importa esos catálogos automáticamente porque esa decisión no está definida en el plan.
+* La asistencia docente asociada a clases programadas todavía conserva el scaffolding inicial.
 * El cálculo dinámico de disponibilidad sigue pendiente.
 * Las prácticas libres, préstamos docentes, observaciones restrictivas y panel operativo siguen pendientes.
-* El `ValidationPipe` todavía no está configurado globalmente para todo el backend; está aplicado directamente en los controladores implementados.
+* La autenticación, el usuario actual y los permisos todavía no están integrados en las operaciones del Core.
+* El `ValidationPipe` aún no es global para todo el backend; está aplicado directamente en los controladores implementados.
 
 ## NO MODIFICAR
 
-* No retirar la fecha operativa ni la restricción única `(claseId, fecha)` de asistencia docente.
-* No permitir que `PATCH /asistencia-docente/:id` cambie la clase o la fecha del registro.
-* No aceptar estados diferentes a `PENDIENTE`, `ASISTIO` y `AUSENTE`.
 * No crear una tabla permanente para disponibilidad; debe calcularse desde las fuentes operativas.
 * No conectar directamente con la base de Gestión de Monitores.
+* No retirar las validaciones de DTOs ni los `ParseUUIDPipe` de aulas y horario.
+* No permitir la eliminación física de aulas con historial operativo.
+* No permitir la eliminación de clases con asistencias asociadas.
+* No retirar la transacción que mantiene un solo período académico activo.
+* No eliminar ni debilitar la validación de solapamientos de clases.
 * No reemplazar `PrismaService` con servicios Prisma privados en los siguientes módulos del Core.
-* No modificar las relaciones o enums del Core sin revisar las migraciones y el impacto sobre los demás frentes.
-* No construir el panel operativo duplicando reglas de asistencia o disponibilidad.
+* No implementar `/horario/importar` hasta que se acuerde y documente el formato de carga.
+* No modificar las relaciones o enums del Core en Prisma sin revisar las migraciones y el impacto sobre los demás frentes.
+* No iniciar el motor de disponibilidad antes de completar la asistencia docente y acordar cómo afecta una ausencia a la disponibilidad.
 
 ## SIGUIENTE PASO
 
-* Continuar con el cuarto paso del plan: implementar el motor calculado de disponibilidad de aulas.
+* Implementar asistencia docente asociada a clases programadas.
 * Crear y validar los contratos:
-  * `GET /disponibilidad-aulas?fecha=&horaInicio=&horaFin=`;
-  * `GET /disponibilidad-aulas/:aulaId?fecha=&horaInicio=&horaFin=`;
-  * `GET /disponibilidad-aulas/resumen-dia?fecha=`.
-* Definir una respuesta estable con aula, estado calculado, motivo, bloque actual, siguiente actividad y fuentes que explican el resultado.
-* Mantener disponibilidad como un cálculo de solo lectura, sin persistir una tabla de disponibilidad.
-* Aplicar la prioridad definida en el plan: estado del aula, restricción vigente, clase programada, préstamo docente, práctica libre, tarea que afecta disponibilidad y disponible.
-* Definir explícitamente cómo una asistencia `AUSENTE` modifica o explica la ocupación producida por una clase programada.
-* Agregar pruebas unitarias para prioridades y pruebas E2E con aula disponible, aula ocupada y aula en mantenimiento.
-* No implementar todavía los CRUD reales de prácticas libres, préstamos docentes, observaciones o panel operativo.
+  * `GET /asistencia-docente?fecha=&aulaId=&estado=`;
+  * `POST /asistencia-docente`;
+  * `PATCH /asistencia-docente/:id`;
+  * `GET /asistencia-docente/clase/:claseId`.
+* Permitir registros únicamente sobre clases existentes.
+* Evitar múltiples registros activos para una misma clase y bloque operativo.
+* Validar los estados `PENDIENTE`, `ASISTIO` y `AUSENTE`.
+* Preparar el registro de `registradoPorId` para integrarlo con el usuario autenticado cuando la infraestructura de autenticación esté disponible.
+* Preparar la consulta de asistencias pendientes del día para el futuro panel operativo.
+* Agregar pruebas unitarias de estados y duplicados, y pruebas E2E de registro y consulta por clase.
+* No iniciar disponibilidad, prácticas libres, préstamos docentes, observaciones o panel operativo durante ese siguiente paso.   

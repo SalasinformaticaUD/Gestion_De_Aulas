@@ -9,7 +9,7 @@ import { PrismaService } from '../src/prisma/prisma.service';
 
 type PrismaMock = {
   aula: { findMany: jest.Mock; findUnique: jest.Mock };
-  observacion: { findFirst: jest.Mock };
+  observacion: { findFirst: jest.Mock; findMany: jest.Mock };
   claseProgramada: { findFirst: jest.Mock };
   prestamoDocente: { findFirst: jest.Mock };
   practicaLibre: { findFirst: jest.Mock };
@@ -27,7 +27,7 @@ describe('DisponibilidadAulasController (e2e)', () => {
   };
   const prisma: PrismaMock = {
     aula: { findMany: jest.fn(), findUnique: jest.fn() },
-    observacion: { findFirst: jest.fn() },
+    observacion: { findFirst: jest.fn(), findMany: jest.fn() },
     claseProgramada: { findFirst: jest.fn() },
     prestamoDocente: { findFirst: jest.fn() },
     practicaLibre: { findFirst: jest.fn() },
@@ -53,6 +53,7 @@ describe('DisponibilidadAulasController (e2e)', () => {
     prisma.aula.findMany.mockResolvedValue([aula]);
     prisma.aula.findUnique.mockResolvedValue(aula);
     prisma.observacion.findFirst.mockResolvedValue(null);
+    prisma.observacion.findMany.mockResolvedValue([]);
     prisma.claseProgramada.findFirst.mockResolvedValue(null);
     prisma.prestamoDocente.findFirst.mockResolvedValue(null);
     prisma.practicaLibre.findFirst.mockResolvedValue(null);
@@ -72,7 +73,27 @@ describe('DisponibilidadAulasController (e2e)', () => {
 
     expect(body).toHaveLength(1);
     expect(body[0]).toMatchObject({
+      aula: {
+        id: aulaId,
+        codigo: 'LAB-01',
+        ubicacion: 'Piso 2',
+        capacidad: 25,
+        estado: EstadoAula.OPERATIVA,
+      },
+      bloque: {
+        fecha: '2026-08-20',
+        horaInicio: '08:00',
+        horaFin: '10:00',
+        duracionHoras: 2,
+      },
       estadoCalculado: 'disponible',
+      motivo: 'No existen actividades ni restricciones para el bloque.',
+      bloqueActual: null,
+      siguienteActividad: null,
+      fuentes: [],
+      // Jest expone este matcher asimétrico con tipo público `any`.
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      calculadoEn: expect.any(String),
       persistido: false,
     });
   });
@@ -167,6 +188,16 @@ describe('DisponibilidadAulasController (e2e)', () => {
         expect(body.message).toEqual(expect.any(Array));
         expect(body.timestamp).toEqual(expect.any(String));
       }));
+
+  it('rechaza parametros no permitidos mediante la validacion global', async () => {
+    await request(app.getHttpServer())
+      .get(
+        '/disponibilidad-aulas?fecha=2026-08-20&horaInicio=08:00&horaFin=10:00&desconocido=true',
+      )
+      .expect(400);
+
+    expect(prisma.aula.findMany).not.toHaveBeenCalled();
+  });
 
   afterAll(async () => {
     await app.close();

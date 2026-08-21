@@ -13,6 +13,7 @@ import {
 } from '../../generated/prisma/enums.js';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service';
+import { ObservacionesService } from '../observaciones/observaciones.service';
 import {
   DURACION_BLOQUE_HORAS,
   HORA_FIN_OPERACION,
@@ -20,27 +21,15 @@ import {
 } from './disponibilidad-aulas.constants';
 import { ConsultarDisponibilidadDto } from './dto/consultar-disponibilidad.dto';
 import { ConsultarResumenDiaDto } from './dto/consultar-resumen-dia.dto';
-
-type EstadoCalculado =
-  'disponible' | 'ocupada' | 'reservada' | 'mantenimiento' | 'bloqueada';
-
-type FuenteDisponibilidad = {
-  tipo:
-    | 'estado-aula'
-    | 'restriccion'
-    | 'clase-programada'
-    | 'prestamo-docente'
-    | 'practica-libre'
-    | 'tarea-operativa';
-  id: string;
-  descripcion: string;
-  estado?: string;
-};
-
-type SiguienteActividad = FuenteDisponibilidad & {
-  horaInicio: string;
-  horaFin: string | null;
-};
+import {
+  AulaResumenDisponibilidad,
+  DisponibilidadAula,
+  EstadoCalculadoDisponibilidad,
+  FuenteDisponibilidad,
+  ResumenDisponibilidadDia,
+  SiguienteActividadDisponibilidad,
+  TipoFuenteDisponibilidad,
+} from './entities/disponibilidad-aula.entity';
 
 type ActividadCandidata = {
   inicio: Date;
@@ -63,14 +52,6 @@ type BloqueDosHoras = {
   diaSemana: number;
 };
 
-type AulaBase = {
-  id: string;
-  codigo: string;
-  ubicacion: string;
-  capacidad: number;
-  estado: EstadoAula;
-};
-
 type ClaseConDetalle = Prisma.ClaseProgramadaGetPayload<{
   include: {
     docente: true;
@@ -81,9 +62,14 @@ type ClaseConDetalle = Prisma.ClaseProgramadaGetPayload<{
 
 @Injectable()
 export class DisponibilidadAulasService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly observacionesService: ObservacionesService,
+  ) {}
 
-  async findAll(query: ConsultarDisponibilidadDto) {
+  async findAll(
+    query: ConsultarDisponibilidadDto,
+  ): Promise<DisponibilidadAula[]> {
     const bloque = this.normalizarBloque(query);
     const aulas = await this.prisma.aula.findMany({
       select: {
@@ -101,7 +87,10 @@ export class DisponibilidadAulasService {
     );
   }
 
-  async findOne(aulaId: string, query: ConsultarDisponibilidadDto) {
+  async findOne(
+    aulaId: string,
+    query: ConsultarDisponibilidadDto,
+  ): Promise<DisponibilidadAula> {
     const bloque = this.normalizarBloque(query);
     const aula = await this.prisma.aula.findUnique({
       where: { id: aulaId },
@@ -121,7 +110,9 @@ export class DisponibilidadAulasService {
     return this.calcularDisponibilidad(aula, bloque);
   }
 
-  async findResumenDia(query: ConsultarResumenDiaDto) {
+  async findResumenDia(
+    query: ConsultarResumenDiaDto,
+  ): Promise<ResumenDisponibilidadDia> {
     const bloques = this.construirBloquesOperativos();
     const resultados = await Promise.all(
       bloques.map(async (bloque) => ({
@@ -144,7 +135,10 @@ export class DisponibilidadAulasService {
     };
   }
 
-  private async calcularDisponibilidad(aula: AulaBase, bloque: BloqueDosHoras) {
+  private async calcularDisponibilidad(
+    aula: AulaResumenDisponibilidad,
+    bloque: BloqueDosHoras,
+  ): Promise<DisponibilidadAula> {
     const [restriccion, clase, prestamo, practica, tarea, siguienteActividad] =
       await Promise.all([
         this.buscarRestriccion(aula.id, bloque),
@@ -248,13 +242,13 @@ export class DisponibilidadAulasService {
   }
 
   private resolverPrioridad(input: {
-    aula: AulaBase;
+    aula: AulaResumenDisponibilidad;
     restriccion: boolean;
     clase: boolean;
     prestamo: boolean;
     practica: boolean;
     tarea: boolean;
-  }): { estado: EstadoCalculado; motivo: string } {
+  }): { estado: EstadoCalculadoDisponibilidad; motivo: string } {
     if (input.aula.estado === EstadoAula.MANTENIMIENTO) {
       return {
         estado: 'mantenimiento',
@@ -303,16 +297,14 @@ export class DisponibilidadAulasService {
     };
   }
 
-  private buscarRestriccion(aulaId: string, bloque: BloqueDosHoras) {
-    return this.prisma.observacion.findFirst({
-      where: {
+  private async buscarRestriccion(aulaId: string, bloque: BloqueDosHoras) {
+    const restricciones =
+      await this.observacionesService.findRestriccionesVigentes(
         aulaId,
-        tipo: TipoObservacion.RESTRICCION,
-        creadoEn: { lt: bloque.fin },
-        OR: [{ vigenteHasta: null }, { vigenteHasta: { gt: bloque.inicio } }],
-      },
-      orderBy: { creadoEn: 'desc' },
-    });
+        bloque.inicio,
+        bloque.fin,
+      );
+    return restricciones[0] ?? null;
   }
 
   private buscarClase(
@@ -396,7 +388,7 @@ export class DisponibilidadAulasService {
   private async buscarSiguienteActividad(
     aulaId: string,
     bloque: BloqueDosHoras,
-  ): Promise<SiguienteActividad | null> {
+  ): Promise<SiguienteActividadDisponibilidad | null> {
     const [restriccion, clase, prestamo, practica, tarea] = await Promise.all([
       this.prisma.observacion.findFirst({
         where: {
@@ -585,7 +577,7 @@ export class DisponibilidadAulasService {
     }).format(fecha);
   }
 
-  private prioridadFuente(tipo: FuenteDisponibilidad['tipo']): number {
+  private prioridadFuente(tipo: TipoFuenteDisponibilidad): number {
     return [
       'estado-aula',
       'restriccion',

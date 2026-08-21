@@ -34,13 +34,10 @@ const asistenciaInclude = {
 export class AsistenciaDocenteService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateAsistenciaDocenteDto) {
+  async create(dto: CreateAsistenciaDocenteDto, registradoPorId: string) {
     const fecha = this.parseDate(dto.fecha);
     await this.ensureClaseExists(dto.claseId);
-
-    if (dto.registradoPorId) {
-      await this.ensureUsuarioExists(dto.registradoPorId);
-    }
+    await this.ensureUsuarioExists(registradoPorId);
 
     const duplicate = await this.prisma.asistenciaDocente.findUnique({
       where: { claseId_fecha: { claseId: dto.claseId, fecha } },
@@ -63,9 +60,7 @@ export class AsistenciaDocenteService {
           estado,
           registradaEn:
             estado === EstadoAsistencia.PENDIENTE ? null : new Date(),
-          ...(dto.registradoPorId !== undefined && {
-            registradoPorId: dto.registradoPorId,
-          }),
+          registradoPorId,
           ...(dto.observacion !== undefined && {
             observacion: dto.observacion.trim(),
           }),
@@ -114,18 +109,11 @@ export class AsistenciaDocenteService {
       );
     }
 
-    if (dto.registradoPorId) {
-      await this.ensureUsuarioExists(dto.registradoPorId);
-    }
-
     const data: Prisma.AsistenciaDocenteUncheckedUpdateInput = {
       ...(dto.estado !== undefined && {
         estado: dto.estado,
         registradaEn:
           dto.estado === EstadoAsistencia.PENDIENTE ? null : new Date(),
-      }),
-      ...(dto.registradoPorId !== undefined && {
-        registradoPorId: dto.registradoPorId,
       }),
       ...(dto.observacion !== undefined && {
         observacion: dto.observacion.trim(),
