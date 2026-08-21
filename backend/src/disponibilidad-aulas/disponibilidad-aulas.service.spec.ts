@@ -61,7 +61,7 @@ describe('DisponibilidadAulasService', () => {
       ...aula,
       estado: EstadoAula.MANTENIMIENTO,
     });
-    prisma.claseProgramada.findFirst.mockResolvedValue({
+    prisma.claseProgramada.findFirst.mockResolvedValueOnce({
       id: 'clase-id',
       grupo: '020-81',
       docente: { nombre: 'Docente Uno' },
@@ -76,7 +76,7 @@ describe('DisponibilidadAulasService', () => {
   });
 
   it('mantiene ocupada una clase aunque el docente figure ausente', async () => {
-    prisma.claseProgramada.findFirst.mockResolvedValue({
+    prisma.claseProgramada.findFirst.mockResolvedValueOnce({
       id: 'clase-id',
       grupo: '020-81',
       docente: { nombre: 'Docente Uno' },
@@ -88,6 +88,48 @@ describe('DisponibilidadAulasService', () => {
 
     expect(result.estadoCalculado).toBe('ocupada');
     expect(result.fuentes[0].estado).toBe(EstadoAsistencia.AUSENTE);
+  });
+
+  it('informa la siguiente actividad posterior al bloque', async () => {
+    prisma.claseProgramada.findFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: 'clase-siguiente',
+        grupo: '020-82',
+        horaInicio: new Date('1970-01-01T10:00:00.000Z'),
+        horaFin: new Date('1970-01-01T12:00:00.000Z'),
+        docente: { nombre: 'Docente Dos' },
+        asignatura: { nombre: 'Bases de datos' },
+      });
+
+    const result = await service.findOne(aula.id, bloque);
+
+    expect(result.siguienteActividad).toMatchObject({
+      tipo: 'clase-programada',
+      id: 'clase-siguiente',
+      horaInicio: '10:00',
+      horaFin: '12:00',
+    });
+  });
+
+  it('construye el resumen diario en ocho bloques no persistidos', async () => {
+    const result = await service.findResumenDia({ fecha: bloque.fecha });
+
+    expect(result.rangoOperativo).toEqual({
+      horaInicio: '06:00',
+      horaFin: '22:00',
+      duracionBloqueHoras: 2,
+    });
+    expect(result.bloques).toHaveLength(8);
+    expect(result.bloques[0]).toMatchObject({
+      horaInicio: '06:00',
+      horaFin: '08:00',
+    });
+    expect(result.bloques[7]).toMatchObject({
+      horaInicio: '20:00',
+      horaFin: '22:00',
+    });
+    expect(result.persistido).toBe(false);
   });
 
   it('calcula todas las aulas sin guardar resultados', async () => {

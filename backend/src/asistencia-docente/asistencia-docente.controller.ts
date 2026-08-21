@@ -7,8 +7,6 @@ import {
   Patch,
   Post,
   Query,
-  UsePipes,
-  ValidationPipe,
 } from '@nestjs/common';
 import { AsistenciaDocenteService } from './asistencia-docente.service';
 import { CreateAsistenciaDocenteDto } from './dto/create-asistencia-docente.dto';
@@ -16,13 +14,6 @@ import { UpdateAsistenciaDocenteDto } from './dto/update-asistencia-docente.dto'
 import { FindAsistenciasDto } from './dto/find-asistencias.dto';
 
 @Controller('asistencia-docente')
-@UsePipes(
-  new ValidationPipe({
-    transform: true,
-    whitelist: true,
-    forbidNonWhitelisted: true,
-  }),
-)
 export class AsistenciaDocenteController {
   constructor(
     private readonly asistenciaDocenteService: AsistenciaDocenteService,

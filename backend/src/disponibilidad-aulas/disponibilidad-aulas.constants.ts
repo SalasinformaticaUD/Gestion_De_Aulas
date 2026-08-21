@@ -1,0 +1,5 @@
+export const DURACION_BLOQUE_HORAS = 2;
+export const HORA_INICIO_OPERACION =
+  process.env.DISPONIBILIDAD_HORA_INICIO ?? '06:00';
+export const HORA_FIN_OPERACION =
+  process.env.DISPONIBILIDAD_HORA_FIN ?? '22:00';

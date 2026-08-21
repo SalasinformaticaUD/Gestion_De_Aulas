@@ -1,15 +1,12 @@
 import { Module } from '@nestjs/common';
 import { SoftwareService } from './software.service';
 import { SoftwareController } from './software.controller';
-import { SoftwarePrismaService } from './software-prisma.service';
-import { SOFTWARE_PRISMA } from './software.constants';
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
+  imports: [PrismaModule],
   controllers: [SoftwareController],
-  providers: [
-    SoftwareService,
-    { provide: SOFTWARE_PRISMA, useClass: SoftwarePrismaService },
-  ],
+  providers: [SoftwareService],
   exports: [SoftwareService],
 })
 export class SoftwareModule {}

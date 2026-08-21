@@ -4,6 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { HorarioModule } from '../src/horario/horario.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { configureApp } from '../src/configure-app';
 
 type PeriodoRecord = {
   id: string;
@@ -169,6 +170,7 @@ describe('HorarioController (e2e)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    configureApp(app);
     await app.init();
   });
 

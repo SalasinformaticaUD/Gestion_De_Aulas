@@ -8,8 +8,6 @@ import {
   Patch,
   Post,
   Query,
-  UsePipes,
-  ValidationPipe,
 } from '@nestjs/common';
 import { CreateClaseProgramadaDto } from './dto/create-clase-programada.dto';
 import { CreatePeriodoAcademicoDto } from './dto/create-periodo-academico.dto';
@@ -18,13 +16,6 @@ import { UpdateClaseProgramadaDto } from './dto/update-clase-programada.dto';
 import { HorarioService } from './horario.service';
 
 @Controller('horario')
-@UsePipes(
-  new ValidationPipe({
-    transform: true,
-    whitelist: true,
-    forbidNonWhitelisted: true,
-  }),
-)
 export class HorarioController {
   constructor(private readonly horarioService: HorarioService) {}
 

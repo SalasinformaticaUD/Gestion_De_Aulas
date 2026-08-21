@@ -5,11 +5,13 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
+  ParseUUIDPipe,
+  Query,
 } from '@nestjs/common';
 import { PracticasLibresService } from './practicas-libres.service';
 import { CreatePracticasLibreDto } from './dto/create-practicas-libre.dto';
-import { UpdatePracticasLibreDto } from './dto/update-practicas-libre.dto';
+import { FinalizarPracticaLibreDto } from './dto/finalizar-practica-libre.dto';
+import { FindPracticasLibresDto } from './dto/find-practicas-libres.dto';
 
 @Controller('practicas-libres')
 export class PracticasLibresController {
@@ -23,25 +25,25 @@ export class PracticasLibresController {
   }
 
   @Get()
-  findAll() {
-    return this.practicasLibresService.findAll();
+  findAll(@Query() filters: FindPracticasLibresDto) {
+    return this.practicasLibresService.findAll(filters);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.practicasLibresService.findOne(id);
+  @Get('estudiantes/:codigo')
+  findStudent(@Param('codigo') codigo: string) {
+    return this.practicasLibresService.findStudent(codigo);
   }
 
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updatePracticasLibreDto: UpdatePracticasLibreDto,
+  @Patch(':id/finalizar')
+  finish(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: FinalizarPracticaLibreDto,
   ) {
-    return this.practicasLibresService.update(id, updatePracticasLibreDto);
+    return this.practicasLibresService.finish(id, dto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.practicasLibresService.remove(id);
+  @Patch(':id/cancelar')
+  cancel(@Param('id', ParseUUIDPipe) id: string) {
+    return this.practicasLibresService.cancel(id);
   }
 }

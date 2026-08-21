@@ -1,5 +1,5 @@
 import { ConflictException } from '@nestjs/common';
-import type { SoftwarePrismaService } from './software-prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { SoftwareService } from './software.service';
 
 describe('SoftwareService', () => {
@@ -37,7 +37,7 @@ describe('SoftwareService', () => {
       },
     };
 
-    service = new SoftwareService(prisma as unknown as SoftwarePrismaService);
+    service = new SoftwareService(prisma as unknown as PrismaService);
   });
 
   it('normaliza nombre y versión antes de crear el software', async () => {

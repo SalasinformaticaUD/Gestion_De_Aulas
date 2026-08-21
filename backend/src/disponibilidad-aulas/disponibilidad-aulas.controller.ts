@@ -1,23 +1,9 @@
-import {
-  Controller,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Query,
-  UsePipes,
-  ValidationPipe,
-} from '@nestjs/common';
+import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
 import { DisponibilidadAulasService } from './disponibilidad-aulas.service';
 import { ConsultarDisponibilidadDto } from './dto/consultar-disponibilidad.dto';
+import { ConsultarResumenDiaDto } from './dto/consultar-resumen-dia.dto';
 
 @Controller('disponibilidad-aulas')
-@UsePipes(
-  new ValidationPipe({
-    transform: true,
-    whitelist: true,
-    forbidNonWhitelisted: true,
-  }),
-)
 export class DisponibilidadAulasController {
   constructor(
     private readonly disponibilidadAulasService: DisponibilidadAulasService,
@@ -26,6 +12,11 @@ export class DisponibilidadAulasController {
   @Get()
   findAll(@Query() query: ConsultarDisponibilidadDto) {
     return this.disponibilidadAulasService.findAll(query);
+  }
+
+  @Get('resumen-dia')
+  findResumenDia(@Query() query: ConsultarResumenDiaDto) {
+    return this.disponibilidadAulasService.findResumenDia(query);
   }
 
   @Get(':aulaId')

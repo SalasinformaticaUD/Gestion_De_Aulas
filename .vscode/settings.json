@@ -1,3 +1,13 @@
 {
-    "material-icon-theme.activeIconPack": "nest"
+  "material-icon-theme.activeIconPack": "nest",
+  "eslint.workingDirectories": [
+    {
+      "directory": "./backend",
+      "changeProcessCWD": true
+    },
+    {
+      "directory": "./Frontend",
+      "changeProcessCWD": true
+    }
+  ]
 }

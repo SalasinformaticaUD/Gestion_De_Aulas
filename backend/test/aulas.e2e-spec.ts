@@ -5,6 +5,7 @@ import { App } from 'supertest/types';
 import { EstadoAula } from '../generated/prisma/enums.js';
 import { AulasModule } from '../src/aulas/aulas.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { configureApp } from '../src/configure-app';
 
 describe('AulasController (e2e)', () => {
   const aulaId = '00000000-0000-4000-8000-000000000001';
@@ -51,6 +52,7 @@ describe('AulasController (e2e)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    configureApp(app);
     await app.init();
   });
 

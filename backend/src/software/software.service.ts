@@ -1,14 +1,12 @@
 import {
   ConflictException,
-  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 import { CreateSoftwareDto } from './dto/create-software.dto';
 import { UpdateSoftwareDto } from './dto/update-software.dto';
 import { CreateAulaSoftwareDto } from './dto/create-aula-software.dto';
-import type { SoftwarePrismaService } from './software-prisma.service';
-import { SOFTWARE_PRISMA } from './software.constants';
 
 type PrismaError = { code?: unknown };
 
@@ -19,10 +17,7 @@ const hasPrismaCode = (error: unknown, code: string): boolean =>
 
 @Injectable()
 export class SoftwareService {
-  constructor(
-    @Inject(SOFTWARE_PRISMA)
-    private readonly prisma: SoftwarePrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(createSoftwareDto: CreateSoftwareDto) {
     try {

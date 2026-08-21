@@ -5,6 +5,7 @@ import { App } from 'supertest/types';
 import { EstadoAsistencia } from '../generated/prisma/enums.js';
 import { AsistenciaDocenteModule } from '../src/asistencia-docente/asistencia-docente.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { configureApp } from '../src/configure-app';
 
 type AsistenciaRecord = {
   id: string;
@@ -104,6 +105,7 @@ describe('AsistenciaDocenteController (e2e)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    configureApp(app);
     await app.init();
   });
 

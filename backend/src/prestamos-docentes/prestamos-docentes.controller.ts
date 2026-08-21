@@ -5,11 +5,12 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
+  ParseUUIDPipe,
+  Query,
 } from '@nestjs/common';
 import { PrestamosDocentesService } from './prestamos-docentes.service';
 import { CreatePrestamosDocenteDto } from './dto/create-prestamos-docente.dto';
-import { UpdatePrestamosDocenteDto } from './dto/update-prestamos-docente.dto';
+import { FindPrestamosDocentesDto } from './dto/find-prestamos-docentes.dto';
 
 @Controller('prestamos-docentes')
 export class PrestamosDocentesController {
@@ -23,25 +24,27 @@ export class PrestamosDocentesController {
   }
 
   @Get()
-  findAll() {
-    return this.prestamosDocentesService.findAll();
+  findAll(@Query() filters: FindPrestamosDocentesDto) {
+    return this.prestamosDocentesService.findAll(filters);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.prestamosDocentesService.findOne(id);
   }
 
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updatePrestamosDocenteDto: UpdatePrestamosDocenteDto,
-  ) {
-    return this.prestamosDocentesService.update(id, updatePrestamosDocenteDto);
+  @Patch(':id/aprobar')
+  approve(@Param('id', ParseUUIDPipe) id: string) {
+    return this.prestamosDocentesService.approve(id);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.prestamosDocentesService.remove(id);
+  @Patch(':id/cancelar')
+  cancel(@Param('id', ParseUUIDPipe) id: string) {
+    return this.prestamosDocentesService.cancel(id);
+  }
+
+  @Patch(':id/finalizar')
+  finish(@Param('id', ParseUUIDPipe) id: string) {
+    return this.prestamosDocentesService.finish(id);
   }
 }

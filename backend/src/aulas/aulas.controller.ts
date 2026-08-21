@@ -8,8 +8,6 @@ import {
   Delete,
   ParseUUIDPipe,
   Query,
-  UsePipes,
-  ValidationPipe,
 } from '@nestjs/common';
 import { AulasService } from './aulas.service';
 import { CreateAulaDto } from './dto/create-aula.dto';
@@ -17,13 +15,6 @@ import { UpdateAulaDto } from './dto/update-aula.dto';
 import { FindAulasDto } from './dto/find-aulas.dto';
 
 @Controller('aulas')
-@UsePipes(
-  new ValidationPipe({
-    transform: true,
-    whitelist: true,
-    forbidNonWhitelisted: true,
-  }),
-)
 export class AulasController {
   constructor(private readonly aulasService: AulasService) {}
 

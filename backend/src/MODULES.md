@@ -7,7 +7,7 @@ se comunican mediante controladores REST.
 | Módulo Nest | Ruta base | Requisitos | Responsabilidad principal |
 | --- | --- | --- | --- |
 | `horario` | `/horario` | RF-001 a RF-010 | Importación, validación y consulta de horarios y períodos académicos. |
-| `disponibilidad-aulas` | `/disponibilidad-aulas` | RF-011 a RF-020 | Cálculo y consulta dinámica de disponibilidad. No representa una tabla permanente. |
+| `disponibilidad-aulas` | `/disponibilidad-aulas` | RF-011 a RF-020 | Cálculo y consulta dinámica por bloque o resumen diario. Usa bloques de dos horas y no representa una tabla permanente. |
 | `asistencia-docente` | `/asistencia-docente` | RF-021 a RF-030 | Asistencia e inasistencia asociada a clases programadas. |
 | `practicas-libres` | `/practicas-libres` | RF-031 a RF-048 | Solicitudes, préstamos, devoluciones y consulta de estudiantes. |
 | `prestamos-docentes` | `/prestamos-docentes` | RF-049 a RF-058 | Reservas y préstamos temporales de aulas a docentes. |

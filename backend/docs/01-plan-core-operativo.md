@@ -28,8 +28,8 @@ Antes de implementar reglas del core, el frente de Plataforma debe entregar:
 
 - [X] `PrismaModule` global o importable.
 - [X] `PrismaService` conectado a `DATABASE_URL`.
-- [ ] `ValidationPipe` global con `whitelist`, `transform` y `forbidNonWhitelisted` si el equipo lo aprueba.
-- [ ] Filtro global de excepciones o formato comun de error.
+- [X] `ValidationPipe` global con `whitelist`, `transform` y `forbidNonWhitelisted` si el equipo lo aprueba.
+- [X] Filtro global de excepciones o formato comun de error.
 - [X] DTOs con `class-validator` disponible.
 - [ ] Auth basica con usuario autenticado en request.
 - [ ] Decorador o helper para usuario actual.
@@ -197,7 +197,7 @@ Objetivo: entregar la primera version calculada de disponibilidad.
 
 - [X] `GET /disponibilidad-aulas?fecha=&horaInicio=&horaFin=`
 - [X] `GET /disponibilidad-aulas/:aulaId?fecha=&horaInicio=&horaFin=`
-- [ ] `GET /disponibilidad-aulas/resumen-dia?fecha=`
+- [X] `GET /disponibilidad-aulas/resumen-dia?fecha=`
 
 ### 5.3 Modelo de respuesta
 
@@ -228,7 +228,7 @@ Objetivo: entregar la primera version calculada de disponibilidad.
 ### 5.5 Pruebas
 
 - [X] Tests unitarios con datasets en memoria/mocks.
-- [ ] E2E con aula, clase y prestamo docente.
+- [X] E2E con aula, clase y prestamo docente.
 - [X] Caso sin actividades debe retornar disponible.
 - [X] Caso aula en mantenimiento debe prevalecer sobre horario.
 
@@ -242,33 +242,33 @@ Objetivo: permitir prestamos de aula a estudiantes para practica libre, respetan
 
 ### 6.1 Contratos
 
-- [ ] `GET /practicas-libres?estado=&fecha=&aulaId=`
-- [ ] `POST /practicas-libres`
-- [ ] `PATCH /practicas-libres/:id/finalizar`
-- [ ] `PATCH /practicas-libres/:id/cancelar`
-- [ ] `GET /practicas-libres/estudiantes/:codigo`
+- [X] `GET /practicas-libres?estado=&fecha=&aulaId=`
+- [X] `POST /practicas-libres`
+- [X] `PATCH /practicas-libres/:id/finalizar`
+- [X] `PATCH /practicas-libres/:id/cancelar`
+- [X] `GET /practicas-libres/estudiantes/:codigo`
 
 ### 6.2 Reglas
 
-- [ ] Crear o consultar estudiante por codigo.
-- [ ] Bloquear practica si el estudiante tiene multa activa.
-- [ ] Validar que el aula este disponible para el rango solicitado.
-- [ ] Registrar inicio, fin estimada y fin real.
+- [X] Crear o consultar estudiante por codigo.
+- [X] Bloquear practica si el estudiante tiene multa activa.
+- [X] Validar que el aula este disponible para el rango solicitado.
+- [X] Registrar inicio, fin estimada y fin real.
 - [ ] Estados iniciales: `ACTIVO`, `DEVUELTO`, `CANCELADO`, `VENCIDO` segun enum disponible.
 
 ### 6.3 Implementacion
 
-- [ ] Completar DTOs.
-- [ ] Inyectar `PrismaService`.
-- [ ] Inyectar o reutilizar logica de `DisponibilidadAulasService` sin generar ciclos de dependencia.
-- [ ] Implementar transaccion de creacion si se crea estudiante y practica en la misma operacion.
-- [ ] Implementar finalizacion con `finReal`.
+- [X] Completar DTOs.
+- [X] Inyectar `PrismaService`.
+- [X] Inyectar o reutilizar logica de `DisponibilidadAulasService` sin generar ciclos de dependencia.
+- [X] Implementar transaccion de creacion si se crea estudiante y practica en la misma operacion.
+- [X] Implementar finalizacion con `finReal`.
 
 ### 6.4 Pruebas
 
-- [ ] Unit tests de bloqueo por multa.
-- [ ] Unit tests de bloqueo por disponibilidad.
-- [ ] E2E de practica completa: crear, consultar, finalizar.
+- [X] Unit tests de bloqueo por multa.
+- [X] Unit tests de bloqueo por disponibilidad.
+- [X] E2E de practica completa: crear, consultar, finalizar.
 
 Criterio de cierre: la accion "Registrar practica libre" del frontend puede conectarse a API real.
 
@@ -280,31 +280,31 @@ Objetivo: registrar reservas/prestamos temporales de aulas para docentes.
 
 ### 7.1 Contratos
 
-- [ ] `GET /prestamos-docentes?estado=&fecha=&docenteId=&aulaId=`
-- [ ] `POST /prestamos-docentes`
-- [ ] `PATCH /prestamos-docentes/:id/aprobar`
-- [ ] `PATCH /prestamos-docentes/:id/cancelar`
-- [ ] `PATCH /prestamos-docentes/:id/finalizar`
+- [X] `GET /prestamos-docentes?estado=&fecha=&docenteId=&aulaId=`
+- [X] `POST /prestamos-docentes`
+- [X] `PATCH /prestamos-docentes/:id/aprobar`
+- [X] `PATCH /prestamos-docentes/:id/cancelar`
+- [X] `PATCH /prestamos-docentes/:id/finalizar`
 
 ### 7.2 Reglas
 
-- [ ] Validar docente existente o crearlo segun decision de importacion.
-- [ ] Validar aula existente y operativa.
-- [ ] Validar disponibilidad para el rango.
-- [ ] Manejar estados del enum `EstadoPrestamo`.
-- [ ] No permitir aprobar prestamos cruzados.
+- [X] Validar docente existente o crearlo segun decision de importacion.
+- [X] Validar aula existente y operativa.
+- [X] Validar disponibilidad para el rango.
+- [X] Manejar estados del enum `EstadoPrestamo`.
+- [X] No permitir aprobar prestamos cruzados.
 
 ### 7.3 Implementacion
 
-- [ ] DTOs con fecha inicio, fecha fin, docenteId, aulaId y motivo.
-- [ ] Servicio con Prisma.
-- [ ] Consulta para panel operativo: proximos prestamos del dia.
+- [X] DTOs con fecha inicio, fecha fin, docenteId, aulaId y motivo.
+- [X] Servicio con Prisma.
+- [X] Consulta para panel operativo: proximos prestamos del dia.
 - [ ] Auditoria basica si el modulo transversal ya esta listo.
 
 ### 7.4 Pruebas
 
-- [ ] Unit tests de conflicto de rango.
-- [ ] E2E de solicitud, aprobacion y cancelacion.
+- [X] Unit tests de conflicto de rango.
+- [X] E2E de solicitud, aprobacion y cancelacion.
 
 Criterio de cierre: disponibilidad incorpora prestamos docentes como bloqueos reales.
 
@@ -386,7 +386,7 @@ Criterio de cierre: el dashboard operativo del frontend puede consumir un unico 
 Al final de cada sprint:
 
 - [ ] Revisar contratos publicados por Plataforma.
-- [ ] Actualizar `backend/src/MODULES.md` si se agregaron rutas o responsabilidades.
+- [X] Actualizar `backend/src/MODULES.md` si se agregaron rutas o responsabilidades.
 - [ ] Ejecutar migraciones pendientes en entorno local.
 - [X] Ejecutar `npm test -- --runInBand`.
 - [X] Ejecutar `npx tsc --noEmit --incremental false`.
