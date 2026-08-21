@@ -5,6 +5,7 @@ import { UpdateLimpiezaAulaDto } from './dto/update-limpieza-aula.dto';
 @Injectable()
 export class LimpiezaAulasService {
   create(createLimpiezaAulaDto: CreateLimpiezaAulaDto) {
+    void createLimpiezaAulaDto;
     return 'This action adds a new limpiezaAula';
   }
 
@@ -17,6 +18,7 @@ export class LimpiezaAulasService {
   }
 
   update(id: string, updateLimpiezaAulaDto: UpdateLimpiezaAulaDto) {
+    void updateLimpiezaAulaDto;
     return `This action updates a #${id} limpiezaAula`;
   }
 

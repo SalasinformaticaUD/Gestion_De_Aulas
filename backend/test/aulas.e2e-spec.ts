@@ -11,22 +11,21 @@ describe('AulasController (e2e)', () => {
   const aulaId = '00000000-0000-4000-8000-000000000001';
   const missingId = '00000000-0000-4000-8000-000000000002';
   let app: INestApplication<App>;
-  let aulas: Array<Record<string, unknown>>;
+  let aulas: AulaMock[];
 
   const prisma = {
     aula: {
-      create: jest.fn(async ({ data }: { data: Record<string, unknown> }) => {
+      create: jest.fn(({ data }: { data: Record<string, unknown> }) => {
         const aula = { id: aulaId, estado: EstadoAula.OPERATIVA, ...data };
         aulas.push(aula);
         return aula;
       }),
-      findMany: jest.fn(async () => aulas),
-      findUnique: jest.fn(
-        async ({ where }: { where: { id: string } }) =>
-          aulas.find((aula) => aula.id === where.id) ?? null,
+      findMany: jest.fn(() => aulas.map(toPublicSource)),
+      findUnique: jest.fn(({ where }: { where: { id: string } }) =>
+        toPublicSource(aulas.find((aula) => aula.id === where.id)),
       ),
       update: jest.fn(
-        async ({
+        ({
           where,
           data,
         }: {
@@ -66,7 +65,7 @@ describe('AulasController (e2e)', () => {
       .post('/aulas')
       .send({ codigo: 'LAB-01', ubicacion: 'Piso 2', capacidad: 25 })
       .expect(201)
-      .expect(({ body }) => {
+      .expect(({ body }: { body: AulaResponse }) => {
         expect(body.id).toBe(aulaId);
         expect(body.codigo).toBe('LAB-01');
       });
@@ -74,18 +73,34 @@ describe('AulasController (e2e)', () => {
     await request(app.getHttpServer())
       .get('/aulas')
       .expect(200)
-      .expect(({ body }) => expect(body).toHaveLength(1));
+      .expect(({ body }: { body: AulaResponse[] }) => {
+        expect(body).toHaveLength(1);
+        expect(body[0]).toMatchObject({
+          codigo: 'LAB-01',
+          ubicacion: 'Piso 2',
+          piso: 2,
+          capacidad: 25,
+          estado: EstadoAula.OPERATIVA,
+          caracteristicas: null,
+          software: [],
+          historial: [],
+        });
+      });
 
     await request(app.getHttpServer())
       .get(`/aulas/${aulaId}`)
       .expect(200)
-      .expect(({ body }) => expect(body.id).toBe(aulaId));
+      .expect(({ body }: { body: AulaResponse }) =>
+        expect(body.id).toBe(aulaId),
+      );
 
     await request(app.getHttpServer())
       .patch(`/aulas/${aulaId}`)
       .send({ estado: EstadoAula.MANTENIMIENTO })
       .expect(200)
-      .expect(({ body }) => expect(body.estado).toBe(EstadoAula.MANTENIMIENTO));
+      .expect(({ body }: { body: AulaResponse }) =>
+        expect(body.estado).toBe(EstadoAula.MANTENIMIENTO),
+      );
   });
 
   it('responde 404 para un UUID inexistente', () =>
@@ -106,3 +121,41 @@ describe('AulasController (e2e)', () => {
     await app.close();
   });
 });
+
+type AulaMock = {
+  id: string;
+  estado: EstadoAula;
+  codigo?: unknown;
+  ubicacion?: unknown;
+  capacidad?: unknown;
+};
+
+function toPublicSource(aula?: AulaMock) {
+  return aula
+    ? {
+        ...aula,
+        caracteristicas: null,
+        proyectoCurricular: null,
+        softwares: [],
+        observaciones: [],
+        tareas: [],
+        limpiezas: [],
+        practicasLibres: [],
+        prestamosDocentes: [],
+        creadoEn: new Date('2026-01-01T00:00:00.000Z'),
+        actualizadoEn: new Date('2026-08-21T00:00:00.000Z'),
+      }
+    : null;
+}
+
+type AulaResponse = {
+  id: string;
+  codigo: string;
+  ubicacion: string;
+  piso: number | null;
+  capacidad: number;
+  estado: EstadoAula;
+  caracteristicas: unknown;
+  software: unknown[];
+  historial: unknown[];
+};

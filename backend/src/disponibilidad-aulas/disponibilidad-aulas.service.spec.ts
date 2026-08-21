@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { EstadoAsistencia, EstadoAula } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service';
+import { ObservacionesService } from '../observaciones/observaciones.service';
 import { DisponibilidadAulasService } from './disponibilidad-aulas.service';
 
 type PrismaMock = {
@@ -27,6 +28,7 @@ describe('DisponibilidadAulasService', () => {
   };
   let prisma: PrismaMock;
   let service: DisponibilidadAulasService;
+  let observacionesService: { findRestriccionesVigentes: jest.Mock };
 
   beforeEach(() => {
     prisma = {
@@ -40,8 +42,12 @@ describe('DisponibilidadAulasService', () => {
       practicaLibre: { findFirst: jest.fn().mockResolvedValue(null) },
       tarea: { findFirst: jest.fn().mockResolvedValue(null) },
     };
+    observacionesService = {
+      findRestriccionesVigentes: jest.fn().mockResolvedValue([]),
+    };
     service = new DisponibilidadAulasService(
       prisma as unknown as PrismaService,
+      observacionesService as unknown as ObservacionesService,
     );
   });
 
@@ -88,6 +94,25 @@ describe('DisponibilidadAulasService', () => {
 
     expect(result.estadoCalculado).toBe('ocupada');
     expect(result.fuentes[0].estado).toBe(EstadoAsistencia.AUSENTE);
+  });
+
+  it('bloquea y explica una restriccion vigente del modulo de observaciones', async () => {
+    observacionesService.findRestriccionesVigentes.mockResolvedValueOnce([
+      {
+        id: 'restriccion-id',
+        tipo: 'RESTRICCION',
+        contenido: 'Aula cerrada por mantenimiento de red',
+      },
+    ]);
+
+    const result = await service.findOne(aula.id, bloque);
+
+    expect(result.estadoCalculado).toBe('bloqueada');
+    expect(result.fuentes[0]).toMatchObject({
+      tipo: 'restriccion',
+      id: 'restriccion-id',
+      descripcion: 'Aula cerrada por mantenimiento de red',
+    });
   });
 
   it('informa la siguiente actividad posterior al bloque', async () => {

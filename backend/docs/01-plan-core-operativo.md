@@ -31,9 +31,9 @@ Antes de implementar reglas del core, el frente de Plataforma debe entregar:
 - [X] `ValidationPipe` global con `whitelist`, `transform` y `forbidNonWhitelisted` si el equipo lo aprueba.
 - [X] Filtro global de excepciones o formato comun de error.
 - [X] DTOs con `class-validator` disponible.
-- [ ] Auth basica con usuario autenticado en request.
-- [ ] Decorador o helper para usuario actual.
-- [ ] Guard de permisos por modulo, aunque al inicio se pueda usar en modo permisivo.
+- [X] Auth basica con usuario autenticado en request.
+- [X] Decorador o helper para usuario actual.
+- [X] Guard de permisos por modulo, aunque al inicio se pueda usar en modo permisivo.
 
 Mientras esas piezas no existan, este frente puede avanzar con DTOs, servicios puros y tests unitarios usando mocks.
 
@@ -53,7 +53,7 @@ Objetivo: reemplazar el stub del modulo `aulas` por CRUD real y estable.
   - `GET /aulas/:id`
   - `PATCH /aulas/:id`
   - `DELETE /aulas/:id` o desactivacion logica si se decide agregar campo `activa`
-- [ ] Confirmar con frontend los campos minimos para la vista de aulas: codigo, ubicacion, capacidad, estado, caracteristicas, software, historial basico.
+- [X] Confirmar con frontend los campos minimos para la vista de aulas: codigo, ubicacion, capacidad, estado, caracteristicas, software, historial basico.
 
 ### 2.2 DTOs y validaciones
 
@@ -106,13 +106,16 @@ Objetivo: implementar la base del modulo `horario`, incluyendo periodos, asignat
 ### 3.2 Contratos propuestos
 
 - [X] `GET /horario/periodos`
+- [X] `GET /horario/periodos/:id`
 - [X] `POST /horario/periodos`
 - [X] `PATCH /horario/periodos/:id/activar`
+- [X] `PATCH /horario/periodos/:id`
+- [X] `DELETE /horario/periodos/:id`
 - [X] `GET /horario/clases?aulaId=&periodoId=&diaSemana=`
 - [X] `POST /horario/clases`
 - [X] `PATCH /horario/clases/:id`
 - [X] `DELETE /horario/clases/:id`
-- [ ] `POST /horario/importar` para carga por lote cuando el formato este definido.
+- [X] `POST /horario/importar` para carga por lote cuando el formato este definido.
 
 ### 3.3 DTOs
 
@@ -128,8 +131,8 @@ Objetivo: implementar la base del modulo `horario`, incluyendo periodos, asignat
 
 - [X] Inyectar `PrismaService` en `HorarioService`.
 - [X] Implementar consultas por periodo, aula y dia.
-- [ ] Implementar upsert o creacion previa de docente/asignatura si el equipo decide importar datos sin catalogos completos.
-- [ ] Implementar transaccion para carga por lote.
+- [X] Implementar upsert o creacion previa de docente/asignatura si el equipo decide importar datos sin catalogos completos.
+- [X] Implementar transaccion para carga por lote.
 - [X] Devolver errores claros para conflictos de horario.
 
 ### 3.5 Pruebas
@@ -158,7 +161,7 @@ Objetivo: registrar asistencia real asociada a clases programadas.
 - [X] Solo se registra asistencia sobre una `ClaseProgramada` existente.
 - [X] Una clase no debe tener multiples registros activos de asistencia para el mismo bloque operativo, salvo que se defina historial.
 - [X] Estado permitido: `PENDIENTE`, `ASISTIO`, `AUSENTE`.
-- [ ] Guardar `registradoPorId` desde el usuario autenticado cuando auth este disponible.
+- [X] Guardar `registradoPorId` desde el usuario autenticado cuando auth este disponible.
 - [X] Permitir observacion breve.
 
 ### 4.3 Implementacion
@@ -254,7 +257,7 @@ Objetivo: permitir prestamos de aula a estudiantes para practica libre, respetan
 - [X] Bloquear practica si el estudiante tiene multa activa.
 - [X] Validar que el aula este disponible para el rango solicitado.
 - [X] Registrar inicio, fin estimada y fin real.
-- [ ] Estados iniciales: `ACTIVO`, `DEVUELTO`, `CANCELADO`, `VENCIDO` segun enum disponible.
+- [X] Estados iniciales: `ACTIVO`, `DEVUELTO`, `CANCELADO`, `VENCIDO` segun enum disponible.
 
 ### 6.3 Implementacion
 
@@ -316,29 +319,29 @@ Objetivo: permitir novedades y restricciones historicas o vigentes por aula.
 
 ### 8.1 Contratos
 
-- [ ] `GET /observaciones?aulaId=&tipo=&vigentes=true`
-- [ ] `POST /observaciones`
-- [ ] `PATCH /observaciones/:id`
-- [ ] `DELETE /observaciones/:id` o cierre logico.
+- [X] `GET /observaciones?aulaId=&tipo=&vigentes=true`
+- [X] `POST /observaciones`
+- [X] `PATCH /observaciones/:id`
+- [X] `DELETE /observaciones/:id` o cierre logico.
 
 ### 8.2 Reglas
 
-- [ ] `GENERAL` y `NOVEDAD` son informativas.
-- [ ] `RESTRICCION` afecta disponibilidad mientras este vigente.
-- [ ] `SEMANAL` debe tener fecha/rango definido si el equipo lo requiere.
-- [ ] No borrar fisicamente observaciones relevantes para trazabilidad si ya afectaron operacion.
+- [X] `GENERAL` y `NOVEDAD` son informativas.
+- [X] `RESTRICCION` afecta disponibilidad mientras este vigente.
+- [X] `SEMANAL` debe tener fecha/rango definido si el equipo lo requiere.
+- [X] No borrar fisicamente observaciones relevantes para trazabilidad si ya afectaron operacion.
 
 ### 8.3 Implementacion
 
-- [ ] Completar DTOs.
-- [ ] Servicio con Prisma.
-- [ ] Metodo `findRestriccionesVigentes(aulaId, fecha)` para disponibilidad.
+- [X] Completar DTOs.
+- [X] Servicio con Prisma.
+- [X] Metodo `findRestriccionesVigentes(aulaId, fecha)` para disponibilidad.
 - [ ] Registrar usuario creador si se agrega campo al schema o si auditoria lo cubre.
 
 ### 8.4 Pruebas
 
-- [ ] Unit test de restriccion vigente.
-- [ ] E2E de creacion y consulta por aula.
+- [X] Unit test de restriccion vigente.
+- [X] E2E de creacion y consulta por aula.
 
 Criterio de cierre: disponibilidad puede explicar bloqueos por observaciones.
 

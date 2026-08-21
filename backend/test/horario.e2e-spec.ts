@@ -35,10 +35,11 @@ type PrismaMock = {
     findUnique: jest.Mock;
     updateMany: jest.Mock;
     update: jest.Mock;
+    delete: jest.Mock;
   };
   aula: { findUnique: jest.Mock };
-  docente: { findUnique: jest.Mock };
-  asignatura: { findUnique: jest.Mock };
+  docente: { findUnique: jest.Mock; upsert: jest.Mock };
+  asignatura: { findUnique: jest.Mock; upsert: jest.Mock };
   proyectoCurricular: { findUnique: jest.Mock };
   claseProgramada: {
     findMany: jest.Mock;
@@ -76,9 +77,21 @@ describe('HorarioController (e2e)', () => {
         },
       ),
       findMany: jest.fn(() => Promise.resolve(periodos)),
-      findUnique: jest.fn(({ where }: { where: { id: string } }) =>
-        Promise.resolve(periodos.find((periodo) => periodo.id === where.id)),
-      ),
+      findUnique: jest.fn(({ where }: { where: { id: string } }) => {
+        const periodo = periodos.find((item) => item.id === where.id);
+        return Promise.resolve(
+          periodo
+            ? {
+                ...periodo,
+                _count: {
+                  clases: clases.filter(
+                    (clase) => clase.periodoId === periodo.id,
+                  ).length,
+                },
+              }
+            : null,
+        );
+      }),
       updateMany: jest.fn(({ data }: { data: { activo: boolean } }) => {
         periodos.forEach((periodo) => Object.assign(periodo, data));
         return Promise.resolve({ count: periodos.length });
@@ -96,6 +109,11 @@ describe('HorarioController (e2e)', () => {
           return Promise.resolve(periodo);
         },
       ),
+      delete: jest.fn(({ where }: { where: { id: string } }) => {
+        const indice = periodos.findIndex((periodo) => periodo.id === where.id);
+        const [eliminado] = periodos.splice(indice, 1);
+        return Promise.resolve(eliminado);
+      }),
     },
     aula: {
       findUnique: jest.fn(({ where }: { where: { id: string } }) =>
@@ -106,10 +124,20 @@ describe('HorarioController (e2e)', () => {
       findUnique: jest.fn(({ where }: { where: { id: string } }) =>
         Promise.resolve({ id: where.id }),
       ),
+      upsert: jest.fn(() =>
+        Promise.resolve({
+          id: '00000000-0000-4000-8000-000000000010',
+        }),
+      ),
     },
     asignatura: {
       findUnique: jest.fn(({ where }: { where: { id: string } }) =>
         Promise.resolve({ id: where.id }),
+      ),
+      upsert: jest.fn(() =>
+        Promise.resolve({
+          id: '00000000-0000-4000-8000-000000000011',
+        }),
       ),
     },
     proyectoCurricular: { findUnique: jest.fn() },
@@ -158,7 +186,17 @@ describe('HorarioController (e2e)', () => {
     $transaction: jest.fn(),
   };
   prisma.$transaction.mockImplementation(
-    (callback: (tx: PrismaMock) => unknown) => callback(prisma),
+    async (callback: (tx: PrismaMock) => unknown) => {
+      const periodosAntes = [...periodos];
+      const clasesAntes = [...clases];
+      try {
+        return await callback(prisma);
+      } catch (error: unknown) {
+        periodos = periodosAntes;
+        clases = clasesAntes;
+        throw error;
+      }
+    },
   );
 
   beforeAll(async () => {
@@ -181,7 +219,7 @@ describe('HorarioController (e2e)', () => {
     jest.clearAllMocks();
   });
 
-  it('crea y activa un período académico', async () => {
+  it('completa el CRUD de un período académico', async () => {
     await request(app.getHttpServer())
       .post('/horario/periodos')
       .send({
@@ -200,6 +238,29 @@ describe('HorarioController (e2e)', () => {
       .expect(({ body }: { body: PeriodoRecord }) =>
         expect(body.activo).toBe(true),
       );
+
+    await request(app.getHttpServer())
+      .get(`/horario/periodos/${periodoId}`)
+      .expect(200)
+      .expect(({ body }: { body: PeriodoRecord }) =>
+        expect(body.id).toBe(periodoId),
+      );
+
+    await request(app.getHttpServer())
+      .patch(`/horario/periodos/${periodoId}`)
+      .send({ nombre: '2026-3 actualizado' })
+      .expect(200)
+      .expect(({ body }: { body: PeriodoRecord }) =>
+        expect(body.nombre).toBe('2026-3 actualizado'),
+      );
+
+    await request(app.getHttpServer())
+      .delete(`/horario/periodos/${periodoId}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get(`/horario/periodos/${periodoId}`)
+      .expect(404);
   });
 
   it('crea y consulta una clase programada', async () => {
@@ -255,6 +316,126 @@ describe('HorarioController (e2e)', () => {
         grupo: '020-82',
       })
       .expect(409);
+  });
+
+  it('importa por lote y revierte todas las filas si existe un conflicto', async () => {
+    periodos.push({ id: periodoId, activo: true });
+    const claseBase = {
+      aulaId,
+      docenteId,
+      asignaturaId,
+      diaSemana: 1,
+      horaInicio: '08:00',
+      horaFin: '10:00',
+      grupo: '020-81',
+    };
+
+    await request(app.getHttpServer())
+      .post('/horario/importar')
+      .send({
+        formato: 'JSON_V1',
+        periodoId,
+        nombreArchivo: 'horario-2026-3.json',
+        clases: [
+          claseBase,
+          {
+            ...claseBase,
+            diaSemana: 2,
+            horaInicio: '10:00',
+            horaFin: '12:00',
+            grupo: '020-82',
+          },
+        ],
+      })
+      .expect(201)
+      .expect(({ body }) => {
+        expect(body).toMatchObject({
+          formato: 'JSON_V1',
+          totalRecibidas: 2,
+          totalCreadas: 2,
+        });
+      });
+    expect(clases).toHaveLength(2);
+
+    clases = [];
+    siguienteClase = 0;
+    await request(app.getHttpServer())
+      .post('/horario/importar')
+      .send({
+        formato: 'JSON_V1',
+        periodoId,
+        clases: [
+          claseBase,
+          {
+            ...claseBase,
+            horaInicio: '09:00',
+            horaFin: '11:00',
+            grupo: '020-83',
+          },
+        ],
+      })
+      .expect(409)
+      .expect(({ body }: { body: { message: string } }) =>
+        expect(body.message).toContain('Fila 2:'),
+      );
+    expect(clases).toHaveLength(0);
+  });
+
+  it('importa clases con docente y asignatura sin catalogos previos', async () => {
+    periodos.push({ id: periodoId, activo: true });
+
+    await request(app.getHttpServer())
+      .post('/horario/importar')
+      .send({
+        formato: 'JSON_V2',
+        periodoId,
+        clases: [
+          {
+            aulaId,
+            docente: {
+              documento: '123456',
+              nombre: 'Docente Nuevo',
+              correo: 'docente@udistrital.edu.co',
+            },
+            asignatura: {
+              codigo: 'SIS-101',
+              nombre: 'Programación I',
+            },
+            diaSemana: 1,
+            horaInicio: '08:00',
+            horaFin: '10:00',
+            grupo: '020-81',
+          },
+        ],
+      })
+      .expect(201)
+      .expect(({ body }: { body: Record<string, unknown> }) =>
+        expect(body).toMatchObject({
+          formato: 'JSON_V2',
+          totalCreadas: 1,
+        }),
+      );
+
+    expect(prisma.docente.upsert).toHaveBeenCalledTimes(1);
+    expect(prisma.asignatura.upsert).toHaveBeenCalledTimes(1);
+    expect(clases[0]).toMatchObject({
+      docenteId: '00000000-0000-4000-8000-000000000010',
+      asignaturaId: '00000000-0000-4000-8000-000000000011',
+    });
+  });
+
+  it('rechaza campos no permitidos mediante la validacion global', async () => {
+    await request(app.getHttpServer())
+      .post('/horario/periodos')
+      .send({
+        nombre: '2026-3',
+        fechaInicio: '2026-08-01',
+        fechaFin: '2026-12-01',
+        desconocido: true,
+      })
+      .expect(400);
+
+    expect(prisma.periodoAcademico.create).not.toHaveBeenCalled();
   });
 
   afterAll(async () => {

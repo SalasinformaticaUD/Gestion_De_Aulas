@@ -13,7 +13,10 @@ import { AulasService } from './aulas.service';
 import { CreateAulaDto } from './dto/create-aula.dto';
 import { UpdateAulaDto } from './dto/update-aula.dto';
 import { FindAulasDto } from './dto/find-aulas.dto';
+import { MODULOS } from '../auth/auth.constants';
+import { RequireModule } from '../auth/decorators/require-module.decorator';
 
+@RequireModule(MODULOS.AULAS)
 @Controller('aulas')
 export class AulasController {
   constructor(private readonly aulasService: AulasService) {}

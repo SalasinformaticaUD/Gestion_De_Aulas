@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   BadRequestException,
   ConflictException,
@@ -90,7 +89,8 @@ export class PracticasLibresService {
     });
   }
 
-  findAll(filters: FindPracticasLibresDto) {
+  async findAll(filters: FindPracticasLibresDto) {
+    await this.marcarPracticasVencidas();
     const inicioDia = filters.fecha
       ? new Date(`${filters.fecha}T00:00:00.000-05:00`)
       : undefined;
@@ -113,6 +113,7 @@ export class PracticasLibresService {
   }
 
   async findStudent(codigo: string) {
+    await this.marcarPracticasVencidas();
     const estudiante = await this.prisma.estudiante.findUnique({
       where: { codigo },
       include: {
@@ -127,7 +128,7 @@ export class PracticasLibresService {
   }
 
   async finish(id: string, dto: FinalizarPracticaLibreDto) {
-    await this.validarPracticaActiva(id);
+    await this.validarPracticaParaCierre(id, true);
     return this.prisma.practicaLibre.update({
       where: { id },
       data: {
@@ -139,7 +140,7 @@ export class PracticasLibresService {
   }
 
   async cancel(id: string) {
-    await this.validarPracticaActiva(id);
+    await this.validarPracticaParaCierre(id, false);
     return this.prisma.practicaLibre.update({
       where: { id },
       data: { estado: EstadoPrestamo.CANCELADO, finReal: new Date() },
@@ -147,17 +148,51 @@ export class PracticasLibresService {
     });
   }
 
-  private async validarPracticaActiva(id: string): Promise<void> {
+  private async validarPracticaParaCierre(
+    id: string,
+    permiteVencida: boolean,
+  ): Promise<void> {
     const practica = await this.prisma.practicaLibre.findUnique({
       where: { id },
-      select: { estado: true },
+      select: { estado: true, finEstimada: true, finReal: true },
     });
     if (!practica) {
       throw new NotFoundException(`No existe práctica libre con id ${id}.`);
     }
-    if (practica.estado !== EstadoPrestamo.ACTIVO) {
+
+    let estado = practica.estado;
+    if (
+      estado === EstadoPrestamo.ACTIVO &&
+      !practica.finReal &&
+      practica.finEstimada &&
+      practica.finEstimada < new Date()
+    ) {
+      await this.prisma.practicaLibre.update({
+        where: { id },
+        data: { estado: EstadoPrestamo.VENCIDO },
+      });
+      estado = EstadoPrestamo.VENCIDO;
+    }
+
+    if (
+      estado !== EstadoPrestamo.ACTIVO &&
+      !(permiteVencida && estado === EstadoPrestamo.VENCIDO)
+    ) {
       throw new ConflictException('La práctica libre ya no está activa.');
     }
+  }
+
+  private async marcarPracticasVencidas(
+    referencia = new Date(),
+  ): Promise<void> {
+    await this.prisma.practicaLibre.updateMany({
+      where: {
+        estado: EstadoPrestamo.ACTIVO,
+        finReal: null,
+        finEstimada: { lt: referencia },
+      },
+      data: { estado: EstadoPrestamo.VENCIDO },
+    });
   }
 
   private construirDatosEstudiante(

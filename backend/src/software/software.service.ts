@@ -7,8 +7,26 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateSoftwareDto } from './dto/create-software.dto';
 import { UpdateSoftwareDto } from './dto/update-software.dto';
 import { CreateAulaSoftwareDto } from './dto/create-aula-software.dto';
+import {
+  FilaImportacionSoftwareDto,
+  ImportarSoftwareDto,
+} from './dto/importar-software.dto';
 
 type PrismaError = { code?: unknown };
+type ResultadoImportacionSoftware = 'EXITOSA' | 'PARCIAL' | 'FALLIDA';
+type ImportacionSoftwareError = {
+  fila: number;
+  aulaCodigo: string;
+  nombre: string;
+  version: string;
+  error: string;
+};
+
+const RESULTADO_IMPORTACION_SOFTWARE = {
+  EXITOSA: 'EXITOSA',
+  PARCIAL: 'PARCIAL',
+  FALLIDA: 'FALLIDA',
+} as const;
 
 const hasPrismaCode = (error: unknown, code: string): boolean =>
   typeof error === 'object' &&
@@ -71,11 +89,22 @@ export class SoftwareService {
 
   async remove(id: string) {
     await this.ensureSoftwareExists(id);
+
+    const associations = await this.prisma.aulaSoftware.count({
+      where: { softwareId: id },
+    });
+
+    if (associations > 0) {
+      throw new ConflictException(
+        'No se puede eliminar software asociado a una o mas aulas.',
+      );
+    }
+
     return this.prisma.software.delete({ where: { id } });
   }
 
   async assignToAula(createAulaSoftwareDto: CreateAulaSoftwareDto) {
-    const { aulaId, softwareId } = createAulaSoftwareDto;
+    const { aulaId, softwareId, instaladoEn } = createAulaSoftwareDto;
 
     await Promise.all([
       this.ensureAulaExists(aulaId),
@@ -87,6 +116,7 @@ export class SoftwareService {
         data: {
           aulaId,
           softwareId,
+          ...(instaladoEn && { instaladoEn: new Date(instaladoEn) }),
         },
         include: { aula: true, software: true },
       });
@@ -179,6 +209,122 @@ export class SoftwareService {
     });
   }
 
+  findImportaciones() {
+    return this.prisma.importacionSoftware.findMany({
+      include: { usuario: true },
+      orderBy: { creadoEn: 'desc' },
+    });
+  }
+
+  async importInventory(importarSoftwareDto: ImportarSoftwareDto) {
+    const { filas, nombreArchivo, usuarioId } = importarSoftwareDto;
+
+    if (usuarioId) {
+      const usuario = await this.prisma.usuario.findUnique({
+        where: { id: usuarioId },
+        select: { id: true },
+      });
+
+      if (!usuario) {
+        throw new NotFoundException(`No existe usuario con id ${usuarioId}.`);
+      }
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const errores: ImportacionSoftwareError[] = [];
+      let registrosProcesados = 0;
+
+      for (const [index, fila] of filas.entries()) {
+        const normalized = this.normalizeImportRow(fila);
+
+        try {
+          const aula = await tx.aula.findUnique({
+            where: { codigo: normalized.aulaCodigo },
+            select: { id: true },
+          });
+
+          if (!aula) {
+            errores.push({
+              fila: index + 1,
+              aulaCodigo: normalized.aulaCodigo,
+              nombre: normalized.nombre,
+              version: normalized.version,
+              error: 'No existe un aula con el codigo indicado.',
+            });
+            continue;
+          }
+
+          const software = await tx.software.upsert({
+            where: {
+              nombre_version: {
+                nombre: normalized.nombre,
+                version: normalized.version,
+              },
+            },
+            create: {
+              nombre: normalized.nombre,
+              version: normalized.version,
+              descripcion: normalized.descripcion,
+            },
+            update: {
+              descripcion: normalized.descripcion,
+            },
+          });
+
+          await tx.aulaSoftware.upsert({
+            where: {
+              aulaId_softwareId: {
+                aulaId: aula.id,
+                softwareId: software.id,
+              },
+            },
+            create: {
+              aulaId: aula.id,
+              softwareId: software.id,
+            },
+            update: {},
+          });
+
+          registrosProcesados += 1;
+        } catch (error: unknown) {
+          errores.push({
+            fila: index + 1,
+            aulaCodigo: normalized.aulaCodigo,
+            nombre: normalized.nombre,
+            version: normalized.version,
+            error: this.getErrorMessage(error),
+          });
+        }
+      }
+
+      const resultado = this.getImportResult(filas.length, registrosProcesados);
+
+      const importacion = await tx.importacionSoftware.create({
+        data: {
+          usuarioId,
+          nombreArchivo,
+          totalRegistros: filas.length,
+          registrosProcesados,
+          registrosConError: errores.length,
+          resultado,
+          ...(errores.length > 0 && { errores }),
+        },
+        include: { usuario: true },
+      });
+
+      return {
+        importacion,
+        resumen: {
+          totalRegistros: filas.length,
+          registrosProcesados,
+          registrosConError: errores.length,
+          resultado,
+        },
+        errores,
+      };
+    });
+  }
+
   private async ensureSoftwareExists(id: string): Promise<void> {
     const software = await this.prisma.software.findUnique({
       where: { id },
@@ -227,5 +373,39 @@ export class SoftwareService {
         descripcion: input.descripcion.trim(),
       }),
     };
+  }
+
+  private normalizeImportRow(
+    input: FilaImportacionSoftwareDto,
+  ): FilaImportacionSoftwareDto {
+    return {
+      aulaCodigo: input.aulaCodigo.trim(),
+      nombre: input.nombre.trim(),
+      version: input.version.trim(),
+      ...(input.descripcion !== undefined && {
+        descripcion: input.descripcion.trim(),
+      }),
+    };
+  }
+
+  private getImportResult(
+    totalRegistros: number,
+    registrosProcesados: number,
+  ): ResultadoImportacionSoftware {
+    if (registrosProcesados === totalRegistros) {
+      return RESULTADO_IMPORTACION_SOFTWARE.EXITOSA;
+    }
+
+    if (registrosProcesados > 0) {
+      return RESULTADO_IMPORTACION_SOFTWARE.PARCIAL;
+    }
+
+    return RESULTADO_IMPORTACION_SOFTWARE.FALLIDA;
+  }
+
+  private getErrorMessage(error: unknown): string {
+    return error instanceof Error
+      ? error.message
+      : 'No fue posible procesar la fila.';
   }
 }

@@ -93,6 +93,65 @@ describe('AulasService', () => {
     );
   });
 
+  it('expone el contrato minimo acordado con software e historial basico', async () => {
+    prisma.aula.findUnique.mockResolvedValue({
+      id: 'aula-id',
+      codigo: 'LAB-401',
+      ubicacion: 'Edificio Sabio de Caldas, Piso 4',
+      capacidad: 40,
+      caracteristicas: { hardware: '40 equipos de cómputo' },
+      estado: EstadoAula.OPERATIVA,
+      proyectoCurricular: { id: 'proyecto-id', nombre: 'Sistemas' },
+      softwares: [
+        {
+          instaladoEn: new Date('2026-08-20T14:00:00.000Z'),
+          software: {
+            id: 'software-id',
+            nombre: 'PostgreSQL',
+            version: '17',
+            descripcion: null,
+          },
+        },
+      ],
+      observaciones: [
+        {
+          id: 'observacion-id',
+          tipo: 'NOVEDAD',
+          contenido: 'Equipo 12 en revisión.',
+          creadoEn: new Date('2026-08-21T14:00:00.000Z'),
+        },
+      ],
+      tareas: [],
+      limpiezas: [],
+      practicasLibres: [],
+      prestamosDocentes: [],
+      creadoEn: new Date('2026-01-01T00:00:00.000Z'),
+      actualizadoEn: new Date('2026-08-21T14:00:00.000Z'),
+    });
+
+    const result = await service.findOne('aula-id');
+
+    expect(result).toMatchObject({
+      codigo: 'LAB-401',
+      ubicacion: 'Edificio Sabio de Caldas, Piso 4',
+      piso: 4,
+      capacidad: 40,
+      estado: EstadoAula.OPERATIVA,
+      caracteristicas: { hardware: '40 equipos de cómputo' },
+      software: [
+        expect.objectContaining({ nombre: 'PostgreSQL', version: '17' }),
+      ],
+    });
+    expect(result).not.toHaveProperty('softwares');
+    expect(result.historial).toEqual([
+      expect.objectContaining({
+        tipo: 'OBSERVACION',
+        descripcion: 'NOVEDAD: Equipo 12 en revisión.',
+      }),
+      expect.objectContaining({ tipo: 'SOFTWARE_INSTALADO' }),
+    ]);
+  });
+
   it('actualiza un aula existente', async () => {
     prisma.aula.findUnique.mockResolvedValue({ id: 'aula-id' });
     prisma.aula.update.mockResolvedValue({

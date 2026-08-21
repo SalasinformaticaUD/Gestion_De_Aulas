@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,6 +11,11 @@ import { CreateClaseProgramadaDto } from './dto/create-clase-programada.dto';
 import { CreatePeriodoAcademicoDto } from './dto/create-periodo-academico.dto';
 import { FindClasesDto } from './dto/find-clases.dto';
 import { UpdateClaseProgramadaDto } from './dto/update-clase-programada.dto';
+import { UpdatePeriodoAcademicoDto } from './dto/update-periodo-academico.dto';
+import {
+  ClaseImportacionDto,
+  ImportarHorarioDto,
+} from './dto/importar-horario.dto';
 
 type PrismaError = { code?: unknown };
 
@@ -23,6 +29,26 @@ type ClaseParaValidar = {
   horaInicio: Date;
   horaFin: Date;
 };
+
+type HorarioDatabase = Pick<
+  Prisma.TransactionClient,
+  | 'periodoAcademico'
+  | 'aula'
+  | 'docente'
+  | 'asignatura'
+  | 'proyectoCurricular'
+  | 'claseProgramada'
+>;
+
+type ClaseImportada = Prisma.ClaseProgramadaGetPayload<{
+  include: {
+    periodo: true;
+    aula: true;
+    docente: true;
+    asignatura: true;
+    proyectoCurricular: true;
+  };
+}>;
 
 const hasPrismaCode = (error: unknown, code: string): boolean =>
   typeof error === 'object' &&
@@ -79,6 +105,19 @@ export class HorarioService {
     });
   }
 
+  async findPeriodo(id: string) {
+    const periodo = await this.prisma.periodoAcademico.findUnique({
+      where: { id },
+      include: { _count: { select: { clases: true } } },
+    });
+
+    if (!periodo) {
+      throw new NotFoundException(`No existe período académico con id ${id}.`);
+    }
+
+    return periodo;
+  }
+
   activarPeriodo(id: string) {
     return this.prisma.$transaction(async (tx) => {
       const periodo = await tx.periodoAcademico.findUnique({
@@ -102,6 +141,76 @@ export class HorarioService {
         data: { activo: true },
       });
     });
+  }
+
+  async updatePeriodo(id: string, dto: UpdatePeriodoAcademicoDto) {
+    const actual = await this.prisma.periodoAcademico.findUnique({
+      where: { id },
+    });
+
+    if (!actual) {
+      throw new NotFoundException(`No existe período académico con id ${id}.`);
+    }
+
+    const fechaInicio = dto.fechaInicio
+      ? new Date(dto.fechaInicio)
+      : actual.fechaInicio;
+    const fechaFin = dto.fechaFin ? new Date(dto.fechaFin) : actual.fechaFin;
+    this.validatePeriodoRange(fechaInicio, fechaFin);
+
+    const data: Prisma.PeriodoAcademicoUpdateInput = {
+      ...(dto.nombre !== undefined && { nombre: dto.nombre.trim() }),
+      ...(dto.fechaInicio !== undefined && { fechaInicio }),
+      ...(dto.fechaFin !== undefined && { fechaFin }),
+      ...(dto.activo !== undefined && { activo: dto.activo }),
+    };
+
+    try {
+      if (dto.activo !== true) {
+        return await this.prisma.periodoAcademico.update({
+          where: { id },
+          data,
+        });
+      }
+
+      return await this.prisma.$transaction(async (tx) => {
+        await tx.periodoAcademico.updateMany({
+          where: { activo: true, id: { not: id } },
+          data: { activo: false },
+        });
+        return tx.periodoAcademico.update({ where: { id }, data });
+      });
+    } catch (error: unknown) {
+      this.throwKnownPeriodoPersistenceError(error);
+      throw error;
+    }
+  }
+
+  async removePeriodo(id: string) {
+    const periodo = await this.prisma.periodoAcademico.findUnique({
+      where: { id },
+      select: { id: true, _count: { select: { clases: true } } },
+    });
+
+    if (!periodo) {
+      throw new NotFoundException(`No existe período académico con id ${id}.`);
+    }
+    if (periodo._count.clases > 0) {
+      throw new ConflictException(
+        'El período académico tiene clases asociadas y no se puede eliminar.',
+      );
+    }
+
+    try {
+      return await this.prisma.periodoAcademico.delete({ where: { id } });
+    } catch (error: unknown) {
+      if (hasPrismaCode(error, 'P2003')) {
+        throw new ConflictException(
+          'El período académico tiene información asociada y no se puede eliminar.',
+        );
+      }
+      throw error;
+    }
   }
 
   findClases(filters: FindClasesDto = {}) {
@@ -151,6 +260,61 @@ export class HorarioService {
       this.throwKnownClassPersistenceError(error);
       throw error;
     }
+  }
+
+  importar(dto: ImportarHorarioDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const creadas: ClaseImportada[] = [];
+
+      for (const [index, fila] of dto.clases.entries()) {
+        try {
+          const catalogos = await this.resolveImportCatalogs(
+            fila,
+            dto.formato,
+            tx,
+          );
+          const entrada: CreateClaseProgramadaDto = {
+            ...fila,
+            periodoId: dto.periodoId,
+            docenteId: catalogos.docenteId,
+            asignaturaId: catalogos.asignaturaId,
+          };
+          const clase = this.normalizeClase(entrada);
+          this.validateTimeRange(clase.horaInicio, clase.horaFin);
+          await this.validateReferences(clase, tx);
+          await this.ensureNoOverlap(clase, undefined, tx);
+
+          const creada = await tx.claseProgramada.create({
+            data: {
+              ...clase,
+              grupo: fila.grupo.trim(),
+              ...(fila.inscritos !== undefined && {
+                inscritos: fila.inscritos,
+              }),
+            },
+            include: {
+              periodo: true,
+              aula: true,
+              docente: true,
+              asignatura: true,
+              proyectoCurricular: true,
+            },
+          });
+          creadas.push(creada);
+        } catch (error: unknown) {
+          this.throwImportError(error, index);
+        }
+      }
+
+      return {
+        formato: dto.formato,
+        periodoId: dto.periodoId,
+        nombreArchivo: dto.nombreArchivo ?? null,
+        totalRecibidas: dto.clases.length,
+        totalCreadas: creadas.length,
+        clases: creadas,
+      };
+    });
   }
 
   async updateClase(id: string, dto: UpdateClaseProgramadaDto) {
@@ -268,27 +432,46 @@ export class HorarioService {
     }
   }
 
-  private async validateReferences(clase: ClaseParaValidar): Promise<void> {
+  private validatePeriodoRange(fechaInicio: Date, fechaFin: Date): void {
+    if (fechaInicio >= fechaFin) {
+      throw new BadRequestException(
+        'La fecha de inicio del período debe ser anterior a la fecha de fin.',
+      );
+    }
+  }
+
+  private throwKnownPeriodoPersistenceError(error: unknown): void {
+    if (hasPrismaCode(error, 'P2002')) {
+      throw new ConflictException(
+        'Ya existe un período académico con el mismo nombre.',
+      );
+    }
+  }
+
+  private async validateReferences(
+    clase: ClaseParaValidar,
+    database: HorarioDatabase = this.prisma,
+  ): Promise<void> {
     const [periodo, aula, docente, asignatura, proyectoCurricular] =
       await Promise.all([
-        this.prisma.periodoAcademico.findUnique({
+        database.periodoAcademico.findUnique({
           where: { id: clase.periodoId },
           select: { id: true },
         }),
-        this.prisma.aula.findUnique({
+        database.aula.findUnique({
           where: { id: clase.aulaId },
           select: { id: true },
         }),
-        this.prisma.docente.findUnique({
+        database.docente.findUnique({
           where: { id: clase.docenteId },
           select: { id: true },
         }),
-        this.prisma.asignatura.findUnique({
+        database.asignatura.findUnique({
           where: { id: clase.asignaturaId },
           select: { id: true },
         }),
         clase.proyectoCurricularId
-          ? this.prisma.proyectoCurricular.findUnique({
+          ? database.proyectoCurricular.findUnique({
               where: { id: clase.proyectoCurricularId },
               select: { id: true },
             })
@@ -315,8 +498,9 @@ export class HorarioService {
   private async ensureNoOverlap(
     clase: ClaseParaValidar,
     excludeId?: string,
+    database: HorarioDatabase = this.prisma,
   ): Promise<void> {
-    const overlap = await this.prisma.claseProgramada.findFirst({
+    const overlap = await database.claseProgramada.findFirst({
       where: {
         periodoId: clase.periodoId,
         aulaId: clase.aulaId,
@@ -341,5 +525,131 @@ export class HorarioService {
         'Una de las entidades relacionadas con la clase ya no existe.',
       );
     }
+  }
+
+  private async resolveImportCatalogs(
+    fila: ClaseImportacionDto,
+    formato: ImportarHorarioDto['formato'],
+    database: HorarioDatabase,
+  ): Promise<{ docenteId: string; asignaturaId: string }> {
+    if (formato === 'JSON_V1') {
+      if (
+        !fila.docenteId ||
+        !fila.asignaturaId ||
+        fila.docente ||
+        fila.asignatura
+      ) {
+        throw new BadRequestException(
+          'JSON_V1 requiere docenteId y asignaturaId y no admite catálogos embebidos.',
+        );
+      }
+      return {
+        docenteId: fila.docenteId,
+        asignaturaId: fila.asignaturaId,
+      };
+    }
+
+    this.validateExclusiveCatalogReference(
+      fila.docenteId,
+      fila.docente,
+      'docente',
+    );
+    this.validateExclusiveCatalogReference(
+      fila.asignaturaId,
+      fila.asignatura,
+      'asignatura',
+    );
+
+    const docenteId = fila.docenteId
+      ? fila.docenteId
+      : (
+          await database.docente.upsert({
+            where: { documento: fila.docente!.documento.trim() },
+            update: {
+              nombre: fila.docente!.nombre.trim(),
+              ...(fila.docente!.correo && {
+                correo: fila.docente!.correo.trim().toLowerCase(),
+              }),
+            },
+            create: {
+              documento: fila.docente!.documento.trim(),
+              nombre: fila.docente!.nombre.trim(),
+              ...(fila.docente!.correo && {
+                correo: fila.docente!.correo.trim().toLowerCase(),
+              }),
+            },
+            select: { id: true },
+          })
+        ).id;
+
+    if (fila.asignatura && fila.proyectoCurricularId) {
+      const proyecto = await database.proyectoCurricular.findUnique({
+        where: { id: fila.proyectoCurricularId },
+        select: { id: true },
+      });
+      if (!proyecto) {
+        throw new NotFoundException(
+          'El proyecto curricular de la asignatura no existe.',
+        );
+      }
+    }
+
+    const asignaturaId = fila.asignaturaId
+      ? fila.asignaturaId
+      : (
+          await database.asignatura.upsert({
+            where: { codigo: fila.asignatura!.codigo.trim() },
+            update: {
+              nombre: fila.asignatura!.nombre.trim(),
+              ...(fila.proyectoCurricularId && {
+                proyectoCurricularId: fila.proyectoCurricularId,
+              }),
+            },
+            create: {
+              codigo: fila.asignatura!.codigo.trim(),
+              nombre: fila.asignatura!.nombre.trim(),
+              ...(fila.proyectoCurricularId && {
+                proyectoCurricularId: fila.proyectoCurricularId,
+              }),
+            },
+            select: { id: true },
+          })
+        ).id;
+
+    return { docenteId, asignaturaId };
+  }
+
+  private validateExclusiveCatalogReference(
+    id: string | undefined,
+    embedded: object | undefined,
+    catalog: string,
+  ): void {
+    if (Boolean(id) === Boolean(embedded)) {
+      throw new BadRequestException(
+        `JSON_V2 requiere exactamente uno entre ${catalog}Id y ${catalog}.`,
+      );
+    }
+  }
+
+  private throwImportError(error: unknown, index: number): never {
+    const fila = index + 1;
+    if (error instanceof HttpException) {
+      throw new HttpException(
+        `Fila ${fila}: ${error.message}`,
+        error.getStatus(),
+      );
+    }
+    if (hasPrismaCode(error, 'P2002')) {
+      throw new ConflictException(
+        `Fila ${fila}: el docente o la asignatura entra en conflicto con un catálogo existente.`,
+      );
+    }
+    if (hasPrismaCode(error, 'P2003')) {
+      throw new NotFoundException(
+        `Fila ${fila}: una de las entidades relacionadas ya no existe.`,
+      );
+    }
+    this.throwKnownClassPersistenceError(error);
+    throw error;
   }
 }

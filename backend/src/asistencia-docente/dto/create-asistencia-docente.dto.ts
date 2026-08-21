@@ -27,10 +27,6 @@ export class CreateAsistenciaDocenteDto {
   @IsEnum(EstadoAsistencia)
   estado?: EstadoAsistencia;
 
-  @IsOptional()
-  @IsUUID()
-  registradoPorId?: string;
-
   @Transform(trim)
   @IsOptional()
   @IsString()

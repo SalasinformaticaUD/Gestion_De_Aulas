@@ -1,9 +1,11 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import type { NextFunction, Response } from 'express';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { EstadoAsistencia } from '../generated/prisma/enums.js';
 import { AsistenciaDocenteModule } from '../src/asistencia-docente/asistencia-docente.module';
+import type { RequestConUsuario } from '../src/auth/request-with-user.type';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { configureApp } from '../src/configure-app';
 
@@ -31,6 +33,7 @@ type PrismaMock = {
 describe('AsistenciaDocenteController (e2e)', () => {
   const claseId = '00000000-0000-4000-8000-000000000001';
   const asistenciaId = '00000000-0000-4000-8000-000000000002';
+  const usuarioId = '00000000-0000-4000-8000-000000000003';
   let app: INestApplication<App>;
   let asistencias: AsistenciaRecord[];
 
@@ -93,7 +96,11 @@ describe('AsistenciaDocenteController (e2e)', () => {
         Promise.resolve(where.id === claseId ? { id: claseId } : null),
       ),
     },
-    usuario: { findUnique: jest.fn() },
+    usuario: {
+      findUnique: jest.fn(({ where }: { where: { id: string } }) =>
+        Promise.resolve(where.id === usuarioId ? { id: usuarioId } : null),
+      ),
+    },
   };
 
   beforeAll(async () => {
@@ -105,6 +112,22 @@ describe('AsistenciaDocenteController (e2e)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    app.use(
+      (req: RequestConUsuario, _res: Response, next: NextFunction): void => {
+        req.user = {
+          id: usuarioId,
+          nombreCompleto: 'Usuario de prueba',
+          nombreUsuario: 'prueba',
+          correo: 'prueba@udistrital.edu.co',
+          cargo: null,
+          dependencia: null,
+          roles: [],
+          permisos: [],
+          modulos: ['ASISTENCIA_DOCENTE'],
+        };
+        next();
+      },
+    );
     configureApp(app);
     await app.init();
   });
@@ -122,6 +145,7 @@ describe('AsistenciaDocenteController (e2e)', () => {
       .expect(({ body }: { body: AsistenciaRecord }) => {
         expect(body.id).toBe(asistenciaId);
         expect(body.estado).toBe(EstadoAsistencia.PENDIENTE);
+        expect(body.registradoPorId).toBe(usuarioId);
       });
 
     await request(app.getHttpServer())
@@ -168,6 +192,32 @@ describe('AsistenciaDocenteController (e2e)', () => {
       .post('/asistencia-docente')
       .send({ claseId: 'invalido', fecha: '20/08/2026' })
       .expect(400);
+  });
+
+  it('rechaza campos no permitidos mediante la validacion global', async () => {
+    await request(app.getHttpServer())
+      .post('/asistencia-docente')
+      .send({
+        claseId,
+        fecha: '2026-08-20',
+        desconocido: true,
+      })
+      .expect(400);
+
+    expect(prisma.asistenciaDocente.create).not.toHaveBeenCalled();
+  });
+
+  it('impide que el cliente suplante al usuario registrador', async () => {
+    await request(app.getHttpServer())
+      .post('/asistencia-docente')
+      .send({
+        claseId,
+        fecha: '2026-08-20',
+        registradoPorId: '00000000-0000-4000-8000-000000000099',
+      })
+      .expect(400);
+
+    expect(prisma.asistenciaDocente.create).not.toHaveBeenCalled();
   });
 
   afterAll(async () => {

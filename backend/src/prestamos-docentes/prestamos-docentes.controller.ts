@@ -9,9 +9,12 @@ import {
   Query,
 } from '@nestjs/common';
 import { PrestamosDocentesService } from './prestamos-docentes.service';
+import { MODULOS } from '../auth/auth.constants';
+import { RequireModule } from '../auth/decorators/require-module.decorator';
 import { CreatePrestamosDocenteDto } from './dto/create-prestamos-docente.dto';
 import { FindPrestamosDocentesDto } from './dto/find-prestamos-docentes.dto';
 
+@RequireModule(MODULOS.PRESTAMOS_DOCENTES)
 @Controller('prestamos-docentes')
 export class PrestamosDocentesController {
   constructor(
