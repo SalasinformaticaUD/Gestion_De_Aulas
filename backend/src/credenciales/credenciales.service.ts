@@ -5,6 +5,7 @@ import { UpdateCredencialeDto } from './dto/update-credenciale.dto';
 @Injectable()
 export class CredencialesService {
   create(createCredencialeDto: CreateCredencialeDto) {
+    void createCredencialeDto;
     return 'This action adds a new credenciale';
   }
 
@@ -17,6 +18,7 @@ export class CredencialesService {
   }
 
   update(id: string, updateCredencialeDto: UpdateCredencialeDto) {
+    void updateCredencialeDto;
     return `This action updates a #${id} credenciale`;
   }
 

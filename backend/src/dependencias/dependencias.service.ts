@@ -5,6 +5,7 @@ import { UpdateDependenciaDto } from './dto/update-dependencia.dto';
 @Injectable()
 export class DependenciasService {
   create(createDependenciaDto: CreateDependenciaDto) {
+    void createDependenciaDto;
     return 'This action adds a new dependencia';
   }
 
@@ -17,6 +18,7 @@ export class DependenciasService {
   }
 
   update(id: string, updateDependenciaDto: UpdateDependenciaDto) {
+    void updateDependenciaDto;
     return `This action updates a #${id} dependencia`;
   }
 

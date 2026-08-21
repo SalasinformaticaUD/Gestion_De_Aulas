@@ -13,8 +13,9 @@ import {
 import { SoftwareService } from './software.service';
 import { CreateSoftwareDto } from './dto/create-software.dto';
 import { UpdateSoftwareDto } from './dto/update-software.dto';
-import { CreateAulaSoftwareDto } from './dto/create-aula-software.dto';
+import { AsignarSoftwareAulaDto } from './dto/create-aula-software.dto';
 import { BuscarAulasPorSoftwareDto } from './dto/buscar-aulas-por-software.dto';
+import { ImportarSoftwareDto } from './dto/importar-software.dto';
 
 @Controller('software')
 @UsePipes(
@@ -37,11 +38,6 @@ export class SoftwareController {
     return this.softwareService.findAll();
   }
 
-  @Post('aulas/asignaciones')
-  assignToAula(@Body() createAulaSoftwareDto: CreateAulaSoftwareDto) {
-    return this.softwareService.assignToAula(createAulaSoftwareDto);
-  }
-
   @Post('aulas/buscar-por-software')
   findAulasByMultipleSoftware(
     @Body() buscarAulasDto: BuscarAulasPorSoftwareDto,
@@ -49,6 +45,18 @@ export class SoftwareController {
     return this.softwareService.findAulasByMultipleSoftware(
       buscarAulasDto.softwareIds,
     );
+  }
+
+  @Post('aulas/:aulaId')
+  assignToAula(
+    @Param('aulaId', ParseUUIDPipe) aulaId: string,
+    @Body() asignarSoftwareAulaDto: AsignarSoftwareAulaDto,
+  ) {
+    return this.softwareService.assignToAula({
+      aulaId,
+      softwareId: asignarSoftwareAulaDto.softwareId,
+      instaladoEn: asignarSoftwareAulaDto.instaladoEn,
+    });
   }
 
   @Get('aulas/:aulaId')
@@ -61,7 +69,17 @@ export class SoftwareController {
     return this.softwareService.findAulasBySoftware(id);
   }
 
-  @Delete('aulas/:aulaId/software/:softwareId')
+  @Post('importaciones')
+  importarInventario(@Body() importarSoftwareDto: ImportarSoftwareDto) {
+    return this.softwareService.importInventory(importarSoftwareDto);
+  }
+
+  @Get('importaciones')
+  findImportaciones() {
+    return this.softwareService.findImportaciones();
+  }
+
+  @Delete('aulas/:aulaId/:softwareId')
   removeFromAula(
     @Param('aulaId', ParseUUIDPipe) aulaId: string,
     @Param('softwareId', ParseUUIDPipe) softwareId: string,

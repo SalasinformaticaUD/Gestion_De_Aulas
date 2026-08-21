@@ -5,6 +5,7 @@ import { UpdateTareasOperativaDto } from './dto/update-tareas-operativa.dto';
 @Injectable()
 export class TareasOperativasService {
   create(createTareasOperativaDto: CreateTareasOperativaDto) {
+    void createTareasOperativaDto;
     return 'This action adds a new tareasOperativa';
   }
 
@@ -17,6 +18,7 @@ export class TareasOperativasService {
   }
 
   update(id: string, updateTareasOperativaDto: UpdateTareasOperativaDto) {
+    void updateTareasOperativaDto;
     return `This action updates a #${id} tareasOperativa`;
   }
 

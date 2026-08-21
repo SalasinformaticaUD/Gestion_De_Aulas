@@ -11,22 +11,22 @@ describe('AulasController (e2e)', () => {
   const aulaId = '00000000-0000-4000-8000-000000000001';
   const missingId = '00000000-0000-4000-8000-000000000002';
   let app: INestApplication<App>;
-  let aulas: Array<Record<string, unknown>>;
+  let aulas: AulaMock[];
 
   const prisma = {
     aula: {
-      create: jest.fn(async ({ data }: { data: Record<string, unknown> }) => {
+      create: jest.fn(({ data }: { data: Record<string, unknown> }) => {
         const aula = { id: aulaId, estado: EstadoAula.OPERATIVA, ...data };
         aulas.push(aula);
         return aula;
       }),
-      findMany: jest.fn(async () => aulas),
+      findMany: jest.fn(() => aulas),
       findUnique: jest.fn(
-        async ({ where }: { where: { id: string } }) =>
+        ({ where }: { where: { id: string } }) =>
           aulas.find((aula) => aula.id === where.id) ?? null,
       ),
       update: jest.fn(
-        async ({
+        ({
           where,
           data,
         }: {
@@ -66,7 +66,7 @@ describe('AulasController (e2e)', () => {
       .post('/aulas')
       .send({ codigo: 'LAB-01', ubicacion: 'Piso 2', capacidad: 25 })
       .expect(201)
-      .expect(({ body }) => {
+      .expect(({ body }: { body: AulaResponse }) => {
         expect(body.id).toBe(aulaId);
         expect(body.codigo).toBe('LAB-01');
       });
@@ -79,13 +79,17 @@ describe('AulasController (e2e)', () => {
     await request(app.getHttpServer())
       .get(`/aulas/${aulaId}`)
       .expect(200)
-      .expect(({ body }) => expect(body.id).toBe(aulaId));
+      .expect(({ body }: { body: AulaResponse }) =>
+        expect(body.id).toBe(aulaId),
+      );
 
     await request(app.getHttpServer())
       .patch(`/aulas/${aulaId}`)
       .send({ estado: EstadoAula.MANTENIMIENTO })
       .expect(200)
-      .expect(({ body }) => expect(body.estado).toBe(EstadoAula.MANTENIMIENTO));
+      .expect(({ body }: { body: AulaResponse }) =>
+        expect(body.estado).toBe(EstadoAula.MANTENIMIENTO),
+      );
   });
 
   it('responde 404 para un UUID inexistente', () =>
@@ -106,3 +110,17 @@ describe('AulasController (e2e)', () => {
     await app.close();
   });
 });
+
+type AulaMock = {
+  id: string;
+  estado: EstadoAula;
+  codigo?: unknown;
+  ubicacion?: unknown;
+  capacidad?: unknown;
+};
+
+type AulaResponse = {
+  id: string;
+  codigo: string;
+  estado: EstadoAula;
+};

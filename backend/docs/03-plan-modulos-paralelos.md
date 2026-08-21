@@ -45,11 +45,11 @@ Objetivo: implementar el flujo completo inicial del modulo mas independiente y p
 
 ### 1.3 DTOs
 
-- [ ] `CreateEquipoAudiovisualDto`: codigoInventario, nombre, tipo, estado, observacion.
-- [ ] `UpdateEquipoAudiovisualDto`.
-- [ ] `CreatePrestamoAudiovisualDto`: docenteId, aulaId opcional, salidaEn, devolucionEstimada, equipos.
-- [ ] `DevolverPrestamoAudiovisualDto`: devolucionReal, estadoDevolucion por equipo.
-- [ ] Validar UUIDs, fechas y arreglos no vacios.
+- [X] `CreateEquipoAudiovisualDto`: codigoInventario, nombre, tipo, estado, observacion.
+- [X] `UpdateEquipoAudiovisualDto`.
+- [X] `CreatePrestamoAudiovisualDto`: docenteId, aulaId, salidaEn, devolucionEstimada, equipos.
+- [X] `DevolverPrestamoAudiovisualDto`: devolucionReal, estadoDevolucion por equipo.
+- [X] Validar UUIDs, fechas y arreglos no vacios.
 
 ### 1.4 Reglas de negocio
 
@@ -62,7 +62,7 @@ Objetivo: implementar el flujo completo inicial del modulo mas independiente y p
 
 ### 1.5 Implementacion
 
-- [ ] Completar DTOs.
+- [X] Completar DTOs.
 - [ ] Implementar servicio con Prisma y transacciones.
 - [ ] Usar `DetallePrestamoAudiovisual` para asociar varios equipos a un prestamo.
 - [ ] Agregar consultas por estado y fecha.
@@ -85,40 +85,40 @@ Objetivo: administrar catalogo de software y relacionarlo con aulas.
 
 ### 2.1 Contratos
 
-- [ ] `GET /software`
-- [ ] `GET /software/:id`
-- [ ] `POST /software`
-- [ ] `PATCH /software/:id`
-- [ ] `DELETE /software/:id`
-- [ ] `GET /software/aulas/:aulaId`
-- [ ] `POST /software/aulas/:aulaId`
-- [ ] `DELETE /software/aulas/:aulaId/:softwareId`
+- [X] `GET /software`
+- [X] `GET /software/:id`
+- [X] `POST /software`
+- [X] `PATCH /software/:id`
+- [X] `DELETE /software/:id`
+- [X] `GET /software/aulas/:aulaId`
+- [X] `POST /software/aulas/:aulaId`
+- [X] `DELETE /software/aulas/:aulaId/:softwareId`
 
 ### 2.2 DTOs
 
-- [ ] `CreateSoftwareDto`: nombre, version, descripcion.
-- [ ] `UpdateSoftwareDto`.
-- [ ] `AsignarSoftwareAulaDto`: softwareId o datos para crear y asociar, instaladoEn opcional.
-- [ ] Validar unicidad por nombre y version.
+- [X] `CreateSoftwareDto`: nombre, version, descripcion.
+- [X] `UpdateSoftwareDto`.
+- [X] `AsignarSoftwareAulaDto`: softwareId o datos para crear y asociar, instaladoEn opcional.
+- [X] Validar unicidad por nombre y version.
 
 ### 2.3 Reglas
 
-- [ ] No duplicar software con mismo nombre y version.
-- [ ] No duplicar relacion aula-software.
-- [ ] Permitir consultar software por aula.
-- [ ] Permitir consultar aulas donde esta instalado un software.
-- [ ] Eliminar software solo si no esta asociado o definir borrado bloqueado.
+- [X] No duplicar software con mismo nombre y version.
+- [X] No duplicar relacion aula-software.
+- [X] Permitir consultar software por aula.
+- [X] Permitir consultar aulas donde esta instalado un software.
+- [X] Eliminar software solo si no esta asociado o definir borrado bloqueado.
 
 ### 2.4 Implementacion
 
-- [ ] Completar DTOs.
-- [ ] Servicio con Prisma.
-- [ ] Metodos de relacion con `AulaSoftware`.
-- [ ] Preparar endpoint para importacion futura desde archivo, sin implementarlo si no hay formato definido.
+- [X] Completar DTOs.
+- [X] Servicio con Prisma.
+- [X] Metodos de relacion con `AulaSoftware`.
+- [X] Preparar endpoint para importacion futura desde archivo, sin implementarlo si no hay formato definido.
 
 ### 2.5 Pruebas
 
-- [ ] Unit tests de unicidad.
+- [X] Unit tests de unicidad.
 - [ ] E2E de crear software y asignarlo a aula.
 
 Criterio de cierre: la pestana "Software instalado" de aulas puede consumir API real.

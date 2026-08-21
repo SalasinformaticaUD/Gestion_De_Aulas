@@ -5,6 +5,7 @@ import { UpdatePanelOperativoDto } from './dto/update-panel-operativo.dto';
 @Injectable()
 export class PanelOperativoService {
   create(createPanelOperativoDto: CreatePanelOperativoDto) {
+    void createPanelOperativoDto;
     return 'This action adds a new panelOperativo';
   }
 
@@ -17,6 +18,7 @@ export class PanelOperativoService {
   }
 
   update(id: string, updatePanelOperativoDto: UpdatePanelOperativoDto) {
+    void updatePanelOperativoDto;
     return `This action updates a #${id} panelOperativo`;
   }
 
