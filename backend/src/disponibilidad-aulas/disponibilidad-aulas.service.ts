@@ -5,6 +5,7 @@ import { UpdateDisponibilidadAulaDto } from './dto/update-disponibilidad-aula.dt
 @Injectable()
 export class DisponibilidadAulasService {
   create(createDisponibilidadAulaDto: CreateDisponibilidadAulaDto) {
+    void createDisponibilidadAulaDto;
     return 'This action adds a new disponibilidadAula';
   }
 
@@ -17,6 +18,7 @@ export class DisponibilidadAulasService {
   }
 
   update(id: string, updateDisponibilidadAulaDto: UpdateDisponibilidadAulaDto) {
+    void updateDisponibilidadAulaDto;
     return `This action updates a #${id} disponibilidadAula`;
   }
 

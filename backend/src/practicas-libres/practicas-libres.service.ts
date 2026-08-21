@@ -5,6 +5,7 @@ import { UpdatePracticasLibreDto } from './dto/update-practicas-libre.dto';
 @Injectable()
 export class PracticasLibresService {
   create(createPracticasLibreDto: CreatePracticasLibreDto) {
+    void createPracticasLibreDto;
     return 'This action adds a new practicasLibre';
   }
 
@@ -17,6 +18,7 @@ export class PracticasLibresService {
   }
 
   update(id: string, updatePracticasLibreDto: UpdatePracticasLibreDto) {
+    void updatePracticasLibreDto;
     return `This action updates a #${id} practicasLibre`;
   }
 

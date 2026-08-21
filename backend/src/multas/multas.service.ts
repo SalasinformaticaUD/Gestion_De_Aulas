@@ -5,6 +5,7 @@ import { UpdateMultaDto } from './dto/update-multa.dto';
 @Injectable()
 export class MultasService {
   create(createMultaDto: CreateMultaDto) {
+    void createMultaDto;
     return 'This action adds a new multa';
   }
 
@@ -17,6 +18,7 @@ export class MultasService {
   }
 
   update(id: string, updateMultaDto: UpdateMultaDto) {
+    void updateMultaDto;
     return `This action updates a #${id} multa`;
   }
 

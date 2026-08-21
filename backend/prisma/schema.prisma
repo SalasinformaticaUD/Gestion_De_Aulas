@@ -72,6 +72,12 @@ enum TipoObservacion {
   RESTRICCION
 }
 
+enum ResultadoImportacionSoftware {
+  EXITOSA
+  PARCIAL
+  FALLIDA
+}
+
 // Identidad, autorización y auditoría
 model Usuario {
   id                               String                @id @default(uuid()) @db.Uuid
@@ -90,6 +96,7 @@ model Usuario {
   accesosCredencial                AccesoCredencial[]
   prestamosAudiovisualesEntregados PrestamoAudiovisual[] @relation("EntregaPrestamoAudiovisual")
   prestamosAudiovisualesRecibidos  PrestamoAudiovisual[] @relation("RecepcionPrestamoAudiovisual")
+  importacionesSoftware            ImportacionSoftware[]
   creadoEn                         DateTime              @default(now())
   actualizadoEn                    DateTime              @updatedAt
 }
@@ -270,6 +277,22 @@ model AulaSoftware {
 
   @@id([aulaId, softwareId])
   @@index([softwareId])
+}
+
+model ImportacionSoftware {
+  id                  String                       @id @default(uuid()) @db.Uuid
+  usuarioId           String?                      @db.Uuid
+  nombreArchivo       String?
+  totalRegistros      Int
+  registrosProcesados Int
+  registrosConError   Int
+  resultado           ResultadoImportacionSoftware
+  errores             Json?
+  usuario             Usuario?                     @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  creadoEn            DateTime                     @default(now())
+
+  @@index([creadoEn])
+  @@index([usuarioId, creadoEn])
 }
 
 // Usuarios externos, préstamos y sanciones

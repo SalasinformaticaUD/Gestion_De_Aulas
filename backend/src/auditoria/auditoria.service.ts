@@ -5,6 +5,7 @@ import { UpdateAuditoriaDto } from './dto/update-auditoria.dto';
 @Injectable()
 export class AuditoriaService {
   create(createAuditoriaDto: CreateAuditoriaDto) {
+    void createAuditoriaDto;
     return 'This action adds a new auditoria';
   }
 
@@ -17,6 +18,7 @@ export class AuditoriaService {
   }
 
   update(id: string, updateAuditoriaDto: UpdateAuditoriaDto) {
+    void updateAuditoriaDto;
     return `This action updates a #${id} auditoria`;
   }
 

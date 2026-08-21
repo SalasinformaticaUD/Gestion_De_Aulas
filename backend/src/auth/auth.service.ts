@@ -5,6 +5,7 @@ import { UpdateAuthDto } from './dto/update-auth.dto';
 @Injectable()
 export class AuthService {
   create(createAuthDto: CreateAuthDto) {
+    void createAuthDto;
     return 'This action adds a new auth';
   }
 
@@ -17,6 +18,7 @@ export class AuthService {
   }
 
   update(id: string, updateAuthDto: UpdateAuthDto) {
+    void updateAuthDto;
     return `This action updates a #${id} auth`;
   }
 

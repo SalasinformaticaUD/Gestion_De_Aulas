@@ -5,6 +5,7 @@ import { UpdateHorarioDto } from './dto/update-horario.dto';
 @Injectable()
 export class HorarioService {
   create(createHorarioDto: CreateHorarioDto) {
+    void createHorarioDto;
     return 'This action adds a new horario';
   }
 
@@ -17,6 +18,7 @@ export class HorarioService {
   }
 
   update(id: string, updateHorarioDto: UpdateHorarioDto) {
+    void updateHorarioDto;
     return `This action updates a #${id} horario`;
   }
 

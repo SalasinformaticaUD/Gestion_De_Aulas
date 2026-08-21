@@ -5,6 +5,7 @@ import { UpdateObservacioneDto } from './dto/update-observacione.dto';
 @Injectable()
 export class ObservacionesService {
   create(createObservacioneDto: CreateObservacioneDto) {
+    void createObservacioneDto;
     return 'This action adds a new observacione';
   }
 
@@ -17,6 +18,7 @@ export class ObservacionesService {
   }
 
   update(id: string, updateObservacioneDto: UpdateObservacioneDto) {
+    void updateObservacioneDto;
     return `This action updates a #${id} observacione`;
   }
 
