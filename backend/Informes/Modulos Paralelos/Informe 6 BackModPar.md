@@ -130,6 +130,8 @@ MONITOR: Kaleth Molina Diaz
 
 * No modificar módulos ajenos a `software` salvo para correcciones puntuales verificadas de compilación, pruebas o lint.
 
+* NO HACER PUSH
+
 ## SIGUIENTE PASO:
 
 * Publicar los cambios locales de `main` en el remoto mediante `git push`, si corresponde.
