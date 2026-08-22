@@ -10,7 +10,9 @@ import {
 } from '@nestjs/common';
 import { MultasService } from './multas.service';
 import { CreateMultaDto } from './dto/create-multa.dto';
-import { UpdateMultaDto } from './dto/update-multa.dto';
+import { CreateMotivoMultaDto } from './dto/create-motivo-multa.dto';
+import { CumplirMultaDto } from './dto/cumplir-multa.dto';
+import { AnularMultaDto } from './dto/anular-multa.dto';
 
 @Controller('multas')
 export class MultasController {
@@ -36,7 +38,7 @@ export class MultasController {
   }
 
   @Post('motivos')
-  createMotivo(@Body() createMotivoMultaDto: unknown) {
+  createMotivo(@Body() createMotivoMultaDto: CreateMotivoMultaDto) {
     return this.multasService.createMotivo(createMotivoMultaDto);
   }
 
@@ -46,15 +48,15 @@ export class MultasController {
   }
 
   @Patch(':id/cumplir')
-  cumplir(@Param('id', ParseUUIDPipe) id: string) {
-    return this.multasService.cumplir(id);
+  cumplir(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CumplirMultaDto,
+  ) {
+    return this.multasService.cumplir(id, dto);
   }
 
   @Patch(':id/anular')
-  anular(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updateMultaDto: UpdateMultaDto,
-  ) {
-    return this.multasService.anular(id, updateMultaDto);
+  anular(@Param('id', ParseUUIDPipe) id: string, @Body() dto: AnularMultaDto) {
+    return this.multasService.anular(id, dto);
   }
 }

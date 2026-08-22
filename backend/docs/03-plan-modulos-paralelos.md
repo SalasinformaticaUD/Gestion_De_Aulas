@@ -141,9 +141,9 @@ Objetivo: administrar sanciones que afectan prestamos o practicas libres.
 
 ### 3.2 DTOs
 
-- [ ] `CreateMotivoMultaDto`: nombre, descripcion.
-- [ ] `CreateMultaDto`: estudianteId o codigoEstudiante, motivoId, descripcion.
-- [ ] `UpdateMultaDto` para cambios administrativos permitidos.
+- [X] `CreateMotivoMultaDto`: nombre, descripcion.
+- [X] `CreateMultaDto`: estudianteId o codigoEstudiante, motivoId, descripcion.
+- [X] `UpdateMultaDto` para cambios administrativos permitidos.
 
 ### 3.3 Reglas
 

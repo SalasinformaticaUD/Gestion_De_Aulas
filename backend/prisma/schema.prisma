@@ -97,6 +97,9 @@ model Usuario {
   prestamosAudiovisualesEntregados PrestamoAudiovisual[] @relation("EntregaPrestamoAudiovisual")
   prestamosAudiovisualesRecibidos  PrestamoAudiovisual[] @relation("RecepcionPrestamoAudiovisual")
   importacionesSoftware            ImportacionSoftware[]
+  multasImpuestas                  Multa[]               @relation("MultaImpuestaPor")
+  multasCumplidas                  Multa[]               @relation("MultaCumplidaPor")
+  multasAnuladas                   Multa[]               @relation("MultaAnuladaPor")
   creadoEn                         DateTime              @default(now())
   actualizadoEn                    DateTime              @updatedAt
 }
@@ -412,14 +415,27 @@ model MotivoMulta {
 }
 
 model Multa {
-  id           String      @id @default(uuid()) @db.Uuid
-  estudianteId String      @db.Uuid
-  motivoId     String      @db.Uuid
-  estado       EstadoMulta @default(ACTIVA)
-  fecha        DateTime    @default(now())
-  descripcion  String?
-  estudiante   Estudiante  @relation(fields: [estudianteId], references: [id])
-  motivo       MotivoMulta @relation(fields: [motivoId], references: [id])
+  id                  String      @id @default(uuid()) @db.Uuid
+  estudianteId        String      @db.Uuid
+  motivoId            String      @db.Uuid
+  estado              EstadoMulta @default(ACTIVA)
+  fecha               DateTime    @default(now())
+  descripcion         String?
+  impuestaPorId       String?     @db.Uuid
+  cumplidaEn          DateTime?
+  cumplidaPorId       String?     @db.Uuid
+  elementosEntregados String?
+  anuladaEn           DateTime?
+  anuladaPorId        String?     @db.Uuid
+  motivoAnulacion     String?
+  estudiante          Estudiante  @relation(fields: [estudianteId], references: [id])
+  motivo              MotivoMulta @relation(fields: [motivoId], references: [id])
+  impuestaPor         Usuario?    @relation("MultaImpuestaPor", fields: [impuestaPorId], references: [id], onDelete: SetNull)
+  cumplidaPor         Usuario?    @relation("MultaCumplidaPor", fields: [cumplidaPorId], references: [id], onDelete: SetNull)
+  anuladaPor          Usuario?    @relation("MultaAnuladaPor", fields: [anuladaPorId], references: [id], onDelete: SetNull)
+
+  @@index([estudianteId, estado])
+  @@index([motivoId, fecha])
 }
 
 // Operación diaria y credenciales institucionales

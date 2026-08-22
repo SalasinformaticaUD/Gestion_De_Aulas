@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { CreateMultaDto } from './dto/create-multa.dto';
-import { UpdateMultaDto } from './dto/update-multa.dto';
+import { CumplirMultaDto } from './dto/cumplir-multa.dto';
+import { AnularMultaDto } from './dto/anular-multa.dto';
 
 @Injectable()
 export class MultasService {
@@ -22,12 +23,13 @@ export class MultasService {
     return `This action returns a #${id} multa`;
   }
 
-  cumplir(id: string) {
+  cumplir(id: string, cumplirMultaDto: CumplirMultaDto) {
+    void cumplirMultaDto;
     return `This action marks a #${id} multa as fulfilled`;
   }
 
-  anular(id: string, updateMultaDto: UpdateMultaDto) {
-    void updateMultaDto;
+  anular(id: string, anularMultaDto: AnularMultaDto) {
+    void anularMultaDto;
     return `This action voids a #${id} multa`;
   }
 
