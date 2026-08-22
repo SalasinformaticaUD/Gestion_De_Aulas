@@ -131,13 +131,13 @@ Objetivo: administrar sanciones que afectan prestamos o practicas libres.
 
 ### 3.1 Contratos
 
-- [ ] `GET /multas?estado=&estudianteId=&codigo=`
-- [ ] `GET /multas/:id`
-- [ ] `POST /multas`
-- [ ] `PATCH /multas/:id/cumplir`
-- [ ] `PATCH /multas/:id/anular`
-- [ ] `GET /multas/motivos`
-- [ ] `POST /multas/motivos`
+- [X] `GET /multas?estado=&estudianteId=&codigo=`
+- [X] `GET /multas/:id`
+- [X] `POST /multas`
+- [X] `PATCH /multas/:id/cumplir`
+- [X] `PATCH /multas/:id/anular`
+- [X] `GET /multas/motivos`
+- [X] `POST /multas/motivos`
 
 ### 3.2 DTOs
 

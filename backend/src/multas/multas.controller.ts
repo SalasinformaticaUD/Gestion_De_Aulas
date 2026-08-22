@@ -5,7 +5,8 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
+  ParseUUIDPipe,
+  Query,
 } from '@nestjs/common';
 import { MultasService } from './multas.service';
 import { CreateMultaDto } from './dto/create-multa.dto';
@@ -21,22 +22,39 @@ export class MultasController {
   }
 
   @Get()
-  findAll() {
-    return this.multasService.findAll();
+  findAll(
+    @Query('estado') estado?: string,
+    @Query('estudianteId') estudianteId?: string,
+    @Query('codigo') codigo?: string,
+  ) {
+    return this.multasService.findAll({ estado, estudianteId, codigo });
+  }
+
+  @Get('motivos')
+  findAllMotivos() {
+    return this.multasService.findAllMotivos();
+  }
+
+  @Post('motivos')
+  createMotivo(@Body() createMotivoMultaDto: unknown) {
+    return this.multasService.createMotivo(createMotivoMultaDto);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.multasService.findOne(id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateMultaDto: UpdateMultaDto) {
-    return this.multasService.update(id, updateMultaDto);
+  @Patch(':id/cumplir')
+  cumplir(@Param('id', ParseUUIDPipe) id: string) {
+    return this.multasService.cumplir(id);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.multasService.remove(id);
+  @Patch(':id/anular')
+  anular(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateMultaDto: UpdateMultaDto,
+  ) {
+    return this.multasService.anular(id, updateMultaDto);
   }
 }
