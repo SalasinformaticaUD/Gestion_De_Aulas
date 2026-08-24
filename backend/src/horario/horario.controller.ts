@@ -8,13 +8,17 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateClaseProgramadaDto } from './dto/create-clase-programada.dto';
 import { CreatePeriodoAcademicoDto } from './dto/create-periodo-academico.dto';
 import { FindClasesDto } from './dto/find-clases.dto';
 import { UpdateClaseProgramadaDto } from './dto/update-clase-programada.dto';
 import { UpdatePeriodoAcademicoDto } from './dto/update-periodo-academico.dto';
 import { ImportarHorarioDto } from './dto/importar-horario.dto';
+import { ImportarHorarioExcelDto } from './dto/importar-horario-excel.dto';
 import { HorarioService } from './horario.service';
 import { MODULOS } from '../auth/auth.constants';
 import { RequireModule } from '../auth/decorators/require-module.decorator';
@@ -70,6 +74,19 @@ export class HorarioController {
   @Post('importar')
   importar(@Body() dto: ImportarHorarioDto) {
     return this.horarioService.importar(dto);
+  }
+
+  @Post('importar/excel')
+  @UseInterceptors(
+    FileInterceptor('archivo', { limits: { fileSize: 5_000_000 } }),
+  )
+  importarExcel(
+    @UploadedFile()
+    archivo:
+      { buffer: Buffer; originalname: string; mimetype: string } | undefined,
+    @Body() dto: ImportarHorarioExcelDto,
+  ) {
+    return this.horarioService.importarExcelOficial(archivo, dto);
   }
 
   @Patch('clases/:id')

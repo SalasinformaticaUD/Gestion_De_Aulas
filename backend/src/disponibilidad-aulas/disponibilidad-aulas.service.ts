@@ -322,6 +322,7 @@ export class DisponibilidadAulasService {
         horaInicio: { lt: bloque.horaFinPrisma },
         horaFin: { gt: bloque.horaInicioPrisma },
         periodo: {
+          activo: true,
           fechaInicio: { lte: bloque.finDia },
           fechaFin: { gte: bloque.inicioDia },
         },
@@ -405,6 +406,7 @@ export class DisponibilidadAulasService {
               diaSemana: bloque.diaSemana,
               horaInicio: { gte: bloque.horaFinPrisma },
               periodo: {
+                activo: true,
                 fechaInicio: { lte: bloque.finDia },
                 fechaFin: { gte: bloque.inicioDia },
               },

@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client.js';
+import * as XLSX from 'xlsx';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateClaseProgramadaDto } from './dto/create-clase-programada.dto';
 import { CreatePeriodoAcademicoDto } from './dto/create-periodo-academico.dto';
@@ -16,6 +17,7 @@ import {
   ClaseImportacionDto,
   ImportarHorarioDto,
 } from './dto/importar-horario.dto';
+import { ImportarHorarioExcelDto } from './dto/importar-horario-excel.dto';
 
 type PrismaError = { code?: unknown };
 
@@ -315,6 +317,156 @@ export class HorarioService {
         clases: creadas,
       };
     });
+  }
+
+  async importarExcelOficial(
+    archivo:
+      { buffer: Buffer; originalname: string; mimetype: string } | undefined,
+    dto: ImportarHorarioExcelDto,
+  ) {
+    if (!archivo || !archivo.buffer.length) {
+      throw new BadRequestException(
+        'Debe adjuntar un archivo Excel en el campo archivo.',
+      );
+    }
+    if (!/\.(xlsx|xls)$/i.test(archivo.originalname)) {
+      throw new BadRequestException(
+        'El archivo debe tener extensión .xlsx o .xls.',
+      );
+    }
+
+    const periodo = await this.prisma.periodoAcademico.findUnique({
+      where: { id: dto.periodoId },
+      select: { id: true, activo: true },
+    });
+    if (!periodo)
+      throw new NotFoundException('El período académico indicado no existe.');
+    if (!periodo.activo) {
+      throw new ConflictException(
+        'La importación oficial solo está permitida para el período académico activo.',
+      );
+    }
+
+    const filas = this.leerFilasExcel(archivo.buffer);
+    const codigosAula = Array.from(
+      new Set(
+        filas.map((fila) => this.valorExcel(fila, 'AULA')).filter(Boolean),
+      ),
+    );
+    const aulas = await this.prisma.aula.findMany({
+      where: { codigo: { in: codigosAula } },
+      select: { id: true, codigo: true },
+    });
+    const aulaPorCodigo = new Map(aulas.map((aula) => [aula.codigo, aula.id]));
+    const rechazadas: Array<{ fila: number; motivo: string }> = [];
+    const entradas: Array<{ fila: number; clase: ClaseImportacionDto }> = [];
+
+    filas.forEach((fila, index) => {
+      try {
+        const codigoAula = this.valorExcel(fila, 'AULA');
+        const aulaId = aulaPorCodigo.get(codigoAula);
+        if (!aulaId) {
+          rechazadas.push({
+            fila: index + 2,
+            motivo: `Aula ${codigoAula || '(vacía)'} no pertenece al catálogo de Aulas de Software.`,
+          });
+          return;
+        }
+        entradas.push({
+          fila: index + 2,
+          clase: this.convertirFilaExcel(fila, aulaId),
+        });
+      } catch (error: unknown) {
+        rechazadas.push({ fila: index + 2, motivo: this.mensajeError(error) });
+      }
+    });
+
+    const resultado = await this.prisma.$transaction(async (tx) => {
+      const idsConservados: string[] = [];
+      let creados = 0;
+      let actualizados = 0;
+
+      for (const entrada of entradas) {
+        try {
+          const catalogos = await this.resolveImportCatalogs(
+            entrada.clase,
+            'JSON_V2',
+            tx,
+          );
+          const clase = this.normalizeClase({
+            ...entrada.clase,
+            periodoId: dto.periodoId,
+            docenteId: catalogos.docenteId,
+            asignaturaId: catalogos.asignaturaId,
+          });
+          this.validateTimeRange(clase.horaInicio, clase.horaFin);
+          await this.validateReferences(clase, tx);
+          const existente = await tx.claseProgramada.findFirst({
+            where: {
+              periodoId: dto.periodoId,
+              aulaId: clase.aulaId,
+              diaSemana: clase.diaSemana,
+              horaInicio: clase.horaInicio,
+              horaFin: clase.horaFin,
+            },
+            select: { id: true },
+          });
+          await this.ensureNoOverlap(clase, existente?.id, tx);
+          const data = {
+            ...clase,
+            grupo: entrada.clase.grupo.trim(),
+            ...(entrada.clase.inscritos !== undefined && {
+              inscritos: entrada.clase.inscritos,
+            }),
+          };
+          if (existente) {
+            await tx.claseProgramada.update({
+              where: { id: existente.id },
+              data,
+            });
+            idsConservados.push(existente.id);
+            actualizados += 1;
+          } else {
+            const creada = await tx.claseProgramada.create({ data });
+            idsConservados.push(creada.id);
+            creados += 1;
+          }
+        } catch (error: unknown) {
+          rechazadas.push({
+            fila: entrada.fila,
+            motivo: this.mensajeError(error),
+          });
+        }
+      }
+
+      let eliminados = 0;
+      if (dto.reemplazarAnterior) {
+        const eliminacion = await tx.claseProgramada.deleteMany({
+          where: {
+            periodoId: dto.periodoId,
+            ...(idsConservados.length > 0 && { id: { notIn: idsConservados } }),
+          },
+        });
+        eliminados = eliminacion.count;
+      }
+      return { creados, actualizados, eliminados };
+    });
+
+    return {
+      formato: 'EXCEL_OFICIAL_V1',
+      periodoId: dto.periodoId,
+      nombreArchivo: archivo.originalname,
+      reemplazoAutorizado: Boolean(dto.reemplazarAnterior),
+      procesados: filas.length,
+      creados: resultado.creados,
+      actualizados: resultado.actualizados,
+      rechazados: rechazadas.length,
+      filtrados: rechazadas.filter((fila) =>
+        fila.motivo.includes('Aulas de Software'),
+      ).length,
+      eliminadosPorReemplazo: resultado.eliminados,
+      detallesRechazados: rechazadas,
+    };
   }
 
   async updateClase(id: string, dto: UpdateClaseProgramadaDto) {
@@ -629,6 +781,136 @@ export class HorarioService {
         `JSON_V2 requiere exactamente uno entre ${catalog}Id y ${catalog}.`,
       );
     }
+  }
+
+  private leerFilasExcel(buffer: Buffer): Array<Record<string, unknown>> {
+    let workbook: XLSX.WorkBook;
+    try {
+      workbook = XLSX.read(buffer, { type: 'buffer', cellDates: false });
+    } catch {
+      throw new BadRequestException('No fue posible leer el archivo Excel.');
+    }
+    const nombreHoja = workbook.SheetNames[0];
+    if (!nombreHoja)
+      throw new BadRequestException('El archivo Excel no contiene hojas.');
+    const filas = XLSX.utils.sheet_to_json<Record<string, unknown>>(
+      workbook.Sheets[nombreHoja],
+      { defval: '' },
+    );
+    if (filas.length === 0)
+      throw new BadRequestException('El archivo Excel no contiene registros.');
+    if (filas.length > 500)
+      throw new BadRequestException(
+        'El archivo Excel supera el máximo de 500 filas.',
+      );
+    const encabezados = new Set(
+      Object.keys(filas[0]).map((encabezado) =>
+        encabezado.trim().toUpperCase(),
+      ),
+    );
+    const requeridos = [
+      'AULA',
+      'DIA_SEMANA',
+      'HORA_INICIO',
+      'HORA_FIN',
+      'GRUPO',
+      'DOCENTE_DOCUMENTO',
+      'DOCENTE_NOMBRE',
+      'ASIGNATURA_CODIGO',
+      'ASIGNATURA_NOMBRE',
+    ];
+    const faltantes = requeridos.filter(
+      (encabezado) => !encabezados.has(encabezado),
+    );
+    if (faltantes.length) {
+      throw new BadRequestException(
+        `Faltan columnas requeridas: ${faltantes.join(', ')}.`,
+      );
+    }
+    return filas;
+  }
+
+  private convertirFilaExcel(
+    fila: Record<string, unknown>,
+    aulaId: string,
+  ): ClaseImportacionDto {
+    const diaSemana = Number(this.valorExcel(fila, 'DIA_SEMANA'));
+    const inscritosTexto = this.valorExcel(fila, 'INSCRITOS');
+    const inscritos = inscritosTexto ? Number(inscritosTexto) : undefined;
+    if (!Number.isInteger(diaSemana) || diaSemana < 1 || diaSemana > 6) {
+      throw new BadRequestException(
+        'DIA_SEMANA debe ser un entero entre 1 y 6.',
+      );
+    }
+    if (
+      inscritos !== undefined &&
+      (!Number.isInteger(inscritos) || inscritos < 0)
+    ) {
+      throw new BadRequestException(
+        'INSCRITOS debe ser un entero positivo o cero.',
+      );
+    }
+    const horaInicio = this.valorExcel(fila, 'HORA_INICIO');
+    const horaFin = this.valorExcel(fila, 'HORA_FIN');
+    if (
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(horaInicio) ||
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(horaFin)
+    ) {
+      throw new BadRequestException(
+        'HORA_INICIO y HORA_FIN deben usar formato HH:mm.',
+      );
+    }
+    const documento = this.valorExcel(fila, 'DOCENTE_DOCUMENTO');
+    const nombreDocente = this.valorExcel(fila, 'DOCENTE_NOMBRE');
+    const codigoAsignatura = this.valorExcel(fila, 'ASIGNATURA_CODIGO');
+    const nombreAsignatura = this.valorExcel(fila, 'ASIGNATURA_NOMBRE');
+    const grupo = this.valorExcel(fila, 'GRUPO');
+    if (
+      !documento ||
+      !nombreDocente ||
+      !codigoAsignatura ||
+      !nombreAsignatura ||
+      !grupo
+    ) {
+      throw new BadRequestException(
+        'La fila contiene campos académicos requeridos vacíos.',
+      );
+    }
+    const proyectoCurricularId =
+      this.valorExcel(fila, 'PROYECTO_CURRICULAR_ID') || undefined;
+    return {
+      aulaId,
+      diaSemana,
+      horaInicio,
+      horaFin,
+      grupo,
+      inscritos,
+      proyectoCurricularId,
+      docente: {
+        documento,
+        nombre: nombreDocente,
+        ...(this.valorExcel(fila, 'DOCENTE_CORREO') && {
+          correo: this.valorExcel(fila, 'DOCENTE_CORREO'),
+        }),
+      },
+      asignatura: { codigo: codigoAsignatura, nombre: nombreAsignatura },
+    };
+  }
+
+  private valorExcel(
+    fila: Record<string, unknown>,
+    encabezado: string,
+  ): string {
+    const clave = Object.keys(fila).find(
+      (actual) => actual.trim().toUpperCase() === encabezado,
+    );
+    return clave && fila[clave] !== undefined ? String(fila[clave]).trim() : '';
+  }
+
+  private mensajeError(error: unknown): string {
+    return error instanceof Error
+      ? error.message
+      : 'Error desconocido al procesar la fila.';
   }
 
   private throwImportError(error: unknown, index: number): never {

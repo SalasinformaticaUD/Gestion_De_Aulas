@@ -7,6 +7,9 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  IsBoolean,
+  IsArray,
+  Max,
   Min,
 } from 'class-validator';
 import { EstadoAula } from '../../../generated/prisma/enums.js';
@@ -40,4 +43,33 @@ export class CreateAulaDto {
   @IsOptional()
   @IsUUID()
   proyectoCurricularId?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  proyectosCurricularesIds?: string[];
+
+  @IsOptional()
+  @IsInt()
+  @Min(1900)
+  @Max(2100)
+  anioAdquisicion?: number;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  marca?: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  modelo?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  renovacionTecnologica?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  pendienteIntervencion?: boolean;
 }

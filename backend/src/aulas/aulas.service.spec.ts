@@ -65,22 +65,27 @@ describe('AulasService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
-  it('aplica los filtros de estado, ubicación y proyecto curricular', async () => {
+  it('aplica filtros compatibles de estado, ubicación, proyecto, código y capacidad', async () => {
     prisma.aula.findMany.mockResolvedValue([]);
 
     await service.findAll({
       estado: EstadoAula.OPERATIVA,
       ubicacion: 'piso 2',
       proyectoCurricularId: '00000000-0000-4000-8000-000000000001',
+      codigo: 'lab',
+      capacidadMin: 20,
+      capacidadMax: 40,
     });
 
     expect(prisma.aula.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: {
+        where: expect.objectContaining({
           estado: EstadoAula.OPERATIVA,
           ubicacion: { contains: 'piso 2', mode: 'insensitive' },
-          proyectoCurricularId: '00000000-0000-4000-8000-000000000001',
-        },
+          codigo: { contains: 'lab', mode: 'insensitive' },
+          capacidad: { gte: 20, lte: 40 },
+          OR: expect.any(Array),
+        }),
       }),
     );
   });

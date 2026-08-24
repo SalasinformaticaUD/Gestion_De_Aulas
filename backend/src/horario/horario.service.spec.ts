@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { HorarioService } from './horario.service';
+import * as XLSX from 'xlsx';
 
 type PrismaMock = {
   periodoAcademico: {
@@ -15,7 +16,7 @@ type PrismaMock = {
     update: jest.Mock;
     delete: jest.Mock;
   };
-  aula: { findUnique: jest.Mock };
+  aula: { findUnique: jest.Mock; findMany: jest.Mock };
   docente: { findUnique: jest.Mock; upsert: jest.Mock };
   asignatura: { findUnique: jest.Mock; upsert: jest.Mock };
   proyectoCurricular: { findUnique: jest.Mock };
@@ -26,6 +27,7 @@ type PrismaMock = {
     findFirst: jest.Mock;
     update: jest.Mock;
     delete: jest.Mock;
+    deleteMany: jest.Mock;
   };
   $transaction: jest.Mock;
 };
@@ -48,7 +50,12 @@ describe('HorarioService', () => {
         update: jest.fn(),
         delete: jest.fn(),
       },
-      aula: { findUnique: jest.fn().mockResolvedValue({ id: aulaId }) },
+      aula: {
+        findUnique: jest.fn().mockResolvedValue({ id: aulaId }),
+        findMany: jest
+          .fn()
+          .mockResolvedValue([{ id: aulaId, codigo: 'LAB-01' }]),
+      },
       docente: {
         findUnique: jest.fn().mockResolvedValue({ id: docenteId }),
         upsert: jest.fn(),
@@ -65,6 +72,7 @@ describe('HorarioService', () => {
         findFirst: jest.fn().mockResolvedValue(null),
         update: jest.fn(),
         delete: jest.fn(),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
       $transaction: jest.fn(),
     };
@@ -72,6 +80,63 @@ describe('HorarioService', () => {
       (callback: (tx: PrismaMock) => unknown) => callback(prisma),
     );
     service = new HorarioService(prisma as unknown as PrismaService);
+  });
+
+  it('importa Excel oficial solo para el período activo y filtra aulas externas', async () => {
+    prisma.periodoAcademico.findUnique.mockResolvedValue({
+      id: periodoId,
+      activo: true,
+    });
+    prisma.docente.upsert.mockResolvedValue({ id: docenteId });
+    prisma.asignatura.upsert.mockResolvedValue({ id: asignaturaId });
+    prisma.claseProgramada.create.mockResolvedValue({ id: 'clase-excel' });
+    const hoja = XLSX.utils.json_to_sheet([
+      {
+        AULA: 'LAB-01',
+        DIA_SEMANA: 1,
+        HORA_INICIO: '08:00',
+        HORA_FIN: '10:00',
+        GRUPO: '01',
+        INSCRITOS: 20,
+        DOCENTE_DOCUMENTO: '123',
+        DOCENTE_NOMBRE: 'Docente',
+        ASIGNATURA_CODIGO: 'ALG',
+        ASIGNATURA_NOMBRE: 'Álgebra',
+      },
+      {
+        AULA: 'AULA-EXTERNA',
+        DIA_SEMANA: 1,
+        HORA_INICIO: '10:00',
+        HORA_FIN: '12:00',
+        GRUPO: '02',
+        INSCRITOS: 20,
+        DOCENTE_DOCUMENTO: '456',
+        DOCENTE_NOMBRE: 'Otro',
+        ASIGNATURA_CODIGO: 'CAL',
+        ASIGNATURA_NOMBRE: 'Cálculo',
+      },
+    ]);
+    const libro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(libro, hoja, 'Horario');
+    const buffer = XLSX.write(libro, { bookType: 'xlsx', type: 'buffer' });
+
+    const resultado = await service.importarExcelOficial(
+      {
+        buffer,
+        originalname: 'horario.xlsx',
+        mimetype:
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      },
+      { periodoId, reemplazarAnterior: true },
+    );
+
+    expect(resultado).toMatchObject({
+      procesados: 2,
+      creados: 1,
+      rechazados: 1,
+      filtrados: 1,
+    });
+    expect(prisma.claseProgramada.deleteMany).toHaveBeenCalled();
   });
 
   it('rechaza un período cuyo inicio no es anterior al fin', async () => {

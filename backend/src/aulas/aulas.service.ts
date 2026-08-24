@@ -24,9 +24,17 @@ const aulaPublicaSelect = {
   codigo: true,
   ubicacion: true,
   capacidad: true,
+  anioAdquisicion: true,
+  marca: true,
+  modelo: true,
+  renovacionTecnologica: true,
+  pendienteIntervencion: true,
   caracteristicas: true,
   estado: true,
   proyectoCurricular: { select: { id: true, nombre: true } },
+  proyectosCurriculares: {
+    select: { proyectoCurricular: { select: { id: true, nombre: true } } },
+  },
   softwares: {
     select: {
       instaladoEn: true,
@@ -95,11 +103,9 @@ export class AulasService {
   ) {}
 
   async create(createAulaDto: CreateAulaDto, usuarioId?: string) {
-    if (createAulaDto.proyectoCurricularId) {
-      await this.ensureProyectoCurricularExists(
-        createAulaDto.proyectoCurricularId,
-      );
-    }
+    await this.ensureProyectosCurricularesExist(
+      this.obtenerProyectosCurricularesIds(createAulaDto),
+    );
 
     try {
       const aula = await this.prisma.aula.create({
@@ -126,7 +132,31 @@ export class AulasService {
         ubicacion: { contains: filters.ubicacion, mode: 'insensitive' },
       }),
       ...(filters.proyectoCurricularId && {
-        proyectoCurricularId: filters.proyectoCurricularId,
+        OR: [
+          { proyectoCurricularId: filters.proyectoCurricularId },
+          {
+            proyectosCurriculares: {
+              some: { proyectoCurricularId: filters.proyectoCurricularId },
+            },
+          },
+        ],
+      }),
+      ...(filters.codigo && {
+        codigo: { contains: filters.codigo, mode: 'insensitive' },
+      }),
+      ...((filters.capacidadMin !== undefined ||
+        filters.capacidadMax !== undefined) && {
+        capacidad: {
+          ...(filters.capacidadMin !== undefined && {
+            gte: filters.capacidadMin,
+          }),
+          ...(filters.capacidadMax !== undefined && {
+            lte: filters.capacidadMax,
+          }),
+        },
+      }),
+      ...(filters.pendienteIntervencion !== undefined && {
+        pendienteIntervencion: filters.pendienteIntervencion,
       }),
     };
 
@@ -157,11 +187,9 @@ export class AulasService {
       throw new NotFoundException(`No existe aula con id ${id}.`);
     }
 
-    if (updateAulaDto.proyectoCurricularId) {
-      await this.ensureProyectoCurricularExists(
-        updateAulaDto.proyectoCurricularId,
-      );
-    }
+    await this.ensureProyectosCurricularesExist(
+      this.obtenerProyectosCurricularesIds(updateAulaDto),
+    );
 
     try {
       const aula = await this.prisma.aula.update({
@@ -237,15 +265,14 @@ export class AulasService {
     }
   }
 
-  private async ensureProyectoCurricularExists(id: string): Promise<void> {
-    const proyecto = await this.prisma.proyectoCurricular.findUnique({
-      where: { id },
-      select: { id: true },
+  private async ensureProyectosCurricularesExist(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    const encontrados = await this.prisma.proyectoCurricular.count({
+      where: { id: { in: ids } },
     });
-
-    if (!proyecto) {
+    if (encontrados !== ids.length) {
       throw new NotFoundException(
-        `No existe proyecto curricular con id ${id}.`,
+        'Uno de los proyectos curriculares no existe.',
       );
     }
   }
@@ -260,40 +287,89 @@ export class AulasService {
     }
   }
 
-  private normalizeCreateInput(
-    input: CreateAulaDto,
-  ): Prisma.AulaUncheckedCreateInput {
+  private normalizeCreateInput(input: CreateAulaDto): Prisma.AulaCreateInput {
     return {
       codigo: input.codigo.trim(),
       ubicacion: input.ubicacion.trim(),
       capacidad: input.capacidad,
+      ...(input.anioAdquisicion !== undefined && {
+        anioAdquisicion: input.anioAdquisicion,
+      }),
+      ...(input.marca !== undefined && { marca: input.marca.trim() }),
+      ...(input.modelo !== undefined && { modelo: input.modelo.trim() }),
+      ...(input.renovacionTecnologica !== undefined && {
+        renovacionTecnologica: input.renovacionTecnologica,
+      }),
+      ...(input.pendienteIntervencion !== undefined && {
+        pendienteIntervencion: input.pendienteIntervencion,
+      }),
       ...(input.caracteristicas !== undefined && {
         caracteristicas: input.caracteristicas as Prisma.InputJsonValue,
       }),
       ...(input.estado !== undefined && { estado: input.estado }),
       ...(input.proyectoCurricularId !== undefined && {
-        proyectoCurricularId: input.proyectoCurricularId,
+        proyectoCurricular: { connect: { id: input.proyectoCurricularId } },
+      }),
+      ...(input.proyectosCurricularesIds !== undefined && {
+        proyectosCurriculares: {
+          create: input.proyectosCurricularesIds.map(
+            (proyectoCurricularId) => ({ proyectoCurricularId }),
+          ),
+        },
       }),
     };
   }
 
-  private normalizeUpdateInput(
-    input: UpdateAulaDto,
-  ): Prisma.AulaUncheckedUpdateInput {
+  private normalizeUpdateInput(input: UpdateAulaDto): Prisma.AulaUpdateInput {
     return {
       ...(input.codigo !== undefined && { codigo: input.codigo.trim() }),
       ...(input.ubicacion !== undefined && {
         ubicacion: input.ubicacion.trim(),
       }),
       ...(input.capacidad !== undefined && { capacidad: input.capacidad }),
+      ...(input.anioAdquisicion !== undefined && {
+        anioAdquisicion: input.anioAdquisicion,
+      }),
+      ...(input.marca !== undefined && { marca: input.marca.trim() }),
+      ...(input.modelo !== undefined && { modelo: input.modelo.trim() }),
+      ...(input.renovacionTecnologica !== undefined && {
+        renovacionTecnologica: input.renovacionTecnologica,
+      }),
+      ...(input.pendienteIntervencion !== undefined && {
+        pendienteIntervencion: input.pendienteIntervencion,
+      }),
       ...(input.caracteristicas !== undefined && {
         caracteristicas: input.caracteristicas as Prisma.InputJsonValue,
       }),
       ...(input.estado !== undefined && { estado: input.estado }),
       ...(input.proyectoCurricularId !== undefined && {
-        proyectoCurricularId: input.proyectoCurricularId,
+        proyectoCurricular: { connect: { id: input.proyectoCurricularId } },
+      }),
+      ...(input.proyectosCurricularesIds !== undefined && {
+        proyectosCurriculares: {
+          deleteMany: {},
+          create: input.proyectosCurricularesIds.map(
+            (proyectoCurricularId) => ({ proyectoCurricularId }),
+          ),
+        },
       }),
     };
+  }
+
+  private obtenerProyectosCurricularesIds(
+    input: Pick<
+      CreateAulaDto,
+      'proyectoCurricularId' | 'proyectosCurricularesIds'
+    >,
+  ): string[] {
+    return Array.from(
+      new Set(
+        [
+          input.proyectoCurricularId,
+          ...(input.proyectosCurricularesIds ?? []),
+        ].filter((id): id is string => id !== undefined),
+      ),
+    );
   }
 
   private toPublicResponse(aula: AulaPublicaSource): Aula {
@@ -304,8 +380,16 @@ export class AulasService {
       piso: this.extraerPiso(aula.ubicacion),
       capacidad: aula.capacidad,
       estado: aula.estado,
+      anioAdquisicion: aula.anioAdquisicion,
+      marca: aula.marca,
+      modelo: aula.modelo,
+      renovacionTecnologica: aula.renovacionTecnologica,
+      pendienteIntervencion: aula.pendienteIntervencion,
       caracteristicas: aula.caracteristicas,
       proyectoCurricular: aula.proyectoCurricular,
+      proyectosCurriculares: (aula.proyectosCurriculares ?? []).map(
+        ({ proyectoCurricular }) => proyectoCurricular,
+      ),
       software: aula.softwares.map(({ software, instaladoEn }) => ({
         ...software,
         instaladoEn,
