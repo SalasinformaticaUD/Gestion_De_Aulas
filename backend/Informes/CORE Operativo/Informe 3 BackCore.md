@@ -1,6 +1,7 @@
-# Informe 2 - BackCore
+# Informe 3 - BackCore
 
-FECHA: 20/08/2026  
+FECHA: 20/08/2026
+TURNO: 10:00 a. m. - 14:00 p. m. 
 MONITOR: Pablo Garzon Gomez
 
 ## AVANCES
