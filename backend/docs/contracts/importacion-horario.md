@@ -82,3 +82,18 @@ opcional y se normaliza a minusculas.
 
 La respuesta incluye `formato`, `periodoId`, `nombreArchivo`, `totalRecibidas`,
 `totalCreadas` y las clases creadas con sus relaciones principales.
+# Importación oficial de horarios en Excel
+
+## `POST /horario/importar/excel`
+
+Recibe `multipart/form-data` con los campos `archivo`, `periodoId` y, de forma opcional, `reemplazarAnterior=true`.
+
+El período indicado debe ser el período activo. El archivo admite `.xlsx` y `.xls`, hasta 5 MB y 500 registros. Se procesa exclusivamente la primera hoja.
+
+Encabezados obligatorios: `AULA`, `DIA_SEMANA`, `HORA_INICIO`, `HORA_FIN`, `GRUPO`, `DOCENTE_DOCUMENTO`, `DOCENTE_NOMBRE`, `ASIGNATURA_CODIGO`, `ASIGNATURA_NOMBRE`.
+
+Encabezados opcionales: `INSCRITOS`, `DOCENTE_CORREO`, `PROYECTO_CURRICULAR_ID`.
+
+La columna `AULA` se cruza contra el catálogo de Aulas de Software. Las filas externas o con aulas desconocidas se excluyen y se reportan en `detallesRechazados`. La respuesta resume `procesados`, `creados`, `actualizados`, `rechazados`, `filtrados` y `eliminadosPorReemplazo`.
+
+`reemplazarAnterior=true` autoriza retirar del período activo las clases que no estén representadas en la versión importada. Sin esa marca, se conservan las clases existentes y se crean o actualizan únicamente las filas válidas del archivo.

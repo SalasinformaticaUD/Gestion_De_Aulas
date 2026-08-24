@@ -1,5 +1,14 @@
 import { Transform } from 'class-transformer';
-import { IsEnum, IsOptional, IsString, IsUUID } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
+} from 'class-validator';
 import { EstadoAula } from '../../../generated/prisma/enums.js';
 
 const trim = ({ value }: { value: unknown }): unknown =>
@@ -18,4 +27,26 @@ export class FindAulasDto {
   @IsOptional()
   @IsUUID()
   proyectoCurricularId?: string;
+
+  @Transform(trim)
+  @IsOptional()
+  @IsString()
+  codigo?: string;
+
+  @Type(() => Number)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  capacidadMin?: number;
+
+  @Type(() => Number)
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  capacidadMax?: number;
+
+  @Type(() => Boolean)
+  @IsOptional()
+  @IsBoolean()
+  pendienteIntervencion?: boolean;
 }

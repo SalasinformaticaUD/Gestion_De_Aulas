@@ -170,14 +170,20 @@ model Auditoria {
 
 // Catálogos académicos y aulas
 model Aula {
-  id                     String                @id @default(uuid()) @db.Uuid
-  codigo                 String                @unique
+  id                     String                   @id @default(uuid()) @db.Uuid
+  codigo                 String                   @unique
   ubicacion              String
   capacidad              Int
   caracteristicas        Json?
-  estado                 EstadoAula            @default(OPERATIVA)
-  proyectoCurricularId   String?               @db.Uuid
-  proyectoCurricular     ProyectoCurricular?   @relation(fields: [proyectoCurricularId], references: [id])
+  estado                 EstadoAula               @default(OPERATIVA)
+  anioAdquisicion        Int?
+  marca                  String?
+  modelo                 String?
+  renovacionTecnologica  Boolean                  @default(false)
+  pendienteIntervencion  Boolean                  @default(false)
+  proyectoCurricularId   String?                  @db.Uuid
+  proyectoCurricular     ProyectoCurricular?      @relation(fields: [proyectoCurricularId], references: [id])
+  proyectosCurriculares  AulaProyectoCurricular[]
   softwares              AulaSoftware[]
   clases                 ClaseProgramada[]
   practicasLibres        PracticaLibre[]
@@ -186,8 +192,8 @@ model Aula {
   observaciones          Observacion[]
   tareas                 Tarea[]
   limpiezas              Limpieza[]
-  creadoEn               DateTime              @default(now())
-  actualizadoEn          DateTime              @updatedAt
+  creadoEn               DateTime                 @default(now())
+  actualizadoEn          DateTime                 @updatedAt
 }
 
 model PeriodoAcademico {
@@ -200,11 +206,22 @@ model PeriodoAcademico {
 }
 
 model ProyectoCurricular {
-  id          String            @id @default(uuid()) @db.Uuid
-  nombre      String            @unique
-  aulas       Aula[]
-  asignaturas Asignatura[]
-  clases      ClaseProgramada[]
+  id             String                   @id @default(uuid()) @db.Uuid
+  nombre         String                   @unique
+  aulas          Aula[]
+  aulasAsignadas AulaProyectoCurricular[]
+  asignaturas    Asignatura[]
+  clases         ClaseProgramada[]
+}
+
+model AulaProyectoCurricular {
+  aulaId               String             @db.Uuid
+  proyectoCurricularId String             @db.Uuid
+  aula                 Aula               @relation(fields: [aulaId], references: [id], onDelete: Cascade)
+  proyectoCurricular   ProyectoCurricular @relation(fields: [proyectoCurricularId], references: [id], onDelete: Cascade)
+
+  @@id([aulaId, proyectoCurricularId])
+  @@index([proyectoCurricularId])
 }
 
 model Asignatura {

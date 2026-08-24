@@ -21,8 +21,14 @@ export class Aula {
   declare piso: number | null;
   declare capacidad: number;
   declare estado: EstadoAula;
+  declare anioAdquisicion: number | null;
+  declare marca: string | null;
+  declare modelo: string | null;
+  declare renovacionTecnologica: boolean;
+  declare pendienteIntervencion: boolean;
   declare caracteristicas: unknown;
   declare proyectoCurricular: { id: string; nombre: string } | null;
+  declare proyectosCurriculares: Array<{ id: string; nombre: string }>;
   declare software: Array<{
     id: string;
     nombre: string;

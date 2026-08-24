@@ -6,14 +6,14 @@ se comunican mediante controladores REST.
 
 | Módulo Nest               | Ruta base                  | Requisitos      | Responsabilidad principal                                                                                               |
 | ------------------------- | -------------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `horario`                 | `/horario`                 | RF-001 a RF-010 | Importación, validación y consulta de horarios y períodos académicos.                                                   |
+| `horario`                 | `/horario`                 | RF-001 a RF-010 | Importación JSON y oficial Excel, validación y consulta de horarios y períodos académicos.                              |
 | `disponibilidad-aulas`    | `/disponibilidad-aulas`    | RF-011 a RF-020 | Cálculo y consulta dinámica por bloque o resumen diario. Usa bloques de dos horas y no representa una tabla permanente. |
 | `asistencia-docente`      | `/asistencia-docente`      | RF-021 a RF-030 | Asistencia e inasistencia asociada a clases programadas.                                                                |
 | `practicas-libres`        | `/practicas-libres`        | RF-031 a RF-048 | Solicitudes, préstamos, devoluciones y consulta de estudiantes.                                                         |
 | `prestamos-docentes`      | `/prestamos-docentes`      | RF-049 a RF-058 | Reservas y préstamos temporales de aulas a docentes.                                                                    |
 | `prestamos-audiovisuales` | `/prestamos-audiovisuales` | RF-059 a RF-071 | Inventario, préstamo y devolución de equipos audiovisuales.                                                             |
 | `software`                | `/software`                | RF-072 a RF-081 | Importación y consulta del software instalado por aula.                                                                 |
-| `aulas`                   | `/aulas`                   | RF-082 a RF-091 | Administración de aulas, capacidad, características y estado operativo.                                                 |
+| `aulas`                   | `/aulas`                   | RF-082 a RF-091 | Administración de aulas, capacidad, características, proyectos curriculares y estado operativo.                        |
 | `multas`                  | `/multas`                  | RF-092 a RF-102 | Multas, motivos, restricciones y cumplimiento.                                                                          |
 | `observaciones`           | `/observaciones`           | RF-103 a RF-110 | Novedades, restricciones y observaciones vigentes e históricas.                                                         |
 | `limpieza-aulas`          | `/limpieza-aulas`          | RF-111 a RF-120 | Programación, registro, novedades e historial de limpieza.                                                              |

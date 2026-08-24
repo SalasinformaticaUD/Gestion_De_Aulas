@@ -410,3 +410,14 @@ Al final de cada sprint:
 8. Panel operativo.
 
 Este orden protege la funcionalidad porque cada modulo se apoya en datos ya existentes y evita que disponibilidad o panel operativo se construyan sobre supuestos temporales.
+
+---
+
+## 12. Incrementos posteriores al cierre inicial
+
+- [X] Importar el horario oficial desde Microsoft Excel con estructura validada, filtrado por catálogo de Aulas de Software y resumen de resultados.
+- [X] Permitir el reemplazo explícitamente autorizado de la versión del período activo, conservando las clases cuando no se autoriza.
+- [X] Restringir la importación oficial y el cálculo operativo de clases al período académico activo.
+- [X] Ampliar aulas con año de adquisición, marca, modelo, renovación tecnológica y pendiente de intervención.
+- [X] Incorporar asociación múltiple de proyectos curriculares sin retirar el campo histórico `proyectoCurricularId`.
+- [X] Agregar filtros de aulas por código, rango de capacidad y pendiente de intervención sin alterar rutas existentes.
