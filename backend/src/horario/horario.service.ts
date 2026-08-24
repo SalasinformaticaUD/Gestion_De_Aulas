@@ -4,9 +4,12 @@ import {
   HttpException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client.js';
+import * as XLSX from 'xlsx';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditoriaService } from '../auditoria/auditoria.service';
 import { CreateClaseProgramadaDto } from './dto/create-clase-programada.dto';
 import { CreatePeriodoAcademicoDto } from './dto/create-periodo-academico.dto';
 import { FindClasesDto } from './dto/find-clases.dto';
@@ -16,6 +19,7 @@ import {
   ClaseImportacionDto,
   ImportarHorarioDto,
 } from './dto/importar-horario.dto';
+import { ImportarHorarioExcelDto } from './dto/importar-horario-excel.dto';
 
 type PrismaError = { code?: unknown };
 
@@ -57,9 +61,12 @@ const hasPrismaCode = (error: unknown, code: string): boolean =>
 
 @Injectable()
 export class HorarioService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly auditoria?: AuditoriaService,
+  ) {}
 
-  async createPeriodo(dto: CreatePeriodoAcademicoDto) {
+  async createPeriodo(dto: CreatePeriodoAcademicoDto, usuarioId?: string) {
     const fechaInicio = new Date(dto.fechaInicio);
     const fechaFin = new Date(dto.fechaFin);
 
@@ -77,17 +84,24 @@ export class HorarioService {
     };
 
     try {
-      if (!data.activo) {
-        return await this.prisma.periodoAcademico.create({ data });
-      }
-
-      return await this.prisma.$transaction(async (tx) => {
-        await tx.periodoAcademico.updateMany({
-          where: { activo: true },
-          data: { activo: false },
-        });
-        return tx.periodoAcademico.create({ data });
-      });
+      const periodo = !data.activo
+        ? await this.prisma.periodoAcademico.create({ data })
+        : await this.prisma.$transaction(async (tx) => {
+            await tx.periodoAcademico.updateMany({
+              where: { activo: true },
+              data: { activo: false },
+            });
+            return tx.periodoAcademico.create({ data });
+          });
+      await this.registrar(
+        usuarioId,
+        'PeriodoAcademico',
+        periodo.id,
+        'CREATE',
+        undefined,
+        periodo,
+      );
+      return periodo;
     } catch (error: unknown) {
       if (hasPrismaCode(error, 'P2002')) {
         throw new ConflictException(
@@ -118,8 +132,9 @@ export class HorarioService {
     return periodo;
   }
 
-  activarPeriodo(id: string) {
-    return this.prisma.$transaction(async (tx) => {
+  async activarPeriodo(id: string, usuarioId?: string) {
+    const previo = await this.findPeriodo(id);
+    const periodo = await this.prisma.$transaction(async (tx) => {
       const periodo = await tx.periodoAcademico.findUnique({
         where: { id },
         select: { id: true },
@@ -141,9 +156,22 @@ export class HorarioService {
         data: { activo: true },
       });
     });
+    await this.registrar(
+      usuarioId,
+      'PeriodoAcademico',
+      id,
+      'UPDATE',
+      previo,
+      periodo,
+    );
+    return periodo;
   }
 
-  async updatePeriodo(id: string, dto: UpdatePeriodoAcademicoDto) {
+  async updatePeriodo(
+    id: string,
+    dto: UpdatePeriodoAcademicoDto,
+    usuarioId?: string,
+  ) {
     const actual = await this.prisma.periodoAcademico.findUnique({
       where: { id },
     });
@@ -166,27 +194,32 @@ export class HorarioService {
     };
 
     try {
-      if (dto.activo !== true) {
-        return await this.prisma.periodoAcademico.update({
-          where: { id },
-          data,
-        });
-      }
-
-      return await this.prisma.$transaction(async (tx) => {
-        await tx.periodoAcademico.updateMany({
-          where: { activo: true, id: { not: id } },
-          data: { activo: false },
-        });
-        return tx.periodoAcademico.update({ where: { id }, data });
-      });
+      const periodo =
+        dto.activo !== true
+          ? await this.prisma.periodoAcademico.update({ where: { id }, data })
+          : await this.prisma.$transaction(async (tx) => {
+              await tx.periodoAcademico.updateMany({
+                where: { activo: true, id: { not: id } },
+                data: { activo: false },
+              });
+              return tx.periodoAcademico.update({ where: { id }, data });
+            });
+      await this.registrar(
+        usuarioId,
+        'PeriodoAcademico',
+        id,
+        'UPDATE',
+        actual,
+        periodo,
+      );
+      return periodo;
     } catch (error: unknown) {
       this.throwKnownPeriodoPersistenceError(error);
       throw error;
     }
   }
 
-  async removePeriodo(id: string) {
+  async removePeriodo(id: string, usuarioId?: string) {
     const periodo = await this.prisma.periodoAcademico.findUnique({
       where: { id },
       select: { id: true, _count: { select: { clases: true } } },
@@ -202,7 +235,17 @@ export class HorarioService {
     }
 
     try {
-      return await this.prisma.periodoAcademico.delete({ where: { id } });
+      const eliminado = await this.prisma.periodoAcademico.delete({
+        where: { id },
+      });
+      await this.registrar(
+        usuarioId,
+        'PeriodoAcademico',
+        id,
+        'DELETE',
+        eliminado,
+      );
+      return eliminado;
     } catch (error: unknown) {
       if (hasPrismaCode(error, 'P2003')) {
         throw new ConflictException(
@@ -235,14 +278,14 @@ export class HorarioService {
     });
   }
 
-  async createClase(dto: CreateClaseProgramadaDto) {
+  async createClase(dto: CreateClaseProgramadaDto, usuarioId?: string) {
     const clase = this.normalizeClase(dto);
     this.validateTimeRange(clase.horaInicio, clase.horaFin);
     await this.validateReferences(clase);
     await this.ensureNoOverlap(clase);
 
     try {
-      return await this.prisma.claseProgramada.create({
+      const creada = await this.prisma.claseProgramada.create({
         data: {
           ...clase,
           grupo: dto.grupo.trim(),
@@ -256,6 +299,15 @@ export class HorarioService {
           proyectoCurricular: true,
         },
       });
+      await this.registrar(
+        usuarioId,
+        'ClaseProgramada',
+        creada.id,
+        'CREATE',
+        undefined,
+        creada,
+      );
+      return creada;
     } catch (error: unknown) {
       this.throwKnownClassPersistenceError(error);
       throw error;
@@ -317,7 +369,161 @@ export class HorarioService {
     });
   }
 
-  async updateClase(id: string, dto: UpdateClaseProgramadaDto) {
+  async importarExcelOficial(
+    archivo:
+      { buffer: Buffer; originalname: string; mimetype: string } | undefined,
+    dto: ImportarHorarioExcelDto,
+  ) {
+    if (!archivo || !archivo.buffer.length) {
+      throw new BadRequestException(
+        'Debe adjuntar un archivo Excel en el campo archivo.',
+      );
+    }
+    if (!/\.(xlsx|xls)$/i.test(archivo.originalname)) {
+      throw new BadRequestException(
+        'El archivo debe tener extensión .xlsx o .xls.',
+      );
+    }
+
+    const periodo = await this.prisma.periodoAcademico.findUnique({
+      where: { id: dto.periodoId },
+      select: { id: true, activo: true },
+    });
+    if (!periodo)
+      throw new NotFoundException('El período académico indicado no existe.');
+    if (!periodo.activo) {
+      throw new ConflictException(
+        'La importación oficial solo está permitida para el período académico activo.',
+      );
+    }
+
+    const filas = this.leerFilasExcel(archivo.buffer);
+    const codigosAula = Array.from(
+      new Set(
+        filas.map((fila) => this.valorExcel(fila, 'AULA')).filter(Boolean),
+      ),
+    );
+    const aulas = await this.prisma.aula.findMany({
+      where: { codigo: { in: codigosAula } },
+      select: { id: true, codigo: true },
+    });
+    const aulaPorCodigo = new Map(aulas.map((aula) => [aula.codigo, aula.id]));
+    const rechazadas: Array<{ fila: number; motivo: string }> = [];
+    const entradas: Array<{ fila: number; clase: ClaseImportacionDto }> = [];
+
+    filas.forEach((fila, index) => {
+      try {
+        const codigoAula = this.valorExcel(fila, 'AULA');
+        const aulaId = aulaPorCodigo.get(codigoAula);
+        if (!aulaId) {
+          rechazadas.push({
+            fila: index + 2,
+            motivo: `Aula ${codigoAula || '(vacía)'} no pertenece al catálogo de Aulas de Software.`,
+          });
+          return;
+        }
+        entradas.push({
+          fila: index + 2,
+          clase: this.convertirFilaExcel(fila, aulaId),
+        });
+      } catch (error: unknown) {
+        rechazadas.push({ fila: index + 2, motivo: this.mensajeError(error) });
+      }
+    });
+
+    const resultado = await this.prisma.$transaction(async (tx) => {
+      const idsConservados: string[] = [];
+      let creados = 0;
+      let actualizados = 0;
+
+      for (const entrada of entradas) {
+        try {
+          const catalogos = await this.resolveImportCatalogs(
+            entrada.clase,
+            'JSON_V2',
+            tx,
+          );
+          const clase = this.normalizeClase({
+            ...entrada.clase,
+            periodoId: dto.periodoId,
+            docenteId: catalogos.docenteId,
+            asignaturaId: catalogos.asignaturaId,
+          });
+          this.validateTimeRange(clase.horaInicio, clase.horaFin);
+          await this.validateReferences(clase, tx);
+          const existente = await tx.claseProgramada.findFirst({
+            where: {
+              periodoId: dto.periodoId,
+              aulaId: clase.aulaId,
+              diaSemana: clase.diaSemana,
+              horaInicio: clase.horaInicio,
+              horaFin: clase.horaFin,
+            },
+            select: { id: true },
+          });
+          await this.ensureNoOverlap(clase, existente?.id, tx);
+          const data = {
+            ...clase,
+            grupo: entrada.clase.grupo.trim(),
+            ...(entrada.clase.inscritos !== undefined && {
+              inscritos: entrada.clase.inscritos,
+            }),
+          };
+          if (existente) {
+            await tx.claseProgramada.update({
+              where: { id: existente.id },
+              data,
+            });
+            idsConservados.push(existente.id);
+            actualizados += 1;
+          } else {
+            const creada = await tx.claseProgramada.create({ data });
+            idsConservados.push(creada.id);
+            creados += 1;
+          }
+        } catch (error: unknown) {
+          rechazadas.push({
+            fila: entrada.fila,
+            motivo: this.mensajeError(error),
+          });
+        }
+      }
+
+      let eliminados = 0;
+      if (dto.reemplazarAnterior) {
+        const eliminacion = await tx.claseProgramada.deleteMany({
+          where: {
+            periodoId: dto.periodoId,
+            ...(idsConservados.length > 0 && { id: { notIn: idsConservados } }),
+          },
+        });
+        eliminados = eliminacion.count;
+      }
+      return { creados, actualizados, eliminados };
+    });
+
+    return {
+      formato: 'EXCEL_OFICIAL_V1',
+      periodoId: dto.periodoId,
+      nombreArchivo: archivo.originalname,
+      reemplazoAutorizado: Boolean(dto.reemplazarAnterior),
+      procesados: filas.length,
+      creados: resultado.creados,
+      actualizados: resultado.actualizados,
+      rechazados: rechazadas.length,
+      filtrados: rechazadas.filter((fila) =>
+        fila.motivo.includes('Aulas de Software'),
+      ).length,
+      eliminadosPorReemplazo: resultado.eliminados,
+      detallesRechazados: rechazadas,
+    };
+  }
+
+  async updateClase(
+    id: string,
+    dto: UpdateClaseProgramadaDto,
+    usuarioId?: string,
+  ) {
     const current = await this.prisma.claseProgramada.findUnique({
       where: { id },
     });
@@ -366,7 +572,7 @@ export class HorarioService {
     };
 
     try {
-      return await this.prisma.claseProgramada.update({
+      const actualizada = await this.prisma.claseProgramada.update({
         where: { id },
         data,
         include: {
@@ -377,13 +583,22 @@ export class HorarioService {
           proyectoCurricular: true,
         },
       });
+      await this.registrar(
+        usuarioId,
+        'ClaseProgramada',
+        id,
+        'UPDATE',
+        current,
+        actualizada,
+      );
+      return actualizada;
     } catch (error: unknown) {
       this.throwKnownClassPersistenceError(error);
       throw error;
     }
   }
 
-  async removeClase(id: string) {
+  async removeClase(id: string, usuarioId?: string) {
     const clase = await this.prisma.claseProgramada.findUnique({
       where: { id },
       select: { id: true },
@@ -394,7 +609,17 @@ export class HorarioService {
     }
 
     try {
-      return await this.prisma.claseProgramada.delete({ where: { id } });
+      const eliminada = await this.prisma.claseProgramada.delete({
+        where: { id },
+      });
+      await this.registrar(
+        usuarioId,
+        'ClaseProgramada',
+        id,
+        'DELETE',
+        eliminada,
+      );
+      return eliminada;
     } catch (error: unknown) {
       if (hasPrismaCode(error, 'P2003')) {
         throw new ConflictException(
@@ -403,6 +628,24 @@ export class HorarioService {
       }
       throw error;
     }
+  }
+
+  private registrar(
+    usuarioId: string | undefined,
+    entidad: string,
+    entidadId: string,
+    accion: 'CREATE' | 'UPDATE' | 'DELETE',
+    datosPrevios?: unknown,
+    datosNuevos?: unknown,
+  ) {
+    return this.auditoria?.registrar({
+      usuarioId,
+      entidad,
+      entidadId,
+      accion,
+      datosPrevios,
+      datosNuevos,
+    });
   }
 
   private normalizeClase(dto: CreateClaseProgramadaDto): ClaseParaValidar {
@@ -629,6 +872,136 @@ export class HorarioService {
         `JSON_V2 requiere exactamente uno entre ${catalog}Id y ${catalog}.`,
       );
     }
+  }
+
+  private leerFilasExcel(buffer: Buffer): Array<Record<string, unknown>> {
+    let workbook: XLSX.WorkBook;
+    try {
+      workbook = XLSX.read(buffer, { type: 'buffer', cellDates: false });
+    } catch {
+      throw new BadRequestException('No fue posible leer el archivo Excel.');
+    }
+    const nombreHoja = workbook.SheetNames[0];
+    if (!nombreHoja)
+      throw new BadRequestException('El archivo Excel no contiene hojas.');
+    const filas = XLSX.utils.sheet_to_json<Record<string, unknown>>(
+      workbook.Sheets[nombreHoja],
+      { defval: '' },
+    );
+    if (filas.length === 0)
+      throw new BadRequestException('El archivo Excel no contiene registros.');
+    if (filas.length > 500)
+      throw new BadRequestException(
+        'El archivo Excel supera el máximo de 500 filas.',
+      );
+    const encabezados = new Set(
+      Object.keys(filas[0]).map((encabezado) =>
+        encabezado.trim().toUpperCase(),
+      ),
+    );
+    const requeridos = [
+      'AULA',
+      'DIA_SEMANA',
+      'HORA_INICIO',
+      'HORA_FIN',
+      'GRUPO',
+      'DOCENTE_DOCUMENTO',
+      'DOCENTE_NOMBRE',
+      'ASIGNATURA_CODIGO',
+      'ASIGNATURA_NOMBRE',
+    ];
+    const faltantes = requeridos.filter(
+      (encabezado) => !encabezados.has(encabezado),
+    );
+    if (faltantes.length) {
+      throw new BadRequestException(
+        `Faltan columnas requeridas: ${faltantes.join(', ')}.`,
+      );
+    }
+    return filas;
+  }
+
+  private convertirFilaExcel(
+    fila: Record<string, unknown>,
+    aulaId: string,
+  ): ClaseImportacionDto {
+    const diaSemana = Number(this.valorExcel(fila, 'DIA_SEMANA'));
+    const inscritosTexto = this.valorExcel(fila, 'INSCRITOS');
+    const inscritos = inscritosTexto ? Number(inscritosTexto) : undefined;
+    if (!Number.isInteger(diaSemana) || diaSemana < 1 || diaSemana > 6) {
+      throw new BadRequestException(
+        'DIA_SEMANA debe ser un entero entre 1 y 6.',
+      );
+    }
+    if (
+      inscritos !== undefined &&
+      (!Number.isInteger(inscritos) || inscritos < 0)
+    ) {
+      throw new BadRequestException(
+        'INSCRITOS debe ser un entero positivo o cero.',
+      );
+    }
+    const horaInicio = this.valorExcel(fila, 'HORA_INICIO');
+    const horaFin = this.valorExcel(fila, 'HORA_FIN');
+    if (
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(horaInicio) ||
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(horaFin)
+    ) {
+      throw new BadRequestException(
+        'HORA_INICIO y HORA_FIN deben usar formato HH:mm.',
+      );
+    }
+    const documento = this.valorExcel(fila, 'DOCENTE_DOCUMENTO');
+    const nombreDocente = this.valorExcel(fila, 'DOCENTE_NOMBRE');
+    const codigoAsignatura = this.valorExcel(fila, 'ASIGNATURA_CODIGO');
+    const nombreAsignatura = this.valorExcel(fila, 'ASIGNATURA_NOMBRE');
+    const grupo = this.valorExcel(fila, 'GRUPO');
+    if (
+      !documento ||
+      !nombreDocente ||
+      !codigoAsignatura ||
+      !nombreAsignatura ||
+      !grupo
+    ) {
+      throw new BadRequestException(
+        'La fila contiene campos académicos requeridos vacíos.',
+      );
+    }
+    const proyectoCurricularId =
+      this.valorExcel(fila, 'PROYECTO_CURRICULAR_ID') || undefined;
+    return {
+      aulaId,
+      diaSemana,
+      horaInicio,
+      horaFin,
+      grupo,
+      inscritos,
+      proyectoCurricularId,
+      docente: {
+        documento,
+        nombre: nombreDocente,
+        ...(this.valorExcel(fila, 'DOCENTE_CORREO') && {
+          correo: this.valorExcel(fila, 'DOCENTE_CORREO'),
+        }),
+      },
+      asignatura: { codigo: codigoAsignatura, nombre: nombreAsignatura },
+    };
+  }
+
+  private valorExcel(
+    fila: Record<string, unknown>,
+    encabezado: string,
+  ): string {
+    const clave = Object.keys(fila).find(
+      (actual) => actual.trim().toUpperCase() === encabezado,
+    );
+    return clave && fila[clave] !== undefined ? String(fila[clave]).trim() : '';
+  }
+
+  private mensajeError(error: unknown): string {
+    return error instanceof Error
+      ? error.message
+      : 'Error desconocido al procesar la fila.';
   }
 
   private throwImportError(error: unknown, index: number): never {

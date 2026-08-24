@@ -60,7 +60,7 @@ $ npm run test:cov
 ## Autenticación básica
 
 La API autentica contra el modelo `Usuario` de Prisma. Las contraseñas nuevas deben
-guardarse con `PasswordHashService`, que utiliza `scrypt`; nunca se admite texto plano.
+guardarse con `PasswordHashService`, que utiliza `bcrypt`; nunca se admite texto plano.
 
 - `POST /auth/login`: recibe `identificador` (usuario o correo) y `password`.
 - `GET /auth/me`: requiere `Authorization: Bearer <token>` y devuelve el usuario actual,
@@ -71,8 +71,9 @@ lista de revocación durante el MVP.
 
 Variables de entorno:
 
-- `AUTH_TOKEN_SECRET`: secreto de firma obligatorio en producción.
-- `AUTH_TOKEN_TTL_SECONDS`: duración del token; por defecto 28 800 segundos.
+- `JWT_SECRET`: secreto de firma HS256 obligatorio en producción. `AUTH_TOKEN_SECRET`
+  se acepta únicamente como nombre heredado durante la transición.
+- `JWT_EXPIRES_IN`: duración del token; por defecto `8h`.
 - `AUTH_REQUIRED`: `true` obliga autenticación global; fuera de producción inicia en
   `false` para facilitar la integración progresiva.
 - `PERMISSIONS_MODE`: `permissive` durante integración o `strict` para exigir los
@@ -109,6 +110,19 @@ Debe definir `ADMIN_INITIAL_PASSWORD` antes de ejecutarlo. Los permisos incluyen
 Prisma 7 usa el generador `prisma-client` con salida local en `generated/prisma`.
 Se conserva esta configuración porque coincide con el adaptador PostgreSQL actual y
 evita cambiar las migraciones ya creadas.
+
+La guía operativa para una instalación nueva, migraciones y creación del administrador
+inicial está en [docs/operacion-backend.md](docs/operacion-backend.md).
+
+## Integración con Monitores
+
+Monitores usa el mismo secreto `JWT_SECRET` bajo el nombre
+`PLATFORM_JWT_SECRET` para validar los JWT HS256 emitidos por Aulas. Configure además
+`MONITORES_API_URL`, `MONITORES_API_TIMEOUT_MS` y `MONITORES_SERVICE_TOKEN`.
+
+El endpoint interno `POST /integraciones/monitores/usuarios` solo acepta el header
+`X-Monitores-Service-Token`. Lo consume el backend de Monitores para aprovisionar una
+identidad central; no debe llamarse desde el frontend.
 
 ## Deployment
 

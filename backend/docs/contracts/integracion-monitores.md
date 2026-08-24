@@ -25,7 +25,16 @@ Aulas lo informa como `aplicaciones.puedeAccederMonitores`.
 
 ## Monitores → Aulas
 
-Antes de crear un monitor, la API de Monitores debe crear o vincular el usuario mediante
-un endpoint autenticado de Aulas que se definirá al revisar su implementación Python.
-Ese endpoint recibirá únicamente los datos de identidad necesarios y devolverá el UUID
-de `Usuario`; Monitores lo guardará como `usuarioExternoId`.
+Antes de crear un monitor, Monitores crea o vincula la identidad central mediante:
+
+| Método y ruta | Autenticación | Cuerpo |
+| --- | --- | --- |
+| `POST /integraciones/monitores/usuarios` | `X-Monitores-Service-Token` | `nombreCompleto`, `nombreUsuario`, `correo`, `dependenciaId` opcional |
+
+El token se compara de forma segura y nunca llega al navegador. La respuesta es
+`{ id, creado, estado }`. La operación es idempotente por nombre de usuario o correo;
+si ambos identifican usuarios centrales distintos responde `409`.
+
+Una identidad creada desde Monitores queda `INACTIVA`, sin roles y con contraseña
+aleatoria no expuesta. Un administrador de Aulas debe activarla y asignarle permisos
+del módulo `MONITORES` antes de que pueda acceder al aplicativo.
