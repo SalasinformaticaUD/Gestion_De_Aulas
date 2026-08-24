@@ -4,6 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { HorarioModule } from '../src/horario/horario.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { AuditoriaService } from '../src/auditoria/auditoria.service';
 import { configureApp } from '../src/configure-app';
 
 type PeriodoRecord = {
@@ -205,6 +206,8 @@ describe('HorarioController (e2e)', () => {
     })
       .overrideProvider(PrismaService)
       .useValue(prisma)
+      .overrideProvider(AuditoriaService)
+      .useValue({ registrar: jest.fn().mockResolvedValue(undefined) })
       .compile();
 
     app = moduleFixture.createNestApplication();

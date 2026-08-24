@@ -273,7 +273,7 @@ Objetivo: registrar operaciones criticas sin duplicar codigo en cada modulo.
 
 - [X] Unit test de sanitizacion.
 - [X] Unit test de registro.
-- [ ] E2E de consulta protegida.
+- [X] E2E de consulta protegida.
 
 Criterio de cierre: operaciones criticas quedan trazables para la prueba piloto.
 
@@ -289,7 +289,7 @@ Objetivo: preparar comunicacion por API sin mezclar bases de datos.
 - [X] Gestion de Monitores conserva su propia API y base.
 - [X] La comunicacion se hace por HTTP/API.
 - [X] No crear migraciones para tablas internas de Monitores en este backend.
-- [ ] Usar identificadores externos cuando se necesite relacion logica.
+- [X] Usar identificadores externos cuando se necesite relacion logica.
 
 ### 7.2 Cliente HTTP
 
@@ -324,15 +324,15 @@ Objetivo: preparar una version interna utilizable.
 - [ ] No quedan servicios productivos con respuestas `This action...`.
 - [ ] No quedan DTOs vacios en modulos marcados como implementados.
 - [ ] Todas las rutas protegidas tienen guard.
-- [ ] CORS permite el frontend local.
-- [ ] Health endpoint responde.
+- [X] CORS permite el frontend local.
+- [X] Health endpoint responde.
 - [ ] Migraciones corren desde cero.
 - [X] Seeds minimos crean permisos, roles y usuario administrador inicial.
 
 ### 8.2 Checklist de pruebas
 
-- [ ] `npm test -- --runInBand`.
-- [ ] `npm run test:e2e`.
+- [X] `npm test -- --runInBand`.
+- [X] `npm run test:e2e`.
 - [X] `npx tsc --noEmit --incremental false`.
 - [ ] Smoke manual:
   - login;
@@ -344,13 +344,21 @@ Objetivo: preparar una version interna utilizable.
 
 ### 8.3 Documentacion
 
-- [ ] Actualizar README del backend.
+- [X] Actualizar README del backend.
 - [X] Documentar variables de entorno.
-- [ ] Documentar flujo de migraciones.
-- [ ] Documentar usuario admin inicial.
+- [X] Documentar flujo de migraciones.
+- [X] Documentar usuario admin inicial.
 - [X] Documentar contratos minimos para frontend.
 
 Criterio de cierre: los otros frentes pueden integrar sin depender de conocimiento informal.
+
+### Pendientes fuera del alcance transversal
+
+Los ítems sin marcar de esta sección no se pueden cerrar solo desde Plataforma e
+Integración: `Credenciales` necesita un diseño y una llave de cifrado administrada para
+no exponer secretos; `Limpieza`, `Tareas`, `Préstamos audiovisuales`, `Panel` y
+`Reportes` siguen siendo plantillas de sus módulos funcionales. Antes de marcar esos
+ítems se debe implementar cada contrato y sus pruebas en el frente responsable.
 
 ---
 
