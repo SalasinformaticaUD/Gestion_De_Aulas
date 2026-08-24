@@ -8,7 +8,6 @@ import {
 } from '@nestjs/common';
 import type { Prisma } from '../../generated/prisma/client.js';
 import * as XLSX from 'xlsx';
-import * as XLSX from 'xlsx';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import { CreateClaseProgramadaDto } from './dto/create-clase-programada.dto';
@@ -20,7 +19,6 @@ import {
   ClaseImportacionDto,
   ImportarHorarioDto,
 } from './dto/importar-horario.dto';
-import { ImportarHorarioExcelDto } from './dto/importar-horario-excel.dto';
 import { ImportarHorarioExcelDto } from './dto/importar-horario-excel.dto';
 
 type PrismaError = { code?: unknown };
