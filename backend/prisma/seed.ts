@@ -1,12 +1,14 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PrismaClient } from '../generated/prisma/client.js';
+import { PrismaClient } from '@Prisma/client';
 import bcrypt from 'bcryptjs';
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL debe configurarse para ejecutar el seed.');
 
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString }),
+});
 
 const modulos = [
   ['DASHBOARD', 'Dashboard'],
@@ -27,7 +29,14 @@ const modulos = [
   ['MONITORES', 'Gestión de Monitores'],
 ] as const;
 
-const acciones = ['LEER', 'CREAR', 'ACTUALIZAR', 'ELIMINAR', 'APROBAR', 'EXPORTAR'] as const;
+const acciones = [
+  'LEER',
+  'CREAR',
+  'ACTUALIZAR',
+  'ELIMINAR',
+  'APROBAR',
+  'EXPORTAR',
+] as const;
 const dependencias = ['Aulas de Software', 'Electrica y Electronica', 'Fisica'];
 
 async function main() {
@@ -50,20 +59,29 @@ async function main() {
       await prisma.permiso.upsert({
         where: { codigo: codigoPermiso },
         update: { moduloId: modulo.id, descripcion: `${accion} en ${nombre}` },
-        create: { codigo: codigoPermiso, moduloId: modulo.id, descripcion: `${accion} en ${nombre}` },
+        create: {
+          codigo: codigoPermiso,
+          moduloId: modulo.id,
+          descripcion: `${accion} en ${nombre}`,
+        },
       });
     }
   }
 
   const password = process.env.ADMIN_INITIAL_PASSWORD;
   if (!password || password.length < 10) {
-    throw new Error('ADMIN_INITIAL_PASSWORD debe tener al menos 10 caracteres para crear el administrador inicial.');
+    throw new Error(
+      'ADMIN_INITIAL_PASSWORD debe tener al menos 10 caracteres para crear el administrador inicial.',
+    );
   }
   const permisos = await prisma.permiso.findMany({ select: { id: true } });
   const administrador = await prisma.rol.upsert({
     where: { nombre: 'ADMINISTRADOR' },
     update: {},
-    create: { nombre: 'ADMINISTRADOR', descripcion: 'Acceso administrativo inicial.' },
+    create: {
+      nombre: 'ADMINISTRADOR',
+      descripcion: 'Acceso administrativo inicial.',
+    },
   });
   await prisma.rolPermiso.deleteMany({ where: { rolId: administrador.id } });
   await prisma.rolPermiso.createMany({

@@ -1,6 +1,3 @@
-ALTER TABLE "EquipoAudiovisual"
-ADD COLUMN "observacion" TEXT;
-
 ALTER TABLE "PrestamoAudiovisual"
 ADD COLUMN "canceladoPorId" UUID,
 ADD COLUMN "canceladoEn" TIMESTAMP(3),
