@@ -353,32 +353,32 @@ Objetivo: entregar una vista consolidada para la operacion diaria.
 
 ### 9.1 Contratos
 
-- [ ] `GET /panel-operativo/resumen?fecha=`
-- [ ] `GET /panel-operativo/aulas?fecha=`
-- [ ] `GET /panel-operativo/alertas?fecha=`
+- [X] `GET /panel-operativo/resumen?fecha=`
+- [X] `GET /panel-operativo/aulas?fecha=`
+- [X] `GET /panel-operativo/alertas?fecha=`
 
 ### 9.2 Fuentes
 
-- [ ] Disponibilidad calculada.
-- [ ] Horarios del dia.
-- [ ] Asistencias pendientes o ausencias.
-- [ ] Practicas libres activas.
-- [ ] Prestamos docentes del dia.
-- [ ] Observaciones vigentes.
-- [ ] Tareas operativas que afectan disponibilidad.
+- [X] Disponibilidad calculada.
+- [X] Horarios del dia.
+- [X] Asistencias pendientes o ausencias.
+- [X] Practicas libres activas.
+- [X] Prestamos docentes del dia.
+- [X] Observaciones vigentes.
+- [X] Tareas operativas que afectan disponibilidad.
 - [ ] Limpiezas pendientes si el modulo paralelo ya existe.
 
 ### 9.3 Implementacion
 
-- [ ] El servicio del panel debe orquestar servicios existentes, no duplicar reglas.
-- [ ] Definir DTO de respuesta con metricas y listas.
-- [ ] Incluir alertas con severidad: info, advertencia, critica.
-- [ ] Mantener consultas paginables cuando las listas crezcan.
+- [X] El servicio del panel debe orquestar servicios existentes, no duplicar reglas.
+- [X] Definir DTO de respuesta con metricas y listas.
+- [X] Incluir alertas con severidad: info, advertencia, critica.
+- [X] Mantener consultas paginables cuando las listas crezcan.
 
 ### 9.4 Pruebas
 
-- [ ] Unit tests con servicios mockeados.
-- [ ] E2E de resumen con al menos un aula ocupada, una libre y una alerta.
+- [X] Unit tests con servicios mockeados.
+- [X] E2E de resumen con al menos un aula ocupada, una libre y una alerta.
 
 Criterio de cierre: el dashboard operativo del frontend puede consumir un unico endpoint de resumen.
 

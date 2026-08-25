@@ -1,45 +1,29 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import { PanelOperativoService } from './panel-operativo.service';
-import { CreatePanelOperativoDto } from './dto/create-panel-operativo.dto';
-import { UpdatePanelOperativoDto } from './dto/update-panel-operativo.dto';
+import { MODULOS } from '../auth/auth.constants';
+import { RequireModule } from '../auth/decorators/require-module.decorator';
+import {
+  ConsultarAulasPanelOperativoDto,
+  ConsultarPanelOperativoDto,
+} from './dto/consultar-panel-operativo.dto';
 
+@RequireModule(MODULOS.PANEL_OPERATIVO)
 @Controller('panel-operativo')
 export class PanelOperativoController {
   constructor(private readonly panelOperativoService: PanelOperativoService) {}
 
-  @Post()
-  create(@Body() createPanelOperativoDto: CreatePanelOperativoDto) {
-    return this.panelOperativoService.create(createPanelOperativoDto);
+  @Get('resumen')
+  resumen(@Query() query: ConsultarPanelOperativoDto) {
+    return this.panelOperativoService.resumen(query);
   }
 
-  @Get()
-  findAll() {
-    return this.panelOperativoService.findAll();
+  @Get('aulas')
+  aulas(@Query() query: ConsultarAulasPanelOperativoDto) {
+    return this.panelOperativoService.aulas(query);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.panelOperativoService.findOne(id);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updatePanelOperativoDto: UpdatePanelOperativoDto,
-  ) {
-    return this.panelOperativoService.update(id, updatePanelOperativoDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.panelOperativoService.remove(id);
+  @Get('alertas')
+  alertas(@Query() query: ConsultarPanelOperativoDto) {
+    return this.panelOperativoService.alertas(query);
   }
 }

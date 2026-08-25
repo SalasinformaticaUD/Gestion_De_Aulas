@@ -7,5 +7,6 @@ import { DisponibilidadAulasModule } from '../disponibilidad-aulas/disponibilida
   imports: [DisponibilidadAulasModule],
   controllers: [PracticasLibresController],
   providers: [PracticasLibresService],
+  exports: [PracticasLibresService],
 })
 export class PracticasLibresModule {}

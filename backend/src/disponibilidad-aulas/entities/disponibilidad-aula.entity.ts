@@ -17,6 +17,7 @@ export class AulaResumenDisponibilidad {
   declare ubicacion: string;
   declare capacidad: number;
   declare estado: EstadoAula;
+  declare caracteristicas?: unknown;
 }
 
 export class FuenteDisponibilidad {
@@ -63,5 +64,30 @@ export class ResumenDisponibilidadDia {
     aulas: DisponibilidadAula[];
   }>;
   declare calculadoEn: Date;
+  declare persistido: false;
+}
+
+export class SugerenciaDisponibilidadAula extends DisponibilidadAula {
+  declare criterioOrden: {
+    capacidadSobrante: number;
+    codigo: string;
+  };
+}
+
+export class EventoHistoricoDisponibilidad {
+  declare tipo: TipoFuenteDisponibilidad;
+  declare id: string;
+  declare inicio: Date;
+  declare fin: Date | null;
+  declare descripcion: string;
+  declare estado?: string;
+}
+
+export class HistorialDisponibilidadAula {
+  declare aulaId: string;
+  declare desde: string;
+  declare hasta: string;
+  declare eventos: EventoHistoricoDisponibilidad[];
+  declare derivado: true;
   declare persistido: false;
 }

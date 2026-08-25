@@ -7,7 +7,7 @@ se comunican mediante controladores REST.
 | Módulo Nest               | Ruta base                  | Requisitos      | Responsabilidad principal                                                                                               |
 | ------------------------- | -------------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `horario`                 | `/horario`                 | RF-001 a RF-010 | Importación JSON y oficial Excel, validación y consulta de horarios y períodos académicos.                              |
-| `disponibilidad-aulas`    | `/disponibilidad-aulas`    | RF-011 a RF-020 | Cálculo y consulta dinámica por bloque o resumen diario. Usa bloques de dos horas y no representa una tabla permanente. |
+| `disponibilidad-aulas`    | `/disponibilidad-aulas`    | RF-011 a RF-020 | Cálculo y consulta dinámica por bloque, resumen, sugerencias e histórico derivado. Usa bloques de dos horas y no representa una tabla permanente. |
 | `asistencia-docente`      | `/asistencia-docente`      | RF-021 a RF-030 | Asistencia e inasistencia asociada a clases programadas.                                                                |
 | `practicas-libres`        | `/practicas-libres`        | RF-031 a RF-048 | Solicitudes, préstamos, devoluciones y consulta de estudiantes.                                                         |
 | `prestamos-docentes`      | `/prestamos-docentes`      | RF-049 a RF-058 | Reservas y préstamos temporales de aulas a docentes.                                                                    |
@@ -20,7 +20,7 @@ se comunican mediante controladores REST.
 | `tareas-operativas`       | `/tareas-operativas`       | RF-121 a RF-132 | Tareas, responsables, prioridades, estados e impacto en disponibilidad.                                                 |
 | `credenciales`            | `/credenciales`            | RF-133 a RF-142 | Credenciales operativas cifradas, acceso restringido e historial.                                                       |
 | `reportes`                | `/reportes`                | RF-143 a RF-155 | Generación y exportación de formatos, reportes e indicadores.                                                           |
-| `panel-operativo`         | `/panel-operativo`         | RF-156 a RF-165 | Vista consolidada, alertas y sugerencias calculadas en tiempo real.                                                     |
+| `panel-operativo`         | `/panel-operativo`         | RF-156 a RF-165 | Vista consolidada de lectura, aulas paginadas y alertas calculadas en tiempo real.                                     |
 
 ## Módulos transversales
 

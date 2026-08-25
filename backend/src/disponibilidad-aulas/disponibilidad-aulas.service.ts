@@ -21,12 +21,15 @@ import {
 } from './disponibilidad-aulas.constants';
 import { ConsultarDisponibilidadDto } from './dto/consultar-disponibilidad.dto';
 import { ConsultarResumenDiaDto } from './dto/consultar-resumen-dia.dto';
+import { ConsultarHistorialDisponibilidadDto } from './dto/consultar-historial-disponibilidad.dto';
 import {
   AulaResumenDisponibilidad,
   DisponibilidadAula,
   EstadoCalculadoDisponibilidad,
   FuenteDisponibilidad,
   ResumenDisponibilidadDia,
+  HistorialDisponibilidadAula,
+  SugerenciaDisponibilidadAula,
   SiguienteActividadDisponibilidad,
   TipoFuenteDisponibilidad,
 } from './entities/disponibilidad-aula.entity';
@@ -60,6 +63,10 @@ type ClaseConDetalle = Prisma.ClaseProgramadaGetPayload<{
   };
 }>;
 
+type ClaseHistorica = Prisma.ClaseProgramadaGetPayload<{
+  include: { docente: true; asignatura: true; periodo: true };
+}>;
+
 @Injectable()
 export class DisponibilidadAulasService {
   constructor(
@@ -72,18 +79,30 @@ export class DisponibilidadAulasService {
   ): Promise<DisponibilidadAula[]> {
     const bloque = this.normalizarBloque(query);
     const aulas = await this.prisma.aula.findMany({
+      where: {
+        ...(query.capacidadMin !== undefined && {
+          capacidad: { gte: query.capacidadMin },
+        }),
+        ...(query.softwareId && {
+          softwares: { some: { softwareId: query.softwareId } },
+        }),
+      },
       select: {
         id: true,
         codigo: true,
         ubicacion: true,
         capacidad: true,
         estado: true,
+        caracteristicas: true,
       },
       orderBy: { codigo: 'asc' },
     });
 
+    const aulasFiltradas = aulas.filter((aula) =>
+      this.cumpleCaracteristicas(aula.caracteristicas, query.caracteristicas),
+    );
     return Promise.all(
-      aulas.map((aula) => this.calcularDisponibilidad(aula, bloque)),
+      aulasFiltradas.map((aula) => this.calcularDisponibilidad(aula, bloque)),
     );
   }
 
@@ -100,6 +119,7 @@ export class DisponibilidadAulasService {
         ubicacion: true,
         capacidad: true,
         estado: true,
+        caracteristicas: true,
       },
     });
 
@@ -108,6 +128,139 @@ export class DisponibilidadAulasService {
     }
 
     return this.calcularDisponibilidad(aula, bloque);
+  }
+
+  async findSugerencias(
+    query: ConsultarDisponibilidadDto,
+  ): Promise<SugerenciaDisponibilidadAula[]> {
+    const resultados = await this.findAll(query);
+    const capacidadSolicitada = query.capacidadMin ?? 0;
+
+    return resultados
+      .filter((resultado) => resultado.estadoCalculado === 'disponible')
+      .sort(
+        (a, b) =>
+          a.aula.capacidad -
+            capacidadSolicitada -
+            (b.aula.capacidad - capacidadSolicitada) ||
+          a.aula.codigo.localeCompare(b.aula.codigo),
+      )
+      .map((resultado) => ({
+        ...resultado,
+        criterioOrden: {
+          capacidadSobrante: resultado.aula.capacidad - capacidadSolicitada,
+          codigo: resultado.aula.codigo,
+        },
+      }));
+  }
+
+  async findHistorial(
+    query: ConsultarHistorialDisponibilidadDto,
+  ): Promise<HistorialDisponibilidadAula> {
+    const inicio = new Date(`${query.desde}T00:00:00.000-05:00`);
+    const fin = new Date(`${query.hasta}T23:59:59.999-05:00`);
+    if (inicio > fin) {
+      throw new BadRequestException('desde debe ser anterior o igual a hasta.');
+    }
+    if (fin.getTime() - inicio.getTime() > 31 * 24 * 60 * 60 * 1000) {
+      throw new BadRequestException(
+        'El histórico permite consultar máximo 31 días.',
+      );
+    }
+
+    const aula = await this.prisma.aula.findUnique({
+      where: { id: query.aulaId },
+      select: { id: true },
+    });
+    if (!aula) {
+      throw new NotFoundException(`No existe aula con id ${query.aulaId}.`);
+    }
+
+    const [clases, prestamos, practicas, observaciones, tareas] =
+      await Promise.all([
+        this.prisma.claseProgramada.findMany({
+          where: {
+            aulaId: query.aulaId,
+            periodo: { fechaInicio: { lte: fin }, fechaFin: { gte: inicio } },
+          },
+          include: { docente: true, asignatura: true, periodo: true },
+        }),
+        this.prisma.prestamoDocente.findMany({
+          where: {
+            aulaId: query.aulaId,
+            inicio: { lte: fin },
+            fin: { gte: inicio },
+          },
+          include: { docente: true },
+        }),
+        this.prisma.practicaLibre.findMany({
+          where: { aulaId: query.aulaId, inicio: { lte: fin } },
+          include: { estudiante: true },
+        }),
+        this.prisma.observacion.findMany({
+          where: {
+            aulaId: query.aulaId,
+            tipo: TipoObservacion.RESTRICCION,
+            creadoEn: { lte: fin },
+            OR: [{ vigenteHasta: null }, { vigenteHasta: { gte: inicio } }],
+          },
+        }),
+        this.prisma.tarea.findMany({
+          where: {
+            aulaId: query.aulaId,
+            afectaDisponibilidad: true,
+            OR: [{ inicio: null }, { inicio: { lte: fin } }],
+          },
+        }),
+      ]);
+
+    const eventos = [
+      ...clases.flatMap((clase) =>
+        this.expandirClaseHistorica(clase, inicio, fin),
+      ),
+      ...prestamos.map((prestamo) => ({
+        tipo: 'prestamo-docente' as const,
+        id: prestamo.id,
+        inicio: prestamo.inicio,
+        fin: prestamo.fin,
+        descripcion:
+          prestamo.motivo ?? `Préstamo del docente ${prestamo.docente.nombre}.`,
+        estado: prestamo.estado,
+      })),
+      ...practicas.map((practica) => ({
+        tipo: 'practica-libre' as const,
+        id: practica.id,
+        inicio: practica.inicio,
+        fin: practica.finReal ?? practica.finEstimada,
+        descripcion: `Práctica libre del estudiante ${practica.estudiante.codigo}.`,
+        estado: practica.estado,
+      })),
+      ...observaciones.map((observacion) => ({
+        tipo: 'restriccion' as const,
+        id: observacion.id,
+        inicio: observacion.creadoEn,
+        fin: observacion.vigenteHasta,
+        descripcion: observacion.contenido,
+        estado: observacion.tipo,
+      })),
+      ...tareas.map((tarea) => ({
+        tipo: 'tarea-operativa' as const,
+        id: tarea.id,
+        inicio: tarea.inicio ?? inicio,
+        fin: tarea.fin,
+        descripcion: tarea.titulo,
+        estado: tarea.estado,
+      })),
+    ].sort((a, b) => a.inicio.getTime() - b.inicio.getTime());
+
+    return {
+      aulaId: aula.id,
+      desde: query.desde,
+      hasta: query.hasta,
+      eventos,
+      derivado: true,
+      persistido: false,
+    };
   }
 
   async findResumenDia(
@@ -588,6 +741,74 @@ export class DisponibilidadAulasService {
       'practica-libre',
       'tarea-operativa',
     ].indexOf(tipo);
+  }
+
+  private cumpleCaracteristicas(
+    caracteristicas: unknown,
+    requeridas?: string[],
+  ): boolean {
+    if (!requeridas?.length) {
+      return true;
+    }
+    if (!caracteristicas || typeof caracteristicas !== 'object') {
+      return false;
+    }
+    const claves = new Set(
+      Array.isArray(caracteristicas)
+        ? caracteristicas.filter(
+            (valor): valor is string => typeof valor === 'string',
+          )
+        : Object.entries(caracteristicas as Record<string, unknown>)
+            .filter(([, valor]) => valor === true)
+            .map(([clave]) => clave),
+    );
+    return requeridas.every((caracteristica) => claves.has(caracteristica));
+  }
+
+  private expandirClaseHistorica(
+    clase: ClaseHistorica,
+    desde: Date,
+    hasta: Date,
+  ) {
+    const eventos: Array<{
+      tipo: 'clase-programada';
+      id: string;
+      inicio: Date;
+      fin: Date;
+      descripcion: string;
+    }> = [];
+    const inicioPeriodo = new Date(
+      Math.max(clase.periodo.fechaInicio.getTime(), desde.getTime()),
+    );
+    const finPeriodo = new Date(
+      Math.min(clase.periodo.fechaFin.getTime(), hasta.getTime()),
+    );
+
+    for (
+      let cursor = new Date(
+        `${inicioPeriodo.toISOString().slice(0, 10)}T00:00:00.000-05:00`,
+      );
+      cursor <= finPeriodo;
+      cursor.setDate(cursor.getDate() + 1)
+    ) {
+      if (cursor.getDay() !== clase.diaSemana) {
+        continue;
+      }
+      const fecha = cursor.toISOString().slice(0, 10);
+      const inicio = this.combinarFechaHora(fecha, clase.horaInicio);
+      const fin = this.combinarFechaHora(fecha, clase.horaFin);
+      if (inicio < desde || inicio > hasta) {
+        continue;
+      }
+      eventos.push({
+        tipo: 'clase-programada',
+        id: clase.id,
+        inicio,
+        fin,
+        descripcion: `Clase ${clase.asignatura.nombre}, grupo ${clase.grupo}, docente ${clase.docente.nombre}.`,
+      });
+    }
+    return eventos;
   }
 
   private normalizarBloque(query: ConsultarDisponibilidadDto): BloqueDosHoras {

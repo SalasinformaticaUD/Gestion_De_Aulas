@@ -10,6 +10,8 @@ estos endpoints crea o modifica una tabla de disponibilidad.
 - `GET /disponibilidad-aulas?fecha=YYYY-MM-DD&horaInicio=HH:00&horaFin=HH:00`
 - `GET /disponibilidad-aulas/:aulaId?fecha=YYYY-MM-DD&horaInicio=HH:00&horaFin=HH:00`
 - `GET /disponibilidad-aulas/resumen-dia?fecha=YYYY-MM-DD`
+- `GET /disponibilidad-aulas/sugerencias?fecha=YYYY-MM-DD&horaInicio=HH:00&horaFin=HH:00&softwareId=&capacidadMin=&caracteristicas=`
+- `GET /disponibilidad-aulas/historial?aulaId=&desde=YYYY-MM-DD&hasta=YYYY-MM-DD`
 
 `horaInicio` debe ser una hora par y `horaFin` debe corresponder exactamente a dos
 horas despues.
@@ -44,3 +46,19 @@ lista de respuestas de disponibilidad para todas las aulas.
 
 La definicion TypeScript se encuentra en
 `src/disponibilidad-aulas/entities/disponibilidad-aula.entity.ts`.
+
+## Filtros, sugerencias e histórico
+
+La consulta base y la de sugerencias aceptan opcionalmente `softwareId`,
+`capacidadMin` y `caracteristicas`. Las características se envían como una lista
+separada por comas y deben estar presentes en el JSON de características del aula;
+la capacidad y el software se filtran desde el catálogo antes de calcular el bloque.
+
+`GET /sugerencias` conserva solo resultados con estado calculado `disponible` y los
+ordena por menor capacidad sobrante y luego por código. No aplica una prioridad nueva
+ni modifica el motor de disponibilidad.
+
+El histórico admite un rango máximo de 31 días y devuelve eventos derivados de clases,
+préstamos docentes, prácticas libres, restricciones y tareas operativas. La respuesta
+incluye `derivado: true` y `persistido: false`: no existe tabla de historial de
+disponibilidad.
