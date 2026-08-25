@@ -874,120 +874,6 @@ export class HorarioService {
     }
   }
 
-  private leerFilasExcel(buffer: Buffer): Array<Record<string, unknown>> {
-    let workbook: XLSX.WorkBook;
-    try {
-      workbook = XLSX.read(buffer, { type: 'buffer', cellDates: false });
-    } catch {
-      throw new BadRequestException('No fue posible leer el archivo Excel.');
-    }
-    const nombreHoja = workbook.SheetNames[0];
-    if (!nombreHoja)
-      throw new BadRequestException('El archivo Excel no contiene hojas.');
-    const filas = XLSX.utils.sheet_to_json<Record<string, unknown>>(
-      workbook.Sheets[nombreHoja],
-      { defval: '' },
-    );
-    if (filas.length === 0)
-      throw new BadRequestException('El archivo Excel no contiene registros.');
-    if (filas.length > 500)
-      throw new BadRequestException(
-        'El archivo Excel supera el máximo de 500 filas.',
-      );
-    const encabezados = new Set(
-      Object.keys(filas[0]).map((encabezado) =>
-        encabezado.trim().toUpperCase(),
-      ),
-    );
-    const requeridos = [
-      'AULA',
-      'DIA_SEMANA',
-      'HORA_INICIO',
-      'HORA_FIN',
-      'GRUPO',
-      'DOCENTE_DOCUMENTO',
-      'DOCENTE_NOMBRE',
-      'ASIGNATURA_CODIGO',
-      'ASIGNATURA_NOMBRE',
-    ];
-    const faltantes = requeridos.filter(
-      (encabezado) => !encabezados.has(encabezado),
-    );
-    if (faltantes.length) {
-      throw new BadRequestException(
-        `Faltan columnas requeridas: ${faltantes.join(', ')}.`,
-      );
-    }
-    return filas;
-  }
-
-  private convertirFilaExcel(
-    fila: Record<string, unknown>,
-    aulaId: string,
-  ): ClaseImportacionDto {
-    const diaSemana = Number(this.valorExcel(fila, 'DIA_SEMANA'));
-    const inscritosTexto = this.valorExcel(fila, 'INSCRITOS');
-    const inscritos = inscritosTexto ? Number(inscritosTexto) : undefined;
-    if (!Number.isInteger(diaSemana) || diaSemana < 1 || diaSemana > 6) {
-      throw new BadRequestException(
-        'DIA_SEMANA debe ser un entero entre 1 y 6.',
-      );
-    }
-    if (
-      inscritos !== undefined &&
-      (!Number.isInteger(inscritos) || inscritos < 0)
-    ) {
-      throw new BadRequestException(
-        'INSCRITOS debe ser un entero positivo o cero.',
-      );
-    }
-    const horaInicio = this.valorExcel(fila, 'HORA_INICIO');
-    const horaFin = this.valorExcel(fila, 'HORA_FIN');
-    if (
-      !/^([01]\d|2[0-3]):[0-5]\d$/.test(horaInicio) ||
-      !/^([01]\d|2[0-3]):[0-5]\d$/.test(horaFin)
-    ) {
-      throw new BadRequestException(
-        'HORA_INICIO y HORA_FIN deben usar formato HH:mm.',
-      );
-    }
-    const documento = this.valorExcel(fila, 'DOCENTE_DOCUMENTO');
-    const nombreDocente = this.valorExcel(fila, 'DOCENTE_NOMBRE');
-    const codigoAsignatura = this.valorExcel(fila, 'ASIGNATURA_CODIGO');
-    const nombreAsignatura = this.valorExcel(fila, 'ASIGNATURA_NOMBRE');
-    const grupo = this.valorExcel(fila, 'GRUPO');
-    if (
-      !documento ||
-      !nombreDocente ||
-      !codigoAsignatura ||
-      !nombreAsignatura ||
-      !grupo
-    ) {
-      throw new BadRequestException(
-        'La fila contiene campos académicos requeridos vacíos.',
-      );
-    }
-    const proyectoCurricularId =
-      this.valorExcel(fila, 'PROYECTO_CURRICULAR_ID') || undefined;
-    return {
-      aulaId,
-      diaSemana,
-      horaInicio,
-      horaFin,
-      grupo,
-      inscritos,
-      proyectoCurricularId,
-      docente: {
-        documento,
-        nombre: nombreDocente,
-        ...(this.valorExcel(fila, 'DOCENTE_CORREO') && {
-          correo: this.valorExcel(fila, 'DOCENTE_CORREO'),
-        }),
-      },
-      asignatura: { codigo: codigoAsignatura, nombre: nombreAsignatura },
-    };
-  }
-
   private valorExcel(
     fila: Record<string, unknown>,
     encabezado: string,
@@ -995,7 +881,28 @@ export class HorarioService {
     const clave = Object.keys(fila).find(
       (actual) => actual.trim().toUpperCase() === encabezado,
     );
-    return clave && fila[clave] !== undefined ? String(fila[clave]).trim() : '';
+    if (!clave || fila[clave] === undefined || fila[clave] === null) {
+      return '';
+    }
+
+    const valor = fila[clave];
+
+    if (typeof valor === 'string') return valor.trim();
+    if (
+      typeof valor === 'number' ||
+      typeof valor === 'boolean' ||
+      typeof valor === 'bigint'
+    ) {
+      return String(valor).trim();
+    }
+    if (Array.isArray(valor)) {
+      return valor
+        .map((item) => String(item))
+        .join(',')
+        .trim();
+    }
+
+    return '';
   }
 
   private mensajeError(error: unknown): string {
@@ -1116,22 +1023,6 @@ export class HorarioService {
       },
       asignatura: { codigo: codigoAsignatura, nombre: nombreAsignatura },
     };
-  }
-
-  private valorExcel(
-    fila: Record<string, unknown>,
-    encabezado: string,
-  ): string {
-    const clave = Object.keys(fila).find(
-      (actual) => actual.trim().toUpperCase() === encabezado,
-    );
-    return clave && fila[clave] !== undefined ? String(fila[clave]).trim() : '';
-  }
-
-  private mensajeError(error: unknown): string {
-    return error instanceof Error
-      ? error.message
-      : 'Error desconocido al procesar la fila.';
   }
 
   private throwImportError(error: unknown, index: number): never {

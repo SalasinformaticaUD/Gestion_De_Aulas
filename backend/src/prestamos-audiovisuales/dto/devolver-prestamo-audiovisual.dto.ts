@@ -25,12 +25,12 @@ export class EquipoDevueltoAudiovisualDto {
 
 export class DevolverPrestamoAudiovisualDto {
   @IsDateString()
-  devolucionReal: string | undefined;
+  devolucionReal!: string;
 
   @IsArray()
   @ArrayNotEmpty()
   @ArrayUnique((equipo: EquipoDevueltoAudiovisualDto) => equipo.equipoId)
   @ValidateNested({ each: true })
   @Type(() => EquipoDevueltoAudiovisualDto)
-  equipos: EquipoDevueltoAudiovisualDto[] | undefined;
+  equipos!: EquipoDevueltoAudiovisualDto[];
 }

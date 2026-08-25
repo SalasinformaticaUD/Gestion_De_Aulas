@@ -96,6 +96,7 @@ model Usuario {
   accesosCredencial                AccesoCredencial[]
   prestamosAudiovisualesEntregados PrestamoAudiovisual[] @relation("EntregaPrestamoAudiovisual")
   prestamosAudiovisualesRecibidos  PrestamoAudiovisual[] @relation("RecepcionPrestamoAudiovisual")
+  prestamosAudiovisualesCancelados PrestamoAudiovisual[] @relation("CancelacionPrestamoAudiovisual")
   importacionesSoftware            ImportacionSoftware[]
   multasImpuestas                  Multa[]               @relation("MultaImpuestaPor")
   multasCumplidas                  Multa[]               @relation("MultaCumplidaPor")
@@ -361,6 +362,7 @@ model EquipoAudiovisual {
   nombre           String
   tipo             String
   estado           EstadoEquipo                     @default(DISPONIBLE)
+  observacion      String?
   detallesPrestamo DetallePrestamoAudiovisual[]
   mantenimientos   MantenimientoEquipoAudiovisual[]
   observaciones    ObservacionEquipoAudiovisual[]
@@ -374,14 +376,18 @@ model PrestamoAudiovisual {
   aulaId             String                       @db.Uuid
   entregadoPorId     String?                      @db.Uuid
   recibidoPorId      String?                      @db.Uuid
+  canceladoPorId     String?                      @db.Uuid
   salidaEn           DateTime?
   devolucionEstimada DateTime
   devolucionReal     DateTime?
+  canceladoEn        DateTime?
+  motivoCancelacion  String?
   estado             EstadoPrestamo               @default(SOLICITADO)
   docente            Docente                      @relation(fields: [docenteId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   aula               Aula                         @relation(fields: [aulaId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   entregadoPor       Usuario?                     @relation("EntregaPrestamoAudiovisual", fields: [entregadoPorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   recibidoPor        Usuario?                     @relation("RecepcionPrestamoAudiovisual", fields: [recibidoPorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  canceladoPor       Usuario?                     @relation("CancelacionPrestamoAudiovisual", fields: [canceladoPorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   detalles           DetallePrestamoAudiovisual[]
 
   @@index([estado, salidaEn])
