@@ -20,6 +20,7 @@
 @media (max-width:560px) { .room-list { grid-template-columns:1fr; }.room-detail-header { gap:14px; }.room-title-row h2 { font-size:18px; }.room-actions { align-items:stretch; flex-direction:column; }.room-actions .button-primary,.room-actions .button-secondary { width:100%; }.room-information { grid-template-columns:1fr; }.room-info-wide { grid-column:auto; }.room-tabs button { padding:0 13px; }.workstation-grid { grid-template-columns:repeat(5,1fr); }.workstation-tab { padding:16px; }.software-list { grid-template-columns:1fr; }.history-list { padding:16px; }.history-list article { grid-template-columns:1fr; gap:5px; }.history-list span { text-align:left; }.rooms-heading p { max-width:300px; } }
 
 .room-selection-empty { display:grid; min-height:142px; place-items:center; padding:24px; border:1px solid var(--line); border-radius:var(--radius); color:var(--muted); background:#fff; font-size:.78rem; text-align:center; }
+.room-practice-link { display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }
 
 /* Préstamos de equipos audiovisuales */
 .button-secondary { display:inline-flex; align-items:center; justify-content:center; text-decoration:none; }

@@ -1,0 +1,11 @@
+import type { OperationalObservation } from "@/features/observaciones/types";
+
+export const initialObservations: OperationalObservation[] = [
+  { id: "40000000-0000-4000-8000-000000000001", folio: "OBS-2026-0184", roomId: "aula-406", roomCode: "406", type: "RESTRICCION", content: "Aula bloqueada por revisión del sistema eléctrico y estabilizadores de los puestos 12 al 28.", createdAt: "2026-08-25T06:15:00-05:00", validUntil: "2026-08-27T18:00:00-05:00" },
+  { id: "40000000-0000-4000-8000-000000000002", folio: "OBS-2026-0183", roomId: "aula-503", roomCode: "503", type: "SEMANAL", content: "Realizar verificación diaria de licencias de Power BI antes del primer bloque.", createdAt: "2026-08-24T14:20:00-05:00", validUntil: "2026-08-30T22:00:00-05:00" },
+  { id: "40000000-0000-4000-8000-000000000003", folio: "OBS-2026-0182", roomId: "aula-402", roomCode: "402", type: "NOVEDAD", content: "Los puestos 07 y 08 presentan intermitencia en la conexión de red; se reportó a soporte.", createdAt: "2026-08-24T10:42:00-05:00", validUntil: null },
+  { id: "40000000-0000-4000-8000-000000000004", folio: "OBS-2026-0181", roomId: "aula-405", roomCode: "405", type: "GENERAL", content: "El control del videobeam se encuentra bajo custodia de coordinación.", createdAt: "2026-08-23T16:05:00-05:00", validUntil: null },
+  { id: "40000000-0000-4000-8000-000000000005", folio: "OBS-2026-0180", roomId: "aula-601", roomCode: "601", type: "RESTRICCION", content: "Acceso restringido mientras se reemplazaba el cableado del videobeam.", createdAt: "2026-08-22T08:00:00-05:00", validUntil: "2026-08-22T13:30:00-05:00" },
+  { id: "40000000-0000-4000-8000-000000000006", folio: "OBS-2026-0179", roomId: "aula-404", roomCode: "404", type: "SEMANAL", content: "Seguimiento semanal al rendimiento de Revit en los equipos del costado norte.", createdAt: "2026-08-15T09:10:00-05:00", validUntil: "2026-08-22T18:00:00-05:00" },
+  { id: "40000000-0000-4000-8000-000000000007", folio: "OBS-2026-0178", roomId: "aula-701", roomCode: "701", type: "NOVEDAD", content: "Se encontró una memoria USB sin identificación y fue entregada en coordinación.", createdAt: "2026-08-20T17:35:00-05:00", validUntil: "2026-08-20T18:10:00-05:00" },
+];

@@ -3,16 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { navigation } from "@/config/navigation";
+import { followUpNavigation, operationNavigation } from "@/config/navigation";
 
 type AppShellProps = { children: React.ReactNode };
-
-const followUp = [
-  { href: "/observaciones", label: "Observaciones" },
-  { href: "/limpieza", label: "Limpieza" },
-  { href: "/tareas", label: "Tareas operativas" },
-  { href: "/multas", label: "Multas" },
-];
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
@@ -32,9 +25,9 @@ export function AppShell({ children }: AppShellProps) {
         <div className="brand"><span className="brand-mark">U</span><span><strong>SGOAS</strong><small>Aulas de Software</small></span></div>
         <nav className="nav">
           <p className="nav-label">Operación</p>
-          {navigation.map(({ href, label }) => navLink(href, label))}
+          {operationNavigation.map(({ href, label }) => navLink(href, label))}
           <p className="nav-label">Seguimiento</p>
-          {followUp.map(({ href, label }) => navLink(href, label))}
+          {followUpNavigation.map(({ href, label }) => navLink(href, label))}
         </nav>
         <div className="sidebar-footer">
           {navLink("/reportes", "Reportes")}
@@ -45,11 +38,10 @@ export function AppShell({ children }: AppShellProps) {
       <section className="workspace">
         <header className="topbar">
           <button className="menu-button" type="button" aria-label="Abrir menú" aria-expanded={isMenuOpen} onClick={() => setIsMenuOpen(true)}>☰</button>
-          <span className="period">PERIODO 2026-1</span>
+          <span className="period">SEMESTRE 2026-3</span>
           <div className="date-time"><span>Lunes, 18 de agosto de 2026</span><time>08:00:00</time></div>
           <label className="search"><span aria-hidden="true">⌕</span><input type="search" placeholder="Buscar aula, docente, asignatura..." aria-label="Buscar en el sistema" /></label>
           <span className="topbar-spacer" />
-          <button className="notification-button" type="button" aria-label="Notificaciones">♢</button>
           <button className="profile" type="button"><span className="avatar">JR</span><span className="profile-copy"><strong>Jhon Rodríguez</strong><small>Técnico · Almacén</small></span></button>
         </header>
         <main>{children}</main>

@@ -85,7 +85,7 @@ export function AudiovisualsView() {
   return (
     <>
       <section className="page-heading audiovisual-heading">
-        <div><span className="page-kicker">Módulo P06</span><h1>Equipos Audiovisuales</h1><p>Control de inventario, préstamos, devoluciones y estado de equipos.</p></div>
+        <div><h1>Equipos Audiovisuales</h1><p>Control de inventario, préstamos, devoluciones y estado de equipos.</p></div>
         <button type="button" className="button-primary audiovisual-new" onClick={() => setLoanEquipment(equipment.find((item) => item.status === "DISPONIBLE") ?? null)}>+ Registrar préstamo</button>
       </section>
 
