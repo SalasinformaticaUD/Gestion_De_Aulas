@@ -124,7 +124,7 @@ export function TeacherLoansView() {
       </tbody></table></div>
     </section>
 
-    <aside className={styles.ruleNote}><span aria-hidden="true">i</span><p><strong>Reglas aplicadas por el Core:</strong> cada préstamo ocupa un bloque exacto de dos horas. Al aprobar, se comprueba nuevamente la disponibilidad del aula y se impiden cruces con préstamos aprobados o activos. Solo las solicitudes y aprobaciones pueden cancelarse.</p></aside>
+    
 
     {showRequest && <RequestLoanDialog loans={loans} onClose={() => setShowRequest(false)} onSubmit={createLoan} />}
   </>;

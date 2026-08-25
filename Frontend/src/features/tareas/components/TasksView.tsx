@@ -72,7 +72,7 @@ export function TasksView() {
   };
 
   return <>
-    <section className={`page-heading ${styles.heading}`}><div><span className={styles.kicker}>Flujo de trabajo</span><h1>Tareas Operativas</h1><p>Organice y actualice las actividades de mantenimiento y operación.</p></div><button type="button" className="button-primary" onClick={() => setEditor("new")}>+ Nueva tarea</button></section>
+    <section className={`page-heading ${styles.heading}`}><div><h1>Tareas Operativas</h1><p>Organice y actualice las actividades de mantenimiento y operación.</p></div><button type="button" className="button-primary" onClick={() => setEditor("new")}>+ Nueva tarea</button></section>
 
     <section className={styles.metrics} aria-label="Resumen de tareas operativas">{columns.map((column) => <Metric key={column.status} label={column.label} value={tasks.filter((task) => task.status === column.status).length} detail={column.detail} tone={column.status.toLocaleLowerCase()} />)}</section>
 
@@ -86,7 +86,7 @@ export function TasksView() {
       return <section key={column.status} className={`${styles.column} ${styles[`column_${column.status.toLocaleLowerCase()}`]} ${dragTarget === column.status && canReceive ? styles.dropReady : ""}`} onDragOver={(event) => { if (canReceive) { event.preventDefault(); setDragTarget(column.status); } }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragTarget(null); }} onDrop={(event) => { event.preventDefault(); dropTask(column.status); }}><header><div><i /><span><strong>{column.label}</strong><small>{column.detail}</small></span></div><b>{columnTasks.length}</b></header><div className={styles.cardStack}>{columnTasks.map((task) => <TaskCard key={task.id} task={task} dragging={draggedId === task.id} onEdit={() => setEditor(task)} onStatus={(status) => changeStatus(task, status)} onDragStart={(event) => { setDraggedId(task.id); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", task.id); }} onDragEnd={() => { setDraggedId(null); setDragTarget(null); }} />)}{columnTasks.length === 0 && <div className={styles.emptyColumn}>{dragTarget === column.status ? "Suelte la tarea aquí" : "No hay tareas en esta columna"}</div>}</div></section>;
     })}</section>
 
-    <aside className={styles.ruleNote}><span aria-hidden="true">i</span><p><strong>Asignación actual:</strong> el backend modela un único responsable opcional por tarea mediante <code>responsableId</code>. Las tareas que afectan disponibilidad deben indicar aula, inicio y fin. Las completadas y canceladas son estados terminales y no pueden arrastrarse a otra columna.</p></aside>
+    
     {editor && <TaskDialog item={editor === "new" ? undefined : editor} onClose={() => setEditor(null)} onSave={saveTask} />}
   </>;
 }
