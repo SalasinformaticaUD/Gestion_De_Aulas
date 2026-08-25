@@ -1,7 +1,8 @@
 # Informe 8 - BackCore
 
 FECHA: 24/08/2026  
-MONITOR: Pablo Garzon Gomez
+TURNO : TURNO: 06:00 p. m. - 10:00 p. m.  
+MONITOR: Juan Esteban Cañon Solorza 
 
 ## AVANCES
 
