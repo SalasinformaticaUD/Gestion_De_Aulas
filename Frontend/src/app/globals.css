@@ -312,3 +312,9 @@ html[data-theme="dark"] :is(.room-badge-reservada,.loan-status-solicitado,.loan-
 html[data-theme="dark"] .legend-issue,
 html[data-theme="dark"] :is(.room-badge-mantenimiento,.software-status-inactivo,.workstation-mantenimiento,.workstation-fuera-de-servicio,.equipment-status-mantenimiento,.loan-status-vencido,.auth-feedback-error) { color:#f29aa5; background:#3a1d23; border-color:#71333c; }
 html[data-theme="dark"] :is(.equipment-status-fuera-de-servicio,.loan-status-cancelado) { color:#c2c6ce; background:#30333a; }
+
+.paginacion-monitores { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px; color:var(--muted); background:var(--surface-soft); border-top:1px solid var(--line); font-size:13px; }
+.paginacion-monitores>div { display:flex; gap:7px; }
+.paginacion-monitores button { min-height:32px; padding:0 10px; border:1px solid var(--line); border-radius:6px; color:var(--ink); background:var(--surface); font-size:12px; font-weight:750; }
+.paginacion-monitores button:disabled { cursor:not-allowed; opacity:.42; }
+@media(max-width:560px){.paginacion-monitores{align-items:flex-start;flex-direction:column}.paginacion-monitores>div{width:100%}.paginacion-monitores button{flex:1}}

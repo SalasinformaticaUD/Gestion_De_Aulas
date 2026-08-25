@@ -10,7 +10,7 @@ export type ApplicationDefinition = {
 
 export const applications: Record<ApplicationKey, ApplicationDefinition> = {
   aulas: { key: "aulas", name: "Gestión de Aulas", description: "Control de horarios, ocupación, estados y solicitudes de reservas de aulas de software.", loginPath: "/login?app=aulas", destination: "/gestion-aulas" },
-  monitores: { key: "monitores", name: "Gestión de Monitores", description: "Asignación, turnos, asistencia y reportes semanales de los monitores de laboratorio.", loginPath: "/login?app=monitores", destination: process.env.NEXT_PUBLIC_MONITORES_APP_URL ?? "http://localhost:3002" },
+  monitores: { key: "monitores", name: "Gestión de Monitores", description: "Asignación, turnos, asistencia y reportes semanales de los monitores de laboratorio.", loginPath: "/login?app=monitores", destination: "/gestion-monitores" },
 };
 
 export function getApplication(key: string | null): ApplicationDefinition {
