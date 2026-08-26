@@ -70,10 +70,10 @@ Objetivo: implementar el flujo completo inicial del modulo mas independiente y p
 
 ### 1.6 Pruebas
 
-- [ ] Unit tests de prestamo con equipo disponible.
-- [ ] Unit tests de bloqueo con equipo prestado.
-- [ ] Unit tests de devolucion.
-- [ ] E2E de flujo completo: crear equipo, prestar, devolver.
+- [x] Unit tests de prestamo con equipo disponible.
+- [x] Unit tests de bloqueo con equipo prestado.
+- [x] Unit tests de devolucion.
+- [x] E2E de flujo completo: crear equipo, prestar, devolver.
 
 Criterio de cierre: la accion "Audiovisuales" del frontend puede abrir un flujo conectado a datos reales.
 
@@ -98,7 +98,7 @@ Objetivo: administrar catalogo de software y relacionarlo con aulas.
 
 - [X ] `CreateSoftwareDto`: nombre, version, descripcion.
 - [X ] `UpdateSoftwareDto`.
-- [ ] `AsignarSoftwareAulaDto`: softwareId o datos para crear y asociar, instaladoEn opcional.
+- [x] `AsignarSoftwareAulaDto`: softwareId o datos para crear y asociar, instaladoEn opcional.
 - [X ] Validar unicidad por nombre y version.
 
 ### 2.3 Reglas
@@ -114,12 +114,12 @@ Objetivo: administrar catalogo de software y relacionarlo con aulas.
 - [X ] Completar DTOs.
 - [X ] Servicio con Prisma.
 - [X ] Metodos de relacion con `AulaSoftware`.
-- [ ] Preparar endpoint para importacion futura desde archivo, sin implementarlo si no hay formato definido.
+- [x] Preparar endpoint para importacion futura desde archivo, sin implementarlo si no hay formato definido.
 
 ### 2.5 Pruebas
 
 - [X ] Unit tests de unicidad.
-- [ ] E2E de crear software y asignarlo a aula.
+- [x] E2E de crear software y asignarlo a aula.
 
 Criterio de cierre: la pestana "Software instalado" de aulas puede consumir API real.
 
@@ -162,8 +162,8 @@ Objetivo: administrar sanciones que afectan prestamos o practicas libres.
 
 ### 3.5 Pruebas
 
-- [ ] Unit test de multa activa.
-- [ ] E2E de crear, cumplir y consultar.
+- [x] Unit test de multa activa.
+- [x] E2E de crear, cumplir y consultar.
 
 Criterio de cierre: practicas libres puede consultar multas sin implementar su propia logica.
 
@@ -204,7 +204,7 @@ Objetivo: gestionar tareas de mantenimiento/operacion y alimentar disponibilidad
 ### 4.5 Pruebas
 
 - [x] Unit tests de reglas de estado.
-- [ ] E2E de crear tarea que afecta disponibilidad.
+- [x] E2E de crear tarea que afecta disponibilidad.
 
 Criterio de cierre: panel operativo puede mostrar tareas y disponibilidad puede bloquear por tareas.
 
@@ -342,9 +342,9 @@ Al final de cada sprint:
 
 - [x] Confirmar que `PrismaModule` y guards transversales siguen funcionando.
 - [x] Confirmar que no se rompio ningun endpoint del Core.
-- [ ] Publicar contratos listos para frontend.
-- [ ] Actualizar `backend/src/MODULES.md` si se agregan rutas.
-- [ ] Revisar con Core los metodos compartidos:
+- [x] Publicar contratos listos para frontend.
+- [x] Actualizar `backend/src/MODULES.md` si se agregan rutas.
+- [x] Revisar con Core los metodos compartidos:
   - multas activas;
   - tareas que afectan disponibilidad;
   - software por aula;

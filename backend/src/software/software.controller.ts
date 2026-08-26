@@ -55,6 +55,9 @@ export class SoftwareController {
     return this.softwareService.assignToAula({
       aulaId,
       softwareId: asignarSoftwareAulaDto.softwareId,
+      nombre: asignarSoftwareAulaDto.nombre,
+      version: asignarSoftwareAulaDto.version,
+      descripcion: asignarSoftwareAulaDto.descripcion,
       instaladoEn: asignarSoftwareAulaDto.instaladoEn,
     });
   }

@@ -118,6 +118,38 @@ describe('SoftwareService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it('crea o reutiliza el software indicado por nombre y versión al asociarlo', async () => {
+    prisma.aula.findUnique.mockResolvedValue({ id: 'aula-id' });
+    prisma.software.upsert.mockResolvedValue({ id: 'software-creado' });
+    prisma.aulaSoftware.create.mockResolvedValue({
+      aulaId: 'aula-id',
+      softwareId: 'software-creado',
+    });
+
+    await service.assignToAula({
+      aulaId: 'aula-id',
+      nombre: ' MATLAB ',
+      version: ' R2026a ',
+      descripcion: ' Cálculo ',
+      instaladoEn: '2026-08-26',
+    });
+
+    expect(prisma.software.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { nombre_version: { nombre: 'MATLAB', version: 'R2026a' } },
+      }),
+    );
+    expect(prisma.aulaSoftware.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          aulaId: 'aula-id',
+          softwareId: 'software-creado',
+          instaladoEn: new Date('2026-08-26'),
+        }),
+      }),
+    );
+  });
+
   it('bloquea la eliminación de software asociado a aulas', async () => {
     prisma.software.findUnique.mockResolvedValue({ id: 'software-id' });
     prisma.aulaSoftware.count.mockResolvedValue(1);

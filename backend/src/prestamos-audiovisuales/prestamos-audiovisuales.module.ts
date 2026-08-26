@@ -8,5 +8,6 @@ import { PrismaModule } from '../prisma/prisma.module';
   imports: [PrismaModule, AuditoriaModule],
   controllers: [PrestamosAudiovisualesController],
   providers: [PrestamosAudiovisualesService],
+  exports: [PrestamosAudiovisualesService],
 })
 export class PrestamosAudiovisualesModule {}

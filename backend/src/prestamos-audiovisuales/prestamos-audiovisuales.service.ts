@@ -228,6 +228,21 @@ export class PrestamosAudiovisualesService {
     });
   }
 
+  /** Contrato interno para Core: préstamos que ocupan un aula durante una fecha local. */
+  async findPrestamosPorAulaYDia(aulaId: string, fecha: string) {
+    const inicio = new Date(`${fecha}T00:00:00.000-05:00`);
+    const fin = new Date(`${fecha}T23:59:59.999-05:00`);
+    if (Number.isNaN(inicio.getTime()) || Number.isNaN(fin.getTime())) {
+      throw new BadRequestException('fecha debe tener formato YYYY-MM-DD.');
+    }
+    await this.validarAulaParaConsulta(aulaId);
+    return this.prisma.prestamoAudiovisual.findMany({
+      where: { aulaId, salidaEn: { gte: inicio, lte: fin } },
+      include: prestamoInclude,
+      orderBy: { salidaEn: 'asc' },
+    });
+  }
+
   async findOne(id: string) {
     await this.marcarVencidos();
     const prestamo = await this.prisma.prestamoAudiovisual.findUnique({
@@ -378,6 +393,14 @@ export class PrestamosAudiovisualesService {
     if (!usuario) {
       throw new NotFoundException('El usuario autenticado no existe.');
     }
+  }
+
+  private async validarAulaParaConsulta(aulaId: string) {
+    const aula = await this.prisma.aula.findUnique({
+      where: { id: aulaId },
+      select: { id: true },
+    });
+    if (!aula) throw new NotFoundException('El aula indicada no existe.');
   }
 
   private async reservarEquipos(tx: Prisma.TransactionClient, ids: string[]) {

@@ -104,12 +104,12 @@ export class SoftwareService {
   }
 
   async assignToAula(createAulaSoftwareDto: CreateAulaSoftwareDto) {
-    const { aulaId, softwareId, instaladoEn } = createAulaSoftwareDto;
+    const { aulaId, instaladoEn } = createAulaSoftwareDto;
 
-    await Promise.all([
-      this.ensureAulaExists(aulaId),
-      this.ensureSoftwareExists(softwareId),
-    ]);
+    await this.ensureAulaExists(aulaId);
+    const softwareId = await this.resolverSoftwareParaAsignacion(
+      createAulaSoftwareDto,
+    );
 
     try {
       return await this.prisma.aulaSoftware.create({
@@ -128,6 +128,27 @@ export class SoftwareService {
       }
       throw error;
     }
+  }
+
+  private async resolverSoftwareParaAsignacion(
+    dto: CreateAulaSoftwareDto,
+  ): Promise<string> {
+    if (dto.softwareId) {
+      await this.ensureSoftwareExists(dto.softwareId);
+      return dto.softwareId;
+    }
+    if (!dto.nombre || !dto.version) {
+      throw new NotFoundException(
+        'Debe indicar softwareId o nombre y versión del software.',
+      );
+    }
+    return (
+      await this.upsertCatalogEntry({
+        nombre: dto.nombre,
+        version: dto.version,
+        ...(dto.descripcion !== undefined && { descripcion: dto.descripcion }),
+      })
+    ).id;
   }
 
   async removeFromAula(aulaId: string, softwareId: string) {
