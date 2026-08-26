@@ -139,15 +139,23 @@ export class DisponibilidadAulasService {
     aula: AulaResumenDisponibilidad,
     bloque: BloqueDosHoras,
   ): Promise<DisponibilidadAula> {
-    const [restriccion, clase, prestamo, practica, tarea, siguienteActividad] =
-      await Promise.all([
-        this.buscarRestriccion(aula.id, bloque),
-        this.buscarClase(aula.id, bloque),
-        this.buscarPrestamoDocente(aula.id, bloque),
-        this.buscarPracticaLibre(aula.id, bloque),
-        this.buscarTarea(aula.id, bloque),
-        this.buscarSiguienteActividad(aula.id, bloque),
-      ]);
+    const [
+      restriccion,
+      clase,
+      prestamo,
+      practica,
+      tarea,
+      limpieza,
+      siguienteActividad,
+    ] = await Promise.all([
+      this.buscarRestriccion(aula.id, bloque),
+      this.buscarClase(aula.id, bloque),
+      this.buscarPrestamoDocente(aula.id, bloque),
+      this.buscarPracticaLibre(aula.id, bloque),
+      this.buscarTarea(aula.id, bloque),
+      this.buscarLimpiezaProgramada(aula.id, bloque),
+      this.buscarSiguienteActividad(aula.id, bloque),
+    ]);
 
     const fuentes: FuenteDisponibilidad[] = [];
 
@@ -214,6 +222,16 @@ export class DisponibilidadAulasService {
       });
     }
 
+    if (limpieza) {
+      fuentes.push({
+        tipo: 'limpieza-programada',
+        id: limpieza.id,
+        descripcion: limpieza.observacion
+          ? `Limpieza programada: ${limpieza.observacion}`
+          : 'Limpieza programada para este bloque.',
+      });
+    }
+
     const decision = this.resolverPrioridad({
       aula,
       restriccion: Boolean(restriccion),
@@ -221,6 +239,7 @@ export class DisponibilidadAulasService {
       prestamo: Boolean(prestamo),
       practica: Boolean(practica),
       tarea: Boolean(tarea),
+      limpieza: Boolean(limpieza),
     });
 
     return {
@@ -248,6 +267,7 @@ export class DisponibilidadAulasService {
     prestamo: boolean;
     practica: boolean;
     tarea: boolean;
+    limpieza: boolean;
   }): { estado: EstadoCalculadoDisponibilidad; motivo: string } {
     if (input.aula.estado === EstadoAula.MANTENIMIENTO) {
       return {
@@ -289,6 +309,12 @@ export class DisponibilidadAulasService {
       return {
         estado: 'bloqueada',
         motivo: 'Existe una tarea operativa que afecta la disponibilidad.',
+      };
+    }
+    if (input.limpieza) {
+      return {
+        estado: 'bloqueada',
+        motivo: 'Existe una limpieza programada durante el bloque.',
       };
     }
     return {
@@ -383,6 +409,16 @@ export class DisponibilidadAulasService {
         ],
       },
       orderBy: { inicio: 'asc' },
+    });
+  }
+
+  private buscarLimpiezaProgramada(aulaId: string, bloque: BloqueDosHoras) {
+    return this.prisma.limpieza.findFirst({
+      where: {
+        aulaId,
+        realizadaEn: { gte: bloque.inicio, lt: bloque.fin },
+      },
+      orderBy: { realizadaEn: 'asc' },
     });
   }
 
@@ -587,6 +623,7 @@ export class DisponibilidadAulasService {
       'prestamo-docente',
       'practica-libre',
       'tarea-operativa',
+      'limpieza-programada',
     ].indexOf(tipo);
   }
 

@@ -23,6 +23,7 @@ export const environment = {
     requiredInProduction('JWT_SECRET');
     requiredInProduction('FRONTEND_URL');
     requiredInProduction('MONITORES_SERVICE_TOKEN');
+    requiredInProduction('CREDENTIALS_ENCRYPTION_KEY');
     port();
   },
 };

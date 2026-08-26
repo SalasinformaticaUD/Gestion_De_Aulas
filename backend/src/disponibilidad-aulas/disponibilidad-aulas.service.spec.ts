@@ -11,6 +11,7 @@ type PrismaMock = {
   prestamoDocente: { findFirst: jest.Mock };
   practicaLibre: { findFirst: jest.Mock };
   tarea: { findFirst: jest.Mock };
+  limpieza: { findFirst: jest.Mock };
 };
 
 describe('DisponibilidadAulasService', () => {
@@ -41,6 +42,7 @@ describe('DisponibilidadAulasService', () => {
       prestamoDocente: { findFirst: jest.fn().mockResolvedValue(null) },
       practicaLibre: { findFirst: jest.fn().mockResolvedValue(null) },
       tarea: { findFirst: jest.fn().mockResolvedValue(null) },
+      limpieza: { findFirst: jest.fn().mockResolvedValue(null) },
     };
     observacionesService = {
       findRestriccionesVigentes: jest.fn().mockResolvedValue([]),
@@ -112,6 +114,21 @@ describe('DisponibilidadAulasService', () => {
       tipo: 'restriccion',
       id: 'restriccion-id',
       descripcion: 'Aula cerrada por mantenimiento de red',
+    });
+  });
+
+  it('bloquea el aula cuando existe una limpieza programada en el bloque', async () => {
+    prisma.limpieza.findFirst.mockResolvedValueOnce({
+      id: 'limpieza-id',
+      observacion: 'Limpieza profunda',
+    });
+
+    const result = await service.findOne(aula.id, bloque);
+
+    expect(result.estadoCalculado).toBe('bloqueada');
+    expect(result.fuentes[0]).toMatchObject({
+      tipo: 'limpieza-programada',
+      id: 'limpieza-id',
     });
   });
 

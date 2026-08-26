@@ -14,6 +14,7 @@ type PrismaMock = {
   prestamoDocente: { findFirst: jest.Mock };
   practicaLibre: { findFirst: jest.Mock };
   tarea: { findFirst: jest.Mock };
+  limpieza: { findFirst: jest.Mock };
 };
 
 describe('DisponibilidadAulasController (e2e)', () => {
@@ -32,6 +33,7 @@ describe('DisponibilidadAulasController (e2e)', () => {
     prestamoDocente: { findFirst: jest.fn() },
     practicaLibre: { findFirst: jest.fn() },
     tarea: { findFirst: jest.fn() },
+    limpieza: { findFirst: jest.fn() },
   };
   let app: INestApplication<App>;
 
@@ -58,6 +60,7 @@ describe('DisponibilidadAulasController (e2e)', () => {
     prisma.prestamoDocente.findFirst.mockResolvedValue(null);
     prisma.practicaLibre.findFirst.mockResolvedValue(null);
     prisma.tarea.findFirst.mockResolvedValue(null);
+    prisma.limpieza.findFirst.mockResolvedValue(null);
   });
 
   it('consulta todas las salas para un bloque de dos horas', async () => {
