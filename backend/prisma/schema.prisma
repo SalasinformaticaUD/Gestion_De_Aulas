@@ -61,6 +61,8 @@ enum EstadoTarea {
 enum EstadoCredencial {
   ACTIVA
   INACTIVA
+  PENDIENTE_ACTUALIZACION
+  FUERA_DE_USO
 }
 
 enum TipoObservacion {
@@ -99,6 +101,7 @@ model Usuario {
   multasImpuestas                  Multa[]               @relation("MultaImpuestaPor")
   multasCumplidas                  Multa[]               @relation("MultaCumplidaPor")
   multasAnuladas                   Multa[]               @relation("MultaAnuladaPor")
+  limpiezasRegistradas             Limpieza[]            @relation("RegistroLimpieza")
   creadoEn                         DateTime              @default(now())
   actualizadoEn                    DateTime              @updatedAt
 }
@@ -485,11 +488,17 @@ model Tarea {
 }
 
 model Limpieza {
-  id          String   @id @default(uuid()) @db.Uuid
-  aulaId      String   @db.Uuid
-  realizadaEn DateTime @default(now())
-  observacion String?
-  aula        Aula     @relation(fields: [aulaId], references: [id])
+  id            String   @id @default(uuid()) @db.Uuid
+  aulaId        String   @db.Uuid
+  responsableId String?  @db.Uuid
+  realizadaEn   DateTime @default(now())
+  observacion   String?
+  aula          Aula     @relation(fields: [aulaId], references: [id])
+  responsable   Usuario? @relation("RegistroLimpieza", fields: [responsableId], references: [id], onDelete: SetNull)
+
+  @@index([aulaId, realizadaEn])
+  @@index([realizadaEn])
+  @@index([responsableId])
 }
 
 model CredencialOperativa {

@@ -9,7 +9,8 @@ export type TipoFuenteDisponibilidad =
   | 'clase-programada'
   | 'prestamo-docente'
   | 'practica-libre'
-  | 'tarea-operativa';
+  | 'tarea-operativa'
+  | 'limpieza-programada';
 
 export class AulaResumenDisponibilidad {
   declare id: string;

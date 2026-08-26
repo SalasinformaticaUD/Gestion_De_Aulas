@@ -216,34 +216,34 @@ Objetivo: registrar limpiezas, novedades e historial operativo.
 
 ### 5.1 Contratos
 
-- [ ] `GET /limpieza-aulas?aulaId=&desde=&hasta=`
-- [ ] `GET /limpieza-aulas/:id`
-- [ ] `POST /limpieza-aulas`
-- [ ] `PATCH /limpieza-aulas/:id`
+- [x] `GET /limpieza-aulas?aulaId=&desde=&hasta=`
+- [x] `GET /limpieza-aulas/:id`
+- [x] `POST /limpieza-aulas`
+- [x] `PATCH /limpieza-aulas/:id`
 
 ### 5.2 DTOs
 
-- [ ] `CreateLimpiezaAulaDto`: aulaId, realizadaEn, observacion.
-- [ ] `UpdateLimpiezaAulaDto`.
+- [x] `CreateLimpiezaAulaDto`: aulaId, realizadaEn, observacion.
+- [x] `UpdateLimpiezaAulaDto`.
 
 ### 5.3 Reglas
 
-- [ ] La limpieza debe estar asociada a un aula existente.
-- [ ] Mantener historial.
-- [ ] No borrar fisicamente registros de limpieza.
-- [ ] Permitir consulta por fecha para reportes.
+- [x] La limpieza debe estar asociada a un aula existente.
+- [x] Mantener historial.
+- [x] No borrar fisicamente registros de limpieza.
+- [x] Permitir consulta por fecha para reportes.
 
 ### 5.4 Implementacion
 
-- [ ] Completar DTOs.
-- [ ] Servicio con Prisma.
-- [ ] Agregar filtros por aula y rango.
-- [ ] Preparar resumen para panel operativo.
+- [x] Completar DTOs.
+- [x] Servicio con Prisma.
+- [x] Agregar filtros por aula y rango.
+- [x] Preparar resumen para panel operativo.
 
 ### 5.5 Pruebas
 
-- [ ] Unit tests de filtros.
-- [ ] E2E de registrar limpieza.
+- [x] Unit tests de filtros.
+- [x] E2E de registrar limpieza.
 
 Criterio de cierre: panel operativo y reportes pueden usar historial de limpieza.
 
@@ -255,37 +255,37 @@ Objetivo: administrar credenciales institucionales de forma segura.
 
 ### 6.1 Contratos
 
-- [ ] `GET /credenciales`
-- [ ] `GET /credenciales/:id`
-- [ ] `POST /credenciales`
-- [ ] `PATCH /credenciales/:id`
-- [ ] `PATCH /credenciales/:id/estado`
-- [ ] `POST /credenciales/:id/accesos`
-- [ ] `GET /credenciales/:id/secreto`
+- [x] `GET /credenciales`
+- [x] `GET /credenciales/:id`
+- [x] `POST /credenciales`
+- [x] `PATCH /credenciales/:id`
+- [x] `PATCH /credenciales/:id/estado`
+- [x] `POST /credenciales/:id/accesos`
+- [x] `GET /credenciales/:id/secreto`
 
 ### 6.2 Reglas de seguridad
 
-- [ ] Nunca devolver `secretoCifrado` en listados.
-- [ ] El secreto solo se revela por endpoint especifico y permiso explicito.
-- [ ] Guardar secreto cifrado, no texto plano.
-- [ ] Registrar auditoria de consulta de secreto sin guardar el secreto en auditoria.
-- [ ] Separar permisos de ver metadata, ver secreto y editar.
+- [x] Nunca devolver `secretoCifrado` en listados.
+- [x] El secreto solo se revela por endpoint especifico y permiso explicito.
+- [x] Guardar secreto cifrado, no texto plano.
+- [x] Registrar auditoria de consulta de secreto sin guardar el secreto en auditoria.
+- [x] Separar permisos de ver metadata, ver secreto y editar.
 
 ### 6.3 Implementacion
 
-- [ ] Definir variable de entorno para clave de cifrado, por ejemplo `CREDENTIALS_ENCRYPTION_KEY`.
-- [ ] Crear servicio de cifrado con `crypto` de Node.
-- [ ] Completar DTOs.
-- [ ] Implementar CRUD de metadata.
-- [ ] Implementar gestion de accesos con `AccesoCredencial`.
-- [ ] Implementar endpoint de revelado con guard de permisos.
+- [x] Definir variable de entorno para clave de cifrado, por ejemplo `CREDENTIALS_ENCRYPTION_KEY`.
+- [x] Crear servicio de cifrado con `crypto` de Node.
+- [x] Completar DTOs.
+- [x] Implementar CRUD de metadata.
+- [x] Implementar gestion de accesos con `AccesoCredencial`.
+- [x] Implementar endpoint de revelado con guard de permisos.
 
 ### 6.4 Pruebas
 
-- [ ] Unit test de cifrado/descifrado.
-- [ ] Unit test de sanitizacion de respuestas.
-- [ ] E2E de crear credencial sin exponer secreto.
-- [ ] E2E de revelar secreto solo con permiso.
+- [x] Unit test de cifrado/descifrado.
+- [x] Unit test de sanitizacion de respuestas.
+- [x] E2E de crear credencial sin exponer secreto.
+- [x] E2E de revelar secreto solo con permiso.
 
 Criterio de cierre: el modulo puede usarse en piloto sin exponer secretos por accidente.
 

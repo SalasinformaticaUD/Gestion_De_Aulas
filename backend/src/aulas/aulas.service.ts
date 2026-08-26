@@ -62,7 +62,12 @@ const aulaPublicaSelect = {
     take: 5,
   },
   limpiezas: {
-    select: { id: true, realizadaEn: true, observacion: true },
+    select: {
+      id: true,
+      realizadaEn: true,
+      observacion: true,
+      responsable: { select: { nombreCompleto: true } },
+    },
     orderBy: { realizadaEn: 'desc' },
     take: 5,
   },
@@ -437,7 +442,7 @@ export class AulasService {
         descripcion: limpieza.observacion
           ? `Limpieza: ${limpieza.observacion}`
           : 'Limpieza registrada.',
-        responsable: null,
+        responsable: limpieza.responsable?.nombreCompleto ?? null,
       })),
       ...aula.practicasLibres.map((practica) => ({
         id: `practica:${practica.id}`,

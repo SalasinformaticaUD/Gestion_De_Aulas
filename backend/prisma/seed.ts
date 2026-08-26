@@ -54,7 +54,10 @@ async function main() {
       update: { nombre, activo: true },
       create: { codigo, nombre },
     });
-    for (const accion of acciones) {
+    for (const accion of [
+      ...acciones,
+      ...(codigo === 'CREDENCIALES' ? ['VER_SECRETO'] : []),
+    ]) {
       const codigoPermiso = `${codigo}_${accion}`;
       await prisma.permiso.upsert({
         where: { codigo: codigoPermiso },

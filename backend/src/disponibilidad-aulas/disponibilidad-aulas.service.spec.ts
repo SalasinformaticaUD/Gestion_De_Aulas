@@ -6,6 +6,12 @@ import { DisponibilidadAulasService } from './disponibilidad-aulas.service';
 
 type PrismaMock = {
   aula: { findMany: jest.Mock; findUnique: jest.Mock };
+  observacion: { findFirst: jest.Mock };
+  claseProgramada: { findFirst: jest.Mock };
+  prestamoDocente: { findFirst: jest.Mock };
+  practicaLibre: { findFirst: jest.Mock };
+  tarea: { findFirst: jest.Mock };
+  limpieza: { findFirst: jest.Mock };
   observacion: { findFirst: jest.Mock; findMany: jest.Mock };
   claseProgramada: { findFirst: jest.Mock; findMany: jest.Mock };
   prestamoDocente: { findFirst: jest.Mock; findMany: jest.Mock };
@@ -36,6 +42,12 @@ describe('DisponibilidadAulasService', () => {
         findMany: jest.fn().mockResolvedValue([aula]),
         findUnique: jest.fn().mockResolvedValue(aula),
       },
+      observacion: { findFirst: jest.fn().mockResolvedValue(null) },
+      claseProgramada: { findFirst: jest.fn().mockResolvedValue(null) },
+      prestamoDocente: { findFirst: jest.fn().mockResolvedValue(null) },
+      practicaLibre: { findFirst: jest.fn().mockResolvedValue(null) },
+      tarea: { findFirst: jest.fn().mockResolvedValue(null) },
+      limpieza: { findFirst: jest.fn().mockResolvedValue(null) },
       observacion: {
         findFirst: jest.fn().mockResolvedValue(null),
         findMany: jest.fn().mockResolvedValue([]),
@@ -127,6 +139,21 @@ describe('DisponibilidadAulasService', () => {
       tipo: 'restriccion',
       id: 'restriccion-id',
       descripcion: 'Aula cerrada por mantenimiento de red',
+    });
+  });
+
+  it('bloquea el aula cuando existe una limpieza programada en el bloque', async () => {
+    prisma.limpieza.findFirst.mockResolvedValueOnce({
+      id: 'limpieza-id',
+      observacion: 'Limpieza profunda',
+    });
+
+    const result = await service.findOne(aula.id, bloque);
+
+    expect(result.estadoCalculado).toBe('bloqueada');
+    expect(result.fuentes[0]).toMatchObject({
+      tipo: 'limpieza-programada',
+      id: 'limpieza-id',
     });
   });
 
