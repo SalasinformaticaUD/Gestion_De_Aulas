@@ -18,6 +18,7 @@ import { CreateMultaDto } from './dto/create-multa.dto';
 import { CreateMotivoMultaDto } from './dto/create-motivo-multa.dto';
 import { CumplirMultaDto } from './dto/cumplir-multa.dto';
 import { AnularMultaDto } from './dto/anular-multa.dto';
+import { UpdateMultaDto } from './dto/update-multa.dto';
 
 @RequireModule(MODULOS.MULTAS)
 @Controller('multas')
@@ -62,6 +63,16 @@ export class MultasController {
   @RequirePermissions('MULTAS_LEER')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.multasService.findOne(id);
+  }
+
+  @Patch(':id')
+  @RequirePermissions('MULTAS_ACTUALIZAR')
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateMultaDto,
+    @CurrentUser() usuario?: UsuarioAutenticado,
+  ) {
+    return this.multasService.update(id, dto, usuario?.id);
   }
 
   @Patch(':id/cumplir')

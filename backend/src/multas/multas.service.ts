@@ -11,6 +11,7 @@ import { AnularMultaDto } from './dto/anular-multa.dto';
 import { CumplirMultaDto } from './dto/cumplir-multa.dto';
 import { CreateMotivoMultaDto } from './dto/create-motivo-multa.dto';
 import { CreateMultaDto } from './dto/create-multa.dto';
+import { UpdateMultaDto } from './dto/update-multa.dto';
 
 const includeMulta = {
   estudiante: { select: { id: true, codigo: true, nombre: true } },
@@ -125,6 +126,36 @@ export class MultasService {
     return this.prisma.motivoMulta.findMany({
       include: { _count: { select: { multas: true } } },
       orderBy: { nombre: 'asc' },
+    });
+  }
+
+  async update(id: string, dto: UpdateMultaDto, usuarioId?: string) {
+    const previa = await this.findOne(id);
+    if (previa.estado !== EstadoMulta.ACTIVA)
+      throw new ConflictException('Solo una multa activa puede editarse.');
+    if (dto.motivoId) {
+      const motivo = await this.prisma.motivoMulta.findUnique({
+        where: { id: dto.motivoId },
+        select: { id: true },
+      });
+      if (!motivo) throw new NotFoundException('El motivo de multa no existe.');
+    }
+    const multa = await this.prisma.multa.update({
+      where: { id },
+      data: {
+        ...(dto.motivoId && { motivoId: dto.motivoId }),
+        ...(dto.descripcion !== undefined && { descripcion: dto.descripcion }),
+      },
+      include: includeMulta,
+    });
+    await this.registrar(usuarioId, id, 'UPDATE', previa, multa);
+    return multa;
+  }
+
+  tieneMultaActiva(estudianteId: string) {
+    return this.prisma.multa.findFirst({
+      where: { estudianteId, estado: EstadoMulta.ACTIVA },
+      select: { id: true, fecha: true, motivo: { select: { nombre: true } } },
     });
   }
 

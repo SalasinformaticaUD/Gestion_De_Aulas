@@ -8,5 +8,6 @@ import { AuditoriaModule } from '../auditoria/auditoria.module';
   imports: [PrismaModule, AuditoriaModule],
   controllers: [MultasController],
   providers: [MultasService],
+  exports: [MultasService],
 })
 export class MultasModule {}

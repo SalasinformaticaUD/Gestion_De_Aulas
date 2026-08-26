@@ -6,11 +6,6 @@ import { DisponibilidadAulasService } from './disponibilidad-aulas.service';
 
 type PrismaMock = {
   aula: { findMany: jest.Mock; findUnique: jest.Mock };
-  observacion: { findFirst: jest.Mock };
-  claseProgramada: { findFirst: jest.Mock };
-  prestamoDocente: { findFirst: jest.Mock };
-  practicaLibre: { findFirst: jest.Mock };
-  tarea: { findFirst: jest.Mock };
   limpieza: { findFirst: jest.Mock };
   observacion: { findFirst: jest.Mock; findMany: jest.Mock };
   claseProgramada: { findFirst: jest.Mock; findMany: jest.Mock };
@@ -42,11 +37,6 @@ describe('DisponibilidadAulasService', () => {
         findMany: jest.fn().mockResolvedValue([aula]),
         findUnique: jest.fn().mockResolvedValue(aula),
       },
-      observacion: { findFirst: jest.fn().mockResolvedValue(null) },
-      claseProgramada: { findFirst: jest.fn().mockResolvedValue(null) },
-      prestamoDocente: { findFirst: jest.fn().mockResolvedValue(null) },
-      practicaLibre: { findFirst: jest.fn().mockResolvedValue(null) },
-      tarea: { findFirst: jest.fn().mockResolvedValue(null) },
       limpieza: { findFirst: jest.fn().mockResolvedValue(null) },
       observacion: {
         findFirst: jest.fn().mockResolvedValue(null),

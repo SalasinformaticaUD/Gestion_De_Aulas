@@ -5,12 +5,20 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
+  Query,
+  ParseUUIDPipe,
 } from '@nestjs/common';
+import { MODULOS } from '../auth/auth.constants';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { RequireModule } from '../auth/decorators/require-module.decorator';
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
+import type { UsuarioAutenticado } from '../auth/auth.types';
 import { TareasOperativasService } from './tareas-operativas.service';
 import { CreateTareasOperativaDto } from './dto/create-tareas-operativa.dto';
 import { UpdateTareasOperativaDto } from './dto/update-tareas-operativa.dto';
+import { CambiarEstadoTareaDto, FindTareasDto } from './dto/tareas.dto';
 
+@RequireModule(MODULOS.TAREAS)
 @Controller('tareas-operativas')
 export class TareasOperativasController {
   constructor(
@@ -18,30 +26,55 @@ export class TareasOperativasController {
   ) {}
 
   @Post()
-  create(@Body() createTareasOperativaDto: CreateTareasOperativaDto) {
-    return this.tareasOperativasService.create(createTareasOperativaDto);
+  @RequirePermissions('TAREAS_CREAR')
+  create(
+    @Body() createTareasOperativaDto: CreateTareasOperativaDto,
+    @CurrentUser() usuario?: UsuarioAutenticado,
+  ) {
+    return this.tareasOperativasService.create(
+      createTareasOperativaDto,
+      usuario?.id,
+    );
   }
 
   @Get()
-  findAll() {
-    return this.tareasOperativasService.findAll();
+  @RequirePermissions('TAREAS_LEER')
+  findAll(@Query() dto: FindTareasDto) {
+    return this.tareasOperativasService.findAll(dto);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  @RequirePermissions('TAREAS_LEER')
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.tareasOperativasService.findOne(id);
   }
 
   @Patch(':id')
+  @RequirePermissions('TAREAS_ACTUALIZAR')
   update(
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() updateTareasOperativaDto: UpdateTareasOperativaDto,
+    @CurrentUser() usuario?: UsuarioAutenticado,
   ) {
-    return this.tareasOperativasService.update(id, updateTareasOperativaDto);
+    return this.tareasOperativasService.update(
+      id,
+      updateTareasOperativaDto,
+      usuario?.id,
+    );
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.tareasOperativasService.remove(id);
+  @Patch(':id/estado')
+  @RequirePermissions('TAREAS_ACTUALIZAR')
+  cambiarEstado(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CambiarEstadoTareaDto,
+    @CurrentUser() usuario?: UsuarioAutenticado,
+  ) {
+    return this.tareasOperativasService.cambiarEstado(
+      id,
+      dto.estado,
+      usuario?.id,
+      usuario?.roles.includes('ADMINISTRADOR') ?? false,
+    );
   }
 }

@@ -15,7 +15,7 @@ Los modulos principales de este frente son prestamos audiovisuales, software ins
 - [ ] No exponer secretos de credenciales operativas.
 - [ ] No eliminar registros historicos importantes.
 - [ ] Mantener contratos documentados para que frontend pueda conectar modulo por modulo.
-- [ ] Cada fase debe cerrar con `npm test -- --runInBand` y `npx tsc --noEmit --incremental false`.
+- [x] Cada fase debe cerrar con `npm test -- --runInBand` y `npx tsc --noEmit --incremental false`.
 - [ ] Si una dependencia del Core no esta lista, usar interfaz/servicio mockeable temporal y dejar marcado el punto de reemplazo.
 
 ---
@@ -143,7 +143,7 @@ Objetivo: administrar sanciones que afectan prestamos o practicas libres.
 
 - [X ] `CreateMotivoMultaDto`: nombre, descripcion.
 - [X ] `CreateMultaDto`: estudianteId o codigoEstudiante, motivoId, descripcion.
-- [ ] `UpdateMultaDto` para cambios administrativos permitidos.
+- [x] `UpdateMultaDto` para cambios administrativos permitidos.
 
 ### 3.3 Reglas
 
@@ -155,9 +155,9 @@ Objetivo: administrar sanciones que afectan prestamos o practicas libres.
 
 ### 3.4 Implementacion
 
-- [ ] Completar DTOs.
+- [x] Completar DTOs.
 - [X ] Servicio con Prisma.
-- [ ] Metodo `tieneMultaActiva(estudianteId)` exportable para Core.
+- [x] Metodo `tieneMultaActiva(estudianteId)` exportable para Core.
 - [X ] Consultas por codigo de estudiante.
 
 ### 3.5 Pruebas
@@ -175,35 +175,35 @@ Objetivo: gestionar tareas de mantenimiento/operacion y alimentar disponibilidad
 
 ### 4.1 Contratos
 
-- [ ] `GET /tareas-operativas?estado=&responsableId=&aulaId=&fecha=`
-- [ ] `GET /tareas-operativas/:id`
-- [ ] `POST /tareas-operativas`
-- [ ] `PATCH /tareas-operativas/:id`
-- [ ] `PATCH /tareas-operativas/:id/estado`
+- [x] `GET /tareas-operativas?estado=&responsableId=&aulaId=&fecha=`
+- [x] `GET /tareas-operativas/:id`
+- [x] `POST /tareas-operativas`
+- [x] `PATCH /tareas-operativas/:id`
+- [x] `PATCH /tareas-operativas/:id/estado`
 
 ### 4.2 DTOs
 
-- [ ] `CreateTareasOperativaDto`: aulaId opcional, responsableId opcional, titulo, descripcion, afectaDisponibilidad, inicio, fin.
-- [ ] `UpdateTareasOperativaDto`.
-- [ ] `CambiarEstadoTareaDto`: estado.
+- [x] `CreateTareasOperativaDto`: aulaId opcional, responsableId opcional, titulo, descripcion, afectaDisponibilidad, inicio, fin.
+- [x] `UpdateTareasOperativaDto`.
+- [x] `CambiarEstadoTareaDto`: estado.
 
 ### 4.3 Reglas
 
-- [ ] Si `afectaDisponibilidad` es true, debe tener aula, inicio y fin.
-- [ ] No marcar completada una tarea cancelada.
-- [ ] No cancelar una tarea completada sin permiso administrativo.
-- [ ] Las tareas activas con `afectaDisponibilidad` deben poder consultarse por disponibilidad.
+- [x] Si `afectaDisponibilidad` es true, debe tener aula, inicio y fin.
+- [x] No marcar completada una tarea cancelada.
+- [x] No cancelar una tarea completada sin permiso administrativo.
+- [x] Las tareas activas con `afectaDisponibilidad` deben poder consultarse por disponibilidad.
 
 ### 4.4 Implementacion
 
-- [ ] Completar DTOs.
-- [ ] Servicio con Prisma.
-- [ ] Metodo `findTareasQueAfectanDisponibilidad(aulaId, rango)`.
-- [ ] Integrar con usuarios/responsables cuando Plataforma entregue usuarios reales.
+- [x] Completar DTOs.
+- [x] Servicio con Prisma.
+- [x] Metodo `findTareasQueAfectanDisponibilidad(aulaId, rango)`.
+- [x] Integrar con usuarios/responsables cuando Plataforma entregue usuarios reales.
 
 ### 4.5 Pruebas
 
-- [ ] Unit tests de reglas de estado.
+- [x] Unit tests de reglas de estado.
 - [ ] E2E de crear tarea que afecta disponibilidad.
 
 Criterio de cierre: panel operativo puede mostrar tareas y disponibilidad puede bloquear por tareas.
@@ -297,40 +297,40 @@ Objetivo: generar consultas y formatos operativos sin bloquear el MVP.
 
 ### 7.1 Alcance inicial
 
-- [ ] Reporte de uso de aulas por periodo.
-- [ ] Reporte de practicas libres.
-- [ ] Reporte de prestamos audiovisuales.
-- [ ] Reporte de asistencia docente.
-- [ ] Reporte de multas.
-- [ ] Reporte de limpieza.
+- [x] Reporte de uso de aulas por periodo.
+- [x] Reporte de practicas libres.
+- [x] Reporte de prestamos audiovisuales.
+- [x] Reporte de asistencia docente.
+- [x] Reporte de multas.
+- [x] Reporte de limpieza.
 
 ### 7.2 Contratos
 
-- [ ] `GET /reportes/uso-aulas?desde=&hasta=`
-- [ ] `GET /reportes/practicas-libres?desde=&hasta=`
-- [ ] `GET /reportes/prestamos-audiovisuales?desde=&hasta=`
-- [ ] `GET /reportes/asistencia-docente?desde=&hasta=`
-- [ ] `GET /reportes/multas?desde=&hasta=`
-- [ ] `GET /reportes/limpieza?desde=&hasta=`
+- [x] `GET /reportes/uso-aulas?desde=&hasta=`
+- [x] `GET /reportes/practicas-libres?desde=&hasta=`
+- [x] `GET /reportes/prestamos-audiovisuales?desde=&hasta=`
+- [x] `GET /reportes/asistencia-docente?desde=&hasta=`
+- [x] `GET /reportes/multas?desde=&hasta=`
+- [x] `GET /reportes/limpieza?desde=&hasta=`
 
 ### 7.3 Formatos
 
-- [ ] Primera entrega: JSON estructurado para frontend.
-- [ ] Segunda entrega: CSV si el equipo lo necesita.
+- [x] Primera entrega: JSON estructurado para frontend.
+- [x] Segunda entrega: CSV si el equipo lo necesita.
 - [ ] Tercera entrega: PDF/formatos SIGUD cuando el formato institucional este definido.
 
 ### 7.4 Implementacion
 
-- [ ] Completar DTOs de filtros.
-- [ ] Servicio con consultas agregadas de Prisma.
-- [ ] No duplicar calculos del Core; consumir servicios cuando aplique.
-- [ ] Paginacion para reportes detallados.
-- [ ] Validacion de rangos de fecha.
+- [x] Completar DTOs de filtros.
+- [x] Servicio con consultas agregadas de Prisma.
+- [x] No duplicar calculos del Core; consumir servicios cuando aplique.
+- [x] Paginacion para reportes detallados.
+- [x] Validacion de rangos de fecha.
 
 ### 7.5 Pruebas
 
-- [ ] Unit tests de filtros.
-- [ ] E2E de un reporte JSON por modulo implementado.
+- [x] Unit tests de filtros.
+- [x] E2E de un reporte JSON por modulo implementado.
 
 Criterio de cierre: se pueden generar informes operativos basicos para la prueba piloto.
 
@@ -340,8 +340,8 @@ Criterio de cierre: se pueden generar informes operativos basicos para la prueba
 
 Al final de cada sprint:
 
-- [ ] Confirmar que `PrismaModule` y guards transversales siguen funcionando.
-- [ ] Confirmar que no se rompio ningun endpoint del Core.
+- [x] Confirmar que `PrismaModule` y guards transversales siguen funcionando.
+- [x] Confirmar que no se rompio ningun endpoint del Core.
 - [ ] Publicar contratos listos para frontend.
 - [ ] Actualizar `backend/src/MODULES.md` si se agregan rutas.
 - [ ] Revisar con Core los metodos compartidos:
@@ -350,7 +350,7 @@ Al final de cada sprint:
   - software por aula;
   - prestamos audiovisuales por aula/dia;
   - limpieza para panel.
-- [ ] Ejecutar pruebas completas del backend.
+- [x] Ejecutar pruebas completas del backend.
 
 ---
 
