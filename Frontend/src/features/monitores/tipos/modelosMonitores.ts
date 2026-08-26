@@ -1,4 +1,4 @@
-export type DependenciaMonitor = "Aulas de Software" | "Laboratorios de Ingeniería" | "Soporte Tecnológico";
+export type DependenciaMonitor = string;
 export type EstadoHoraExtra = "PENDIENTE" | "APROBADA" | "RECHAZADA" | "NO_APLICA";
 
 export type Monitor = {
@@ -6,7 +6,7 @@ export type Monitor = {
   nombre: string;
   codigo: string;
   dependencia: DependenciaMonitor;
-  correo: string;
+  activo: boolean;
 };
 
 export type ResumenMonitor = {
@@ -15,6 +15,8 @@ export type ResumenMonitor = {
   horasExtraAprobadas: number;
   horasExtraPendientes: number;
   horasAnotaciones: number;
+  retrasos?: number;
+  tieneMemorando?: boolean;
 };
 
 export type SesionMonitor = {
@@ -35,8 +37,8 @@ export type AnotacionMonitor = {
   id: string;
   monitorId: string;
   fecha: string;
-  tipo: "VIRTUAL" | "PERMISO" | "CORRECCION" | "OTRA";
-  accion: "SUMAR" | "DESCONTAR";
+  tipo: "OLVIDO_REGISTRO" | "HORAS_VIRTUALES" | "PERMISO" | "NOVEDAD";
+  accion: "SUMAR" | "DESCONTAR" | "ANOTAR";
   horas: number;
   motivo: string;
   responsable: string;

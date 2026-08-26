@@ -1,2 +1,2 @@
-import { ImportacionAsistencia } from "@/features/monitores/componentes/ImportacionAsistencia";
-export default function PaginaImportacionAsistencia() { return <ImportacionAsistencia />; }
+import { ImportarRegistros } from "@/features/monitores/componentes/ImportarRegistros";
+export default function PaginaImportacionAsistencia() { return <ImportarRegistros />; }

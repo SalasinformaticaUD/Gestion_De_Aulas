@@ -1,2 +1,2 @@
-import { PanelLider } from "@/features/monitores/componentes/PanelLider";
-export default function PaginaPanelMonitores() { return <PanelLider />; }
+import { PanelMonitoresDependencias } from "@/features/monitores/componentes/PanelMonitoresDependencias";
+export default function PaginaPanelMonitores() { return <PanelMonitoresDependencias />; }

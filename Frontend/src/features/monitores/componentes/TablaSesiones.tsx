@@ -2,7 +2,7 @@
 import type { SesionMonitor } from "@/features/monitores/tipos/modelosMonitores";
 import { usarPaginacion } from "@/features/monitores/ganchos/usarPaginacion";
 import { Paginacion } from "./Paginacion";
-import estilos from "./VistasMonitores.module.css";
+import estilos from "./SistemaVisualMonitores.module.css";
 
 const etiquetas = { PENDIENTE:"Pendiente", APROBADA:"Aprobada", RECHAZADA:"Rechazada", NO_APLICA:"No aplica" } as const;
 export function TablaSesiones({ sesiones }: { sesiones:SesionMonitor[] }) {

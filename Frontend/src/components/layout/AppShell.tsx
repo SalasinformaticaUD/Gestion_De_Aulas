@@ -54,6 +54,11 @@ export function AppShell({ children }: AppShellProps) {
           <p className="nav-label">Seguimiento</p>
           {followUpNavigation.map(({ href, label }) => navLink(href, label))}
         </nav>
+        <footer className="sidebar-footer">
+          <Link href="/" className="nav-link" onClick={closeMenu}>
+            <span className="nav-icon" aria-hidden="true">←</span>Volver al inicio
+          </Link>
+        </footer>
       </aside>
       <section className="workspace">
         <header className="topbar">

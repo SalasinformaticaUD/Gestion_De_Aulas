@@ -1,2 +1,2 @@
-import { RevisionHorasExtra } from "@/features/monitores/componentes/RevisionHorasExtra";
-export default function PaginaHorasExtra() { return <RevisionHorasExtra />; }
+import { HorasExtraConRegistro } from "@/features/monitores/componentes/HorasExtraConRegistro";
+export default function PaginaHorasExtra() { return <HorasExtraConRegistro />; }

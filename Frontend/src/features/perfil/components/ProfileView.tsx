@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { applyTheme, defaultProfile, getInitials, loadProfile, loadTheme, saveProfile, type ThemePreference, type UserProfile } from "@/features/perfil/lib/profile";
+import { obtenerSesion } from "@/features/auth/lib/sesion";
 import styles from "./ProfileView.module.css";
 
 export function ProfileView() {
@@ -11,7 +12,7 @@ export function ProfileView() {
   const [passwordNotice, setPasswordNotice] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { setProfile(loadProfile()); setTheme(loadTheme()); }, []);
+  useEffect(() => { const local=loadProfile();const usuario=obtenerSesion()?.usuario;setProfile(usuario?{...local,fullName:usuario.nombreCompleto,email:usuario.correo,username:usuario.nombreUsuario,role:usuario.cargo??usuario.roles.join(", "),department:usuario.dependencia?.nombre??"Sin dependencia"}:local);setTheme(loadTheme()); }, []);
 
   const selectTheme = (next: ThemePreference) => { setTheme(next); applyTheme(next); };
   const updatePhoto = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,7 +65,7 @@ function PasswordSection({ notice, onNotice }: { notice: string | null; onNotice
     event.preventDefault();
     if (!currentPassword || newPassword.length < 10 || mismatch) return;
     setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
-    onNotice("Contraseña actualizada correctamente. Ningún valor fue almacenado en el navegador.");
+    onNotice("El backend actual todavía no expone un endpoint para cambiar la contraseña. No se envió ni almacenó ningún valor.");
   };
   return <section className={styles.profileSection}><header><div><span>02</span><div><h2>Cambiar contraseña</h2><p>Utilice una clave institucional segura y diferente a la actual.</p></div></div><b>Operación protegida</b></header><form className={styles.passwordForm} onSubmit={submit}><label><span>Contraseña actual</span><input type="password" value={currentPassword} onChange={(event) => { setCurrentPassword(event.target.value); onNotice(null); }} autoComplete="current-password" required /></label><div><label><span>Nueva contraseña</span><input type="password" value={newPassword} onChange={(event) => { setNewPassword(event.target.value); onNotice(null); }} minLength={10} maxLength={128} autoComplete="new-password" required /><small>Mínimo 10 caracteres.</small></label><label><span>Confirmar contraseña</span><input type="password" value={confirmPassword} onChange={(event) => { setConfirmPassword(event.target.value); onNotice(null); }} minLength={10} maxLength={128} autoComplete="new-password" required />{mismatch && <small className={styles.fieldError}>Las contraseñas no coinciden.</small>}</label></div>{notice && <p className={styles.passwordSuccess} role="status">✓ {notice}</p>}<footer><button type="submit" className="button-primary" disabled={!currentPassword || newPassword.length < 10 || mismatch}>Actualizar contraseña</button></footer></form></section>;
 }
