@@ -4,7 +4,8 @@ import { PrismaClient } from '@Prisma/client';
 import bcrypt from 'bcryptjs';
 
 const connectionString = process.env.DATABASE_URL;
-if (!connectionString) throw new Error('DATABASE_URL debe configurarse para ejecutar el seed.');
+if (!connectionString)
+  throw new Error('DATABASE_URL debe configurarse para ejecutar el seed.');
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString }),
@@ -88,7 +89,10 @@ async function main() {
   });
   await prisma.rolPermiso.deleteMany({ where: { rolId: administrador.id } });
   await prisma.rolPermiso.createMany({
-    data: permisos.map(({ id: permisoId }) => ({ rolId: administrador.id, permisoId })),
+    data: permisos.map(({ id: permisoId }) => ({
+      rolId: administrador.id,
+      permisoId,
+    })),
     skipDuplicates: true,
   });
   await prisma.usuario.upsert({

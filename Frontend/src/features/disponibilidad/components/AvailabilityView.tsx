@@ -30,6 +30,14 @@ const stateLabels: Record<AvailabilityState, string> = {
   bloqueada: "Bloqueada",
 };
 
+const stateDescriptions: Record<AvailabilityState, string> = {
+  disponible: "Lista para usar",
+  ocupada: "En uso actualmente",
+  reservada: "Con reserva activa",
+  mantenimiento: "Fuera de servicio",
+  bloqueada: "Acceso restringido",
+};
+
 const sourceLabels: Record<AvailabilitySourceType, string> = {
   "estado-aula": "Estado del aula",
   restriccion: "Restricción",
@@ -118,7 +126,7 @@ export function AvailabilityView() {
 
     {view === "bloque" && <>
       <section className={styles.statusBar} aria-label="Filtrar por estado calculado">
-        {(Object.keys(stateLabels) as AvailabilityState[]).map((state) => <button key={state} type="button" className={`${styles.statusFilter} ${styles[`tone_${state}`]} ${stateFilter === state ? styles.statusActive : ""}`} onClick={() => setStateFilter((current) => current === state ? "todos" : state)}><i />{stateLabels[state]}<b>{count(state)}</b></button>)}
+        {(Object.keys(stateLabels) as AvailabilityState[]).map((state) => <button key={state} type="button" className={`${styles.statusMetric} ${styles[`statusMetric_${state}`]} ${stateFilter === state ? styles.statusActive : ""}`} onClick={() => setStateFilter((current) => current === state ? "todos" : state)}><div><span>{stateLabels[state]}</span><strong>{count(state)}</strong><small>{stateDescriptions[state]}</small></div><i aria-hidden="true" /></button>)}
       </section>
 
       <section className={styles.filters} aria-label="Filtros de disponibilidad">
@@ -190,4 +198,3 @@ function formatEventDate(value: string) {
 function formatEventTime(value: string) {
   return new Intl.DateTimeFormat("es-CO", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Bogota" }).format(new Date(value));
 }
-

@@ -20,113 +20,31 @@
 .readOnlyNote p,.readOnlyNote strong { display:block; margin:0; }
 .readOnlyNote p { font-size:11.7px; line-height:1.35; }
 .readOnlyNote strong { font-size:13px; }
-.statusBar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin-bottom: 13px;
-}
-
-.statusFilter {
-  min-height: 34px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 0 11px;
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  color: #5c626c;
-  background: #fff;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.statusFilter.tone_disponible i {
-  background: #078839 !important;
-}
-
-.statusFilter.tone_ocupada i {
-  background: #175cc4 !important;
-}
-
-.statusFilter.tone_reservada i {
-  background: #b45d00 !important;
-}
-
-.statusFilter.tone_mantenimiento i {
-  background: #ce2030 !important;
-}
-
-.statusFilter.tone_bloqueada i {
-  background: #6d3bb1 !important;
-}
-
-
-.tone_disponible {
-  color: #078839 !important;
-  background: #ecfbf1 !important;
-}
-
-.tone_ocupada {
-  color: #175cc4 !important;
-  background: #edf4ff !important;
-}
-
-.tone_reservada {
-  color: #b45d00 !important;
-  background: #fff8e8 !important;
-}
-
-.tone_mantenimiento {
-  color: #ce2030 !important;
-  background: #fff0f0 !important;
-}
-
-.tone_bloqueada {
-  color: #6d3bb1 !important;
-  background: #f5efff !important;
-}
-
-
+.statusBar { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:16px; }
+.statusMetric { min-height:98px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 17px; border:1px solid var(--line); border-radius:var(--radius); color:inherit; background:var(--surface,#fff); text-align:left; cursor:pointer; }
+.statusMetric>div { min-width:0; }
+.statusMetric span,.statusMetric strong,.statusMetric small { display:block; }
+.statusMetric span { color:var(--muted); font-size:15.6px; font-weight:700; }
+.statusMetric strong { margin-top:6px; font-size:33.8px; line-height:1; color:var(--ink); }
+.statusMetric small { margin-top:7px; color:var(--muted); font-size:14.3px; }
+.statusMetric>i { width:10px; height:10px; flex:0 0 auto; border-radius:50%; background:#737984; box-shadow:0 0 0 6px var(--surface-soft,#eff1f4); }
+.statusMetric.statusActive { border-color:var(--primary); box-shadow:0 0 0 2px color-mix(in srgb,var(--primary) 16%,transparent); }
+.statusMetric_disponible>i { background:#16a34a; box-shadow:0 0 0 6px #dcfce7; }
+.statusMetric_ocupada>i { background:#2563eb; box-shadow:0 0 0 6px #dbeafe; }
+.statusMetric_reservada>i { background:#d97706; box-shadow:0 0 0 6px #fef3c7; }
+.statusMetric_mantenimiento>i { background:#dc2626; box-shadow:0 0 0 6px #fee2e2; }
+.statusMetric_bloqueada>i { background:#7c3aed; box-shadow:0 0 0 6px #ede9fe; }
+.stateBadge i,.legend i { width:6px; height:6px; display:inline-block; border-radius:50%; background:currentColor; }
+.tone_disponible { color:#078839!important; background:#ecfbf1!important; }
+.tone_ocupada { color:#175cc4!important; background:#edf4ff!important; }
+.tone_reservada { color:#b45d00!important; background:#fff8e8!important; }
+.tone_mantenimiento { color:#ce2030!important; background:#fff0f0!important; }
+.tone_bloqueada { color:#6d3bb1!important; background:#f5efff!important; }
 .filters { display:grid; grid-template-columns:minmax(210px,1.5fr) 105px 130px minmax(170px,1fr) auto; gap:11px; align-items:end; padding:15px 17px; border:1px solid var(--line); border-radius:var(--radius); background:#fff; }
-.searchControl > div {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #111827;
-  border: 1px solid #374151;
-  border-radius: 10px;
-  padding: 0 14px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.searchControl > div:focus-within {
-  border-color: #60a5fa;
-  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
-}
-
-.searchControl i {
-  color: #9ca3af;
-  font-size: 20px;
-  font-style: normal;
-}
-
-.searchControl input {
-  width: 100%;
-  background: transparent;
-  border: 0;
-  outline: 0;
-  color: #f9fafb;
-}
-
-.searchControl input::placeholder {
-  color: #6b7280;
-}
-
-.searchControl > span {
-  color: #d1d5db;
-}
-
+.searchControl>div { height:36px; display:flex; align-items:center; gap:7px; padding:0 9px; border:1px solid var(--line); border-radius:6px; background:#f8f9fb; }
+.searchControl>div:focus-within { border-color:var(--primary); box-shadow:0 0 0 3px rgba(165,16,34,.09); }
+.searchControl>div input { height:auto; padding:0; border:0; box-shadow:none; background:transparent; }
+.searchControl>div i { color:#8a9099; font-size:19.5px; font-style:normal; }
 .clearButton { height:36px; padding:0 11px; border:1px solid var(--line); border-radius:6px; color:#575d67; background:#fff; font-size:13px; font-weight:750; }
 .clearButton:hover { border-color:#c4c8ce; background:#f8f9fb; }
 .characteristics { min-width:0; grid-column:1 / 5; display:grid; gap:6px; color:var(--muted); font-size:11.7px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
@@ -252,8 +170,8 @@
   .heading { align-items:flex-start; }.timePanel { grid-template-columns:1fr; }.readOnlyNote { grid-column:auto; }.filters { grid-template-columns:1fr 1fr; }.searchControl { grid-column:1/-1; }.characteristics { grid-column:1/-1; grid-row:auto; }.suggestionToggle { grid-column:1/-1; grid-row:auto; }.clearButton { grid-column:auto; grid-row:auto; }.roomGrid { grid-template-columns:repeat(2,minmax(0,1fr)); }.resultsMeta span:last-child { display:none; }.summaryTools { flex-wrap:wrap; }.summaryTools .searchControl { width:auto; flex:1 1 100%; }.legend { width:100%; margin-left:0; padding:3px 0; }.historyLayout { grid-template-columns:1fr; }.historyFilters { grid-template-columns:1fr 1fr; }.historyFilters h2,.historyFilters>p,.historyFilters>.control,.derivedNote { grid-column:1/-1; }
 }
 @media (max-width:560px) {
-  .calculated { white-space:normal; }.viewTabs { width:100%; }.viewTabs button { flex:1; justify-content:center; }.viewTabs button span { display:none; }.statusBar { display:grid; grid-template-columns:1fr 1fr; }.statusFilter { justify-content:center; }.filters { grid-template-columns:1fr; }.searchControl { grid-column:auto; }.clearButton { width:100%; }.roomGrid { grid-template-columns:1fr; }.floorGroup>header { margin-top:5px; }.historyFilters { grid-template-columns:1fr; }.historyDates { grid-template-columns:1fr; }.historyFilters h2,.historyFilters>p,.historyFilters>.control,.derivedNote { grid-column:auto; }.timeline article { grid-template-columns:10px 74px minmax(0,1fr); gap:7px; }.dialog dl { grid-template-columns:1fr; }.dialogNext p { grid-template-columns:1fr; }.calculationMeta { flex-direction:column; }.dialog>footer { align-items:stretch; flex-direction:column-reverse; }.dialog>footer button,.dialog>footer a { width:100%; }
+  .calculated { white-space:normal; }.viewTabs { width:100%; }.viewTabs button { flex:1; justify-content:center; }.viewTabs button span { display:none; }.statusBar { grid-template-columns:1fr 1fr; gap:8px; }.statusMetric { min-height:89px; padding:13px; }.statusMetric span { font-size:14.3px; }.statusMetric strong { font-size:29.9px; }.filters { grid-template-columns:1fr; }.searchControl { grid-column:auto; }.clearButton { width:100%; }.roomGrid { grid-template-columns:1fr; }.floorGroup>header { margin-top:5px; }.historyFilters { grid-template-columns:1fr; }.historyDates { grid-template-columns:1fr; }.historyFilters h2,.historyFilters>p,.historyFilters>.control,.derivedNote { grid-column:auto; }.timeline article { grid-template-columns:10px 74px minmax(0,1fr); gap:7px; }.dialog dl { grid-template-columns:1fr; }.dialogNext p { grid-template-columns:1fr; }.calculationMeta { flex-direction:column; }.dialog>footer { align-items:stretch; flex-direction:column-reverse; }.dialog>footer button,.dialog>footer a { width:100%; }
 }
 
 /* Escala tipográfica alineada con Aulas y Audiovisuales */
-.viewTabs button { font-size:15.6px; }.control,.blockControl { font-size:13px; }.control input,.control select { font-size:15.6px; }.blockScroller button { font-size:14.3px; }.blockScroller button small { font-size:11.7px; }.readOnlyNote p { font-size:13px; }.readOnlyNote strong { font-size:14.3px; }.statusFilter { font-size:14.3px; }.statusFilter b { font-size:13px; }.characteristics { font-size:13px; }.characteristics button { font-size:13px; }.suggestionToggle b { font-size:13px; }.suggestionToggle small { font-size:11.7px; }.resultsMeta { font-size:13px; }.resultsMeta strong { font-size:15.6px; }.floorGroup h2 { font-size:15.6px; }.floorGroup p { font-size:13px; }.roomIdentity h3 { font-size:16.9px; }.roomIdentity p { font-size:13px; }.stateBadge { font-size:13px; }.activity>span,.nextActivity>span,.software>span { font-size:11.7px; }.activity strong { font-size:14.3px; }.activity p,.nextActivity p { font-size:13px; }.nextActivity p b { font-size:13px; }.software i { font-size:11.7px; }.roomCard>footer button,.roomCard>footer a { font-size:14.3px; }.dailyCard h2,.timelineCard h2 { font-size:16.9px; }.dailyCard p,.dailyCard>header>span,.timelineCard p,.timelineCard>header>span { font-size:13px; }.dailyTable thead th { font-size:13px; }.dailyTable thead small { font-size:11.7px; }.dailyTable tbody th strong { font-size:14.3px; }.dailyTable tbody th small { font-size:11.7px; }.compactBadge { font-size:11.7px; }.historyFilters h2 { font-size:18.2px; }.historyFilters>p { font-size:14.3px; }.derivedNote p { font-size:13px; }.derivedNote strong { font-size:14.3px; }.timeline time { font-size:13px; }.timeline time small { font-size:11.7px; }.timeline article>div>span { font-size:11.7px; }.timeline article>div>strong { font-size:14.3px; }.timeline article>div>small { font-size:11.7px; }.timelineCard>footer { font-size:11.7px; }.dialog>header span { font-size:13px; }.dialogStatus p { font-size:14.3px; }.dialog dt { font-size:11.7px; }.dialog dd { font-size:14.3px; }.dialogBody section h3 { font-size:14.3px; }.sourceList span { font-size:11.7px; }.sourceList p { font-size:14.3px; }.noSources { font-size:13px; }.dialogNext time,.dialogNext strong { font-size:13px; }.dialogNext span { font-size:11.7px; }.calculationMeta { font-size:11.7px; }.dialog>footer button,.dialog>footer a { font-size:14.3px; }
+.viewTabs button { font-size:15.6px; }.control,.blockControl { font-size:13px; }.control input,.control select { font-size:15.6px; }.blockScroller button { font-size:14.3px; }.blockScroller button small { font-size:11.7px; }.readOnlyNote p { font-size:13px; }.readOnlyNote strong { font-size:14.3px; }.characteristics { font-size:13px; }.characteristics button { font-size:13px; }.suggestionToggle b { font-size:13px; }.suggestionToggle small { font-size:11.7px; }.resultsMeta { font-size:13px; }.resultsMeta strong { font-size:15.6px; }.floorGroup h2 { font-size:15.6px; }.floorGroup p { font-size:13px; }.roomIdentity h3 { font-size:16.9px; }.roomIdentity p { font-size:13px; }.stateBadge { font-size:13px; }.activity>span,.nextActivity>span,.software>span { font-size:11.7px; }.activity strong { font-size:14.3px; }.activity p,.nextActivity p { font-size:13px; }.nextActivity p b { font-size:13px; }.software i { font-size:11.7px; }.roomCard>footer button,.roomCard>footer a { font-size:14.3px; }.dailyCard h2,.timelineCard h2 { font-size:16.9px; }.dailyCard p,.dailyCard>header>span,.timelineCard p,.timelineCard>header>span { font-size:13px; }.dailyTable thead th { font-size:13px; }.dailyTable thead small { font-size:11.7px; }.dailyTable tbody th strong { font-size:14.3px; }.dailyTable tbody th small { font-size:11.7px; }.compactBadge { font-size:11.7px; }.historyFilters h2 { font-size:18.2px; }.historyFilters>p { font-size:14.3px; }.derivedNote p { font-size:13px; }.derivedNote strong { font-size:14.3px; }.timeline time { font-size:13px; }.timeline time small { font-size:11.7px; }.timeline article>div>span { font-size:11.7px; }.timeline article>div>strong { font-size:14.3px; }.timeline article>div>small { font-size:11.7px; }.timelineCard>footer { font-size:11.7px; }.dialog>header span { font-size:13px; }.dialogStatus p { font-size:14.3px; }.dialog dt { font-size:11.7px; }.dialog dd { font-size:14.3px; }.dialogBody section h3 { font-size:14.3px; }.sourceList span { font-size:11.7px; }.sourceList p { font-size:14.3px; }.noSources { font-size:13px; }.dialogNext time,.dialogNext strong { font-size:13px; }.dialogNext span { font-size:11.7px; }.calculationMeta { font-size:11.7px; }.dialog>footer button,.dialog>footer a { font-size:14.3px; }
