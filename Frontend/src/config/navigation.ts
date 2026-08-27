@@ -8,6 +8,7 @@ export const operationNavigation = [
   { href: "/audiovisuales", label: "Audiovisuales" },
   { href: "/software", label: "Software Instalado" },
   { href: "/credenciales", label: "Credenciales" },
+  { href: "/usuarios", label: "Usuarios" },
 ] as const;
 
 export const followUpNavigation = [

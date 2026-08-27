@@ -3,33 +3,33 @@ import type { AnotacionApi, ConciliacionApi, ConsultaPublicaApi, DashboardApi, E
 import { modoDemoMonitores } from "./modoDemo";
 import { anotacionesDemo, conciliacionesDemo, consultaDemo, dashboardDemo, excepcionesDemo, horariosDemo, monitoresDemo, sesionesDemo } from "./datosDemo";
 
-async function conDemo<T>(real: Promise<T>, demo: T): Promise<T> {
+async function conDemo<T>(real: () => Promise<T>, demo: T): Promise<T> {
   if (modoDemoMonitores) return demo;
-  return real;
+  return real();
 }
 
 export const servicioMonitores = {
-  listarMonitores: () => conDemo(solicitarMonitores<MonitorApi[]>("/api/v1/monitors/"), monitoresDemo),
-  obtenerDashboard: () => conDemo(solicitarMonitores<DashboardApi>("/api/v1/reports/dashboard/"), dashboardDemo),
-  listarHorarios: () => conDemo(solicitarMonitores<HorarioApi[]>("/api/v1/schedules/"), horariosDemo),
+  listarMonitores: () => conDemo(() => solicitarMonitores<MonitorApi[]>("/api/v1/monitors/"), monitoresDemo),
+  obtenerDashboard: () => conDemo(() => solicitarMonitores<DashboardApi>("/api/v1/reports/dashboard/"), dashboardDemo),
+  listarHorarios: () => conDemo(() => solicitarMonitores<HorarioApi[]>("/api/v1/schedules/"), horariosDemo),
   actualizarHorario: (id: string, payload: Partial<Pick<HorarioApi, "is_active" | "weekday" | "start_time" | "end_time">>) =>
     solicitarMonitores<HorarioApi>(`/api/v1/schedules/${id}/`, { method: "PATCH", body: JSON.stringify(payload) }),
-  listarExcepciones: () => conDemo(solicitarMonitores<ExcepcionApi[]>("/api/v1/schedules/exceptions/"), excepcionesDemo),
+  listarExcepciones: () => conDemo(() => solicitarMonitores<ExcepcionApi[]>("/api/v1/schedules/exceptions/"), excepcionesDemo),
   crearExcepcion: (payload: Omit<ExcepcionApi, "id" | "department_label">) =>
     solicitarMonitores<ExcepcionApi>("/api/v1/schedules/exceptions/", { method: "POST", body: JSON.stringify(payload) }),
   actualizarExcepcion: (id: string, payload: Partial<Omit<ExcepcionApi, "id" | "department_label">>) =>
     solicitarMonitores<ExcepcionApi>(`/api/v1/schedules/exceptions/${id}/`, { method: "PATCH", body: JSON.stringify(payload) }),
   eliminarExcepcion: (id: string) => solicitarMonitores<void>(`/api/v1/schedules/exceptions/${id}/`, { method: "DELETE" }),
-  listarAnotaciones: () => conDemo(solicitarMonitores<AnotacionApi[]>("/api/v1/annotations/"), anotacionesDemo),
+  listarAnotaciones: () => conDemo(() => solicitarMonitores<AnotacionApi[]>("/api/v1/annotations/"), anotacionesDemo),
   crearAnotacion: (payload: Omit<AnotacionApi, "id" | "leader" | "department" | "created_at">) =>
     solicitarMonitores<AnotacionApi>("/api/v1/annotations/", { method: "POST", body: JSON.stringify(payload) }),
   actualizarAnotacion: (id: string, payload: Partial<Omit<AnotacionApi, "id" | "leader" | "department" | "created_at">>) =>
     solicitarMonitores<AnotacionApi>(`/api/v1/annotations/${id}/`, { method: "PATCH", body: JSON.stringify(payload) }),
   eliminarAnotacion: (id: string) => solicitarMonitores<void>(`/api/v1/annotations/${id}/`, { method: "DELETE" }),
-  listarSesiones: () => conDemo(solicitarMonitores<SesionApi[]>("/api/v1/sessions/"), sesionesDemo),
+  listarSesiones: () => conDemo(() => solicitarMonitores<SesionApi[]>("/api/v1/sessions/"), sesionesDemo),
   revisarHorasExtra: (id: string, payload: { decision: "approve" | "reject"; note?: string; penalize_on_reject?: boolean }) =>
     solicitarMonitores<SesionApi>(`/api/v1/sessions/${id}/review-overtime/`, { method: "POST", body: JSON.stringify(payload) }),
-  listarConciliaciones: () => conDemo(solicitarMonitores<ConciliacionApi[]>("/api/v1/attendance/pending-reconciliation/"), conciliacionesDemo),
+  listarConciliaciones: () => conDemo(() => solicitarMonitores<ConciliacionApi[]>("/api/v1/attendance/pending-reconciliation/"), conciliacionesDemo),
   asignarMonitor: (registroId: string, monitorId: string) =>
     solicitarMonitores<ConciliacionApi>(`/api/v1/attendance/pending-reconciliation/${registroId}/assign-monitor/`, { method: "POST", body: JSON.stringify({ monitor_id: monitorId }) }),
   importarAsistencia: (archivo: File) => {

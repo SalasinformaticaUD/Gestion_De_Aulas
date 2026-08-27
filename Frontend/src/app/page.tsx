@@ -1,19 +1,21 @@
 import Link from "next/link";
 import { applications } from "@/features/auth/config/applications";
+import { UniversityLogo } from "@/components/brand/UniversityLogo";
+import { CosmosLogo } from "@/components/brand/CosmosLogo";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 export default function ApplicationSelectorPage() {
   return (
     <main className="app-selector">
+      <ThemeToggle />
       <div className="selector-background" aria-hidden="true" />
 
       <section className="selector-panel" aria-labelledby="selector-title">
         <header className="selector-header">
-          <span className="selector-brand" aria-hidden="true">✦</span>
-          <div>
-            <strong>COSMOS</strong>
-            <p>PLATAFORMA DE GESTIÓN</p>
-          </div>
+          <UniversityLogo className="selector-logo" priority />
+          <CosmosLogo className="cosmos-logo" priority />
         </header>
+
 
         <div className="selector-copy">
           <h1 id="selector-title">Seleccione el sistema al que desea acceder</h1>
