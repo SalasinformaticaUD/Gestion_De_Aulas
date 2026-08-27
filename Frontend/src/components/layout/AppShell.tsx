@@ -4,7 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { followUpNavigation, operationNavigation } from "@/config/navigation";
+import { UniversityLogo } from "@/components/brand/UniversityLogo";
 import { applyTheme, defaultProfile, getInitials, loadProfile, loadTheme, profileEvent, type UserProfile } from "@/features/perfil/lib/profile";
+import { CosmosLogo } from "@/components/brand/CosmosLogo";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { ModuleSwitcher } from "@/components/layout/ModuleSwitcher";
 
 type AppShellProps = { children: React.ReactNode };
 
@@ -38,7 +42,7 @@ export function AppShell({ children }: AppShellProps) {
   }) ?? "08:00:00";
 
   const navLink = (href: string, label: string) => (
-    <Link href={href} className="nav-link" aria-current={pathname === href ? "page" : undefined} onClick={closeMenu}>
+    <Link key={href} href={href} className="nav-link" aria-current={pathname === href ? "page" : undefined} onClick={closeMenu}>
       <span className="nav-icon" aria-hidden="true">•</span>{label}
     </Link>
   );
@@ -47,7 +51,7 @@ export function AppShell({ children }: AppShellProps) {
     <div className="app-shell">
       {isMenuOpen && <button className="menu-overlay" aria-label="Cerrar menú" onClick={closeMenu} />}
       <aside className={`sidebar ${isMenuOpen ? "is-open" : ""}`} aria-label="Navegación principal">
-        <div className="brand"><span className="brand-mark">U</span><span><strong>SGOAS</strong><small>Aulas de Software</small></span></div>
+        <div className="brand"><CosmosLogo className="sidebar-cosmos-logo" priority /><span><small>Aulas de Software</small></span></div>
         <nav className="nav">
           <p className="nav-label">Operación</p>
           {operationNavigation.map(({ href, label }) => navLink(href, label))}
@@ -55,6 +59,7 @@ export function AppShell({ children }: AppShellProps) {
           {followUpNavigation.map(({ href, label }) => navLink(href, label))}
         </nav>
         <footer className="sidebar-footer">
+          <ModuleSwitcher current="aulas" onNavigate={closeMenu} />
           <Link href="/" className="nav-link" onClick={closeMenu}>
             <span className="nav-icon" aria-hidden="true">←</span>Volver al inicio
           </Link>
@@ -67,6 +72,7 @@ export function AppShell({ children }: AppShellProps) {
           <div className="date-time"><span>{formattedDate}</span><time dateTime={currentDate?.toISOString()}>{formattedTime}</time></div>
           <label className="search"><span aria-hidden="true">⌕</span><input type="search" placeholder="Buscar aula, docente, asignatura..." aria-label="Buscar en el sistema" /></label>
           <span className="topbar-spacer" />
+          <ThemeToggle />
           <Link href="/perfil" className="profile" aria-current={pathname === "/perfil" ? "page" : undefined}>
             <span className={`avatar ${profileData.photo ? "avatar-has-photo" : ""}`} style={profileData.photo ? { backgroundImage: `url("${profileData.photo}")` } : undefined}>{!profileData.photo && getInitials(profileData.fullName)}</span>
             <span className="profile-copy"><strong>{profileData.fullName}</strong><small>{profileData.role}</small></span>

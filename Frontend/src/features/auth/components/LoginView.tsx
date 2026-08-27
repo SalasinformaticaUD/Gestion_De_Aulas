@@ -7,6 +7,9 @@ import { getApplication } from "@/features/auth/config/applications";
 import { guardarSesion } from "@/features/auth/lib/sesion";
 import { iniciarSesionMonitores, solicitarAulas, type RespuestaLoginCentral } from "@/features/monitores/api/clienteMonitores";
 import { modoDemoMonitores } from "@/features/monitores/api/modoDemo";
+import { UniversityLogo } from "@/components/brand/UniversityLogo";
+import { CosmosLogo } from "@/components/brand/CosmosLogo";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 export function LoginView() {
   const router = useRouter();
@@ -86,12 +89,12 @@ export function LoginView() {
 
   return (
     <main className="auth-page">
+      <ThemeToggle />
       <section className="auth-layout" aria-labelledby="login-title">
         <header className="auth-brand">
-          <span aria-hidden="true">✦</span>
+          <UniversityLogo className="auth-logo" priority />
           <div>
-            <strong>COSMOS</strong>
-            <small>PLATAFORMA DE GESTIÓN</small>
+            <CosmosLogo className="auth-cosmos-logo" priority />
           </div>
         </header>
 
