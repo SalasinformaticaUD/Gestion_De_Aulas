@@ -1,0 +1,8 @@
+node_modules
+dist
+coverage
+.env
+python-renderer/.venv
+python-renderer/**/__pycache__
+*.pyc
+*.log

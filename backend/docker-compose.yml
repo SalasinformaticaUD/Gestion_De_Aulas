@@ -1,0 +1,58 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: aulas
+      POSTGRES_USER: aulas
+      POSTGRES_PASSWORD: aulas_docker
+    ports:
+      - "5433:5432"
+    volumes:
+      - reportes_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aulas -d aulas"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  pdf-renderer:
+    build:
+      context: .
+      dockerfile: python-renderer/Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      REPORT_TEMPLATES_DIR: /app/templates/reportes
+      SOFFICE_PATH: /usr/bin/soffice
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://aulas:aulas_docker@db:5432/aulas
+      FRONTEND_URL: http://localhost:5173
+      JWT_SECRET: docker-jwt-secret-change-this-value
+      AUTH_TOKEN_SECRET: docker-auth-secret-change-this-value
+      AUTH_TOKEN_TTL_SECONDS: 28800
+      AUTH_REQUIRED: "false"
+      PERMISSIONS_MODE: permissive
+      MONITORES_API_URL: http://localhost:8000
+      MONITORES_API_TIMEOUT_MS: 5000
+      MONITORES_SERVICE_TOKEN: docker-service-token-change-this-value
+      CREDENTIALS_ENCRYPTION_KEY: docker-credentials-key-change-this-value-32
+      ADMIN_INITIAL_PASSWORD: AdminDocker-2026-Segura
+      PDF_RENDERER_URL: http://pdf-renderer:8001
+      PDF_RENDERER_TIMEOUT_MS: 120000
+    depends_on:
+      db:
+        condition: service_healthy
+      pdf-renderer:
+        condition: service_started
+
+volumes:
+  reportes_postgres_data:

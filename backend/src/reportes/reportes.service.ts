@@ -1,6 +1,14 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  Optional,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConsultarReporteDto } from './dto/consultar-reporte.dto';
+import { PlantillasPdfService } from './plantillas-pdf.service';
+import type { UsuarioAutenticado } from '../auth/auth.types';
 
 export const REPORTES = [
   'uso-aulas',
@@ -14,7 +22,212 @@ export type CodigoReporte = (typeof REPORTES)[number];
 
 @Injectable()
 export class ReportesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly plantillasPdf?: PlantillasPdfService,
+  ) {}
+
+  async generarPracticaLibrePdf(
+    id: string,
+    usuario?: Pick<UsuarioAutenticado, 'nombreUsuario'>,
+  ): Promise<Buffer> {
+    const practica = await this.prisma.practicaLibre.findUnique({
+      where: { id },
+      include: {
+        estudiante: true,
+        aula: { include: { proyectoCurricular: true } },
+      },
+    });
+    if (!practica) {
+      throw new NotFoundException('No existe la práctica libre indicada.');
+    }
+
+    const fecha = this.partesBogota(practica.inicio);
+    const consecutivo = `PRA-${fecha.fecha.replaceAll('-', '')}-${id
+      .slice(0, 8)
+      .toUpperCase()}`;
+    const estado = String(practica.estado);
+    const observaciones = [
+      `Estado: ${estado}`,
+      practica.finReal
+        ? `Finalizada: ${this.horaBogota(practica.finReal)}`
+        : `Fin estimado: ${this.horaBogota(practica.finEstimada)}`,
+      'Registro generado desde el Sistema de Gestión Operativa de Aulas de Software.',
+    ].join(' ');
+    const atendidoPor = usuario?.nombreUsuario || 'admin';
+
+    return this.pdf().generar(
+      'Ficha - Practicas libres',
+      {
+        B10: `NOMBRE:\n${practica.estudiante.nombre}`,
+        G10: `CÉDULA/CÓDIGO:\n${practica.estudiante.codigo}`,
+        B12: 'TÍTULO DE LA PRÁCTICA O ESPACIO ACADÉMICO: Práctica Libre',
+        G12: 'CÓDIGO DE GRUPO: No Aplica',
+        B16: fecha.dia,
+        C16: fecha.mes,
+        D16: fecha.anio,
+        E16: this.horaBogota(practica.inicio),
+        F16: `${practica.aula.codigo} - ${practica.aula.ubicacion}`,
+        I16: consecutivo,
+        // La fila 19 contiene los encabezados ENTREGA/DEVOL; los datos van
+        // en la primera fila de registros, la fila 20.
+        B20: '1',
+        C20: `Uso de aula ${practica.aula.codigo} para práctica libre`,
+        H20: id.slice(0, 8).toUpperCase(),
+        I20: this.horaBogota(practica.inicio),
+        J20: this.horaBogota(practica.finEstimada),
+        B25: `OBSERVACIONES: ${observaciones}`,
+        B26: `ATENDIDO POR: ${atendidoPor}`,
+        G26: `USUARIO:\n${practica.estudiante.nombre}`,
+        G28: 'DOCENTE: No Aplica',
+      },
+      `Ficha_PracticaLibre_${consecutivo}`,
+    );
+  }
+
+  async generarPrestamoAudiovisualPdf(id: string): Promise<Buffer> {
+    const prestamo = await this.prisma.prestamoAudiovisual.findUnique({
+      where: { id },
+      include: {
+        docente: true,
+        aula: { include: { proyectoCurricular: true } },
+        entregadoPor: {
+          select: { nombreCompleto: true, nombreUsuario: true },
+        },
+        detalles: { include: { equipo: true } },
+      },
+    });
+    if (!prestamo) {
+      throw new NotFoundException('No existe el préstamo audiovisual indicado.');
+    }
+
+    const salida = prestamo.salidaEn ?? prestamo.devolucionEstimada;
+    const fecha = this.partesBogota(salida);
+    const equipos = prestamo.detalles.map((detalle) => detalle.equipo);
+    const responsable =
+      prestamo.entregadoPor?.nombreCompleto ??
+      prestamo.entregadoPor?.nombreUsuario ??
+      'Sistema';
+    const observaciones = [
+      ...equipos.map((equipo) =>
+        [
+          equipo.codigoInventario,
+          equipo.nombre,
+          equipo.observacion ? `Observación: ${equipo.observacion}` : '',
+        ]
+          .filter(Boolean)
+          .join(' - '),
+      ),
+      prestamo.motivoCancelacion
+        ? `Motivo de cancelación: ${prestamo.motivoCancelacion}`
+        : '',
+      `Estado: ${prestamo.estado}`,
+      `Atendido por: ${responsable}`,
+    ]
+      .filter(Boolean)
+      .join('. ');
+    const nombreArchivo =
+      equipos.map((equipo) => equipo.codigoInventario).join('-') ||
+      `Prestamo-${id.slice(0, 8)}`;
+
+    return this.pdf().generar(
+      'Ficha SIGUD audiovisuales',
+      {
+        D6: fecha.dia,
+        E6: fecha.mes,
+        F6: fecha.anio,
+        C8: equipos.map((equipo) => equipo.codigoInventario).join(', '),
+        F8: [...new Set(equipos.map((equipo) => equipo.tipo))].join(', '),
+        C9: equipos.map((equipo) => equipo.nombre).join(', '),
+        C10: 'No aplica',
+        C11: prestamo.aula.proyectoCurricular?.nombre ?? 'No aplica',
+        C13: prestamo.aula.codigo,
+        C14: this.horaBogota(salida),
+        C15: this.horaBogota(prestamo.devolucionEstimada),
+        C17: observaciones,
+        C21: responsable,
+      },
+      `${nombreArchivo}-${prestamo.aula.codigo}`,
+    );
+  }
+
+  async generarAsistenciaSigudPdf(fechaTexto: string): Promise<Buffer> {
+    this.validarFechaDiaria(fechaTexto);
+    const fecha = new Date(`${fechaTexto}T00:00:00.000Z`);
+    const inicioDia = fecha;
+    const finDia = new Date(`${fechaTexto}T23:59:59.999Z`);
+    const asistencias = await this.prisma.asistenciaDocente.findMany({
+      where: {
+        fecha,
+        estado: 'ASISTIO',
+        clase: {
+          periodo: {
+            fechaInicio: { lte: finDia },
+            fechaFin: { gte: inicioDia },
+          },
+        },
+      },
+      include: {
+        clase: {
+          include: { aula: true, docente: true },
+        },
+      },
+    });
+
+    const valores: Record<string, string> = {
+      F8: fechaTexto.slice(8, 10),
+      H8: fechaTexto.slice(5, 7),
+      J8: fechaTexto.slice(0, 4),
+    };
+    const filasPorSala = new Map<string, number>();
+    for (let index = 0; index < 20; index++) {
+      const filaSala = 11 + index * 3;
+      filasPorSala.set(String(306 + index), filaSala);
+    }
+    // La plantilla conserva su catálogo de salas; se sobreescribe con los códigos
+    // que realmente existen en cada bloque para que el mapeo no dependa del orden.
+    const salasPlantilla = [
+      '306', '312', '311', '406', '412', '501', '502', '503', '504', '505',
+      '506', '507', '601', '701', '702', '703', '704', '706', '707', '403',
+    ];
+    filasPorSala.clear();
+    salasPlantilla.forEach((sala, index) => filasPorSala.set(sala, 11 + index * 3));
+
+    const columnasPorHora: Record<number, string> = {
+      6: 'G',
+      8: 'J',
+      10: 'M',
+      12: 'P',
+      14: 'S',
+      16: 'V',
+      18: 'Y',
+      20: 'AB',
+    };
+    const nombres = new Map<string, string[]>();
+    for (const asistencia of asistencias) {
+      const clase = asistencia.clase;
+      const sala = this.extraerNumero(clase.aula.codigo);
+      const fila = filasPorSala.get(sala);
+      const hora = clase.horaInicio.getUTCHours();
+      const columna = columnasPorHora[hora];
+      if (!fila || !columna) continue;
+      const clave = `${fila}:${columna}`;
+      const lista = nombres.get(clave) ?? [];
+      if (!lista.includes(clase.docente.nombre)) lista.push(clase.docente.nombre);
+      nombres.set(clave, lista);
+    }
+    for (const [clave, lista] of nombres) {
+      const [fila, columna] = clave.split(':');
+      valores[`${columna}${Number(fila) + 1}`] = lista.join(' / ');
+      valores[`${columna}${Number(fila) + 2}`] = lista.join(' / ');
+    }
+
+    return this.pdf().generar(
+      'SIGUD',
+      valores,
+      `Asistencia_SIGUD_${fechaTexto.replaceAll('-', '_')}`,
+    );
+  }
 
   async consultar(reporte: CodigoReporte, query: ConsultarReporteDto) {
     const { desde, hasta, pagina, limite, skip } = this.contexto(query);
@@ -283,6 +496,77 @@ export class ReportesService {
         columnas.map((columna) => escapar(item[columna])).join(','),
       ),
     ].join('\n');
+  }
+
+  private pdf(): PlantillasPdfService {
+    if (!this.plantillasPdf) {
+      throw new ServiceUnavailableException(
+        'La generación de PDFs no está disponible en este despliegue.',
+      );
+    }
+    return this.plantillasPdf;
+  }
+
+  private validarFechaDiaria(fechaTexto: string): void {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaTexto)) {
+      throw new BadRequestException('fecha debe tener formato YYYY-MM-DD.');
+    }
+    const fecha = new Date(`${fechaTexto}T00:00:00.000Z`);
+    if (Number.isNaN(fecha.getTime())) {
+      throw new BadRequestException('La fecha indicada no es válida.');
+    }
+    if (fecha.getUTCDay() === 0 || this.esFestivo(fechaTexto)) {
+      throw new BadRequestException(
+        'No se genera asistencia SIGUD para domingos ni días festivos.',
+      );
+    }
+  }
+
+  private esFestivo(fecha: string): boolean {
+    const festivos = new Set([
+      '01-01', '01-12', '03-23', '04-02', '04-03', '05-01', '05-18',
+      '06-08', '06-15', '06-29', '07-13', '07-20', '08-07', '08-17',
+      '10-12', '11-02', '11-16', '12-08', '12-25',
+    ]);
+    const festivos2027 = new Set([
+      '01-01', '01-11', '03-22', '03-25', '03-26', '05-01', '05-10',
+      '05-31', '06-07', '07-05', '07-12', '07-20', '08-07', '08-16',
+      '10-18', '11-01', '11-15', '12-08', '12-25',
+    ]);
+    const [anio, mesDia] = [fecha.slice(0, 4), fecha.slice(5)];
+    return (anio === '2027' ? festivos2027 : festivos).has(mesDia);
+  }
+
+  private partesBogota(fecha: Date) {
+    const partes = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Bogota',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(fecha);
+    const valor = (tipo: Intl.DateTimeFormatPartTypes) =>
+      partes.find((parte) => parte.type === tipo)?.value ?? '';
+    return {
+      fecha: `${valor('year')}-${valor('month')}-${valor('day')}`,
+      dia: valor('day'),
+      mes: valor('month'),
+      anio: valor('year'),
+    };
+  }
+
+  private horaBogota(fecha: Date | null): string {
+    if (!fecha) return '';
+    return new Intl.DateTimeFormat('es-CO', {
+      timeZone: 'America/Bogota',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(fecha);
+  }
+
+  private extraerNumero(valor: string): string {
+    const resultado = valor.match(/(\d+)\s*$/);
+    return resultado?.[1] ?? valor.trim();
   }
 
   private contexto(query: ConsultarReporteDto) {
