@@ -56,3 +56,8 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 /generated/prisma
+
+# Python renderer local environment and cache
+/python-renderer/.venv/
+**/__pycache__/
+*.py[cod]

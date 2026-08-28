@@ -1,8 +1,10 @@
 # Informe 5 - BackPlateInt
 
 FECHA: 27/08/2026  
-TURNO: Jornada de desarrollo  
-MONITOR: Esteban Bautista
+TURNO: 4:00 p. m. - 8:00 p. m.
+MONITOR: Juan Esteban Cañon Solorza
+TURNO: 6:00 p. m. - 10:00 p. m.
+MONITOR: Carol Stefanya Velasco Rodríguez
 
 ## AVANCES
 
