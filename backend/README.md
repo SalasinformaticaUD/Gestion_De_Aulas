@@ -89,6 +89,22 @@ Las rutas actuales se conservan sin prefijo `/api` para mantener compatibilidad.
 solo acepta los orígenes indicados en `FRONTEND_URL` (separados por coma) y
 `GET /health` responde `{ "status": "ok" }`.
 
+### Generación de formatos PDF
+
+Los formatos institucionales se conservan como plantillas XLSX en `templates/reportes`.
+NestJS envía los datos al servicio interno FastAPI ubicado en `python-renderer`; este
+rellena una copia temporal con `openpyxl` y la convierte a PDF mediante LibreOffice.
+Así se conservan las celdas combinadas, bordes, fórmulas e imágenes del formato Excel.
+Microsoft Office no es necesario, pero sí debe estar disponible LibreOffice.
+
+- `GET /reportes/practicas-libres/:id/pdf`
+- `GET /reportes/prestamos-audiovisuales/:id/pdf`
+- `GET /reportes/asistencia-docente/pdf?fecha=YYYY-MM-DD`
+
+El endpoint SIGUD aplica la regla heredada de no generar domingos ni festivos de 2026
+y 2027. Las dos fichas operativas utilizan los datos actuales de prácticas libres y
+préstamos audiovisuales, respectivamente.
+
 ```bash
 # generar el cliente y aplicar migraciones
 npm run prisma:generate
