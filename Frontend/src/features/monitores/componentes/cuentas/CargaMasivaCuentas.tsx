@@ -1,0 +1,9 @@
+"use client";
+
+import { useState, type FormEvent } from "react";
+import estilos from "../SistemaVisualMonitores.module.css";
+
+export function CargaMasivaCuentas({ archivo, onArchivo, onSubmit }: { archivo: File | null; onArchivo: (archivo: File | null) => void; onSubmit: (evento: FormEvent<HTMLFormElement>) => void }) {
+  const [repiteHistorial, setRepiteHistorial] = useState(false);
+  return <section className={`${estilos.tarjeta} ${estilos.cargaMasivaCuentas}`}><header><div><h2>Carga masiva</h2><p>Puedes usar encabezados en inglés o español.</p></div></header><form className={estilos.formularioCargaMasiva} onSubmit={onSubmit}><div className={estilos.especificacionArchivo}><p><strong>Requeridos:</strong></p><ul><li>email / correo</li><li>full_name / nombre completo</li><li>codigo_estudiante / código estudiante</li><li>department / dependencia <strong>(Monitores Aulas de Software, Monitores Laboratorios, Monitores Física)</strong></li></ul><p><strong>Opcionales:</strong></p><ul><li>numero_documento / número documento</li><li>proyecto_curricular / proyecto curricular <strong>(ingenieria_electronica, ingenieria_sistemas, ingenieria_electrica, ingenieria_industrial, ingenieria_catastral, licenciatura_fisica)</strong></li><li>telefono / phone</li></ul></div><label className={estilos.archivoCarga}><span>Archivo Excel (.xlsx)</span><input type="file" accept=".xlsx,.xls" onChange={(e) => onArchivo(e.target.files?.[0] ?? null)} required /><small>{archivo?.name ?? "Ningún archivo seleccionado"}</small></label><label className={estilos.confirmacionCarga}><input type="checkbox" checked={repiteHistorial} onChange={(e) => setRepiteHistorial(e.target.checked)} /><span>Confirmo que los monitores con historial en este archivo repetirán monitorías</span></label><div className={estilos.accionesFormulario}><button className="button-primary" disabled={!archivo}>↥ Procesar archivo</button></div></form></section>;
+}

@@ -27,8 +27,18 @@ export const servicioMonitores = {
     solicitarMonitores<AnotacionApi>(`/api/v1/annotations/${id}/`, { method: "PATCH", body: JSON.stringify(payload) }),
   eliminarAnotacion: (id: string) => solicitarMonitores<void>(`/api/v1/annotations/${id}/`, { method: "DELETE" }),
   listarSesiones: () => conDemo(() => solicitarMonitores<SesionApi[]>("/api/v1/sessions/"), sesionesDemo),
-  revisarHorasExtra: (id: string, payload: { decision: "approve" | "reject"; note?: string; penalize_on_reject?: boolean }) =>
-    solicitarMonitores<SesionApi>(`/api/v1/sessions/${id}/review-overtime/`, { method: "POST", body: JSON.stringify(payload) }),
+  revisarHorasExtra: async (id: string, payload: { decision: "approve" | "reject"; note?: string; penalize_on_reject?: boolean }) => {
+    if (modoDemoMonitores) {
+      const sesion = sesionesDemo.find((item) => item.id === id);
+      if (!sesion) throw new Error("No se encontró la sesión que se desea revisar.");
+      return {
+        ...sesion,
+        overtime_status: payload.decision === "approve" ? "approved" : "rejected",
+        overtime_review_note: payload.note ?? "",
+      };
+    }
+    return solicitarMonitores<SesionApi>(`/api/v1/sessions/${id}/review-overtime/`, { method: "POST", body: JSON.stringify(payload) });
+  },
   listarConciliaciones: () => conDemo(() => solicitarMonitores<ConciliacionApi[]>("/api/v1/attendance/pending-reconciliation/"), conciliacionesDemo),
   asignarMonitor: (registroId: string, monitorId: string) =>
     solicitarMonitores<ConciliacionApi>(`/api/v1/attendance/pending-reconciliation/${registroId}/assign-monitor/`, { method: "POST", body: JSON.stringify({ monitor_id: monitorId }) }),

@@ -1,2 +1,2 @@
-import { GestionDocumental } from "@/features/monitores/componentes/GestionDocumental";
-export default function PaginaMemorandos() { return <GestionDocumental tipo="memorandos" />; }
+import { GestionMemorandos } from "@/features/monitores/componentes/GestionMemorandos";
+export default function PaginaMemorandos() { return <GestionMemorandos />; }

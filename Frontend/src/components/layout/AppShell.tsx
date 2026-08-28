@@ -9,6 +9,7 @@ import { applyTheme, defaultProfile, getInitials, loadProfile, loadTheme, profil
 import { CosmosLogo } from "@/components/brand/CosmosLogo";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { ModuleSwitcher } from "@/components/layout/ModuleSwitcher";
+import { cerrarSesion } from "@/features/auth/lib/sesion";
 
 type AppShellProps = { children: React.ReactNode };
 
@@ -18,6 +19,11 @@ export function AppShell({ children }: AppShellProps) {
   const [profileData, setProfileData] = useState<UserProfile>(defaultProfile);
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const closeMenu = () => setIsMenuOpen(false);
+  const salir = () => {
+    cerrarSesion();
+    closeMenu();
+    window.location.assign("/");
+  };
 
   useEffect(() => {
     const refreshProfile = () => setProfileData(loadProfile());
@@ -51,7 +57,7 @@ export function AppShell({ children }: AppShellProps) {
     <div className="app-shell">
       {isMenuOpen && <button className="menu-overlay" aria-label="Cerrar menú" onClick={closeMenu} />}
       <aside className={`sidebar ${isMenuOpen ? "is-open" : ""}`} aria-label="Navegación principal">
-        <div className="brand"><CosmosLogo className="sidebar-cosmos-logo" priority /><span><small>Aulas de Software</small></span></div>
+        <div className="brand"><CosmosLogo className="sidebar-cosmos-logo" variant="light" priority /><span><small>Aulas de Software</small></span></div>
         <nav className="nav">
           <p className="nav-label">Operación</p>
           {operationNavigation.map(({ href, label }) => navLink(href, label))}
@@ -60,9 +66,7 @@ export function AppShell({ children }: AppShellProps) {
         </nav>
         <footer className="sidebar-footer">
           <ModuleSwitcher current="aulas" onNavigate={closeMenu} />
-          <Link href="/" className="nav-link" onClick={closeMenu}>
-            <span className="nav-icon" aria-hidden="true">←</span>Volver al inicio
-          </Link>
+          <button type="button" className="nav-link nav-logout" onClick={salir}><span className="nav-icon" aria-hidden="true">↪</span>Salir</button>
         </footer>
       </aside>
       <section className="workspace">

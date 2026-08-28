@@ -1,15 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { getApplication } from "@/features/auth/config/applications";
 import { guardarSesion } from "@/features/auth/lib/sesion";
-import { iniciarSesionMonitores, solicitarAulas, type RespuestaLoginCentral } from "@/features/monitores/api/clienteMonitores";
+import { solicitarAulas, type RespuestaLoginCentral } from "@/features/monitores/api/clienteMonitores";
 import { modoDemoMonitores } from "@/features/monitores/api/modoDemo";
-import { UniversityLogo } from "@/components/brand/UniversityLogo";
 import { CosmosLogo } from "@/components/brand/CosmosLogo";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
+
+const credencialesDemoCambioAplicativo = {
+  usuario: "demo-cambio-aplicativos",
+  contrasena: "demo-cambio-aplicativos",
+} as const;
 
 export function LoginView() {
   const router = useRouter();
@@ -45,11 +50,14 @@ export function LoginView() {
 
     try {
       if (modoDemoMonitores) {
+        const puedeCambiarAplicativo = username.trim() === credencialesDemoCambioAplicativo.usuario
+          && password === credencialesDemoCambioAplicativo.contrasena;
         guardarSesion({
           aplicacion: application.key,
           tokenAcceso: "demo-token",
           expiraEn: Date.now() + 8 * 60 * 60 * 1000,
           modoDemo: true,
+          aplicacionesAutorizadas: puedeCambiarAplicativo ? ["aulas", "monitores"] : [application.key],
           usuario: { id:"demo", nombreCompleto:"Usuario Demo", nombreUsuario:username.trim(), correo:"demo@local", cargo:"Líder de monitores", dependencia:{id:"demo",nombre:"Aulas de Software"}, roles:["LIDER"], permisos:["MONITORES_LEER"], modulos:["MONITORES"] },
         });
         setFeedback("success");
@@ -65,17 +73,12 @@ export function LoginView() {
         ? central.aplicaciones.puedeAccederMonitores
         : central.aplicaciones.puedeAccederAulas;
       if (!permitido) throw new Error(`Su usuario no tiene permisos para ${application.name}.`);
-      let usuarioMonitores;
-      if (application.key === "monitores") {
-        try {
-          usuarioMonitores = await iniciarSesionMonitores(username.trim(), password);
-        } catch {
-          // El acceso principal pertenece al backend central. La API funcional
-          // puede no estar disponible todavía y no debe bloquear la navegación.
-          usuarioMonitores = undefined;
-        }
-      }
-      guardarSesion({ aplicacion:application.key, tokenAcceso:central.accessToken, expiraEn:Date.now() + central.expiresIn * 1000, usuario:central.usuario, usuarioMonitores });
+      const aplicacionesAutorizadas = [
+        ...(central.aplicaciones.puedeAccederAulas ? ["aulas" as const] : []),
+        ...(central.aplicaciones.puedeAccederMonitores ? ["monitores" as const] : []),
+      ];
+      // La API de Monitores recibe este mismo token; nunca se reenvían credenciales.
+      guardarSesion({ aplicacion:application.key, tokenAcceso:central.accessToken, expiraEn:Date.now() + central.expiresIn * 1000, usuario:central.usuario, aplicacionesAutorizadas });
       setFeedback("success");
       const destino = nextPath?.startsWith("/") ? nextPath : application.destination;
       window.setTimeout(() => router.push(destino), 450);
@@ -92,10 +95,7 @@ export function LoginView() {
       <ThemeToggle />
       <section className="auth-layout" aria-labelledby="login-title">
         <header className="auth-brand">
-          <UniversityLogo className="auth-logo" priority />
-          <div>
-            <CosmosLogo className="auth-cosmos-logo" priority />
-          </div>
+          <CosmosLogo className="auth-cosmos-logo" priority />
         </header>
 
         <form className="login-card" onSubmit={submitLogin}>
@@ -136,6 +136,15 @@ export function LoginView() {
           {!isValidating && (
             <Link className="login-back" href="/">←&nbsp; Atrás — Selector de Aplicativo</Link>
           )}
+
+          <div className="login-institutional-logo">
+            <Image
+              alt="Universidad Distrital Francisco José de Caldas"
+              height={291}
+              src="/brand/universidad-distrital-login.png"
+              width={832}
+            />
+          </div>
         </form>
 
         {feedback === "success" && (
