@@ -10,9 +10,10 @@ export function ProfileView() {
   const [theme, setTheme] = useState<ThemePreference>("light");
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [passwordNotice, setPasswordNotice] = useState<string | null>(null);
+  const [session, setSession] = useState<ReturnType<typeof obtenerSesion>>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { const local=loadProfile();const usuario=obtenerSesion()?.usuario;setProfile(usuario?{...local,fullName:usuario.nombreCompleto,email:usuario.correo,username:usuario.nombreUsuario,role:usuario.cargo??usuario.roles.join(", "),department:usuario.dependencia?.nombre??"Sin dependencia"}:local);setTheme(loadTheme()); }, []);
+  useEffect(() => { const sesion=obtenerSesion(); setSession(sesion); const local=loadProfile();const usuario=sesion?.usuario;setProfile(usuario?{...local,fullName:usuario.nombreCompleto,email:usuario.correo,username:usuario.nombreUsuario,role:usuario.cargo??usuario.roles.join(", "),department:usuario.dependencia?.nombre??"Sin dependencia"}:local);setTheme(loadTheme()); }, []);
 
   const selectTheme = (next: ThemePreference) => { setTheme(next); applyTheme(next); };
   const updatePhoto = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -45,6 +46,7 @@ export function ProfileView() {
       </aside>
       <div className={styles.sections}>
         <section className={styles.profileSection}><header><div><span>01</span><div><h2>Información personal</h2><p>Datos asociados a su cuenta institucional.</p></div></div><b>Solo lectura</b></header><div className={styles.dataGrid}><DataItem label="Nombre completo" value={profile.fullName} /><DataItem label="Correo institucional" value={profile.email} /><DataItem label="Nombre de usuario" value={profile.username} mono /><DataItem label="Cargo" value={profile.role} /></div><aside className={styles.backendNote}></aside></section>
+        <section className={styles.profileSection}><header><div><span>04</span><div><h2>Accesos asignados</h2><p>Roles, módulos y permisos entregados por la plataforma central.</p></div></div><b>Gestionado por administración</b></header><div className={styles.dataGrid}><DataItem label="Roles" value={session?.usuario.roles.join(", ") || "Sin roles"} /><DataItem label="Módulos" value={session?.usuario.modulos.join(", ") || "Sin módulos"} /><DataItem label="Permisos" value={session?.usuario.permisos.join(", ") || "Sin permisos"} /></div></section>
         <PasswordSection notice={passwordNotice} onNotice={setPasswordNotice} />
         <section className={styles.profileSection}><header><div><span>03</span><div><h2>Apariencia</h2><p>Elija cómo se presenta la interfaz en este dispositivo.</p></div></div><b>Guardado local</b></header><div className={styles.themeOptions}><button type="button" className={theme === "light" ? styles.selectedTheme : ""} onClick={() => selectTheme("light")}><span className={styles.lightPreview}><i /><i /><i /></span><strong>Modo claro</strong><small>Fondos luminosos y alto contraste</small><b>{theme === "light" ? "✓ Activo" : "Seleccionar"}</b></button><button type="button" className={theme === "dark" ? styles.selectedTheme : ""} onClick={() => selectTheme("dark")}><span className={styles.darkPreview}><i /><i /><i /></span><strong>Modo oscuro</strong><small>Reduce el brillo de la interfaz</small><b>{theme === "dark" ? "✓ Activo" : "Seleccionar"}</b></button></div></section>
       </div>

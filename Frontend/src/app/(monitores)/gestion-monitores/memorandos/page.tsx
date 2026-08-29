@@ -1,2 +1,2 @@
-import { GestionMemorandos } from "@/features/monitores/componentes/GestionMemorandos";
-export default function PaginaMemorandos() { return <GestionMemorandos />; }
+import { ReportesApiView } from "@/features/monitores/componentes/ReportesApiView";
+export default function PaginaMemorandos() { return <ReportesApiView tipo="memorandos" />; }

@@ -1,8 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { audiovisualEquipment, audiovisualLoans } from "@/features/audiovisuales/data/audiovisuals";
+import { cargarAudiovisuales, cancelarPrestamoAudiovisual, crearPrestamoAudiovisual, devolverPrestamoAudiovisual } from "@/features/audiovisuales/api/audiovisualesApi";
+import { listarAulas } from "@/features/aulas/api/aulasApi";
+import { listarDocentes, type DocenteCatalogo } from "@/features/catalogos/api/catalogosApi";
+import type { Room } from "@/features/aulas/types";
 import type { AudiovisualEquipment, AudiovisualEquipmentStatus, AudiovisualLoan } from "@/features/audiovisuales/types";
 
 const equipmentStatus: Record<AudiovisualEquipmentStatus, string> = {
@@ -26,8 +29,10 @@ type View = "inventario" | "prestamos";
 export function AudiovisualsView() {
   const searchParams = useSearchParams();
   const initialRoom = searchParams.get("aula") ?? "";
-  const [equipment, setEquipment] = useState(audiovisualEquipment);
-  const [loans, setLoans] = useState(audiovisualLoans);
+  const [equipment, setEquipment] = useState<AudiovisualEquipment[]>([]);
+  const [loans, setLoans] = useState<AudiovisualLoan[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [teachers, setTeachers] = useState<DocenteCatalogo[]>([]);
   const [view, setView] = useState<View>("inventario");
   const [query, setQuery] = useState("");
   const [type, setType] = useState("todos");
@@ -50,43 +55,26 @@ export function AudiovisualsView() {
   const count = (value: AudiovisualEquipmentStatus) => equipment.filter((item) => item.status === value).length;
   const equipmentById = (id: string) => equipment.find((item) => item.id === id);
 
-  const registerLoan = (payload: { teacher: string; room: string; dueAt: string; equipmentIds: string[] }) => {
-    const nextNumber = String(87 + loans.length).padStart(4, "0");
-    const newLoan: AudiovisualLoan = {
-      id: `PA-2026-${nextNumber}`,
-      teacher: payload.teacher,
-      room: payload.room,
-      checkoutAt: new Date().toISOString(),
-      dueAt: payload.dueAt,
-      status: "ACTIVO",
-      equipmentIds: payload.equipmentIds,
-      deliveredBy: "Jhon Rodríguez",
-    };
-    setLoans((current) => [newLoan, ...current]);
-    setEquipment((current) => current.map((item) => payload.equipmentIds.includes(item.id) ? { ...item, status: "PRESTADO", loanCount: item.loanCount + 1 } : item));
-    setLoanEquipment(null);
-    setNotice(`Préstamo ${newLoan.id} registrado con ${payload.equipmentIds.length} equipo(s).`);
+  const reload = async () => { try { const [data, nextRooms, nextTeachers] = await Promise.all([cargarAudiovisuales(), listarAulas(), listarDocentes()]); setEquipment(data.equipment); setLoans(data.loans); setRooms(nextRooms); setTeachers(nextTeachers); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible cargar audiovisuales."); } };
+  useEffect(() => { void reload(); }, []);
+  const registerLoan = async (payload: { teacherId: string; roomId: string; dueAt: string; equipmentIds: string[] }) => {
+    try { await crearPrestamoAudiovisual({ docenteId: payload.teacherId, aulaId: payload.roomId, salidaEn: new Date().toISOString(), devolucionEstimada: new Date(payload.dueAt).toISOString(), equipos: payload.equipmentIds.map((equipoId) => ({ equipoId })) }); await reload(); setLoanEquipment(null); setNotice(`Préstamo registrado con ${payload.equipmentIds.length} equipo(s).`); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible registrar el préstamo."); }
   };
 
-  const completeReturn = (conditions: Record<string, "DISPONIBLE" | "MANTENIMIENTO">) => {
+  const completeReturn = async (conditions: Record<string, "DISPONIBLE" | "MANTENIMIENTO">) => {
     if (!returnLoan) return;
-    setEquipment((current) => current.map((item) => conditions[item.id] ? { ...item, status: conditions[item.id] } : item));
-    setLoans((current) => current.map((loan) => loan.id === returnLoan.id ? { ...loan, status: "DEVUELTO", returnedAt: new Date().toISOString() } : loan));
-    setNotice(`Devolución del préstamo ${returnLoan.id} registrada.`);
-    setReturnLoan(null);
+    try { await devolverPrestamoAudiovisual(returnLoan.id, returnLoan.equipmentIds.map((equipoId) => ({ equipoId, estadoFisicoDevolucion: "Sin novedades", estadoFuncionalDevolucion: conditions[equipoId] }))); await reload(); setNotice(`Devolución registrada.`); setReturnLoan(null); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible registrar la devolución."); }
   };
 
-  const cancelLoan = (loan: AudiovisualLoan) => {
-    setLoans((current) => current.map((item) => item.id === loan.id ? { ...item, status: "CANCELADO" } : item));
-    setEquipment((current) => current.map((item) => loan.equipmentIds.includes(item.id) ? { ...item, status: "DISPONIBLE" } : item));
-    setNotice(`Préstamo ${loan.id} cancelado; los equipos volvieron a estar disponibles.`);
+  const cancelLoan = async (loan: AudiovisualLoan) => {
+    try { await cancelarPrestamoAudiovisual(loan.id); await reload(); setNotice("Préstamo cancelado; los equipos fueron liberados."); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible cancelar el préstamo."); }
   };
 
   return (
     <>
       <section className="page-heading audiovisual-heading">
         <div><h1>Equipos Audiovisuales</h1><p>Control de inventario, préstamos, devoluciones y estado de equipos.</p></div>
-        <button type="button" className="button-primary audiovisual-new" onClick={() => setLoanEquipment(equipment.find((item) => item.status === "DISPONIBLE") ?? null)}>+ Registrar préstamo</button>
+        <button type="button" className="button-primary audiovisual-new" disabled={!equipment.some((item) => item.status === "DISPONIBLE")} onClick={() => setLoanEquipment(equipment.find((item) => item.status === "DISPONIBLE") ?? null)}>+ Registrar préstamo</button>
       </section>
 
       <section className="audiovisual-metrics" aria-label="Resumen de equipos">
@@ -114,7 +102,7 @@ export function AudiovisualsView() {
         <UsageNotice equipment={equipment} />
       </> : <LoansTable loans={loans} equipmentById={equipmentById} onReturn={setReturnLoan} onCancel={cancelLoan} />}
 
-      {loanEquipment && <LoanDialog initial={loanEquipment} equipment={equipment} initialRoom={initialRoom} onClose={() => setLoanEquipment(null)} onSubmit={registerLoan} />}
+      {loanEquipment && <LoanDialog initial={loanEquipment} equipment={equipment} rooms={rooms} teachers={teachers} initialRoom={initialRoom} onClose={() => setLoanEquipment(null)} onSubmit={registerLoan} />}
       {returnLoan && <ReturnDialog loan={returnLoan} equipmentById={equipmentById} onClose={() => setReturnLoan(null)} onSubmit={completeReturn} />}
     </>
   );
@@ -129,7 +117,7 @@ function StatusBadge({ status }: { status: AudiovisualEquipmentStatus }) {
 }
 
 function EquipmentTable({ equipment, activeLoans, onLoan, onReturn }: { equipment: AudiovisualEquipment[]; activeLoans: AudiovisualLoan[]; onLoan: (item: AudiovisualEquipment) => void; onReturn: (loan: AudiovisualLoan) => void }) {
-  const maxLoans = Math.max(...audiovisualEquipment.map((item) => item.loanCount));
+  const maxLoans = Math.max(1, ...equipment.map((item) => item.loanCount));
   return <section className="audiovisual-card"><div className="table-wrap"><table className="audiovisual-table"><thead><tr><th>Código</th><th>Equipo</th><th>Tipo</th><th>Estado</th><th>Uso acumulado</th><th>Préstamos</th><th>Responsable</th><th>Acciones</th></tr></thead><tbody>
     {equipment.map((item) => {
       const loan = activeLoans.find((current) => current.equipmentIds.includes(item.id));
@@ -147,22 +135,23 @@ function UsageNotice({ equipment }: { equipment: AudiovisualEquipment[] }) {
   const projectors = equipment.filter((item) => item.type === "Videobeam");
   const highest = [...projectors].sort((a, b) => b.usageHours - a.usageHours)[0];
   const available = projectors.filter((item) => item.status === "DISPONIBLE").sort((a, b) => a.usageHours - b.usageHours).map((item) => item.inventoryCode).join(" y ");
+  if (!highest) return <aside className="usage-notice"><span aria-hidden="true">i</span><p><strong>Distribución de uso:</strong> aún no hay videobeams registrados para calcular recomendaciones.</p></aside>;
   return <aside className="usage-notice"><span aria-hidden="true">i</span><p><strong>Distribución de uso:</strong> {highest.inventoryCode} tiene el mayor uso acumulado ({highest.usageHours} h). Se recomienda priorizar {available} para distribuir el desgaste.</p></aside>;
 }
 
 function LoansTable({ loans, equipmentById, onReturn, onCancel }: { loans: AudiovisualLoan[]; equipmentById: (id: string) => AudiovisualEquipment | undefined; onReturn: (loan: AudiovisualLoan) => void; onCancel: (loan: AudiovisualLoan) => void }) {
-  return <section className="audiovisual-card"><div className="table-wrap"><table className="audiovisual-table loans-table"><thead><tr><th>Préstamo</th><th>Docente / aula</th><th>Equipos</th><th>Salida</th><th>Devolución estimada</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{loans.map((loan) => <tr key={loan.id}><td><b className="inventory-code">{loan.id}</b><small>Entrega: {loan.deliveredBy}</small></td><td><strong>{loan.teacher}</strong><small>Aula {loan.room}</small></td><td><div className="loan-equipment-list">{loan.equipmentIds.map((id) => <span key={id}>{equipmentById(id)?.inventoryCode ?? id}</span>)}</div></td><td>{formatDateTime(loan.checkoutAt)}</td><td>{formatDateTime(loan.dueAt)}</td><td><span className={`loan-status loan-status-${loan.status.toLocaleLowerCase()}`}>{loanStatus[loan.status]}</span></td><td><div className="loan-actions">{(loan.status === "ACTIVO" || loan.status === "VENCIDO") && <><button type="button" className="table-action table-action-success" onClick={() => onReturn(loan)}>Devolver</button><button type="button" className="table-action table-action-muted" onClick={() => onCancel(loan)}>Cancelar</button></>}</div></td></tr>)}</tbody></table></div></section>;
+  return <section className="audiovisual-card"><div className="table-wrap"><table className="audiovisual-table loans-table"><thead><tr><th>Préstamo</th><th>Docente / aula</th><th>Equipos</th><th>Salida</th><th>Devolución estimada</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>{loans.map((loan) => <tr key={loan.id}><td><b className="inventory-code">{loan.id}</b><small>Entrega: {loan.deliveredBy}</small></td><td><strong>{loan.teacher}</strong><small>Aula {loan.room}</small></td><td><div className="loan-equipment-list">{loan.equipmentIds.map((id) => <span key={id}>{equipmentById(id)?.inventoryCode ?? id}</span>)}</div></td><td>{formatDateTime(loan.checkoutAt)}</td><td>{formatDateTime(loan.dueAt)}</td><td><span className={`loan-status loan-status-${loan.status.toLocaleLowerCase()}`}>{loanStatus[loan.status]}</span></td><td><div className="loan-actions">{(loan.status === "ACTIVO" || loan.status === "VENCIDO") && <><button type="button" className="table-action table-action-success" onClick={() => onReturn(loan)}>Devolver</button><button type="button" className="table-action table-action-muted" onClick={() => onCancel(loan)}>Cancelar</button></>}</div></td></tr>)}{loans.length === 0 && <tr><td colSpan={7} className="audiovisual-empty">No hay préstamos registrados.</td></tr>}</tbody></table></div></section>;
 }
 
-function LoanDialog({ initial, equipment, initialRoom, onClose, onSubmit }: { initial: AudiovisualEquipment; equipment: AudiovisualEquipment[]; initialRoom: string; onClose: () => void; onSubmit: (payload: { teacher: string; room: string; dueAt: string; equipmentIds: string[] }) => void }) {
-  const [teacher, setTeacher] = useState("");
-  const [room, setRoom] = useState(initialRoom);
+function LoanDialog({ initial, equipment, rooms, teachers, initialRoom, onClose, onSubmit }: { initial: AudiovisualEquipment; equipment: AudiovisualEquipment[]; rooms: Room[]; teachers: DocenteCatalogo[]; initialRoom: string; onClose: () => void; onSubmit: (payload: { teacherId: string; roomId: string; dueAt: string; equipmentIds: string[] }) => void | Promise<void> }) {
+  const [teacherId, setTeacherId] = useState("");
+  const [roomId, setRoomId] = useState(rooms.find((room) => room.code === initialRoom)?.id ?? "");
   const [dueAt, setDueAt] = useState("");
   const [selected, setSelected] = useState([initial.id]);
   const available = equipment.filter((item) => item.status === "DISPONIBLE");
   const toggle = (id: string) => setSelected((current) => current.includes(id) ? current.length > 1 ? current.filter((item) => item !== id) : current : [...current, id]);
-  const submit = (event: React.FormEvent) => { event.preventDefault(); onSubmit({ teacher: teacher.trim(), room, dueAt, equipmentIds: selected }); };
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className="audiovisual-dialog" role="dialog" aria-modal="true" aria-labelledby="loan-title"><header><div><h2 id="loan-title">Registrar préstamo</h2><p>Seleccione uno o varios equipos disponibles.</p></div><button type="button" onClick={onClose} aria-label="Cerrar">×</button></header><form onSubmit={submit}><div className="dialog-grid"><label className="dialog-field"><span>Docente responsable</span><input value={teacher} onChange={(event) => setTeacher(event.target.value)} placeholder="Nombre del docente" required autoFocus /></label><label className="dialog-field"><span>Aula de destino</span><select value={room} onChange={(event) => setRoom(event.target.value)} required><option value="">Seleccionar aula</option>{["401","402","403","404","405","406","501","502","503","504","505","506","601","602","603","604","605","606","701","702"].map((item) => <option key={item} value={item}>Aula {item}</option>)}</select></label><label className="dialog-field dialog-field-wide"><span>Devolución estimada</span><input type="datetime-local" value={dueAt} onChange={(event) => setDueAt(event.target.value)} required /></label></div><fieldset className="equipment-picker"><legend>Equipos incluidos <b>{selected.length}</b></legend><div>{available.map((item) => <label key={item.id} className={selected.includes(item.id) ? "is-selected" : ""}><input type="checkbox" checked={selected.includes(item.id)} onChange={() => toggle(item.id)} /><span><strong>{item.inventoryCode}</strong>{item.name}<small>{item.type}</small></span></label>)}</div></fieldset><label className="dialog-field"><span>Observaciones de salida</span><textarea rows={2} placeholder="Estado físico o funcional al momento de la entrega" /></label><footer><button type="button" className="dialog-cancel" onClick={onClose}>Cancelar</button><button type="submit" className="button-primary">Confirmar préstamo</button></footer></form></section></div>;
+  const submit = (event: React.FormEvent) => { event.preventDefault(); void onSubmit({ teacherId, roomId, dueAt, equipmentIds: selected }); };
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className="audiovisual-dialog" role="dialog" aria-modal="true" aria-labelledby="loan-title"><header><div><h2 id="loan-title">Registrar préstamo</h2><p>Seleccione uno o varios equipos disponibles.</p></div><button type="button" onClick={onClose} aria-label="Cerrar">×</button></header><form onSubmit={submit}><div className="dialog-grid"><label className="dialog-field"><span>Docente responsable</span><select value={teacherId} onChange={(event) => setTeacherId(event.target.value)} required autoFocus><option value="">Seleccionar docente</option>{teachers.map((teacher) => <option key={teacher.id} value={teacher.id}>{teacher.nombre}</option>)}</select></label><label className="dialog-field"><span>Aula de destino</span><select value={roomId} onChange={(event) => setRoomId(event.target.value)} required><option value="">Seleccionar aula</option>{rooms.map((room) => <option key={room.id} value={room.id}>Aula {room.code}</option>)}</select></label><label className="dialog-field dialog-field-wide"><span>Devolución estimada</span><input type="datetime-local" value={dueAt} onChange={(event) => setDueAt(event.target.value)} required /></label></div><fieldset className="equipment-picker"><legend>Equipos incluidos <b>{selected.length}</b></legend><div>{available.map((item) => <label key={item.id} className={selected.includes(item.id) ? "is-selected" : ""}><input type="checkbox" checked={selected.includes(item.id)} onChange={() => toggle(item.id)} /><span><strong>{item.inventoryCode}</strong>{item.name}<small>{item.type}</small></span></label>)}</div></fieldset><footer><button type="button" className="dialog-cancel" onClick={onClose}>Cancelar</button><button type="submit" className="button-primary" disabled={!teacherId || !roomId || !dueAt}>Confirmar préstamo</button></footer></form></section></div>;
 }
 
 function ReturnDialog({ loan, equipmentById, onClose, onSubmit }: { loan: AudiovisualLoan; equipmentById: (id: string) => AudiovisualEquipment | undefined; onClose: () => void; onSubmit: (conditions: Record<string, "DISPONIBLE" | "MANTENIMIENTO">) => void }) {

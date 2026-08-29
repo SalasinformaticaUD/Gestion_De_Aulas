@@ -1,0 +1,11 @@
+import { obtenerSesion } from "@/features/auth/lib/sesion";
+import { solicitarAulas } from "@/features/monitores/api/clienteMonitores";
+import type { TeacherLoan } from "@/features/prestamos-docentes/types";
+type ApiLoan = { id: string; estado: TeacherLoan["status"]; inicio: string; fin: string; motivo: string | null; aulaId: string; aula: { codigo: string }; docente: { id: string; nombre: string; documento: string | null } };
+const token = () => { const value = obtenerSesion()?.tokenAcceso; if (!value) throw new Error("La sesión expiró. Inicie sesión nuevamente."); return value; };
+const map = (item: ApiLoan): TeacherLoan => ({ id: item.id, status: item.estado, start: item.inicio, end: item.fin, reason: item.motivo ?? undefined, roomId: item.aulaId, roomCode: item.aula.codigo, teacher: { id: item.docente.id, name: item.docente.nombre, document: item.docente.documento ?? "Sin documento", faculty: "Docente" } });
+export const listarPrestamosDocentes = async () => (await solicitarAulas<ApiLoan[]>("/prestamos-docentes", token())).map(map);
+export const crearPrestamoDocente = (input: { docenteId: string; aulaId: string; inicio: string; fin: string; motivo?: string }) => solicitarAulas<ApiLoan>("/prestamos-docentes", token(), { method: "POST", body: JSON.stringify(input) });
+export const aprobarPrestamoDocente = (id: string) => solicitarAulas<ApiLoan>(`/prestamos-docentes/${id}/aprobar`, token(), { method: "PATCH", body: JSON.stringify({}) });
+export const cancelarPrestamoDocente = (id: string) => solicitarAulas<ApiLoan>(`/prestamos-docentes/${id}/cancelar`, token(), { method: "PATCH", body: JSON.stringify({}) });
+export const finalizarPrestamoDocente = (id: string) => solicitarAulas<ApiLoan>(`/prestamos-docentes/${id}/finalizar`, token(), { method: "PATCH", body: JSON.stringify({}) });

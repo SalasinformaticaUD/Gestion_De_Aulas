@@ -7,14 +7,8 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { getApplication } from "@/features/auth/config/applications";
 import { guardarSesion } from "@/features/auth/lib/sesion";
 import { solicitarAulas, type RespuestaLoginCentral } from "@/features/monitores/api/clienteMonitores";
-import { modoDemoMonitores } from "@/features/monitores/api/modoDemo";
 import { CosmosLogo } from "@/components/brand/CosmosLogo";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
-
-const credencialesDemoCambioAplicativo = {
-  usuario: "demo-cambio-aplicativos",
-  contrasena: "demo-cambio-aplicativos",
-} as const;
 
 export function LoginView() {
   const router = useRouter();
@@ -49,22 +43,6 @@ export function LoginView() {
     setIsValidating(true);
 
     try {
-      if (modoDemoMonitores) {
-        const puedeCambiarAplicativo = username.trim() === credencialesDemoCambioAplicativo.usuario
-          && password === credencialesDemoCambioAplicativo.contrasena;
-        guardarSesion({
-          aplicacion: application.key,
-          tokenAcceso: "demo-token",
-          expiraEn: Date.now() + 8 * 60 * 60 * 1000,
-          modoDemo: true,
-          aplicacionesAutorizadas: puedeCambiarAplicativo ? ["aulas", "monitores"] : [application.key],
-          usuario: { id:"demo", nombreCompleto:"Usuario Demo", nombreUsuario:username.trim(), correo:"demo@local", cargo:"Líder de monitores", dependencia:{id:"demo",nombre:"Aulas de Software"}, roles:["LIDER"], permisos:["MONITORES_LEER"], modulos:["MONITORES"] },
-        });
-        setFeedback("success");
-        const destino = nextPath?.startsWith("/") ? nextPath : application.destination;
-        window.setTimeout(() => router.push(destino), 250);
-        return;
-      }
       const central = await solicitarAulas<RespuestaLoginCentral>("/auth/login", undefined, {
         method: "POST",
         body: JSON.stringify({ identificador: username.trim(), password }),

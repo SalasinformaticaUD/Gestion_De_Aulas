@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { applications, type ApplicationKey } from "@/features/auth/config/applications";
 import { cerrarSesion, obtenerSesion, tieneAccesoAplicacion } from "@/features/auth/lib/sesion";
-import { ErrorApi, eventoErrorAutorizacion, solicitarAulas } from "@/features/monitores/api/clienteMonitores";
+import { ErrorApi, eventoErrorAutorizacion, solicitarAulas, solicitarMonitores } from "@/features/monitores/api/clienteMonitores";
 import { notify } from "@/lib/notifications";
 
 type AccessGuardProps = { application: ApplicationKey; children: ReactNode };
@@ -25,8 +25,25 @@ export function AccessGuard({ application, children }: AccessGuardProps) {
       router.replace(`${applications[sesion.aplicacion].destination}?acceso=denegado`);
       return;
     }
-    if (sesion.modoDemo) { setIsAllowed(true); return; }
-    solicitarAulas("/auth/me", sesion.tokenAcceso)
+    const milisegundosRestantes = sesion.expiraEn - Date.now();
+    if (milisegundosRestantes <= 0) {
+      cerrarSesion();
+      router.replace(`/login?app=${application}&next=${encodeURIComponent(pathname)}`);
+      return;
+    }
+    const temporizadorExpiracion = window.setTimeout(() => {
+      cerrarSesion();
+      router.replace(`/login?app=${application}&next=${encodeURIComponent(pathname)}`);
+    }, milisegundosRestantes);
+    const validarSesion = async () => {
+      await solicitarAulas("/auth/me", sesion.tokenAcceso);
+      // Monitores mantiene su perfil operativo local y debe confirmar que el UUID
+      // del JWT central está vinculado a un usuario activo en esa aplicación.
+      if (application === "monitores") {
+        await solicitarMonitores("/api/v1/platform/me/");
+      }
+    };
+    validarSesion()
       .then(() => { if (activo) setIsAllowed(true); })
       .catch((error: unknown) => {
         if (error instanceof ErrorApi && error.estado === 403) {
@@ -36,7 +53,7 @@ export function AccessGuard({ application, children }: AccessGuardProps) {
         cerrarSesion();
         router.replace(`/login?app=${application}&next=${encodeURIComponent(pathname)}`);
       });
-    return () => { activo = false; };
+    return () => { activo = false; window.clearTimeout(temporizadorExpiracion); };
   }, [application, pathname, router]);
 
   useEffect(() => {

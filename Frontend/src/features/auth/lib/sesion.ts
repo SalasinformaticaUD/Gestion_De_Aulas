@@ -10,7 +10,6 @@ export type SesionAplicacion = {
   expiraEn: number;
   usuario: UsuarioCentral;
   aplicacionesAutorizadas: ApplicationKey[];
-  modoDemo?: boolean;
 };
 
 export function guardarSesion(sesion: SesionAplicacion) {

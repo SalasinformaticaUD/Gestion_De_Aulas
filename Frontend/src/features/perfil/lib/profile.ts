@@ -10,14 +10,15 @@ export type UserProfile = {
 };
 
 export const defaultProfile: UserProfile = {
-  fullName: "Jhon Rodríguez",
-  email: "jrodriguez@udistrital.edu.co",
-  username: "jrodriguez",
-  role: "Técnico · Almacén",
-  department: "Aulas de Software",
+  fullName: "Usuario",
+  email: "",
+  username: "",
+  role: "Sin perfil cargado",
+  department: "",
 };
 
-const profileKey = "sgoas-user-profile";
+// Se versiona la clave para no reutilizar el perfil de prueba guardado por versiones anteriores.
+const profileKey = "sgoas-user-profile-v2";
 const themeKey = "sgoas-theme";
 export const profileEvent = "sgoas-profile-updated";
 export const themeEvent = "sgoas-theme-updated";

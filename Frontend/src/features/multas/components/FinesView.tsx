@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { fineStudents, initialFineReasons, initialFines } from "@/features/multas/data/fines";
+import { useEffect, useMemo, useState } from "react";
+import { anularMulta, buscarEstudiante, cargarMultas, crearMotivoMulta, crearMulta, cumplirMulta } from "@/features/multas/api/multasApi";
 import type { FineReason, FineRecord, FineStatus, FineStudent } from "@/features/multas/types";
 import styles from "./FinesView.module.css";
 
@@ -9,8 +9,8 @@ type View = "activas" | "historial" | "motivos";
 const statusLabels: Record<FineStatus, string> = { ACTIVA: "Activa", CUMPLIDA: "Cumplida", ANULADA: "Anulada" };
 
 export function FinesView() {
-  const [fines, setFines] = useState(initialFines);
-  const [reasons, setReasons] = useState(initialFineReasons);
+  const [fines, setFines] = useState<FineRecord[]>([]);
+  const [reasons, setReasons] = useState<FineReason[]>([]);
   const [view, setView] = useState<View>("activas");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("todas");
@@ -29,35 +29,22 @@ export function FinesView() {
     );
   }, [activeFines, historicalFines, query, reasons, statusFilter, view]);
 
-  const createFine = (payload: { student: FineStudent; reasonId: string; description?: string }) => {
-    const nextNumber = Math.max(...fines.map((fine) => Number(fine.folio.slice(-4)))) + 1;
-    const fine: FineRecord = { ...payload, id: `12000000-0000-4000-8000-${String(nextNumber).padStart(12, "0")}`, folio: `MUL-2026-${String(nextNumber).padStart(4, "0")}`, status: "ACTIVA", date: "2026-08-25T21:50:00-05:00", imposedBy: "Jhon Rodríguez" };
-    setFines((current) => [fine, ...current]);
-    setShowCreate(false);
-    setView("activas");
-    setNotice({ tone: "success", text: `${fine.folio} fue impuesta a ${fine.student.name}. Las prácticas libres quedan bloqueadas mientras esté activa.` });
+  const reload = async () => { try { const data = await cargarMultas(); setFines(data.fines); setReasons(data.reasons); } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible cargar las multas." }); } };
+  useEffect(() => { void reload(); }, []);
+  const createFine = async (payload: { student: FineStudent; reasonId: string; description?: string }) => {
+    try { await crearMulta({ codigoEstudiante: payload.student.code, motivoId: payload.reasonId, descripcion: payload.description }); await reload(); setShowCreate(false); setView("activas"); setNotice({ tone: "success", text: `Multa impuesta a ${payload.student.name}.` }); } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible crear la multa." }); }
   };
 
-  const completeTransition = (item: FineRecord, action: "cumplir" | "anular", detail: string) => {
+  const completeTransition = async (item: FineRecord, action: "cumplir" | "anular", detail: string) => {
     if (item.status !== "ACTIVA") {
       setNotice({ tone: "error", text: "Solo una multa activa puede cumplirse o anularse." });
       return;
     }
-    setFines((current) => current.map((fine) => fine.id === item.id ? action === "cumplir" ? { ...fine, status: "CUMPLIDA", fulfilledAt: "2026-08-25T21:50:00-05:00", fulfilledBy: "Jhon Rodríguez", deliveredItems: detail } : { ...fine, status: "ANULADA", annulledAt: "2026-08-25T21:50:00-05:00", annulledBy: "Jhon Rodríguez", annulmentReason: detail } : fine));
-    setTransition(null);
-    setNotice({ tone: "success", text: `${item.folio} fue marcada como ${action === "cumplir" ? "cumplida" : "anulada"}. La transición quedó asociada al usuario actual.` });
+    try { if (action === "cumplir") await cumplirMulta(item.id, detail); else await anularMulta(item.id, detail); await reload(); setTransition(null); setNotice({ tone: "success", text: `${item.folio} fue marcada como ${action === "cumplir" ? "cumplida" : "anulada"}.` }); } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible actualizar la multa." }); }
   };
 
-  const createReason = (payload: Omit<FineReason, "id">) => {
-    if (reasons.some((reason) => reason.name.toLocaleLowerCase("es") === payload.name.toLocaleLowerCase("es"))) {
-      setNotice({ tone: "error", text: "Ya existe un motivo de multa con ese nombre." });
-      return false;
-    }
-    const reason: FineReason = { ...payload, id: `13000000-0000-4000-8000-${String(reasons.length + 1).padStart(12, "0")}` };
-    setReasons((current) => [...current, reason].sort((a, b) => a.name.localeCompare(b.name, "es")));
-    setShowReason(false);
-    setNotice({ tone: "success", text: `El motivo “${reason.name}” fue creado correctamente.` });
-    return true;
+  const createReason = async (payload: Omit<FineReason, "id">) => {
+    try { await crearMotivoMulta(payload); await reload(); setShowReason(false); setNotice({ tone: "success", text: `El motivo “${payload.name}” fue creado correctamente.` }); return true; } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible crear el motivo." }); return false; }
   };
 
   const changeView = (next: View) => { setView(next); setStatusFilter("todas"); };
@@ -101,27 +88,27 @@ function ReasonsView({ reasons, fines, onCreate }: { reasons: FineReason[]; fine
   return <section className={styles.reasonsCard}><header><div><h2>Motivos de multa</h2><p>Catálogo utilizado para clasificar nuevas restricciones.</p></div><button type="button" className="button-primary" onClick={onCreate}>+ Nuevo motivo</button></header><div className={styles.reasonGrid}>{reasons.map((reason) => <article key={reason.id}><header><span>{fines.filter((fine) => fine.reasonId === reason.id).length}</span><strong>{reason.name}</strong></header><p>{reason.description || "Sin descripción registrada."}</p><footer>{fines.filter((fine) => fine.reasonId === reason.id && fine.status === "ACTIVA").length} multa(s) activa(s)</footer></article>)}</div></section>;
 }
 
-function CreateFineDialog({ reasons, onClose, onCreate }: { reasons: FineReason[]; onClose: () => void; onCreate: (payload: { student: FineStudent; reasonId: string; description?: string }) => void }) {
+function CreateFineDialog({ reasons, onClose, onCreate }: { reasons: FineReason[]; onClose: () => void; onCreate: (payload: { student: FineStudent; reasonId: string; description?: string }) => void | Promise<void> }) {
   const [code, setCode] = useState("");
   const [student, setStudent] = useState<FineStudent | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [reasonId, setReasonId] = useState(reasons[0]?.id ?? "");
   const [description, setDescription] = useState("");
-  const lookup = () => { const found = fineStudents.find((item) => item.code.toLocaleLowerCase("es") === code.trim().toLocaleLowerCase("es")); setStudent(found ?? null); setNotFound(!found); };
-  const submit = (event: React.FormEvent) => { event.preventDefault(); if (student && reasonId) onCreate({ student, reasonId, description: description.trim() || undefined }); };
+  const lookup = async () => { try { const found = await buscarEstudiante(code.trim()); setStudent(found); setNotFound(!found); } catch { setStudent(null); setNotFound(true); } };
+  const submit = (event: React.FormEvent) => { event.preventDefault(); if (student && reasonId) void onCreate({ student, reasonId, description: description.trim() || undefined }); };
   return <DialogShell title="Nueva multa" subtitle="Restricción estudiantil" description="Identifique un estudiante existente y seleccione el motivo." onClose={onClose}><form onSubmit={submit}><div className={styles.studentLookup}><label><span>Código estudiantil</span><input value={code} onChange={(event) => { setCode(event.target.value); setStudent(null); setNotFound(false); }} minLength={3} maxLength={30} required autoFocus placeholder="Ej. 2021102044" /></label><button type="button" onClick={lookup} disabled={code.trim().length < 3}>Buscar</button></div>{student && <div className={styles.studentResult}><b>✓</b><span><strong>{student.name}</strong><small>Código {student.code} · Estudiante encontrado</small></span></div>}{notFound && <div className={styles.inlineError}>El estudiante no existe. El backend no crea estudiantes desde el módulo de multas.</div>}<div className={styles.formGrid}><label className={styles.wideField}><span>Motivo</span><select value={reasonId} onChange={(event) => setReasonId(event.target.value)}>{reasons.map((reason) => <option key={reason.id} value={reason.id}>{reason.name}</option>)}</select></label><label className={styles.wideField}><span>Descripción <small>Opcional · {description.length}/2000</small></span><textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={2000} rows={5} placeholder="Detalle las circunstancias de la multa..." /></label></div><div className={styles.blockWarning}><strong>Esta acción bloqueará las prácticas libres</strong><span>La restricción permanecerá hasta registrar cumplimiento o anulación.</span></div><footer><button type="button" className={styles.dialogCancel} onClick={onClose}>Cancelar</button><button type="submit" className="button-primary" disabled={!student || !reasonId}>Imponer multa</button></footer></form></DialogShell>;
 }
 
-function TransitionDialog({ item, action, onClose, onConfirm }: { item: FineRecord; action: "cumplir" | "anular"; onClose: () => void; onConfirm: (item: FineRecord, action: "cumplir" | "anular", detail: string) => void }) {
+function TransitionDialog({ item, action, onClose, onConfirm }: { item: FineRecord; action: "cumplir" | "anular"; onClose: () => void; onConfirm: (item: FineRecord, action: "cumplir" | "anular", detail: string) => void | Promise<void> }) {
   const [detail, setDetail] = useState("");
   const fulfilling = action === "cumplir";
-  return <DialogShell title={fulfilling ? "Registrar cumplimiento" : "Anular multa"} subtitle={item.folio} description={`${item.student.name} · Código ${item.student.code}`} onClose={onClose}><form onSubmit={(event) => { event.preventDefault(); if (detail.trim()) onConfirm(item, action, detail.trim()); }}><div className={`${styles.transitionIntro} ${!fulfilling ? styles.annulIntro : ""}`}><strong>{fulfilling ? "La multa dejará de bloquear al estudiante" : "Esta es una acción administrativa trazable"}</strong><span>{fulfilling ? "Describa los elementos o compromisos entregados para verificar el cumplimiento." : "Indique claramente por qué la multa debe invalidarse."}</span></div><div className={styles.formGrid}><label className={styles.wideField}><span>{fulfilling ? "Elementos entregados" : "Motivo de anulación"} <small>{detail.length}/2000</small></span><textarea value={detail} onChange={(event) => setDetail(event.target.value)} maxLength={2000} rows={5} required autoFocus /></label></div><footer><button type="button" className={styles.dialogCancel} onClick={onClose}>Cancelar</button><button type="submit" className={fulfilling ? styles.confirmFulfill : styles.confirmAnnul} disabled={!detail.trim()}>{fulfilling ? "Confirmar cumplimiento" : "Confirmar anulación"}</button></footer></form></DialogShell>;
+  return <DialogShell title={fulfilling ? "Registrar cumplimiento" : "Anular multa"} subtitle={item.folio} description={`${item.student.name} · Código ${item.student.code}`} onClose={onClose}><form onSubmit={(event) => { event.preventDefault(); if (detail.trim()) void onConfirm(item, action, detail.trim()); }}><div className={`${styles.transitionIntro} ${!fulfilling ? styles.annulIntro : ""}`}><strong>{fulfilling ? "La multa dejará de bloquear al estudiante" : "Esta es una acción administrativa trazable"}</strong><span>{fulfilling ? "Describa los elementos o compromisos entregados para verificar el cumplimiento." : "Indique claramente por qué la multa debe invalidarse."}</span></div><div className={styles.formGrid}><label className={styles.wideField}><span>{fulfilling ? "Elementos entregados" : "Motivo de anulación"} <small>{detail.length}/2000</small></span><textarea value={detail} onChange={(event) => setDetail(event.target.value)} maxLength={2000} rows={5} required autoFocus /></label></div><footer><button type="button" className={styles.dialogCancel} onClick={onClose}>Cancelar</button><button type="submit" className={fulfilling ? styles.confirmFulfill : styles.confirmAnnul} disabled={!detail.trim()}>{fulfilling ? "Confirmar cumplimiento" : "Confirmar anulación"}</button></footer></form></DialogShell>;
 }
 
-function ReasonDialog({ onClose, onCreate }: { onClose: () => void; onCreate: (payload: Omit<FineReason, "id">) => boolean }) {
+function ReasonDialog({ onClose, onCreate }: { onClose: () => void; onCreate: (payload: Omit<FineReason, "id">) => boolean | Promise<boolean> }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  return <DialogShell title="Nuevo motivo" subtitle="Catálogo de multas" description="El nombre debe ser único dentro del catálogo." onClose={onClose}><form onSubmit={(event) => { event.preventDefault(); onCreate({ name: name.trim(), description: description.trim() || undefined }); }}><div className={styles.formGrid}><label className={styles.wideField}><span>Nombre <small>{name.length}/160</small></span><input value={name} onChange={(event) => setName(event.target.value)} maxLength={160} required autoFocus /></label><label className={styles.wideField}><span>Descripción <small>Opcional · {description.length}/2000</small></span><textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={2000} rows={4} /></label></div><footer><button type="button" className={styles.dialogCancel} onClick={onClose}>Cancelar</button><button type="submit" className="button-primary" disabled={!name.trim()}>Crear motivo</button></footer></form></DialogShell>;
+  return <DialogShell title="Nuevo motivo" subtitle="Catálogo de multas" description="El nombre debe ser único dentro del catálogo." onClose={onClose}><form onSubmit={(event) => { event.preventDefault(); void onCreate({ name: name.trim(), description: description.trim() || undefined }); }}><div className={styles.formGrid}><label className={styles.wideField}><span>Nombre <small>{name.length}/160</small></span><input value={name} onChange={(event) => setName(event.target.value)} maxLength={160} required autoFocus /></label><label className={styles.wideField}><span>Descripción <small>Opcional · {description.length}/2000</small></span><textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={2000} rows={4} /></label></div><footer><button type="button" className={styles.dialogCancel} onClick={onClose}>Cancelar</button><button type="submit" className="button-primary" disabled={!name.trim()}>Crear motivo</button></footer></form></DialogShell>;
 }
 
 function DialogShell({ title, subtitle, description, onClose, children }: { title: string; subtitle: string; description: string; onClose: () => void; children: React.ReactNode }) {

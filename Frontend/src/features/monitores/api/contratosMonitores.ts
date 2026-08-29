@@ -1,5 +1,6 @@
 export type MonitorApi = {
   id: string;
+  user_email?: string;
   codigo_estudiante: string;
   full_name: string;
   department: string;
@@ -13,6 +14,7 @@ export type HorarioApi = {
   weekday: number;
   start_time: string;
   end_time: string;
+  location: string;
   is_active: boolean;
 };
 

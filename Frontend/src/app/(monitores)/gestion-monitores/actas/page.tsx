@@ -1,2 +1,2 @@
-import { GestionDocumental } from "@/features/monitores/componentes/GestionDocumental";
-export default function PaginaActas() { return <GestionDocumental tipo="actas" />; }
+import { ReportesApiView } from "@/features/monitores/componentes/ReportesApiView";
+export default function PaginaActas() { return <ReportesApiView tipo="actas" />; }

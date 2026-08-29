@@ -5,7 +5,7 @@ import styles from "./ScheduleView.module.css";
 
 const days = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const blocks = ["07:00 - 09:00", "09:00 - 11:00", "11:00 - 13:00", "14:00 - 16:00", "16:00 - 18:00"];
-const rooms = ["401", "402", "403", "404", "405"];
+const rooms: string[] = [];
 const tones = [
   { value: "info", label: "Informativa" },
   { value: "success", label: "Confirmada" },
@@ -15,21 +15,15 @@ const tones = [
 type ClassEntry = { subject: string; teacher: string; tone: string };
 type ClassMap = Record<string, ClassEntry>;
 
-const initialClasses: ClassMap = {
-  "07:00 - 09:00-Lunes-401": { subject: "Resistencia de materiales", teacher: "Dr. Carlos Mendoza", tone: "info" },
-  "07:00 - 09:00-Martes-401": { subject: "Cálculo diferencial", teacher: "Mg. Patricia Silva", tone: "success" },
-  "07:00 - 09:00-Viernes-401": { subject: "Laboratorio de materiales", teacher: "Ing. Ana Suárez", tone: "success" },
-  "09:00 - 11:00-Miércoles-401": { subject: "Física I", teacher: "Dr. Roberto Herrera", tone: "success" },
-  "14:00 - 16:00-Jueves-401": { subject: "Resistencia de materiales", teacher: "Dr. Carlos Mendoza", tone: "warning" },
-};
+const initialClasses: ClassMap = {};
 
 function slotKey(block: string, day: string, room: string) {
   return `${block}-${day}-${room}`;
 }
 
 export function ScheduleView() {
-  const [room, setRoom] = useState("401");
-  const [week, setWeek] = useState("2026-W34");
+  const [room, setRoom] = useState("");
+  const [week, setWeek] = useState("");
   const [classes, setClasses] = useState<ClassMap>(initialClasses);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -37,11 +31,11 @@ export function ScheduleView() {
     <>
       <section className="page-heading"><div><h1>Horarios académicos</h1><p>Vista semanal de la programación por aula · Período 2026-1.</p></div><span className="live-status">Periodo activo</span></section>
       <section className="filters" aria-label="Filtros de horario">
-        <label className="field">Aula<select value={room} onChange={(event) => setRoom(event.target.value)}>{rooms.map((number) => <option key={number} value={number}>Aula {number}</option>)}</select></label>
+        <label className="field">Aula<select value={room} onChange={(event) => setRoom(event.target.value)}><option value="">Sin aulas registradas</option>{rooms.map((number) => <option key={number} value={number}>Aula {number}</option>)}</select></label>
         <label className="field">Semana<input type="week" value={week} onChange={(event) => setWeek(event.target.value)} /></label>
         <button className="button-primary" type="button" onClick={() => setIsModalOpen(true)}>+ Agregar clase</button>
       </section>
-      <section className="card"><header className="card-header"><div><h2>Aula {room} · Horario semanal</h2><p>La información se importará desde el archivo oficial de horarios.</p></div><span>Semana {week.slice(-2)}</span></header>
+      <section className="card"><header className="card-header"><div><h2>{room ? `Aula ${room} · Horario semanal` : "Horario semanal"}</h2><p>No hay aulas ni actividades registradas.</p></div><span>{week ? `Semana ${week.slice(-2)}` : "Sin período"}</span></header>
         <div className="table-wrap"><table className="schedule"><thead><tr><th>Bloque</th>{days.map((day) => <th key={day}>{day}</th>)}</tr></thead><tbody>
           {blocks.map((block) => <tr key={block}><td>{block}</td>{days.map((day) => {
             const entry = classes[slotKey(block, day, room)];

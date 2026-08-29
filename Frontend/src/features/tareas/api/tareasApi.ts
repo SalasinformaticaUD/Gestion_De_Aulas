@@ -1,0 +1,10 @@
+import { obtenerSesion } from "@/features/auth/lib/sesion";
+import { solicitarAulas } from "@/features/monitores/api/clienteMonitores";
+import type { OperationalTask, TaskStatus } from "@/features/tareas/types";
+type ApiTask = { id: string; titulo: string; descripcion: string | null; estado: TaskStatus; aulaId: string | null; responsableId: string | null; afectaDisponibilidad: boolean; inicio: string | null; fin: string | null; aula: { codigo: string } | null };
+const token = () => { const value = obtenerSesion()?.tokenAcceso; if (!value) throw new Error("La sesión expiró. Inicie sesión nuevamente."); return value; };
+const map = (task: ApiTask): OperationalTask => ({ id: task.id, code: `TAR-${task.id.slice(0, 8).toUpperCase()}`, title: task.titulo, description: task.descripcion ?? undefined, status: task.estado, roomId: task.aulaId ?? undefined, roomCode: task.aula?.codigo, responsibleId: task.responsableId ?? undefined, affectsAvailability: task.afectaDisponibilidad, start: task.inicio ?? undefined, end: task.fin ?? undefined });
+export const listarTareas = async () => (await solicitarAulas<ApiTask[]>("/tareas-operativas", token())).map(map);
+export const crearTarea = (data: Record<string, unknown>) => solicitarAulas<ApiTask>("/tareas-operativas", token(), { method: "POST", body: JSON.stringify(data) });
+export const actualizarTarea = (id: string, data: Record<string, unknown>) => solicitarAulas<ApiTask>(`/tareas-operativas/${id}`, token(), { method: "PATCH", body: JSON.stringify(data) });
+export const cambiarEstadoTarea = (id: string, estado: TaskStatus) => solicitarAulas<ApiTask>(`/tareas-operativas/${id}/estado`, token(), { method: "PATCH", body: JSON.stringify({ estado }) });

@@ -79,6 +79,18 @@ export async function solicitarMonitores<T>(ruta: string, opciones: RequestInit 
   return interpretarRespuesta<T>(respuesta, Boolean(token));
 }
 
+export async function descargarMonitores(ruta: string, opciones: RequestInit = {}) {
+  const cabeceras = new Headers(opciones.headers);
+  const token = obtenerSesion()?.tokenAcceso;
+  if (token) cabeceras.set("Authorization", `Bearer ${token}`);
+  const respuesta = await fetch(`${baseMonitores}${ruta}`, { ...opciones, headers: cabeceras });
+  if (!respuesta.ok) {
+    notificarErrorAutorizacion(respuesta.status);
+    throw new ErrorApi("No fue posible descargar el documento.", respuesta.status);
+  }
+  return respuesta.blob();
+}
+
 export type UsuarioCentral = {
   id: string;
   nombreCompleto: string;

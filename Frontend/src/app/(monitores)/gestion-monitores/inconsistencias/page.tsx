@@ -1,2 +1,2 @@
-import { InconsistenciasAsistencia } from "@/features/monitores/componentes/InconsistenciasAsistencia";
-export default function PaginaInconsistencias() { return <InconsistenciasAsistencia />; }
+import { ConciliacionAsistencia } from "@/features/monitores/componentes/ConciliacionAsistencia";
+export default function PaginaInconsistencias() { return <ConciliacionAsistencia />; }

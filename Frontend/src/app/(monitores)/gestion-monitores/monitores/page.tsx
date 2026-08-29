@@ -1,2 +1,2 @@
-import { GestionCuentasMonitores } from "@/features/monitores/componentes/GestionCuentasMonitores";
-export default function PaginaMonitores() { return <GestionCuentasMonitores />; }
+import { MonitoresApiView } from "@/features/monitores/componentes/MonitoresApiView";
+export default function PaginaMonitores() { return <MonitoresApiView />; }

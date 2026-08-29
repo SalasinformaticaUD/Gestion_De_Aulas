@@ -1,2 +1,2 @@
-import { HistoricosMonitores } from "@/features/monitores/componentes/HistoricosMonitores";
-export default function PaginaHistoricos() { return <HistoricosMonitores />; }
+import { HistoricoApiView } from "@/features/monitores/componentes/HistoricoApiView";
+export default function PaginaHistoricos() { return <HistoricoApiView />; }
