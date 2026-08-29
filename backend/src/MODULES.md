@@ -31,6 +31,8 @@ se comunican mediante controladores REST.
 | `roles`        | `/roles`        | Administración de roles.                                                                                                                                 |
 | `permisos`     | `/permisos`     | Permisos por módulo y operación.                                                                                                                         |
 | `dependencias` | `/dependencias` | Dependencias a las que pertenecen los usuarios.                                                                                                          |
+| `docentes` | `/docentes` | Catálogo administrativo reutilizado por horarios, préstamos docentes y préstamos audiovisuales. Permite `GET`, `GET /:id`, `POST` y `PATCH /:id`; la búsqueda usa `?q=`. |
+| `estudiantes` | `/estudiantes` | Catálogo administrativo reutilizado por prácticas libres y multas. Permite `GET`, `GET /:id`, `POST` y `PATCH /:id`; la búsqueda usa `?q=`. |
 | `auditoria`    | `/auditoria`    | Consulta de trazabilidad de operaciones críticas.                                                                                                        |
 
 ## Reglas arquitectónicas
