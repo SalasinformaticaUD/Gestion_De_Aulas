@@ -97,7 +97,10 @@ async function main() {
   });
   await prisma.usuario.upsert({
     where: { nombreUsuario: 'admin' },
-    update: {},
+    update: {
+      passwordHash: bcrypt.hashSync(password, 12),
+      estado: 'ACTIVA',
+    },
     create: {
       nombreCompleto: 'Administrador inicial',
       nombreUsuario: 'admin',

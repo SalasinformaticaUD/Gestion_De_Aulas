@@ -1,0 +1,55 @@
+{
+  "info": {
+    "name": "Integración Gestión de Aulas - Monitores",
+    "description": "Pruebas del login central y de los módulos Monitores, Horarios y Excepciones.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "aulasUrl", "value": "http://localhost:3000" },
+    { "key": "monitoresUrl", "value": "http://localhost:8000" },
+    { "key": "identificador", "value": "admin" },
+    { "key": "password", "value": "" },
+    { "key": "token", "value": "" },
+    { "key": "monitorId", "value": "" },
+    { "key": "horarioId", "value": "" },
+    { "key": "excepcionId", "value": "" }
+  ],
+  "item": [
+    { "name": "01 - Autenticación", "item": [
+      { "name": "Login central", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"identificador\": \"{{identificador}}\",\n  \"password\": \"{{password}}\"\n}" }, "url": "{{aulasUrl}}/auth/login" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Login correcto', () => pm.response.to.have.status(200));", "const json = pm.response.json();", "pm.collectionVariables.set('token', json.accessToken);", "pm.collectionVariables.set('usuarioId', json.usuario.id);"] } }] },
+      { "name": "Sesión central", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{aulasUrl}}/auth/me" } },
+      { "name": "Contexto Monitores", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{monitoresUrl}}/api/v1/platform/me/" } }
+    ] },
+    { "name": "02 - Monitores", "item": [
+      { "name": "Listar monitores", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{monitoresUrl}}/api/v1/monitors/" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Lista correcta', () => pm.response.to.have.status(200));", "const data = pm.response.json();", "const rows = Array.isArray(data) ? data : data.results;", "if (rows && rows[0]) pm.collectionVariables.set('monitorId', rows[0].id);"] } }] },
+      { "name": "Crear monitor (provision)", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"full_name\": \"Monitor Prueba Postman\",\n  \"codigo_estudiante\": \"PM-2026-001\",\n  \"email\": \"monitor.postman@udistrital.edu.co\",\n  \"username\": \"monitor.postman\",\n  \"department\": \"physics\",\n  \"numero_documento\": \"100000001\",\n  \"proyecto_curricular\": \"licenciatura_fisica\",\n  \"telefono\": \"3000000000\"\n}" }, "url": "{{monitoresUrl}}/api/v1/monitors/provision/" } }
+    ] },
+    { "name": "03 - Horarios", "item": [
+      { "name": "Listar horarios", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{monitoresUrl}}/api/v1/schedules/" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Lista correcta', () => pm.response.to.have.status(200));", "const data = pm.response.json();", "const rows = Array.isArray(data) ? data : data.results;", "if (rows && rows[0]) pm.collectionVariables.set('horarioId', rows[0].id);"] } }] },
+      { "name": "Crear horario", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"monitor\": \"{{monitorId}}\",\n  \"weekday\": 0,\n  \"start_time\": \"08:00:00\",\n  \"end_time\": \"12:00:00\",\n  \"location\": \"Aula 301\",\n  \"is_active\": true\n}" }, "url": "{{monitoresUrl}}/api/v1/schedules/" } },
+      { "name": "Actualizar horario", "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{ \"is_active\": false }" }, "url": "{{monitoresUrl}}/api/v1/schedules/{{horarioId}}/" } }
+    ] },
+    { "name": "04 - Excepciones", "item": [
+      { "name": "Listar excepciones", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{monitoresUrl}}/api/v1/schedules/exceptions/" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Lista correcta', () => pm.response.to.have.status(200));", "const data = pm.response.json();", "const rows = Array.isArray(data) ? data : data.results;", "if (rows && rows[0]) pm.collectionVariables.set('excepcionId', rows[0].id);"] } }] },
+      { "name": "Crear excepción", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }, { "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Jornada institucional Postman\",\n  \"description\": \"Prueba de integración\",\n  \"start_date\": \"2026-10-01\",\n  \"end_date\": \"2026-10-02\",\n  \"department\": null,\n  \"ignore_lateness\": true,\n  \"approve_overtime\": false,\n  \"is_active\": true\n}" }, "url": "{{monitoresUrl}}/api/v1/schedules/exceptions/" } }
+    ] },
+    { "name": "05 - Asistencia y sesiones", "item": [
+      { "name": "Listar sesiones", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{monitoresUrl}}/api/v1/sessions/" } },
+      { "name": "Conciliaciones pendientes", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{monitoresUrl}}/api/v1/attendance/pending-reconciliation/" } }
+    ] },
+    { "name": "06 - Reportes y notificaciones", "item": [
+      { "name": "Dashboard", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{monitoresUrl}}/api/v1/reports/dashboard/" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Dashboard correcto', () => pm.response.to.have.status(200));", "pm.test('Respuesta JSON', () => pm.response.to.be.json);"] } }] },
+      { "name": "Snapshots de reportes", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{monitoresUrl}}/api/v1/reports/snapshots/" } },
+      { "name": "Consulta pública por código", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{monitoresUrl}}/api/v1/reports/public-monitor-lookup/?codigo_estudiante=PM-2026-001" } },
+      { "name": "Notificaciones", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{monitoresUrl}}/api/v1/notifications/" } }
+    ] },
+    { "name": "07 - Memorandos, actas e históricos", "item": [
+      { "name": "Listar memorandos", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{monitoresUrl}}/api/v1/reports/memorandums/" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Memorandos accesibles', () => pm.response.to.have.status(200));", "pm.test('Respuesta JSON', () => pm.response.to.be.json);", "const data = pm.response.json();", "const rows = Array.isArray(data) ? data : data.results;", "if (rows && rows[0]) pm.collectionVariables.set('memorandumId', rows[0].id);"] } }] },
+      { "name": "Descargar memorando PDF", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{monitoresUrl}}/api/v1/reports/memorandums/{{memorandumId}}/pdf/" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('PDF o recurso no disponible', () => pm.expect([200, 400, 404]).to.include(pm.response.code));", "if (pm.response.code === 200) pm.test('Contenido PDF', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf'));" ] } }] },
+      { "name": "Reenviar memorando", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{monitoresUrl}}/api/v1/reports/memorandums/{{memorandumId}}/resend/" } },
+      { "name": "Listar estado de actas", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{monitoresUrl}}/api/v1/reports/commitment-acts/" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Actas accesibles', () => pm.response.to.have.status(200));", "pm.test('Respuesta JSON', () => pm.response.to.be.json);", "const rows = pm.response.json();", "if (rows && rows[0]) pm.collectionVariables.set('monitorId', rows[0].monitor);"] } }] },
+      { "name": "Descargar acta PDF", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{monitoresUrl}}/api/v1/reports/commitment-acts/{{monitorId}}/pdf/" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Acta PDF o recurso no disponible', () => pm.expect([200, 404]).to.include(pm.response.code));", "if (pm.response.code === 200) pm.test('Contenido PDF', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf'));" ] } }] },
+      { "name": "Histórico", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }], "url": "{{monitoresUrl}}/api/v1/reports/history/" }, "event": [{ "listen": "test", "script": { "exec": ["pm.test('Histórico accesible', () => pm.response.to.have.status(200));", "pm.test('Respuesta JSON', () => pm.response.to.be.json);"] } }] }
+    ] }
+  ]
+}

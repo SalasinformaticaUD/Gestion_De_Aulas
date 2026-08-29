@@ -123,7 +123,7 @@ export class AulasService {
         accion: 'CREATE',
         datosNuevos: aula,
       });
-      return aula;
+      return this.findOne(aula.id);
     } catch (error: unknown) {
       this.throwKnownPersistenceError(error);
       throw error;
@@ -209,7 +209,7 @@ export class AulasService {
         datosPrevios: previa,
         datosNuevos: aula,
       });
-      return aula;
+      return this.findOne(aula.id);
     } catch (error: unknown) {
       this.throwKnownPersistenceError(error);
       throw error;
