@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '../../generated/prisma/client.js';
+import type { Prisma } from '@prisma/client';
 import { EstadoAsistencia } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAsistenciaDocenteDto } from './dto/create-asistencia-docente.dto';

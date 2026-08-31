@@ -10,7 +10,7 @@ import {
   EstadoTarea,
   TipoObservacion,
 } from '../../generated/prisma/enums.js';
-import type { Prisma } from '../../generated/prisma/client.js';
+import type { Prisma } from '@prisma/client';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateLimpiezaAulaDto } from './dto/create-limpieza-aula.dto';

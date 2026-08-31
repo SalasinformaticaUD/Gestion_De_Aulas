@@ -1,4 +1,4 @@
-import type { DetallePrestamoAudiovisual as PrismaDetallePrestamoAudiovisual } from '../../../generated/prisma/client.js';
+import type { DetallePrestamoAudiovisual as PrismaDetallePrestamoAudiovisual } from '@prisma/client';
 import type { EquipoAudiovisualEntity } from './equipo-audiovisual.entity';
 import type { PrestamoAudiovisualEntity } from './prestamo-audiovisual.entity';
 

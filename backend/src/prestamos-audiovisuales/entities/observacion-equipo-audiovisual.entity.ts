@@ -1,4 +1,4 @@
-import type { ObservacionEquipoAudiovisual as PrismaObservacionEquipoAudiovisual } from '../../../generated/prisma/client.js';
+import type { ObservacionEquipoAudiovisual as PrismaObservacionEquipoAudiovisual } from '@prisma/client';
 import type { EquipoAudiovisualEntity } from './equipo-audiovisual.entity';
 
 export class ObservacionEquipoAudiovisualEntity implements PrismaObservacionEquipoAudiovisual {

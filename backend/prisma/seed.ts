@@ -39,12 +39,21 @@ const acciones = [
   'EXPORTAR',
 ] as const;
 const dependencias = ['Aulas de Software', 'Electrica y Electronica', 'Fisica'];
+const cargos = ['ADMINISTRADOR', 'COORDINADOR', 'DOCENTE', 'MONITOR', 'ESTUDIANTE', 'TÉCNICO', 'AUXILIAR ADMINISTRATIVO'];
 
 async function main() {
   for (const nombre of dependencias) {
     await prisma.dependencia.upsert({
       where: { nombre },
       update: { activa: true },
+      create: { nombre },
+    });
+  }
+
+  for (const nombre of cargos) {
+    await prisma.cargo.upsert({
+      where: { nombre },
+      update: { activo: true },
       create: { nombre },
     });
   }

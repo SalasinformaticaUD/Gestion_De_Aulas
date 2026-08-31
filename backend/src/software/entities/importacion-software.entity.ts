@@ -1,7 +1,7 @@
 import type {
   ImportacionSoftware as PrismaImportacionSoftware,
   Usuario,
-} from '../../../generated/prisma/client.js';
+} from '@prisma/client';
 
 export class ImportacionSoftwareEntity implements PrismaImportacionSoftware {
   declare id: string;

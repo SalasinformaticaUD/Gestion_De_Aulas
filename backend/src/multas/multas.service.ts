@@ -4,7 +4,7 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
-import { EstadoMulta, Prisma } from '../../generated/prisma/client.js';
+import { EstadoMulta, Prisma } from '@prisma/client';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnularMultaDto } from './dto/anular-multa.dto';

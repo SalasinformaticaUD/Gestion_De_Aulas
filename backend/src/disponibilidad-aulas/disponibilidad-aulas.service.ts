@@ -11,7 +11,7 @@ import {
   EstadoTarea,
   TipoObservacion,
 } from '../../generated/prisma/enums.js';
-import type { Prisma } from '../../generated/prisma/client.js';
+import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ObservacionesService } from '../observaciones/observaciones.service';
 import {

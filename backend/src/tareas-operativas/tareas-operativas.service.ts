@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EstadoTarea } from '../../generated/prisma/client.js';
+import { EstadoTarea } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import { CreateTareasOperativaDto } from './dto/create-tareas-operativa.dto';

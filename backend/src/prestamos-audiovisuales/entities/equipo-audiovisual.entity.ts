@@ -1,4 +1,4 @@
-import type { EquipoAudiovisual as PrismaEquipoAudiovisual } from '../../../generated/prisma/client.js';
+import type { EquipoAudiovisual as PrismaEquipoAudiovisual } from '@prisma/client';
 import type { DetallePrestamoAudiovisualEntity } from './detalle-prestamo-audiovisual.entity';
 import type { MantenimientoEquipoAudiovisualEntity } from './mantenimiento-equipo-audiovisual.entity';
 import type { ObservacionEquipoAudiovisualEntity } from './observacion-equipo-audiovisual.entity';

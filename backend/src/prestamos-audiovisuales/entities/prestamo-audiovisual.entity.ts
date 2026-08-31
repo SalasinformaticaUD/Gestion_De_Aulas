@@ -3,7 +3,7 @@ import type {
   Docente,
   PrestamoAudiovisual as PrismaPrestamoAudiovisual,
   Usuario,
-} from '../../../generated/prisma/client.js';
+} from '@prisma/client';
 import type { DetallePrestamoAudiovisualEntity } from './detalle-prestamo-audiovisual.entity';
 
 type UsuarioPrestamoAudiovisual = Pick<Usuario, keyof Usuario>;

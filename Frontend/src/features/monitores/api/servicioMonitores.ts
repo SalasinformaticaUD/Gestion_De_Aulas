@@ -4,7 +4,7 @@ import type { AnotacionApi, ConciliacionApi, ConsultaPublicaApi, DashboardApi, E
 export const servicioMonitores = {
   listarMonitores: () => solicitarMonitores<MonitorApi[]>("/api/v1/monitors/"),
   provisionarMonitor: (payload: { full_name: string; codigo_estudiante: string; email: string; username?: string; department: string; numero_documento?: string; proyecto_curricular?: string; telefono?: string }) =>
-    solicitarMonitores<MonitorApi>("/api/v1/monitors/provision/", { method: "POST", body: JSON.stringify(payload) }),
+    solicitarMonitores<MonitorApi>("/api/v1/monitors/provision/", { method: "POST", body: JSON.stringify({ ...payload, username: payload.username?.trim() || undefined }) }),
   actualizarMonitor: (id: string, payload: Partial<Pick<MonitorApi, "codigo_estudiante" | "full_name" | "department" | "is_active">>) =>
     solicitarMonitores<MonitorApi>(`/api/v1/monitors/${id}/`, { method: "PATCH", body: JSON.stringify(payload) }),
   eliminarMonitor: (id: string) => solicitarMonitores<void>(`/api/v1/monitors/${id}/`, { method: "DELETE" }),

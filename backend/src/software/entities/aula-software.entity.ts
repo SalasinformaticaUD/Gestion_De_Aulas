@@ -2,7 +2,7 @@ import type {
   Aula,
   AulaSoftware as PrismaAulaSoftware,
   Software,
-} from '../../../generated/prisma/client.js';
+} from '@prisma/client';
 
 export class AulaSoftwareEntity implements PrismaAulaSoftware {
   declare aulaId: string;
