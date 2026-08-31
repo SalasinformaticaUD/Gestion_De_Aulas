@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { listarAulas } from "@/features/aulas/api/aulasApi";
 import { listarDocentes, type DocenteCatalogo } from "@/features/catalogos/api/catalogosApi";
+import { consultarDisponibilidad, type DisponibilidadApi } from "@/features/disponibilidad/api/disponibilidadApi";
 import { aprobarPrestamoDocente, cancelarPrestamoDocente, crearPrestamoDocente, finalizarPrestamoDocente, listarPrestamosDocentes } from "@/features/prestamos-docentes/api/prestamosDocentesApi";
-import type { Room } from "@/features/aulas/types";
 import type { TeacherLoan, TeacherLoanStatus } from "@/features/prestamos-docentes/types";
 import styles from "./TeacherLoansView.module.css";
 
@@ -24,7 +23,6 @@ const historyStatuses: TeacherLoanStatus[] = ["DEVUELTO", "CANCELADO", "VENCIDO"
 
 export function TeacherLoansView() {
   const [loans, setLoans] = useState<TeacherLoan[]>([]);
-  const [rooms, setRooms] = useState<Room[]>([]);
   const [teachers, setTeachers] = useState<DocenteCatalogo[]>([]);
   const [view, setView] = useState<LoanView>("gestion");
   const [query, setQuery] = useState("");
@@ -50,7 +48,7 @@ export function TeacherLoansView() {
     setStatusFilter("todos");
   };
 
-  const reload = async () => { try { const [nextLoans, nextRooms, nextTeachers] = await Promise.all([listarPrestamosDocentes(), listarAulas(), listarDocentes()]); setLoans(nextLoans); setRooms(nextRooms); setTeachers(nextTeachers); } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible cargar préstamos." }); } };
+  const reload = async () => { try { const [nextLoans, nextTeachers] = await Promise.all([listarPrestamosDocentes(), listarDocentes()]); setLoans(nextLoans); setTeachers(nextTeachers); } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible cargar préstamos." }); } };
   useEffect(() => { void reload(); }, []);
   const approveLoan = async (target: TeacherLoan) => {
     if (target.status !== "SOLICITADO") return;
@@ -110,7 +108,7 @@ export function TeacherLoansView() {
 
     
 
-    {showRequest && <RequestLoanDialog rooms={rooms} teachers={teachers} onClose={() => setShowRequest(false)} onSubmit={createLoan} />}
+    {showRequest && <RequestLoanDialog teachers={teachers} onClose={() => setShowRequest(false)} onSubmit={createLoan} />}
   </>;
 }
 
@@ -136,27 +134,42 @@ function StatusBadge({ status }: { status: TeacherLoanStatus }) {
   return <span className={`${styles.status} ${styles[`status_${status.toLocaleLowerCase()}`]}`}><i />{statusLabels[status]}</span>;
 }
 
-function RequestLoanDialog({ rooms, teachers, onClose, onSubmit }: { rooms: Room[]; teachers: DocenteCatalogo[]; onClose: () => void; onSubmit: (payload: { docenteId: string; aulaId: string; inicio: string; fin: string; motivo?: string }) => void | Promise<void> }) {
+function RequestLoanDialog({ teachers, onClose, onSubmit }: { teachers: DocenteCatalogo[]; onClose: () => void; onSubmit: (payload: { docenteId: string; aulaId: string; inicio: string; fin: string; motivo?: string }) => void | Promise<void> }) {
   const [teacherId, setTeacherId] = useState(teachers[0]?.id ?? "");
   const [date, setDate] = useState(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(new Date()));
   const [startTime, setStartTime] = useState("08:00");
   const [reason, setReason] = useState("");
   const [selectedRoomId, setSelectedRoomId] = useState("");
-  const suggestions = rooms.filter((room) => room.status === "disponible").sort((a, b) => a.capacity - b.capacity || a.code.localeCompare(b.code));
-  const selectedRoom = suggestions.find((room) => room.id === selectedRoomId);
+  const [suggestions, setSuggestions] = useState<DisponibilidadApi[]>([]);
+  const [loadingRooms, setLoadingRooms] = useState(true);
+  const [roomsError, setRoomsError] = useState<string | null>(null);
+  const endTime = `${String(Number(startTime.slice(0, 2)) + 2).padStart(2, "0")}:00`;
+  useEffect(() => {
+    let active = true;
+    setLoadingRooms(true);
+    setRoomsError(null);
+    setSelectedRoomId("");
+    void consultarDisponibilidad(date, startTime, endTime).then((result) => {
+      if (!active) return;
+      setSuggestions(result.filter((item) => item.estadoCalculado.toLocaleLowerCase("es") === "disponible").sort((a, b) => a.aula.capacidad - b.aula.capacidad || a.aula.codigo.localeCompare(b.aula.codigo)));
+    }).catch((error) => {
+      if (active) setRoomsError(error instanceof Error ? error.message : "No fue posible consultar la disponibilidad de aulas.");
+    }).finally(() => { if (active) setLoadingRooms(false); });
+    return () => { active = false; };
+  }, [date, endTime, startTime]);
+  const selectedRoom = suggestions.find((room) => room.aula.id === selectedRoomId);
   const teacher = teachers.find((item) => item.id === teacherId);
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     if (!teacher || !selectedRoom) return;
-    const endHour = String(Number(startTime.slice(0, 2)) + 2).padStart(2, "0");
-    void onSubmit({ docenteId: teacherId, aulaId: selectedRoom.id, inicio: `${date}T${startTime}:00-05:00`, fin: `${date}T${endHour}:00:00-05:00`, motivo: reason.trim() || undefined });
+    void onSubmit({ docenteId: teacherId, aulaId: selectedRoom.aula.id, inicio: `${date}T${startTime}:00-05:00`, fin: `${date}T${endTime}:00-05:00`, motivo: reason.trim() || undefined });
   };
 
   return <div className={styles.backdrop} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="loan-dialog-title"><header><div><span>Nueva reserva académica</span><h2 id="loan-dialog-title">Solicitud de préstamo docente</h2><p>Seleccione el docente, el bloque y una de las aulas disponibles.</p></div><button type="button" onClick={onClose} aria-label="Cerrar">×</button></header><form onSubmit={submit}>
     <fieldset className={styles.formSection}><legend><b>1</b> Docente y actividad</legend><div className={styles.formGrid}><label className={styles.wideField}><span>Docente responsable</span><select value={teacherId} onChange={(event) => setTeacherId(event.target.value)}><option value="">Seleccione docente</option>{teachers.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</select></label><label className={styles.wideField}><span>Motivo de la solicitud <small>Opcional · {reason.length}/500</small></span><textarea value={reason} onChange={(event) => setReason(event.target.value)} maxLength={500} rows={3} placeholder="Ej. Taller complementario de la asignatura..." /></label></div></fieldset>
     <fieldset className={styles.formSection}><legend><b>2</b> Bloque exacto de dos horas</legend><div className={styles.formGrid}><label><span>Fecha</span><input type="date" value={date} onChange={(event) => setDate(event.target.value)} required /></label><label><span>Horario</span><select value={startTime} onChange={(event) => setStartTime(event.target.value)}>{["06:00", "08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00"].map((block) => <option key={block} value={block}>{block}–{String(Number(block.slice(0, 2)) + 2).padStart(2, "0")}:00</option>)}</select></label></div></fieldset>
-    <fieldset className={styles.formSection}><legend><b>3</b> Aula operativa <span>{suggestions.length} resultado(s)</span></legend><div className={styles.roomSuggestions}>{suggestions.slice(0, 10).map((room) => <button key={room.id} type="button" className={selectedRoomId === room.id ? styles.selectedRoom : ""} onClick={() => setSelectedRoomId(room.id)}><strong>{room.code}</strong><span>{room.capacity} puestos · Piso {room.floor}</span><small>{room.location}</small></button>)}{suggestions.length === 0 && <p className={styles.noSuggestions}>No hay aulas operativas registradas.</p>}</div></fieldset>
+    <fieldset className={styles.formSection}><legend><b>3</b> Aulas disponibles <span>{loadingRooms ? "Consultando…" : `${suggestions.length} resultado(s)`}</span></legend><div className={styles.roomSuggestions}>{suggestions.slice(0, 10).map((room) => <button key={room.aula.id} type="button" className={selectedRoomId === room.aula.id ? styles.selectedRoom : ""} onClick={() => setSelectedRoomId(room.aula.id)}><strong>{room.aula.codigo}</strong><span>{room.aula.capacidad} puestos · Piso {room.aula.piso ?? "—"}</span><small>{room.aula.ubicacion}</small></button>)}{loadingRooms && <p className={styles.noSuggestions}>Consultando disponibilidad para la fecha y bloque seleccionados…</p>}{roomsError && <p className={styles.noSuggestions}>{roomsError}</p>}{!loadingRooms && !roomsError && suggestions.length === 0 && <p className={styles.noSuggestions}>No hay aulas disponibles para esta fecha y bloque.</p>}</div></fieldset>
     <div className={styles.validationSummary}><span className={teacher ? styles.checkOk : ""}>{teacher ? "✓" : "1"} Docente válido</span><span className={selectedRoom ? styles.checkOk : ""}>{selectedRoom ? "✓" : "2"} Aula seleccionada</span><span className={styles.checkOk}>✓ Bloque de 2 h</span></div>
     <aside className={styles.approvalHint}><strong>La solicitud quedará pendiente.</strong> La aprobación posterior vuelve a validar la disponibilidad y los cruces del aula.</aside>
     <footer><button type="button" className={styles.dialogCancel} onClick={onClose}>Cancelar</button><button type="submit" className="button-primary" disabled={!teacher || !selectedRoom}>Crear solicitud →</button></footer>

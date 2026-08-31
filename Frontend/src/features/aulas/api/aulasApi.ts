@@ -68,3 +68,11 @@ export async function crearAula(input: CrearAulaInput) {
   });
   return aRoom(aula);
 }
+
+export async function actualizarAula(id: string, input: CrearAulaInput) {
+  const aula = await solicitarAulas<AulaApi>(`/aulas/${id}`, tokenActual(), {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+  return aRoom(aula);
+}

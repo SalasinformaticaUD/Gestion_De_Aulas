@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { crearAula, listarAulas, type CrearAulaInput } from "@/features/aulas/api/aulasApi";
+import { actualizarAula, crearAula, listarAulas, type CrearAulaInput } from "@/features/aulas/api/aulasApi";
 import type { Room, RoomStatus } from "@/features/aulas/types";
 
 const statusLabels: Record<RoomStatus, string> = {
@@ -24,6 +24,7 @@ export function RoomsView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingRoom, setEditingRoom] = useState<Room | null>(null);
 
   const loadRooms = async () => {
     setLoading(true);
@@ -59,6 +60,12 @@ export function RoomsView() {
     setActiveTab("Información general");
   };
 
+  const saveRoom = async (room: Room, input: CrearAulaInput) => {
+    const updated = await actualizarAula(room.id, input);
+    setRooms((current) => current.map((item) => item.id === updated.id ? updated : item));
+    setSelectedId(updated.id);
+  };
+
   return (
     <>
       <section className="page-heading rooms-heading">
@@ -83,7 +90,7 @@ export function RoomsView() {
         {selectedRoom ? <section className="room-detail" aria-labelledby="room-title">
           <header className="room-detail-header">
             <div><div className="room-title-row"><h2 id="room-title">Aula {selectedRoom.code}</h2><StatusBadge status={selectedRoom.status} /></div><p>{selectedRoom.location} · Piso {selectedRoom.floor || "sin definir"} · {selectedRoom.capacity} puestos · {selectedRoom.software.length} aplicaciones instaladas</p></div>
-            <div className="room-actions"><Link className="button-secondary" href={`/audiovisuales?aula=${selectedRoom.code}`}>Audiovisuales</Link><Link className="button-primary room-practice-link" href={`/practicas-libres?aula=${selectedRoom.code}`}>Registrar práctica libre</Link></div>
+            <div className="room-actions"><button type="button" className="button-secondary" onClick={() => setEditingRoom(selectedRoom)}>Editar aula</button><Link className="button-secondary" href={`/audiovisuales?aula=${selectedRoom.code}`}>Audiovisuales</Link><Link className="button-primary room-practice-link" href={`/practicas-libres?aula=${selectedRoom.code}`}>Registrar práctica libre</Link></div>
           </header>
           <div className="room-tabs" role="tablist" aria-label="Detalles del aula">
             {tabs.map((tab) => <button key={tab} role="tab" type="button" aria-selected={activeTab === tab} className={activeTab === tab ? "is-active" : ""} onClick={() => setActiveTab(tab)}>{tab === "Puestos" ? `${tab} (${selectedRoom.capacity})` : tab === "Software instalado" ? `${tab} (${selectedRoom.software.length})` : tab}</button>)}
@@ -93,6 +100,7 @@ export function RoomsView() {
       </section>
 
       {isCreateOpen && <CreateRoomDialog onClose={() => setIsCreateOpen(false)} onCreate={async (input) => { await registerRoom(input); setIsCreateOpen(false); }} />}
+      {editingRoom && <EditRoomDialog room={editingRoom} onClose={() => setEditingRoom(null)} onSave={async (input) => { await saveRoom(editingRoom, input); setEditingRoom(null); }} />}
     </>
   );
 }
@@ -107,7 +115,7 @@ function CreateRoomDialog({ onClose, onCreate }: { onClose: () => void; onCreate
     try {
       await onCreate({
         codigo: String(values.get("codigo") ?? "").trim(),
-        ubicacion: String(values.get("ubicacion") ?? "").trim(),
+        ubicacion: `${String(values.get("ubicacion") ?? "").trim().replace(/,?\s*piso\s*\d+\s*$/i, "")}, Piso ${Number(values.get("piso"))}`,
         capacidad: Number(values.get("capacidad")),
         estado: String(values.get("estado")) as CrearAulaInput["estado"],
         anioAdquisicion: values.get("anioAdquisicion") ? Number(values.get("anioAdquisicion")) : undefined,
@@ -119,7 +127,18 @@ function CreateRoomDialog({ onClose, onCreate }: { onClose: () => void; onCreate
       setSaving(false);
     }
   };
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className="audiovisual-dialog" role="dialog" aria-modal="true" aria-labelledby="create-room-title"><header><div><h2 id="create-room-title">Crear aula</h2><p>La información se guardará directamente en la API central.</p></div><button type="button" onClick={onClose} aria-label="Cerrar">×</button></header><form onSubmit={submit}><div className="dialog-grid"><label className="dialog-field"><span>Código del aula</span><input name="codigo" placeholder="Ej. 401" required autoFocus /></label><label className="dialog-field"><span>Capacidad</span><input name="capacidad" type="number" min="1" placeholder="Ej. 30" required /></label><label className="dialog-field dialog-field-wide"><span>Ubicación</span><input name="ubicacion" placeholder="Ej. Edificio Sabio Caldas, piso 4" required /></label><label className="dialog-field"><span>Estado inicial</span><select name="estado" defaultValue="OPERATIVA"><option value="OPERATIVA">Operativa</option><option value="MANTENIMIENTO">Mantenimiento</option><option value="FUERA_DE_SERVICIO">Fuera de servicio</option></select></label><label className="dialog-field"><span>Año de adquisición</span><input name="anioAdquisicion" type="number" min="1900" max="2100" placeholder="Opcional" /></label><label className="dialog-field"><span>Marca</span><input name="marca" placeholder="Opcional" /></label><label className="dialog-field"><span>Modelo</span><input name="modelo" placeholder="Opcional" /></label></div>{error && <p className="auth-feedback auth-feedback-error" role="alert">{error}</p>}<footer><button type="button" className="dialog-cancel" onClick={onClose} disabled={saving}>Cancelar</button><button type="submit" className="button-primary" disabled={saving}>{saving ? "Guardando…" : "Crear aula"}</button></footer></form></section></div>;
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className="audiovisual-dialog" role="dialog" aria-modal="true" aria-labelledby="create-room-title"><header><div><h2 id="create-room-title">Crear aula</h2><p>La información se guardará directamente en la API central.</p></div><button type="button" onClick={onClose} aria-label="Cerrar">×</button></header><form onSubmit={submit}><div className="dialog-grid"><label className="dialog-field"><span>Código del aula</span><input name="codigo" placeholder="Ej. 401" required autoFocus /></label><label className="dialog-field"><span>Capacidad</span><input name="capacidad" type="number" min="1" placeholder="Ej. 30" required /></label><label className="dialog-field"><span>Piso</span><select name="piso" defaultValue="" required><option value="" disabled>Seleccionar piso</option>{Array.from({ length: 7 }, (_, index) => index + 1).map((value) => <option key={value} value={value}>Piso {value}</option>)}</select></label><label className="dialog-field dialog-field-wide"><span>Ubicación</span><input name="ubicacion" placeholder="Ej. Edificio Sabio Caldas" required /></label><label className="dialog-field"><span>Estado inicial</span><select name="estado" defaultValue="OPERATIVA"><option value="OPERATIVA">Operativa</option><option value="MANTENIMIENTO">Mantenimiento</option><option value="FUERA_DE_SERVICIO">Fuera de servicio</option></select></label><label className="dialog-field"><span>Año de adquisición</span><input name="anioAdquisicion" type="number" min="1900" max="2100" placeholder="Opcional" /></label><label className="dialog-field"><span>Marca</span><input name="marca" placeholder="Opcional" /></label><label className="dialog-field"><span>Modelo</span><input name="modelo" placeholder="Opcional" /></label></div>{error && <p className="auth-feedback auth-feedback-error" role="alert">{error}</p>}<footer><button type="button" className="dialog-cancel" onClick={onClose} disabled={saving}>Cancelar</button><button type="submit" className="button-primary" disabled={saving}>{saving ? "Guardando…" : "Crear aula"}</button></footer></form></section></div>;
+}
+
+function EditRoomDialog({ room, onClose, onSave }: { room: Room; onClose: () => void; onSave: (input: CrearAulaInput) => Promise<void> }) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault(); const values = new FormData(event.currentTarget); setSaving(true); setError(null);
+    try { await onSave({ codigo: String(values.get("codigo") ?? "").trim(), ubicacion: `${String(values.get("ubicacion") ?? "").trim().replace(/,?\s*piso\s*\d+\s*$/i, "")}, Piso ${Number(values.get("piso"))}`, capacidad: Number(values.get("capacidad")), estado: String(values.get("estado")) as CrearAulaInput["estado"], anioAdquisicion: values.get("anioAdquisicion") ? Number(values.get("anioAdquisicion")) : undefined, marca: String(values.get("marca") ?? "").trim() || undefined, modelo: String(values.get("modelo") ?? "").trim() || undefined }); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "No fue posible actualizar el aula."); setSaving(false); }
+  };
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className="audiovisual-dialog" role="dialog" aria-modal="true" aria-labelledby="edit-room-title"><header><div><h2 id="edit-room-title">Editar aula {room.code}</h2><p>Los cambios se guardarán directamente en la API central.</p></div><button type="button" onClick={onClose} aria-label="Cerrar">×</button></header><form onSubmit={submit}><div className="dialog-grid"><label className="dialog-field"><span>Código del aula</span><input name="codigo" defaultValue={room.code} required autoFocus /></label><label className="dialog-field"><span>Capacidad</span><input name="capacidad" type="number" min="1" defaultValue={room.capacity} required /></label><label className="dialog-field"><span>Piso</span><select name="piso" defaultValue={room.floor || ""} required><option value="" disabled>Seleccionar piso</option>{Array.from({ length: 7 }, (_, index) => index + 1).map((value) => <option key={value} value={value}>Piso {value}</option>)}</select></label><label className="dialog-field dialog-field-wide"><span>Ubicación</span><input name="ubicacion" defaultValue={room.location.replace(/,?\s*piso\s*\d+\s*$/i, "")} required /></label><label className="dialog-field"><span>Estado</span><select name="estado" defaultValue={room.status === "mantenimiento" ? "MANTENIMIENTO" : "OPERATIVA"}><option value="OPERATIVA">Operativa</option><option value="MANTENIMIENTO">Mantenimiento</option><option value="FUERA_DE_SERVICIO">Fuera de servicio</option></select></label><label className="dialog-field"><span>Año de adquisición</span><input name="anioAdquisicion" type="number" min="1900" max="2100" defaultValue={room.acquisitionYear || ""} /></label><label className="dialog-field"><span>Marca</span><input name="marca" defaultValue={room.hardware === "Sin información" ? "" : room.hardware.split(" · ")[0]} /></label><label className="dialog-field"><span>Modelo</span><input name="modelo" defaultValue={room.hardware.includes(" · ") ? room.hardware.split(" · ")[1] : ""} /></label></div>{error && <p className="auth-feedback auth-feedback-error" role="alert">{error}</p>}<footer><button type="button" className="dialog-cancel" onClick={onClose} disabled={saving}>Cancelar</button><button type="submit" className="button-primary" disabled={saving}>{saving ? "Guardando…" : "Guardar cambios"}</button></footer></form></section></div>;
 }
 
 function RoomListItem({ room, selected, onSelect }: { room: Room; selected: boolean; onSelect: () => void }) { return <button type="button" className={`room-list-item room-status-${room.status} ${selected ? "is-selected" : ""}`} onClick={onSelect} role="listitem"><span><strong>Aula {room.code}</strong><small>Piso {room.floor || "sin definir"} · {room.capacity} puestos</small></span><StatusBadge status={room.status} /></button>; }

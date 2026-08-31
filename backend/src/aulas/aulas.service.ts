@@ -471,4 +471,5 @@ export class AulasService {
     const match = /piso\s*(\d+)/i.exec(ubicacion);
     return match ? Number(match[1]) : null;
   }
+
 }
