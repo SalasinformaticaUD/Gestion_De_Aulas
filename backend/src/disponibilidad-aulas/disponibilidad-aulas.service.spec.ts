@@ -98,7 +98,7 @@ describe('DisponibilidadAulasService', () => {
     expect(result.bloqueActual?.tipo).toBe('estado-aula');
   });
 
-  it('mantiene ocupada una clase aunque el docente figure ausente', async () => {
+  it('libera el aula cuando el docente figura ausente', async () => {
     prisma.claseProgramada.findFirst.mockResolvedValueOnce({
       id: 'clase-id',
       grupo: '020-81',
@@ -109,8 +109,46 @@ describe('DisponibilidadAulasService', () => {
 
     const result = await service.findOne(aula.id, bloque);
 
-    expect(result.estadoCalculado).toBe('ocupada');
+    expect(result.estadoCalculado).toBe('disponible');
     expect(result.fuentes[0].estado).toBe(EstadoAsistencia.AUSENTE);
+  });
+
+  it('convierte una asistencia pendiente en ausencia después de 20 minutos', async () => {
+    prisma.claseProgramada.findFirst.mockResolvedValueOnce({
+      id: 'clase-id',
+      grupo: '020-81',
+      horaInicio: new Date('1970-01-01T08:00:00.000Z'),
+      horaFin: new Date('1970-01-01T10:00:00.000Z'),
+      docente: { nombre: 'Docente Uno' },
+      asignatura: { nombre: 'Programación' },
+      asistencias: [{ estado: EstadoAsistencia.PENDIENTE }],
+    });
+
+    const result = await service.findOne(aula.id, bloque);
+
+    expect(result.estadoCalculado).toBe('disponible');
+    expect(result.fuentes[0]).toMatchObject({
+      tipo: 'clase-programada',
+      estado: EstadoAsistencia.AUSENTE,
+    });
+  });
+
+  it('mantiene pendiente la clase futura antes de superar los 20 minutos', async () => {
+    const fechaFutura = '2099-08-20';
+    prisma.claseProgramada.findFirst.mockResolvedValueOnce({
+      id: 'clase-futura',
+      grupo: '020-81',
+      horaInicio: new Date('1970-01-01T08:00:00.000Z'),
+      horaFin: new Date('1970-01-01T10:00:00.000Z'),
+      docente: { nombre: 'Docente Uno' },
+      asignatura: { nombre: 'Programación' },
+      asistencias: [{ estado: EstadoAsistencia.PENDIENTE }],
+    });
+
+    const result = await service.findOne(aula.id, { ...bloque, fecha: fechaFutura });
+
+    expect(result.estadoCalculado).toBe('ocupada');
+    expect(result.fuentes[0].estado).toBe(EstadoAsistencia.PENDIENTE);
   });
 
   it('bloquea y explica una restriccion vigente del modulo de observaciones', async () => {

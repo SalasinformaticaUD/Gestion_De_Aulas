@@ -32,6 +32,7 @@ type ClaseParaValidar = {
   diaSemana: number;
   horaInicio: Date;
   horaFin: Date;
+  semana: number;
 };
 
 type HorarioDatabase = Pick<
@@ -263,6 +264,7 @@ export class HorarioService {
       ...(filters.diaSemana !== undefined && {
         diaSemana: filters.diaSemana,
       }),
+      ...(filters.semana !== undefined && { semana: filters.semana }),
     };
 
     return this.prisma.claseProgramada.findMany({
@@ -411,6 +413,7 @@ export class HorarioService {
     const rechazadas: Array<{ fila: number; motivo: string }> = [];
     const entradas: Array<{ fila: number; clase: ClaseImportacionDto }> = [];
 
+    const clavesLote = new Set<string>();
     filas.forEach((fila, index) => {
       try {
         const codigoAula = this.valorExcel(fila, 'AULA');
@@ -422,9 +425,15 @@ export class HorarioService {
           });
           return;
         }
+        const clase = this.convertirFilaExcel(fila, aulaId);
+        const clave = `${aulaId}|${clase.semana}|${clase.diaSemana}|${clase.horaInicio}|${clase.horaFin}`;
+        if (clavesLote.has(clave)) {
+          throw new ConflictException('Registro duplicado dentro del archivo.');
+        }
+        clavesLote.add(clave);
         entradas.push({
           fila: index + 2,
-          clase: this.convertirFilaExcel(fila, aulaId),
+          clase,
         });
       } catch (error: unknown) {
         rechazadas.push({ fila: index + 2, motivo: this.mensajeError(error) });
@@ -456,6 +465,7 @@ export class HorarioService {
               periodoId: dto.periodoId,
               aulaId: clase.aulaId,
               diaSemana: clase.diaSemana,
+              semana: clase.semana,
               horaInicio: clase.horaInicio,
               horaFin: clase.horaFin,
             },
@@ -540,6 +550,7 @@ export class HorarioService {
       proyectoCurricularId:
         dto.proyectoCurricularId ?? current.proyectoCurricularId,
       diaSemana: dto.diaSemana ?? current.diaSemana,
+      semana: dto.semana ?? current.semana,
       horaInicio: dto.horaInicio
         ? this.parseTime(dto.horaInicio)
         : current.horaInicio,
@@ -561,6 +572,7 @@ export class HorarioService {
         proyectoCurricularId: dto.proyectoCurricularId,
       }),
       ...(dto.diaSemana !== undefined && { diaSemana: dto.diaSemana }),
+      ...(dto.semana !== undefined && { semana: dto.semana }),
       ...(dto.horaInicio !== undefined && {
         horaInicio: this.parseTime(dto.horaInicio),
       }),
@@ -658,6 +670,7 @@ export class HorarioService {
       diaSemana: dto.diaSemana,
       horaInicio: this.parseTime(dto.horaInicio),
       horaFin: this.parseTime(dto.horaFin),
+      semana: dto.semana ?? 1,
     };
   }
 
@@ -748,6 +761,7 @@ export class HorarioService {
         periodoId: clase.periodoId,
         aulaId: clase.aulaId,
         diaSemana: clase.diaSemana,
+        semana: clase.semana,
         horaInicio: { lt: clase.horaFin },
         horaFin: { gt: clase.horaInicio },
         ...(excludeId && { id: { not: excludeId } }),
@@ -963,11 +977,18 @@ export class HorarioService {
     aulaId: string,
   ): ClaseImportacionDto {
     const diaSemana = Number(this.valorExcel(fila, 'DIA_SEMANA'));
+    const semanaTexto = this.valorExcel(fila, 'SEMANA');
+    const semana = semanaTexto ? Number(semanaTexto) : 1;
     const inscritosTexto = this.valorExcel(fila, 'INSCRITOS');
     const inscritos = inscritosTexto ? Number(inscritosTexto) : undefined;
     if (!Number.isInteger(diaSemana) || diaSemana < 1 || diaSemana > 6) {
       throw new BadRequestException(
         'DIA_SEMANA debe ser un entero entre 1 y 6.',
+      );
+    }
+    if (!Number.isInteger(semana) || semana < 1 || semana > 26) {
+      throw new BadRequestException(
+        'SEMANA debe ser un entero entre 1 y 26 dentro del semestre.',
       );
     }
     if (
@@ -1009,6 +1030,7 @@ export class HorarioService {
     return {
       aulaId,
       diaSemana,
+      semana,
       horaInicio,
       horaFin,
       grupo,

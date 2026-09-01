@@ -9,6 +9,9 @@ describe('PracticasLibresService', () => {
     codigoEstudiante: '20261001',
     nombreEstudiante: 'Estudiante Uno',
     aulaId: '00000000-0000-4000-8000-000000000001',
+    softwareId: '00000000-0000-4000-8000-000000000002',
+    softwareSolicitado: 'AutoCAD',
+    responsableTipo: 'MONITOR' as const,
     inicio: '2026-08-20T08:00:00-05:00',
     finEstimada: '2026-08-20T10:00:00-05:00',
   };
@@ -31,6 +34,8 @@ describe('PracticasLibresService', () => {
       updateMany: jest.fn(),
     },
     estudiante: { findUnique: jest.fn() },
+    software: { findUnique: jest.fn() },
+    aulaSoftware: { findUnique: jest.fn() },
   };
   const disponibilidad = { findOne: jest.fn() };
   let service: PracticasLibresService;
@@ -42,7 +47,9 @@ describe('PracticasLibresService', () => {
       motivo: 'Sin actividades.',
     });
     tx.estudiante.findUnique.mockResolvedValue(null);
-    tx.estudiante.create.mockResolvedValue({ id: 'estudiante-id' });
+    tx.estudiante.findUnique.mockResolvedValue({ id: 'estudiante-id' });
+    prisma.software.findUnique.mockResolvedValue({ id: dto.softwareId, nombre: 'AutoCAD' });
+    prisma.aulaSoftware.findUnique.mockResolvedValue({ aulaId: dto.aulaId });
     tx.practicaLibre.create.mockResolvedValue({ id: 'practica-id' });
     service = new PracticasLibresService(
       prisma as unknown as PrismaService,
@@ -50,8 +57,8 @@ describe('PracticasLibresService', () => {
     );
   });
 
-  it('crea estudiante y práctica cuando el aula está disponible', async () => {
-    await expect(service.create(dto)).resolves.toEqual({ id: 'practica-id' });
+  it('crea una práctica para un estudiante existente cuando el aula está disponible', async () => {
+    await expect(service.create(dto)).resolves.toMatchObject({ id: 'practica-id' });
 
     expect(disponibilidad.findOne).toHaveBeenCalledWith(dto.aulaId, {
       fecha: '2026-08-20',
@@ -59,6 +66,7 @@ describe('PracticasLibresService', () => {
       horaFin: '10:00',
     });
     expect(tx.practicaLibre.create).toHaveBeenCalledTimes(1);
+    expect(tx.estudiante.create).not.toHaveBeenCalled();
   });
 
   it('bloquea la práctica cuando el estudiante tiene multa activa', async () => {

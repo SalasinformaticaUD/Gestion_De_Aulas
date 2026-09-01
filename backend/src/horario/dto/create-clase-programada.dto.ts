@@ -37,6 +37,12 @@ export class CreateClaseProgramadaDto {
   @Max(6)
   diaSemana!: number;
 
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(26)
+  semana?: number;
+
   @Matches(HORA_PATTERN, {
     message: 'horaInicio debe tener formato HH:mm o HH:mm:ss',
   })

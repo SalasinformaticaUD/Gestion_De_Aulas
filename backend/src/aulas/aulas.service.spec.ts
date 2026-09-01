@@ -3,6 +3,30 @@ import { EstadoAula } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service';
 import { AulasService } from './aulas.service';
 
+const aulaPublicaMock = {
+  id: 'aula-id',
+  codigo: 'LAB-01',
+  ubicacion: 'Edificio Sabio Caldas, Piso 2',
+  capacidad: 25,
+  caracteristicas: null,
+  estado: EstadoAula.OPERATIVA,
+  anioAdquisicion: null,
+  marca: null,
+  modelo: null,
+  renovacionTecnologica: false,
+  pendienteIntervencion: false,
+  proyectoCurricular: null,
+  proyectosCurriculares: [],
+  softwares: [],
+  observaciones: [],
+  tareas: [],
+  limpiezas: [],
+  practicasLibres: [],
+  prestamosDocentes: [],
+  creadoEn: new Date('2026-01-01T00:00:00.000Z'),
+  actualizadoEn: new Date('2026-01-01T00:00:00.000Z'),
+};
+
 describe('AulasService', () => {
   let service: AulasService;
   let prisma: {
@@ -37,6 +61,7 @@ describe('AulasService', () => {
 
   it('normaliza los textos antes de crear un aula', async () => {
     prisma.aula.create.mockResolvedValue({ id: 'aula-id' });
+    prisma.aula.findUnique.mockResolvedValue(aulaPublicaMock);
 
     await service.create({
       codigo: ' LAB-01 ',
@@ -158,7 +183,9 @@ describe('AulasService', () => {
   });
 
   it('actualiza un aula existente', async () => {
-    prisma.aula.findUnique.mockResolvedValue({ id: 'aula-id' });
+    prisma.aula.findUnique
+      .mockResolvedValueOnce({ id: 'aula-id' })
+      .mockResolvedValueOnce(aulaPublicaMock);
     prisma.aula.update.mockResolvedValue({
       id: 'aula-id',
       estado: EstadoAula.MANTENIMIENTO,

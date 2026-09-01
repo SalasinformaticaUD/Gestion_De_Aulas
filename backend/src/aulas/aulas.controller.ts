@@ -8,7 +8,10 @@ import {
   Delete,
   ParseUUIDPipe,
   Query,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AulasService } from './aulas.service';
 import { CreateAulaDto } from './dto/create-aula.dto';
 import { UpdateAulaDto } from './dto/update-aula.dto';
@@ -29,6 +32,18 @@ export class AulasController {
     @CurrentUser() usuario?: UsuarioAutenticado,
   ) {
     return this.aulasService.create(createAulaDto, usuario?.id);
+  }
+
+  @Post('importar/excel')
+  @UseInterceptors(
+    FileInterceptor('archivo', { limits: { fileSize: 5_000_000 } }),
+  )
+  importarExcel(
+    @UploadedFile()
+    archivo: { buffer: Buffer; originalname: string } | undefined,
+    @CurrentUser() usuario?: UsuarioAutenticado,
+  ) {
+    return this.aulasService.importarExcel(archivo, usuario?.id);
   }
 
   @Get()

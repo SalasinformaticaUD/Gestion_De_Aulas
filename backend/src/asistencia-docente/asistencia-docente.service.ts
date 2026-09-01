@@ -36,8 +36,9 @@ export class AsistenciaDocenteService {
 
   async create(dto: CreateAsistenciaDocenteDto, registradoPorId: string) {
     const fecha = this.parseDate(dto.fecha);
-    await this.ensureClaseExists(dto.claseId);
+    const clase = await this.ensureClaseExists(dto.claseId);
     await this.ensureUsuarioExists(registradoPorId);
+    this.ensureAttendanceWindow(clase, fecha);
 
     const duplicate = await this.prisma.asistenciaDocente.findUnique({
       where: { claseId_fecha: { claseId: dto.claseId, fecha } },
@@ -97,10 +98,10 @@ export class AsistenciaDocenteService {
     });
   }
 
-  async update(id: string, dto: UpdateAsistenciaDocenteDto) {
+  async update(id: string, dto: UpdateAsistenciaDocenteDto, registradoPorId?: string) {
     const asistencia = await this.prisma.asistenciaDocente.findUnique({
       where: { id },
-      select: { id: true },
+      include: { clase: { include: { periodo: true } } },
     });
 
     if (!asistencia) {
@@ -108,6 +109,7 @@ export class AsistenciaDocenteService {
         `No existe registro de asistencia con id ${id}.`,
       );
     }
+    this.ensureAttendanceWindow(asistencia.clase, asistencia.fecha);
 
     const data: Prisma.AsistenciaDocenteUncheckedUpdateInput = {
       ...(dto.estado !== undefined && {
@@ -132,14 +134,32 @@ export class AsistenciaDocenteService {
     }
   }
 
-  private async ensureClaseExists(id: string): Promise<void> {
+  private async ensureClaseExists(id: string): Promise<{ diaSemana: number; periodo: { fechaInicio: Date; fechaFin: Date } }> {
     const clase = await this.prisma.claseProgramada.findUnique({
       where: { id },
-      select: { id: true },
+      select: { diaSemana: true, periodo: { select: { fechaInicio: true, fechaFin: true } } },
     });
 
     if (!clase) {
       throw new NotFoundException(`No existe clase programada con id ${id}.`);
+    }
+    return clase;
+  }
+
+  private ensureAttendanceWindow(clase: { diaSemana: number; periodo: { fechaInicio: Date; fechaFin: Date } }, fecha: Date): void {
+    // La relación siempre está presente en producción; esta tolerancia conserva
+    // compatibilidad con integraciones antiguas que solo devuelven el id.
+    if (!clase?.periodo || !clase?.diaSemana) return;
+    const ahora = new Date();
+    const hoy = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), ahora.getUTCDate()));
+    const ayer = new Date(hoy);
+    ayer.setUTCDate(ayer.getUTCDate() - 1);
+    if (fecha < clase.periodo.fechaInicio || fecha > clase.periodo.fechaFin || fecha < ayer || fecha > hoy) {
+      throw new ConflictException('La asistencia solo puede modificarse el día de la clase y el día siguiente.');
+    }
+    const dia = fecha.getUTCDay() === 0 ? 7 : fecha.getUTCDay();
+    if (dia !== clase.diaSemana) {
+      throw new ConflictException('La fecha no corresponde al día de la semana de la clase.');
     }
   }
 

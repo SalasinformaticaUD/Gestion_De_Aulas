@@ -333,16 +333,23 @@ export class DisponibilidadAulasService {
       });
     }
 
+    const claseOcupa = clase
+      ? this.claseOcupaDisponibilidad(clase, bloque)
+      : false;
     if (clase) {
-      const asistencia = clase.asistencias[0];
-      const detalleAsistencia = asistencia
-        ? ` Asistencia docente: ${asistencia.estado}.`
-        : ' Asistencia docente pendiente de registro.';
+      const asistenciaEfectiva = this.estadoAsistenciaEfectivo(clase, bloque);
+      const automatica =
+        !clase.asistencias[0] ||
+        clase.asistencias[0].estado === EstadoAsistencia.PENDIENTE;
+      const detalleAsistencia =
+        automatica && asistenciaEfectiva === EstadoAsistencia.AUSENTE
+          ? ' Asistencia docente ausente automáticamente: transcurrieron más de 20 minutos sin registro.'
+          : ` Asistencia docente: ${asistenciaEfectiva}.`;
       fuentes.push({
         tipo: 'clase-programada',
         id: clase.id,
         descripcion: `Clase ${clase.asignatura.nombre}, grupo ${clase.grupo}, docente ${clase.docente.nombre}.${detalleAsistencia}`,
-        estado: asistencia?.estado ?? EstadoAsistencia.PENDIENTE,
+        estado: asistenciaEfectiva,
       });
     }
 
@@ -388,7 +395,7 @@ export class DisponibilidadAulasService {
     const decision = this.resolverPrioridad({
       aula,
       restriccion: Boolean(restriccion),
-      clase: Boolean(clase),
+      clase: claseOcupa,
       prestamo: Boolean(prestamo),
       practica: Boolean(practica),
       tarea: Boolean(tarea),
@@ -474,6 +481,40 @@ export class DisponibilidadAulasService {
       estado: 'disponible',
       motivo: 'No existen actividades ni restricciones para el bloque.',
     };
+  }
+
+  private claseOcupaDisponibilidad(
+    clase: ClaseConDetalle,
+    bloque: BloqueDosHoras,
+  ): boolean {
+    return (
+      this.estadoAsistenciaEfectivo(clase, bloque) !== EstadoAsistencia.AUSENTE
+    );
+  }
+
+  private estadoAsistenciaEfectivo(
+    clase: ClaseConDetalle,
+    bloque: BloqueDosHoras,
+  ): EstadoAsistencia {
+    const estadoRegistrado = clase.asistencias[0]?.estado;
+    if (
+      estadoRegistrado === EstadoAsistencia.ASISTIO ||
+      estadoRegistrado === EstadoAsistencia.AUSENTE
+    ) {
+      return estadoRegistrado;
+    }
+
+    // La hora siempre existe en registros reales; el fallback conserva la
+    // compatibilidad con datos antiguos o incompletos.
+    if (!clase.horaInicio) {
+      return EstadoAsistencia.PENDIENTE;
+    }
+
+    const inicioClase = this.combinarFechaHora(bloque.fecha, clase.horaInicio);
+    const limiteRegistro = inicioClase.getTime() + 20 * 60 * 1000;
+    return new Date().getTime() >= limiteRegistro
+      ? EstadoAsistencia.AUSENTE
+      : EstadoAsistencia.PENDIENTE;
   }
 
   private async buscarRestriccion(aulaId: string, bloque: BloqueDosHoras) {

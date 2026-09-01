@@ -1,10 +1,12 @@
 import {
   ConflictException,
+  BadRequestException,
   Injectable,
   NotFoundException,
   Optional,
 } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
+import * as XLSX from 'xlsx';
 import { CreateAulaDto } from './dto/create-aula.dto';
 import { UpdateAulaDto } from './dto/update-aula.dto';
 import { FindAulasDto } from './dto/find-aulas.dto';
@@ -116,6 +118,8 @@ export class AulasService {
       const aula = await this.prisma.aula.create({
         data: this.normalizeCreateInput(createAulaDto),
       });
+      if (createAulaDto.software)
+        await this.syncSoftware(aula.id, createAulaDto.software);
       await this.auditoria?.registrar({
         usuarioId,
         entidad: 'Aula',
@@ -201,6 +205,8 @@ export class AulasService {
         where: { id },
         data: this.normalizeUpdateInput(updateAulaDto),
       });
+      if (updateAulaDto.software !== undefined)
+        await this.syncSoftware(id, updateAulaDto.software);
       await this.auditoria?.registrar({
         usuarioId,
         entidad: 'Aula',
@@ -293,6 +299,11 @@ export class AulasService {
   }
 
   private normalizeCreateInput(input: CreateAulaDto): Prisma.AulaCreateInput {
+    const caracteristicas = input.caracteristicas
+      ? { ...input.caracteristicas }
+      : {};
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+    if (input.hardware) caracteristicas.hardware = input.hardware.trim();
     return {
       codigo: input.codigo.trim(),
       ubicacion: input.ubicacion.trim(),
@@ -302,14 +313,15 @@ export class AulasService {
       }),
       ...(input.marca !== undefined && { marca: input.marca.trim() }),
       ...(input.modelo !== undefined && { modelo: input.modelo.trim() }),
+      ...(input.modeloPc !== undefined && { modelo: input.modeloPc.trim() }),
       ...(input.renovacionTecnologica !== undefined && {
         renovacionTecnologica: input.renovacionTecnologica,
       }),
       ...(input.pendienteIntervencion !== undefined && {
         pendienteIntervencion: input.pendienteIntervencion,
       }),
-      ...(input.caracteristicas !== undefined && {
-        caracteristicas: input.caracteristicas as Prisma.InputJsonValue,
+      ...(Object.keys(caracteristicas).length > 0 && {
+        caracteristicas: caracteristicas as Prisma.InputJsonValue,
       }),
       ...(input.estado !== undefined && { estado: input.estado }),
       ...(input.proyectoCurricularId !== undefined && {
@@ -326,6 +338,18 @@ export class AulasService {
   }
 
   private normalizeUpdateInput(input: UpdateAulaDto): Prisma.AulaUpdateInput {
+    const caracteristicas = input.caracteristicas
+      ? { ...input.caracteristicas }
+      : undefined;
+    if (caracteristicas && input.hardware)
+      caracteristicas.hardware = input.hardware.trim();
+    else if (input.hardware)
+      return {
+        ...this.normalizeUpdateInput({ ...input, hardware: undefined }),
+        caracteristicas: {
+          hardware: input.hardware.trim(),
+        },
+      };
     return {
       ...(input.codigo !== undefined && { codigo: input.codigo.trim() }),
       ...(input.ubicacion !== undefined && {
@@ -337,6 +361,7 @@ export class AulasService {
       }),
       ...(input.marca !== undefined && { marca: input.marca.trim() }),
       ...(input.modelo !== undefined && { modelo: input.modelo.trim() }),
+      ...(input.modeloPc !== undefined && { modelo: input.modeloPc.trim() }),
       ...(input.renovacionTecnologica !== undefined && {
         renovacionTecnologica: input.renovacionTecnologica,
       }),
@@ -359,6 +384,153 @@ export class AulasService {
         },
       }),
     };
+  }
+
+  async importarExcel(
+    archivo: { buffer: Buffer; originalname: string } | undefined,
+    usuarioId?: string,
+  ) {
+    if (
+      !archivo?.buffer?.length ||
+      !/\.(xlsx|xls)$/i.test(archivo.originalname)
+    )
+      throw new BadRequestException(
+        'Debe adjuntar un archivo Excel .xlsx o .xls.',
+      );
+    let filas: Array<Record<string, unknown>>;
+    try {
+      const libro = XLSX.read(archivo.buffer, { type: 'buffer' });
+      const hoja = libro.Sheets[libro.SheetNames[0]];
+      filas = XLSX.utils.sheet_to_json<Record<string, unknown>>(hoja, {
+        defval: '',
+      });
+    } catch {
+      throw new BadRequestException('No fue posible leer el archivo Excel.');
+    }
+    if (!filas.length || filas.length > 500)
+      throw new BadRequestException(
+        'El Excel debe contener entre 1 y 500 aulas.',
+      );
+    const valor = (fila: Record<string, unknown>, nombre: string) => {
+      const clave = Object.keys(fila).find(
+        (item) => item.trim().toUpperCase() === nombre,
+      );
+      return String(clave ? (fila[clave] ?? '') : '').trim();
+    };
+    const requeridas = [
+      'CODIGO',
+      'UBICACION',
+      'CAPACIDAD',
+      'MARCA',
+      'MODELO_PC',
+      'SOFTWARE',
+      'HARDWARE',
+    ];
+    const encabezados = new Set(
+      Object.keys(filas[0]).map((item) => item.trim().toUpperCase()),
+    );
+    const faltantes = requeridas.filter((item) => !encabezados.has(item));
+    if (faltantes.length)
+      throw new BadRequestException(
+        `Faltan columnas requeridas: ${faltantes.join(', ')}.`,
+      );
+    const codigos = new Set<string>();
+    const entradas = filas.map((fila, indice) => {
+      const codigo = valor(fila, 'CODIGO');
+      const ubicacion = valor(fila, 'UBICACION');
+      const marca = valor(fila, 'MARCA');
+      const modeloPc = valor(fila, 'MODELO_PC');
+      const software = valor(fila, 'SOFTWARE');
+      const hardware = valor(fila, 'HARDWARE');
+      const capacidad = Number(valor(fila, 'CAPACIDAD'));
+      if (
+        !codigo ||
+        !ubicacion ||
+        !marca ||
+        !modeloPc ||
+        !software ||
+        !hardware ||
+        !Number.isInteger(capacidad) ||
+        capacidad < 1
+      )
+        throw new BadRequestException(
+          `Fila ${indice + 2}: código, ubicación, capacidad, marca, modelo de PC, software y hardware son obligatorios y válidos.`,
+        );
+      if (codigos.has(codigo.toUpperCase()))
+        throw new ConflictException(
+          `Fila ${indice + 2}: código de aula duplicado en el archivo.`,
+        );
+      codigos.add(codigo.toUpperCase());
+      return {
+        codigo,
+        ubicacion,
+        capacidad,
+        marca,
+        modeloPc,
+        software,
+        hardware,
+      };
+    });
+    const existentes = await this.prisma.aula.findMany({
+      select: { codigo: true },
+    });
+    const codigosExistentes = new Set(
+      existentes.map((item) => item.codigo.toUpperCase()),
+    );
+    const repetidos = entradas
+      .map((item) => item.codigo)
+      .filter((codigo) => codigosExistentes.has(codigo.toUpperCase()));
+    if (repetidos.length)
+      throw new ConflictException(
+        `Ya existen aulas con código: ${repetidos.join(', ')}.`,
+      );
+    const creadas = await this.prisma.$transaction(async (tx) => {
+      const result: Array<{ id: string }> = [];
+      for (const entrada of entradas) {
+        const aula = await tx.aula.create({
+          data: this.normalizeCreateInput({ ...entrada, estado: undefined }),
+        });
+        await this.syncSoftwareWith(tx, aula.id, entrada.software);
+        result.push(aula);
+      }
+      return result;
+    });
+    return {
+      nombreArchivo: archivo.originalname,
+      totalRecibidas: filas.length,
+      totalCreadas: creadas.length,
+      creadas: await Promise.all(creadas.map((item) => this.findOne(item.id))),
+    };
+  }
+
+  private async syncSoftware(aulaId: string, listado: string): Promise<void> {
+    return this.syncSoftwareWith(this.prisma, aulaId, listado);
+  }
+
+  private async syncSoftwareWith(
+    database: Pick<PrismaService, 'aulaSoftware' | 'software'>,
+    aulaId: string,
+    listado: string,
+  ): Promise<void> {
+    const nombres = [
+      ...new Set(
+        listado
+          .split(/[,;\n]/)
+          .map((item) => item.trim())
+          .filter(Boolean),
+      ),
+    ];
+    await database.aulaSoftware.deleteMany({ where: { aulaId } });
+    for (const nombre of nombres) {
+      const software = await database.software.upsert({
+        where: { nombre_version: { nombre, version: 'Importado' } },
+        update: {},
+        create: { nombre, version: 'Importado' },
+      });
+      await database.aulaSoftware.create({
+        data: { aulaId, softwareId: software.id },
+      });
+    }
   }
 
   private obtenerProyectosCurricularesIds(
@@ -442,6 +614,7 @@ export class AulasService {
         descripcion: limpieza.observacion
           ? `Limpieza: ${limpieza.observacion}`
           : 'Limpieza registrada.',
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         responsable: limpieza.responsable?.nombreCompleto ?? null,
       })),
       ...aula.practicasLibres.map((practica) => ({
@@ -471,5 +644,4 @@ export class AulasService {
     const match = /piso\s*(\d+)/i.exec(ubicacion);
     return match ? Number(match[1]) : null;
   }
-
 }

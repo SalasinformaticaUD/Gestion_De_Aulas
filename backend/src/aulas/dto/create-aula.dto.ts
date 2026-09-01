@@ -65,6 +65,21 @@ export class CreateAulaDto {
   @IsString()
   modelo?: string;
 
+  @Transform(trim)
+  @IsOptional()
+  @IsString()
+  modeloPc?: string;
+
+  @Transform(trim)
+  @IsOptional()
+  @IsString()
+  software?: string;
+
+  @Transform(trim)
+  @IsOptional()
+  @IsString()
+  hardware?: string;
+
   @IsOptional()
   @IsBoolean()
   renovacionTecnologica?: boolean;

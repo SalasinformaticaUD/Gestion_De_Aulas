@@ -48,10 +48,12 @@ export class AsistenciaDocenteController {
   }
 
   @Patch(':id')
+  @RequireAuth()
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateAsistenciaDocenteDto: UpdateAsistenciaDocenteDto,
+    @CurrentUser() usuario: UsuarioAutenticado,
   ) {
-    return this.asistenciaDocenteService.update(id, updateAsistenciaDocenteDto);
+    return this.asistenciaDocenteService.update(id, updateAsistenciaDocenteDto, usuario.id);
   }
 }

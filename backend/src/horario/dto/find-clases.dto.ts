@@ -16,4 +16,10 @@ export class FindClasesDto {
   @Min(1)
   @Max(6)
   diaSemana?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(26)
+  semana?: number;
 }

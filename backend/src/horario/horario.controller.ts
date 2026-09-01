@@ -10,6 +10,7 @@ import {
   Query,
   UseInterceptors,
   UploadedFile,
+  ForbiddenException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CreateClaseProgramadaDto } from './dto/create-clase-programada.dto';
@@ -43,6 +44,7 @@ export class HorarioController {
     @Body() dto: CreatePeriodoAcademicoDto,
     @CurrentUser() usuario?: UsuarioAutenticado,
   ) {
+    this.ensureAdministrator(usuario);
     return this.horarioService.createPeriodo(dto, usuario?.id);
   }
 
@@ -92,12 +94,17 @@ export class HorarioController {
     @Body() dto: CreateClaseProgramadaDto,
     @CurrentUser() usuario?: UsuarioAutenticado,
   ) {
+    this.ensureAdministrator(usuario);
     return this.horarioService.createClase(dto, usuario?.id);
   }
 
   @Post('importar')
   @RequirePermissions('HORARIOS_CREAR')
-  importar(@Body() dto: ImportarHorarioDto) {
+  importar(
+    @Body() dto: ImportarHorarioDto,
+    @CurrentUser() usuario?: UsuarioAutenticado,
+  ) {
+    this.ensureAdministrator(usuario);
     return this.horarioService.importar(dto);
   }
 
@@ -111,8 +118,18 @@ export class HorarioController {
     archivo:
       { buffer: Buffer; originalname: string; mimetype: string } | undefined,
     @Body() dto: ImportarHorarioExcelDto,
+    @CurrentUser() usuario?: UsuarioAutenticado,
   ) {
+    this.ensureAdministrator(usuario);
     return this.horarioService.importarExcelOficial(archivo, dto);
+  }
+
+  private ensureAdministrator(usuario?: UsuarioAutenticado): void {
+    if (!usuario?.roles.some((rol) => rol.toUpperCase() === 'ADMINISTRADOR')) {
+      throw new ForbiddenException(
+        'Solo un administrador puede administrar el horario.',
+      );
+    }
   }
 
   @Patch('clases/:id')
