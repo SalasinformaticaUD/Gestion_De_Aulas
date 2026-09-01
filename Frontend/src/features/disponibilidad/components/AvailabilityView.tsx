@@ -8,9 +8,15 @@ const estados: Record<string, string> = { disponible: "Disponible", ocupada: "Oc
 const estadosAsistencia: Record<string, string> = { ASISTIO: "Asistió", AUSENTE: "No asistió", PENDIENTE: "Pendiente" };
 const bloques = ["06:00", "08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00"];
 
+function bloqueActualBogota() {
+  const hora = Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/Bogota", hour: "2-digit", hourCycle: "h23" }).format(new Date()));
+  const inicio = Math.min(20, Math.max(6, 6 + Math.floor((hora - 6) / 2) * 2));
+  return `${String(inicio).padStart(2, "0")}:00`;
+}
+
 export function AvailabilityView() {
   const [fecha, setFecha] = useState(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(new Date()));
-  const [horaInicio, setHoraInicio] = useState("08:00");
+  const [horaInicio, setHoraInicio] = useState(bloqueActualBogota);
   const [resultados, setResultados] = useState<DisponibilidadApi[]>([]);
   const [filtro, setFiltro] = useState("todos");
   const [error, setError] = useState<string | null>(null);
