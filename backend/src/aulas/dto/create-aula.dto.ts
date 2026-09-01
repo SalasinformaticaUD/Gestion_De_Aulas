@@ -45,6 +45,12 @@ export class CreateAulaDto {
   proyectoCurricularId?: string;
 
   @IsOptional()
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  proyecto?: string;
+
+  @IsOptional()
   @IsArray()
   @IsUUID('4', { each: true })
   proyectosCurricularesIds?: string[];
@@ -79,6 +85,11 @@ export class CreateAulaDto {
   @IsOptional()
   @IsString()
   hardware?: string;
+
+  @IsOptional()
+  @Transform(trim)
+  @IsString()
+  caracteristica?: string;
 
   @IsOptional()
   @IsBoolean()

@@ -139,16 +139,17 @@
 .cancelButton {
   min-height: 37px;
   padding: 0 14px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--primary);
   border-radius: 7px;
-  color: #555b65;
-  background: var(--surface-soft);
+  color: var(--primary);
+  background: transparent;
   font-size: 14.3px;
   font-weight: 750;
 }
 
 .cancelButton:hover {
-  background: #eef0f3;
+  color: #fff;
+  background: var(--primary);
 }
 
 @media (max-width: 620px) {

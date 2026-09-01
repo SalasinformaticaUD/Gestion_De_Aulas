@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import * as XLSX from 'xlsx';
+import { EstadoAsistencia } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import { CreateClaseProgramadaDto } from './dto/create-clase-programada.dto';
@@ -33,6 +34,9 @@ type ClaseParaValidar = {
   horaInicio: Date;
   horaFin: Date;
   semana: number;
+  modeloPc?: string | null;
+  software?: string | null;
+  hardware?: string | null;
 };
 
 type HorarioDatabase = Pick<
@@ -43,6 +47,7 @@ type HorarioDatabase = Pick<
   | 'asignatura'
   | 'proyectoCurricular'
   | 'claseProgramada'
+  | 'asistenciaDocente'
 >;
 
 type ClaseImportada = Prisma.ClaseProgramadaGetPayload<{
@@ -257,14 +262,14 @@ export class HorarioService {
     }
   }
 
-  findClases(filters: FindClasesDto = {}) {
+  async findClases(filters: FindClasesDto = {}) {
+    await this.cerrarAsistenciasVencidas();
     const where: Prisma.ClaseProgramadaWhereInput = {
       ...(filters.aulaId && { aulaId: filters.aulaId }),
       ...(filters.periodoId && { periodoId: filters.periodoId }),
       ...(filters.diaSemana !== undefined && {
         diaSemana: filters.diaSemana,
       }),
-      ...(filters.semana !== undefined && { semana: filters.semana }),
     };
 
     return this.prisma.claseProgramada.findMany({
@@ -275,13 +280,19 @@ export class HorarioService {
         docente: true,
         asignatura: true,
         proyectoCurricular: true,
+        asistencias: {
+          orderBy: { fecha: 'desc' },
+        },
       },
       orderBy: [{ diaSemana: 'asc' }, { horaInicio: 'asc' }],
     });
   }
 
   async createClase(dto: CreateClaseProgramadaDto, usuarioId?: string) {
-    const clase = this.normalizeClase(dto);
+    const clase = this.normalizeClase({
+      ...dto,
+      semana: 1,
+    });
     this.validateTimeRange(clase.horaInicio, clase.horaFin);
     await this.validateReferences(clase);
     await this.ensureNoOverlap(clase);
@@ -292,6 +303,9 @@ export class HorarioService {
           ...clase,
           grupo: dto.grupo.trim(),
           ...(dto.inscritos !== undefined && { inscritos: dto.inscritos }),
+          modeloPc: dto.modeloPc?.trim() || null,
+          software: dto.software?.trim() || null,
+          hardware: dto.hardware?.trim() || null,
         },
         include: {
           periodo: true,
@@ -319,6 +333,13 @@ export class HorarioService {
   importar(dto: ImportarHorarioDto) {
     return this.prisma.$transaction(async (tx) => {
       const creadas: ClaseImportada[] = [];
+      const periodo = await tx.periodoAcademico.findUnique({
+        where: { id: dto.periodoId },
+        select: { fechaInicio: true },
+      });
+      const semanaPorDefecto = periodo?.fechaInicio
+        ? this.calcularSemanaSemestre(periodo.fechaInicio)
+        : 1;
 
       for (const [index, fila] of dto.clases.entries()) {
         try {
@@ -332,6 +353,7 @@ export class HorarioService {
             periodoId: dto.periodoId,
             docenteId: catalogos.docenteId,
             asignaturaId: catalogos.asignaturaId,
+            semana: fila.semana ?? semanaPorDefecto,
           };
           const clase = this.normalizeClase(entrada);
           this.validateTimeRange(clase.horaInicio, clase.horaFin);
@@ -345,6 +367,9 @@ export class HorarioService {
               ...(fila.inscritos !== undefined && {
                 inscritos: fila.inscritos,
               }),
+              modeloPc: fila.modeloPc?.trim() || null,
+              software: fila.software?.trim() || null,
+              hardware: fila.hardware?.trim() || null,
             },
             include: {
               periodo: true,
@@ -389,7 +414,7 @@ export class HorarioService {
 
     const periodo = await this.prisma.periodoAcademico.findUnique({
       where: { id: dto.periodoId },
-      select: { id: true, activo: true },
+      select: { id: true, activo: true, fechaInicio: true },
     });
     if (!periodo)
       throw new NotFoundException('El período académico indicado no existe.');
@@ -400,24 +425,27 @@ export class HorarioService {
     }
 
     const filas = this.leerFilasExcel(archivo.buffer);
-    const codigosAula = Array.from(
-      new Set(
-        filas.map((fila) => this.valorExcel(fila, 'AULA')).filter(Boolean),
-      ),
-    );
     const aulas = await this.prisma.aula.findMany({
-      where: { codigo: { in: codigosAula } },
       select: { id: true, codigo: true },
     });
-    const aulaPorCodigo = new Map(aulas.map((aula) => [aula.codigo, aula.id]));
+    const aulaPorCodigo = new Map<string, string>();
+    aulas.forEach((aula) => {
+      const codigo = aula.codigo.trim();
+      aulaPorCodigo.set(codigo.toUpperCase(), aula.id);
+      aulaPorCodigo.set(`AULA ${codigo}`.toUpperCase(), aula.id);
+      aulaPorCodigo.set(`AULA-${codigo}`.toUpperCase(), aula.id);
+      const numero = codigo.match(/\d+[A-Z]?$/i)?.[0];
+      if (numero) aulaPorCodigo.set(numero.toUpperCase(), aula.id);
+    });
     const rechazadas: Array<{ fila: number; motivo: string }> = [];
     const entradas: Array<{ fila: number; clase: ClaseImportacionDto }> = [];
 
     const clavesLote = new Set<string>();
     filas.forEach((fila, index) => {
       try {
-        const codigoAula = this.valorExcel(fila, 'AULA');
-        const aulaId = aulaPorCodigo.get(codigoAula);
+        const salon = this.valorExcel(fila, 'SALON') || this.valorExcel(fila, 'AULA');
+        const codigoAula = this.extraerCodigoAula(salon);
+        const aulaId = aulaPorCodigo.get(codigoAula.toUpperCase());
         if (!aulaId) {
           rechazadas.push({
             fila: index + 2,
@@ -425,8 +453,14 @@ export class HorarioService {
           });
           return;
         }
-        const clase = this.convertirFilaExcel(fila, aulaId);
-        const clave = `${aulaId}|${clase.semana}|${clase.diaSemana}|${clase.horaInicio}|${clase.horaFin}`;
+        const clase = this.convertirFilaExcel(
+          fila,
+          aulaId,
+          periodo.fechaInicio
+            ? this.calcularSemanaSemestre(periodo.fechaInicio)
+            : 1,
+        );
+        const clave = `${aulaId}|${clase.diaSemana}|${clase.horaInicio}|${clase.horaFin}`;
         if (clavesLote.has(clave)) {
           throw new ConflictException('Registro duplicado dentro del archivo.');
         }
@@ -447,6 +481,14 @@ export class HorarioService {
 
       for (const entrada of entradas) {
         try {
+          const proyectoCurricular = entrada.clase.proyectoCurricularNombre
+            ? await tx.proyectoCurricular.upsert({
+                where: { nombre: entrada.clase.proyectoCurricularNombre },
+                create: { nombre: entrada.clase.proyectoCurricularNombre },
+                update: {},
+                select: { id: true },
+              })
+            : undefined;
           const catalogos = await this.resolveImportCatalogs(
             entrada.clase,
             'JSON_V2',
@@ -455,6 +497,7 @@ export class HorarioService {
           const clase = this.normalizeClase({
             ...entrada.clase,
             periodoId: dto.periodoId,
+            proyectoCurricularId: proyectoCurricular?.id,
             docenteId: catalogos.docenteId,
             asignaturaId: catalogos.asignaturaId,
           });
@@ -465,7 +508,6 @@ export class HorarioService {
               periodoId: dto.periodoId,
               aulaId: clase.aulaId,
               diaSemana: clase.diaSemana,
-              semana: clase.semana,
               horaInicio: clase.horaInicio,
               horaFin: clase.horaFin,
             },
@@ -501,6 +543,16 @@ export class HorarioService {
 
       let eliminados = 0;
       if (dto.reemplazarAnterior) {
+        await tx.asistenciaDocente?.deleteMany({
+          where: {
+            clase: {
+              periodoId: dto.periodoId,
+              ...(idsConservados.length > 0 && {
+                id: { notIn: idsConservados },
+              }),
+            },
+          },
+        });
         const eliminacion = await tx.claseProgramada.deleteMany({
           where: {
             periodoId: dto.periodoId,
@@ -550,7 +602,7 @@ export class HorarioService {
       proyectoCurricularId:
         dto.proyectoCurricularId ?? current.proyectoCurricularId,
       diaSemana: dto.diaSemana ?? current.diaSemana,
-      semana: dto.semana ?? current.semana,
+      semana: 1,
       horaInicio: dto.horaInicio
         ? this.parseTime(dto.horaInicio)
         : current.horaInicio,
@@ -572,7 +624,6 @@ export class HorarioService {
         proyectoCurricularId: dto.proyectoCurricularId,
       }),
       ...(dto.diaSemana !== undefined && { diaSemana: dto.diaSemana }),
-      ...(dto.semana !== undefined && { semana: dto.semana }),
       ...(dto.horaInicio !== undefined && {
         horaInicio: this.parseTime(dto.horaInicio),
       }),
@@ -581,6 +632,9 @@ export class HorarioService {
       }),
       ...(dto.grupo !== undefined && { grupo: dto.grupo.trim() }),
       ...(dto.inscritos !== undefined && { inscritos: dto.inscritos }),
+      ...(dto.modeloPc !== undefined && { modeloPc: dto.modeloPc.trim() || null }),
+      ...(dto.software !== undefined && { software: dto.software.trim() || null }),
+      ...(dto.hardware !== undefined && { hardware: dto.hardware.trim() || null }),
     };
 
     try {
@@ -670,7 +724,12 @@ export class HorarioService {
       diaSemana: dto.diaSemana,
       horaInicio: this.parseTime(dto.horaInicio),
       horaFin: this.parseTime(dto.horaFin),
-      semana: dto.semana ?? 1,
+      // Se conserva en el modelo por compatibilidad, pero una clase representa
+      // el mismo bloque recurrente durante todo el período académico.
+      semana: 1,
+      modeloPc: dto.modeloPc?.trim() || null,
+      software: dto.software?.trim() || null,
+      hardware: dto.hardware?.trim() || null,
     };
   }
 
@@ -761,7 +820,6 @@ export class HorarioService {
         periodoId: clase.periodoId,
         aulaId: clase.aulaId,
         diaSemana: clase.diaSemana,
-        semana: clase.semana,
         horaInicio: { lt: clase.horaFin },
         horaFin: { gt: clase.horaInicio },
         ...(excludeId && { id: { not: excludeId } }),
@@ -819,25 +877,42 @@ export class HorarioService {
 
     const docenteId = fila.docenteId
       ? fila.docenteId
-      : (
-          await database.docente.upsert({
-            where: { documento: fila.docente!.documento.trim() },
-            update: {
-              nombre: fila.docente!.nombre.trim(),
-              ...(fila.docente!.correo && {
-                correo: fila.docente!.correo.trim().toLowerCase(),
-              }),
-            },
-            create: {
-              documento: fila.docente!.documento.trim(),
-              nombre: fila.docente!.nombre.trim(),
-              ...(fila.docente!.correo && {
-                correo: fila.docente!.correo.trim().toLowerCase(),
-              }),
-            },
+      : await (async () => {
+          const nombre = fila.docente!.nombre.trim();
+          const documento = fila.docente!.documento?.trim();
+          if (documento) {
+            return (
+              await database.docente.upsert({
+                where: { documento },
+                update: {
+                  nombre,
+                  ...(fila.docente!.correo && {
+                    correo: fila.docente!.correo.trim().toLowerCase(),
+                  }),
+                },
+                create: {
+                  documento,
+                  nombre,
+                  ...(fila.docente!.correo && {
+                    correo: fila.docente!.correo.trim().toLowerCase(),
+                  }),
+                },
+                select: { id: true },
+              })
+            ).id;
+          }
+          const existente = await database.docente.findFirst({
+            where: { nombre },
             select: { id: true },
-          })
-        ).id;
+          });
+          if (existente) return existente.id;
+          return (
+            await database.docente.create({
+              data: { nombre },
+              select: { id: true },
+            })
+          ).id;
+        })();
 
     if (fila.asignatura && fila.proyectoCurricularId) {
       const proyecto = await database.proyectoCurricular.findUnique({
@@ -892,8 +967,9 @@ export class HorarioService {
     fila: Record<string, unknown>,
     encabezado: string,
   ): string {
+    const normalizado = encabezado.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
     const clave = Object.keys(fila).find(
-      (actual) => actual.trim().toUpperCase() === encabezado,
+      (actual) => actual.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase() === normalizado,
     );
     if (!clave || fila[clave] === undefined || fila[clave] === null) {
       return '';
@@ -947,20 +1023,13 @@ export class HorarioService {
       );
     const encabezados = new Set(
       Object.keys(filas[0]).map((encabezado) =>
-        encabezado.trim().toUpperCase(),
+        encabezado.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase(),
       ),
     );
-    const requeridos = [
-      'AULA',
-      'DIA_SEMANA',
-      'HORA_INICIO',
-      'HORA_FIN',
-      'GRUPO',
-      'DOCENTE_DOCUMENTO',
-      'DOCENTE_NOMBRE',
-      'ASIGNATURA_CODIGO',
-      'ASIGNATURA_NOMBRE',
-    ];
+    const formatoNuevo = encabezados.has('SALON');
+    const requeridos = formatoNuevo
+      ? ['PERIODO', 'DIA', 'HORA', 'CAP', 'SALON', 'GRUPO', 'ASIGNATURA', 'PROYECTO', 'ID', 'DOCENTE', 'INSCRITOS2']
+      : ['AULA', 'DIA_SEMANA', 'HORA_INICIO', 'HORA_FIN', 'GRUPO', 'DOCENTE_DOCUMENTO', 'DOCENTE_NOMBRE', 'ASIGNATURA_CODIGO', 'ASIGNATURA_NOMBRE'];
     const faltantes = requeridos.filter(
       (encabezado) => !encabezados.has(encabezado),
     );
@@ -975,20 +1044,38 @@ export class HorarioService {
   private convertirFilaExcel(
     fila: Record<string, unknown>,
     aulaId: string,
+    semanaPorDefecto = 1,
   ): ClaseImportacionDto {
-    const diaSemana = Number(this.valorExcel(fila, 'DIA_SEMANA'));
-    const semanaTexto = this.valorExcel(fila, 'SEMANA');
-    const semana = semanaTexto ? Number(semanaTexto) : 1;
-    const inscritosTexto = this.valorExcel(fila, 'INSCRITOS');
+    if (!this.valorExcel(fila, 'SALON')) {
+      return this.convertirFilaExcelAnterior(fila, aulaId);
+    }
+    const diaTexto = this.valorExcel(fila, 'DIA');
+    const periodoExcel = this.valorExcel(fila, 'PERIODO');
+    const identificador = this.valorExcel(fila, 'ID');
+    const capacidad = Number(this.valorExcel(fila, 'CAP'));
+    const dias: Record<string, number> = {
+      LUNES: 1,
+      MARTES: 2,
+      MIERCOLES: 3,
+      JUEVES: 4,
+      VIERNES: 5,
+      SABADO: 6,
+    };
+    const diaSemana = dias[diaTexto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()] ?? Number(diaTexto);
+    // El horario es recurrente durante todo el semestre. La columna SEMANA se
+    // conserva como opcional por compatibilidad con archivos anteriores, pero
+    // ya no cambia la programación ni crea una copia distinta por semana.
+    const semana = 1;
+    const inscritosTexto = this.valorExcel(fila, 'INSCRITOS2');
     const inscritos = inscritosTexto ? Number(inscritosTexto) : undefined;
+    if (!periodoExcel || !identificador || !Number.isInteger(capacidad) || capacidad < 1) {
+      throw new BadRequestException(
+        'PERIODO, CAP e ID son obligatorios y CAP debe ser un entero positivo.',
+      );
+    }
     if (!Number.isInteger(diaSemana) || diaSemana < 1 || diaSemana > 6) {
       throw new BadRequestException(
         'DIA_SEMANA debe ser un entero entre 1 y 6.',
-      );
-    }
-    if (!Number.isInteger(semana) || semana < 1 || semana > 26) {
-      throw new BadRequestException(
-        'SEMANA debe ser un entero entre 1 y 26 dentro del semestre.',
       );
     }
     if (
@@ -999,23 +1086,31 @@ export class HorarioService {
         'INSCRITOS debe ser un entero positivo o cero.',
       );
     }
-    const horaInicio = this.valorExcel(fila, 'HORA_INICIO');
-    const horaFin = this.valorExcel(fila, 'HORA_FIN');
+    const [horaInicio, horaFin] = this.convertirHoraExcel(this.valorExcel(fila, 'HORA'));
     if (
       !/^([01]\d|2[0-3]):[0-5]\d$/.test(horaInicio) ||
       !/^([01]\d|2[0-3]):[0-5]\d$/.test(horaFin)
     ) {
       throw new BadRequestException(
-        'HORA_INICIO y HORA_FIN deben usar formato HH:mm.',
+        'HORA debe indicar un bloque válido, por ejemplo 6AM, 8AM, 2PM o 06:00 - 08:00.',
       );
     }
+    const nombreDocente = this.valorExcel(fila, 'DOCENTE');
     const documento = this.valorExcel(fila, 'DOCENTE_DOCUMENTO');
-    const nombreDocente = this.valorExcel(fila, 'DOCENTE_NOMBRE');
-    const codigoAsignatura = this.valorExcel(fila, 'ASIGNATURA_CODIGO');
-    const nombreAsignatura = this.valorExcel(fila, 'ASIGNATURA_NOMBRE');
+    const asignaturaTexto = this.valorExcel(fila, 'ASIGNATURA');
+    const [codigoAsignatura, nombreAsignatura] = this.separarCatalogo(asignaturaTexto, 'ASIG');
     const grupo = this.valorExcel(fila, 'GRUPO');
+    if (documento && !/^\d+$/.test(documento)) {
+      throw new BadRequestException(
+        'DOCENTE_DOCUMENTO debe contener solo números.',
+      );
+    }
+    if (nombreDocente && !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:[\s'-][A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*$/.test(nombreDocente)) {
+      throw new BadRequestException(
+        'DOCENTE_NOMBRE debe contener solo letras.',
+      );
+    }
     if (
-      !documento ||
       !nombreDocente ||
       !codigoAsignatura ||
       !nombreAsignatura ||
@@ -1025,8 +1120,7 @@ export class HorarioService {
         'La fila contiene campos académicos requeridos vacíos.',
       );
     }
-    const proyectoCurricularId =
-      this.valorExcel(fila, 'PROYECTO_CURRICULAR_ID') || undefined;
+    const [, proyectoCurricularNombre] = this.separarCatalogo(this.valorExcel(fila, 'PROYECTO'), 'PROY');
     return {
       aulaId,
       diaSemana,
@@ -1035,16 +1129,133 @@ export class HorarioService {
       horaFin,
       grupo,
       inscritos,
-      proyectoCurricularId,
+      ...(proyectoCurricularNombre && { proyectoCurricularNombre }),
       docente: {
-        documento,
         nombre: nombreDocente,
+        ...(documento && { documento }),
         ...(this.valorExcel(fila, 'DOCENTE_CORREO') && {
           correo: this.valorExcel(fila, 'DOCENTE_CORREO'),
         }),
       },
       asignatura: { codigo: codigoAsignatura, nombre: nombreAsignatura },
     };
+  }
+
+  private convertirFilaExcelAnterior(
+    fila: Record<string, unknown>,
+    aulaId: string,
+  ): ClaseImportacionDto {
+    const diaSemana = Number(this.valorExcel(fila, 'DIA_SEMANA'));
+    const semana = 1;
+    const inscritosTexto = this.valorExcel(fila, 'INSCRITOS');
+    const inscritos = inscritosTexto ? Number(inscritosTexto) : undefined;
+    if (!Number.isInteger(diaSemana) || diaSemana < 1 || diaSemana > 6) {
+      throw new BadRequestException('DIA_SEMANA debe ser un entero entre 1 y 6.');
+    }
+    const horaInicio = this.valorExcel(fila, 'HORA_INICIO');
+    const horaFin = this.valorExcel(fila, 'HORA_FIN');
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(horaInicio) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(horaFin)) {
+      throw new BadRequestException('HORA_INICIO y HORA_FIN deben usar formato HH:mm.');
+    }
+    const documento = this.valorExcel(fila, 'DOCENTE_DOCUMENTO');
+    const nombreDocente = this.valorExcel(fila, 'DOCENTE_NOMBRE');
+    const codigoAsignatura = this.valorExcel(fila, 'ASIGNATURA_CODIGO');
+    const nombreAsignatura = this.valorExcel(fila, 'ASIGNATURA_NOMBRE');
+    const grupo = this.valorExcel(fila, 'GRUPO');
+    if (!documento || !/^\d+$/.test(documento)) throw new BadRequestException('DOCENTE_DOCUMENTO debe contener solo números.');
+    if (!nombreDocente || !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:[\s'-][A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*$/.test(nombreDocente)) throw new BadRequestException('DOCENTE_NOMBRE debe contener solo letras.');
+    if (!codigoAsignatura || !nombreAsignatura || !grupo) throw new BadRequestException('La fila contiene campos académicos requeridos vacíos.');
+    return { aulaId, diaSemana, semana, horaInicio, horaFin, grupo, inscritos, docente: { documento, nombre: nombreDocente, ...(this.valorExcel(fila, 'DOCENTE_CORREO') && { correo: this.valorExcel(fila, 'DOCENTE_CORREO') }) }, asignatura: { codigo: codigoAsignatura, nombre: nombreAsignatura }, proyectoCurricularId: this.valorExcel(fila, 'PROYECTO_CURRICULAR_ID') || undefined };
+  }
+
+  private extraerCodigoAula(salon: string): string {
+    const limpio = salon.trim();
+    const sinCapacidad = limpio.replace(/\s+CAP\s*\(.*\)$/i, '').trim();
+    const numero = sinCapacidad.match(/\d+[A-Z]?$/i)?.[0];
+    return numero ?? sinCapacidad;
+  }
+
+  private convertirHoraExcel(valor: string): [string, string] {
+    const texto = valor.trim().toUpperCase().replace(/\s+/g, '');
+    const rango = texto.match(/^(\d{1,2})(?::(\d{2}))?([AP]M)?[-–](\d{1,2})(?::(\d{2}))?([AP]M)?$/);
+    if (rango) {
+      const inicio = this.normalizarHora(rango[1], rango[2] ?? '00', rango[3]);
+      const fin = this.normalizarHora(rango[4], rango[5] ?? '00', rango[6] ?? rango[3]);
+      return [inicio, fin];
+    }
+    const inicio = texto.match(/^(\d{1,2})(?::(\d{2}))?([AP]M)?$/);
+    if (!inicio) return ['', ''];
+    const horaInicio = this.normalizarHora(inicio[1], inicio[2] ?? '00', inicio[3]);
+    const fecha = new Date(`1970-01-01T${horaInicio}:00Z`);
+    fecha.setUTCHours(fecha.getUTCHours() + 2);
+    return [horaInicio, `${String(fecha.getUTCHours()).padStart(2, '0')}:${String(fecha.getUTCMinutes()).padStart(2, '0')}`];
+  }
+
+  private normalizarHora(horaTexto: string, minutos: string, meridiano?: string): string {
+    let hora = Number(horaTexto);
+    if (meridiano === 'PM' && hora < 12) hora += 12;
+    if (meridiano === 'AM' && hora === 12) hora = 0;
+    return `${String(hora).padStart(2, '0')}:${minutos}`;
+  }
+
+  private separarCatalogo(valor: string, prefijo: string): [string, string] {
+    const partes = valor.split(/\s+-\s+/, 2).map((item) => item.trim());
+    if (partes.length === 2) return partes as [string, string];
+    return [prefijo + '-' + valor.replace(/\W+/g, '-').toUpperCase(), valor];
+  }
+
+  private async cerrarAsistenciasVencidas(): Promise<void> {
+    const ahora = new Date();
+    const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+    const ayer = new Date(hoy);
+    ayer.setDate(ayer.getDate() - 1);
+    const limite = new Date(Date.UTC(ayer.getFullYear(), ayer.getMonth(), ayer.getDate()));
+    const clases = await this.prisma.claseProgramada.findMany({
+      select: {
+        id: true,
+        diaSemana: true,
+        periodo: { select: { fechaInicio: true, fechaFin: true } },
+      },
+    });
+
+    for (const clase of clases) {
+      const inicio = new Date(clase.periodo.fechaInicio);
+      const fin = new Date(Math.min(clase.periodo.fechaFin.getTime(), limite.getTime() - 1));
+      for (const fecha = new Date(Date.UTC(inicio.getUTCFullYear(), inicio.getUTCMonth(), inicio.getUTCDate())); fecha <= fin; fecha.setUTCDate(fecha.getUTCDate() + 1)) {
+        const dia = fecha.getUTCDay() === 0 ? 7 : fecha.getUTCDay();
+        if (dia !== clase.diaSemana) continue;
+        const fechaRegistro = new Date(fecha);
+        await this.prisma.asistenciaDocente.updateMany({
+          where: { claseId: clase.id, fecha: fechaRegistro, estado: EstadoAsistencia.PENDIENTE },
+          data: { estado: EstadoAsistencia.AUSENTE, registradaEn: new Date() },
+        });
+        await this.prisma.asistenciaDocente.upsert({
+          where: { claseId_fecha: { claseId: clase.id, fecha: fechaRegistro } },
+          update: {},
+          create: { claseId: clase.id, fecha: fechaRegistro, estado: EstadoAsistencia.AUSENTE, registradaEn: new Date() },
+        });
+      }
+    }
+  }
+
+  private calcularSemanaSemestre(
+    fechaInicio: Date,
+    fechaReferencia = new Date(),
+  ): number {
+    const inicio = Date.UTC(
+      fechaInicio.getUTCFullYear(),
+      fechaInicio.getUTCMonth(),
+      fechaInicio.getUTCDate(),
+    );
+    const referencia = Date.UTC(
+      fechaReferencia.getUTCFullYear(),
+      fechaReferencia.getUTCMonth(),
+      fechaReferencia.getUTCDate(),
+    );
+    const diasTranscurridos = Math.floor(
+      (referencia - inicio) / (24 * 60 * 60 * 1000),
+    );
+    return Math.min(26, Math.max(1, Math.floor(diasTranscurridos / 7) + 1));
   }
 
   private throwImportError(error: unknown, index: number): never {

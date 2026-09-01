@@ -110,6 +110,15 @@ export class AulasService {
   ) {}
 
   async create(createAulaDto: CreateAulaDto, usuarioId?: string) {
+    if (createAulaDto.proyecto) {
+      const proyecto = await this.prisma.proyectoCurricular.upsert({
+        where: { nombre: createAulaDto.proyecto },
+        create: { nombre: createAulaDto.proyecto },
+        update: {},
+        select: { id: true },
+      });
+      createAulaDto.proyectoCurricularId = proyecto.id;
+    }
     await this.ensureProyectosCurricularesExist(
       this.obtenerProyectosCurricularesIds(createAulaDto),
     );
@@ -199,6 +208,15 @@ export class AulasService {
     await this.ensureProyectosCurricularesExist(
       this.obtenerProyectosCurricularesIds(updateAulaDto),
     );
+    if (updateAulaDto.proyecto) {
+      const proyecto = await this.prisma.proyectoCurricular.upsert({
+        where: { nombre: updateAulaDto.proyecto },
+        create: { nombre: updateAulaDto.proyecto },
+        update: {},
+        select: { id: true },
+      });
+      updateAulaDto.proyectoCurricularId = proyecto.id;
+    }
 
     try {
       const aula = await this.prisma.aula.update({
@@ -304,6 +322,7 @@ export class AulasService {
       : {};
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     if (input.hardware) caracteristicas.hardware = input.hardware.trim();
+    if (input.caracteristica) caracteristicas.descripcion = input.caracteristica.trim();
     return {
       codigo: input.codigo.trim(),
       ubicacion: input.ubicacion.trim(),
@@ -343,12 +362,20 @@ export class AulasService {
       : undefined;
     if (caracteristicas && input.hardware)
       caracteristicas.hardware = input.hardware.trim();
+    if (caracteristicas && input.caracteristica)
+      caracteristicas.descripcion = input.caracteristica.trim();
     else if (input.hardware)
       return {
         ...this.normalizeUpdateInput({ ...input, hardware: undefined }),
         caracteristicas: {
           hardware: input.hardware.trim(),
+          ...(input.caracteristica && { descripcion: input.caracteristica.trim() }),
         },
+      };
+    else if (input.caracteristica)
+      return {
+        ...this.normalizeUpdateInput({ ...input, caracteristica: undefined }),
+        caracteristicas: { descripcion: input.caracteristica.trim() },
       };
     return {
       ...(input.codigo !== undefined && { codigo: input.codigo.trim() }),
@@ -411,23 +438,24 @@ export class AulasService {
       throw new BadRequestException(
         'El Excel debe contener entre 1 y 500 aulas.',
       );
-    const valor = (fila: Record<string, unknown>, nombre: string) => {
-      const clave = Object.keys(fila).find(
-        (item) => item.trim().toUpperCase() === nombre,
-      );
+    const normalizarEncabezado = (valor: string) =>
+      valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+    const valor = (fila: Record<string, unknown>, ...nombres: string[]) => {
+      const claves = nombres.map(normalizarEncabezado);
+      const clave = Object.keys(fila).find((item) => claves.includes(normalizarEncabezado(item)));
       return String(clave ? (fila[clave] ?? '') : '').trim();
     };
     const requeridas = [
-      'CODIGO',
-      'UBICACION',
+      'AULA DE SOFTWARE',
       'CAPACIDAD',
-      'MARCA',
-      'MODELO_PC',
-      'SOFTWARE',
-      'HARDWARE',
+      'PROYECTO',
+      'ANO',
+      'MARCA Y MODELO',
+      'CARACTERISTICA',
+      'NECESITA RENOVACION',
     ];
     const encabezados = new Set(
-      Object.keys(filas[0]).map((item) => item.trim().toUpperCase()),
+      Object.keys(filas[0]).map(normalizarEncabezado),
     );
     const faltantes = requeridas.filter((item) => !encabezados.has(item));
     if (faltantes.length)
@@ -436,25 +464,27 @@ export class AulasService {
       );
     const codigos = new Set<string>();
     const entradas = filas.map((fila, indice) => {
-      const codigo = valor(fila, 'CODIGO');
-      const ubicacion = valor(fila, 'UBICACION');
-      const marca = valor(fila, 'MARCA');
-      const modeloPc = valor(fila, 'MODELO_PC');
-      const software = valor(fila, 'SOFTWARE');
-      const hardware = valor(fila, 'HARDWARE');
+      const codigo = valor(fila, 'AULA DE SOFTWARE', 'CODIGO');
+      const proyecto = valor(fila, 'PROYECTO');
+      const anio = Number(valor(fila, 'AÑO', 'ANO'));
+      const marcaModelo = valor(fila, 'MARCA Y MODELO');
+      const caracteristica = valor(fila, 'CARACTERISTICA', 'CARACTERISTICAS');
+      const renovacionTexto = valor(fila, 'NECESITA RENOVACIÓN', 'NECESITA RENOVACION').toUpperCase();
       const capacidad = Number(valor(fila, 'CAPACIDAD'));
+      const necesitaRenovacion = ['SI', 'SÍ', 'TRUE', '1', 'YES'].includes(renovacionTexto);
       if (
         !codigo ||
-        !ubicacion ||
-        !marca ||
-        !modeloPc ||
-        !software ||
-        !hardware ||
+        !proyecto ||
+        !marcaModelo ||
+        !caracteristica ||
+        !renovacionTexto ||
+        !Number.isInteger(anio) ||
+        anio < 1900 ||
         !Number.isInteger(capacidad) ||
         capacidad < 1
       )
         throw new BadRequestException(
-          `Fila ${indice + 2}: código, ubicación, capacidad, marca, modelo de PC, software y hardware son obligatorios y válidos.`,
+          `Fila ${indice + 2}: aula, capacidad, proyecto, año, marca y modelo, característica y renovación son obligatorios y válidos.`,
         );
       if (codigos.has(codigo.toUpperCase()))
         throw new ConflictException(
@@ -463,43 +493,110 @@ export class AulasService {
       codigos.add(codigo.toUpperCase());
       return {
         codigo,
-        ubicacion,
         capacidad,
-        marca,
-        modeloPc,
-        software,
-        hardware,
+        proyecto,
+        anio,
+        marcaModelo,
+        caracteristica,
+        necesitaRenovacion,
       };
     });
     const existentes = await this.prisma.aula.findMany({
-      select: { codigo: true },
+      select: {
+        id: true,
+        codigo: true,
+        caracteristicas: true,
+        _count: {
+          select: {
+            clases: true,
+            practicasLibres: true,
+            prestamosDocentes: true,
+            prestamosAudiovisuales: true,
+            observaciones: true,
+            tareas: true,
+            limpiezas: true,
+          },
+        },
+      },
     });
-    const codigosExistentes = new Set(
-      existentes.map((item) => item.codigo.toUpperCase()),
+    const existentesPorCodigo = new Map(
+      existentes.map((item) => [item.codigo.toUpperCase(), item]),
     );
-    const repetidos = entradas
-      .map((item) => item.codigo)
-      .filter((codigo) => codigosExistentes.has(codigo.toUpperCase()));
-    if (repetidos.length)
-      throw new ConflictException(
-        `Ya existen aulas con código: ${repetidos.join(', ')}.`,
-      );
-    const creadas = await this.prisma.$transaction(async (tx) => {
-      const result: Array<{ id: string }> = [];
+    const resultado = await this.prisma.$transaction(async (tx) => {
+      const creadas: Array<{ id: string }> = [];
+      const actualizadas: Array<{ id: string }> = [];
       for (const entrada of entradas) {
-        const aula = await tx.aula.create({
-          data: this.normalizeCreateInput({ ...entrada, estado: undefined }),
+        const proyecto = await tx.proyectoCurricular.upsert({
+          where: { nombre: entrada.proyecto },
+          create: { nombre: entrada.proyecto },
+          update: {},
+          select: { id: true },
         });
-        await this.syncSoftwareWith(tx, aula.id, entrada.software);
-        result.push(aula);
+        const existente = existentesPorCodigo.get(entrada.codigo.toUpperCase());
+        const caracteristicasActuales = existente?.caracteristicas;
+        const caracteristicas = {
+          ...(typeof caracteristicasActuales === 'object' &&
+          caracteristicasActuales !== null &&
+          !Array.isArray(caracteristicasActuales)
+            ? caracteristicasActuales
+            : {}),
+          descripcion: entrada.caracteristica,
+        };
+        if (existente) {
+          const aula = await tx.aula.update({
+            where: { id: existente.id },
+            data: {
+              codigo: entrada.codigo,
+              capacidad: entrada.capacidad,
+              anioAdquisicion: entrada.anio,
+              marca: entrada.marcaModelo,
+              renovacionTecnologica: entrada.necesitaRenovacion,
+              proyectoCurricular: { connect: { id: proyecto.id } },
+              caracteristicas: caracteristicas as Prisma.InputJsonValue,
+            },
+          });
+          actualizadas.push(aula);
+        } else {
+          const aula = await tx.aula.create({
+            data: this.normalizeCreateInput({
+              codigo: entrada.codigo,
+              ubicacion: 'Sin ubicación registrada',
+              capacidad: entrada.capacidad,
+              estado: undefined,
+              anioAdquisicion: entrada.anio,
+              marca: entrada.marcaModelo,
+              proyectoCurricularId: proyecto.id,
+              renovacionTecnologica: entrada.necesitaRenovacion,
+              caracteristicas: { descripcion: entrada.caracteristica },
+            }),
+          });
+          creadas.push(aula);
+        }
       }
-      return result;
+      const codigosCargados = new Set(entradas.map((entrada) => entrada.codigo.toUpperCase()));
+      const ausentes = existentes.filter((aula) => !codigosCargados.has(aula.codigo.toUpperCase()));
+      const relacionados = ausentes.filter((aula) => Object.values(aula._count).some((cantidad) => cantidad > 0));
+      if (relacionados.length) {
+        throw new ConflictException(
+          `No se pueden reemplazar las aulas ausentes porque tienen información relacionada: ${relacionados.map((aula) => aula.codigo).join(', ')}.`,
+        );
+      }
+      const eliminadas = ausentes.length
+        ? await tx.aula.deleteMany({ where: { id: { in: ausentes.map((aula) => aula.id) } } })
+        : { count: 0 };
+      return { creadas, actualizadas, eliminadas: eliminadas.count };
     });
     return {
       nombreArchivo: archivo.originalname,
       totalRecibidas: filas.length,
-      totalCreadas: creadas.length,
-      creadas: await Promise.all(creadas.map((item) => this.findOne(item.id))),
+      totalCreadas: resultado.creadas.length,
+      totalActualizadas: resultado.actualizadas.length,
+      totalEliminadas: resultado.eliminadas,
+      creadas: await Promise.all(
+        [...resultado.creadas, ...resultado.actualizadas].map((item) =>
+          this.findOne(item.id),
+        ),
+      ),
     };
   }
 

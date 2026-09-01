@@ -28,7 +28,10 @@ export type Room = {
   workstations: Workstation[];
   location: string;
   hardware: string;
+  brandModel: string;
   curriculumProject: string;
+  characteristic: string;
+  renewalNeeded: boolean;
   acquisitionYear: number;
   history: RoomHistoryEntry[];
   notes?: string;

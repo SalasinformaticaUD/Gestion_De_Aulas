@@ -14,9 +14,11 @@ type AulaApi = {
   anioAdquisicion: number | null;
   marca: string | null;
   modelo: string | null;
+  caracteristicas?: unknown;
   proyectoCurricular: { id: string; nombre: string } | null;
   software?: Array<{ nombre: string; version: string }>;
   historial?: Array<{ fecha: string; descripcion: string; responsable: string | null }>;
+  renovacionTecnologica?: boolean;
 };
 
 export type CrearAulaInput = {
@@ -27,6 +29,12 @@ export type CrearAulaInput = {
   anioAdquisicion?: number;
   marca?: string;
   modelo?: string;
+  modeloPc?: string;
+  software?: string;
+  hardware?: string;
+  proyecto?: string;
+  caracteristica?: string;
+  renovacionTecnologica?: boolean;
 };
 
 function estadoInterfaz(estado: EstadoAulaApi): RoomStatus {
@@ -43,8 +51,11 @@ function aRoom(aula: AulaApi): Room {
     software: (aula.software ?? []).map((item) => ({ name: item.nombre, version: item.version, licenses: 0, status: "activo" })),
     workstations: [],
     location: aula.ubicacion,
-    hardware: [aula.marca, aula.modelo].filter(Boolean).join(" · ") || "Sin información",
+    hardware: typeof aula.caracteristicas === "object" && aula.caracteristicas !== null ? String((aula.caracteristicas as { hardware?: unknown }).hardware ?? "") || "Sin información" : "Sin información",
+    brandModel: [aula.marca, aula.modelo].filter(Boolean).join(" ") || "Sin información",
     curriculumProject: aula.proyectoCurricular?.nombre ?? "Sin asignar",
+    characteristic: typeof aula.caracteristicas === "object" && aula.caracteristicas !== null ? String((aula.caracteristicas as { descripcion?: unknown }).descripcion ?? "Sin información") : "Sin información",
+    renewalNeeded: Boolean(aula.renovacionTecnologica),
     acquisitionYear: aula.anioAdquisicion ?? 0,
     history: (aula.historial ?? []).map((item) => ({ timestamp: new Date(item.fecha).toLocaleString("es-CO"), action: item.descripcion, responsible: item.responsable ?? "Sistema" })),
   };
@@ -67,6 +78,11 @@ export async function crearAula(input: CrearAulaInput) {
     body: JSON.stringify(input),
   });
   return aRoom(aula);
+}
+
+export async function importarAulasExcel(archivo: File) {
+  const formulario = new FormData(); formulario.append("archivo", archivo);
+  return solicitarAulas<{ totalRecibidas: number; totalCreadas: number; totalActualizadas: number; totalEliminadas: number }>("/aulas/importar/excel", tokenActual(), { method: "POST", body: formulario });
 }
 
 export async function actualizarAula(id: string, input: CrearAulaInput) {

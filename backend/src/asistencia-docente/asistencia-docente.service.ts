@@ -134,10 +134,10 @@ export class AsistenciaDocenteService {
     }
   }
 
-  private async ensureClaseExists(id: string): Promise<{ diaSemana: number; periodo: { fechaInicio: Date; fechaFin: Date } }> {
+  private async ensureClaseExists(id: string): Promise<{ diaSemana: number; horaInicio: Date; periodo: { fechaInicio: Date; fechaFin: Date } }> {
     const clase = await this.prisma.claseProgramada.findUnique({
       where: { id },
-      select: { diaSemana: true, periodo: { select: { fechaInicio: true, fechaFin: true } } },
+      select: { diaSemana: true, horaInicio: true, periodo: { select: { fechaInicio: true, fechaFin: true } } },
     });
 
     if (!clase) {
@@ -146,7 +146,7 @@ export class AsistenciaDocenteService {
     return clase;
   }
 
-  private ensureAttendanceWindow(clase: { diaSemana: number; periodo: { fechaInicio: Date; fechaFin: Date } }, fecha: Date): void {
+  private ensureAttendanceWindow(clase: { diaSemana: number; horaInicio: Date; periodo: { fechaInicio: Date; fechaFin: Date } }, fecha: Date): void {
     // La relación siempre está presente en producción; esta tolerancia conserva
     // compatibilidad con integraciones antiguas que solo devuelven el id.
     if (!clase?.periodo || !clase?.diaSemana) return;
@@ -155,11 +155,21 @@ export class AsistenciaDocenteService {
     const ayer = new Date(hoy);
     ayer.setUTCDate(ayer.getUTCDate() - 1);
     if (fecha < clase.periodo.fechaInicio || fecha > clase.periodo.fechaFin || fecha < ayer || fecha > hoy) {
-      throw new ConflictException('La asistencia solo puede modificarse el día de la clase y el día siguiente.');
+      throw new ConflictException('La asistencia solo puede modificarse el día anterior o el día actual.');
     }
     const dia = fecha.getUTCDay() === 0 ? 7 : fecha.getUTCDay();
     if (dia !== clase.diaSemana) {
       throw new ConflictException('La fecha no corresponde al día de la semana de la clase.');
+    }
+    if (fecha.getTime() === hoy.getTime()) {
+      const ahora = new Date();
+      // horaInicio representa la hora local del horario (aunque Prisma la
+      // entregue como Date con fecha técnica 1970-01-01).
+      const minutosActuales = ahora.getHours() * 60 + ahora.getMinutes();
+      const minutosInicio = clase.horaInicio.getUTCHours() * 60 + clase.horaInicio.getUTCMinutes();
+      if (minutosActuales < minutosInicio) {
+        throw new ConflictException('No se puede registrar asistencia para un bloque que aún no ha iniciado.');
+      }
     }
   }
 

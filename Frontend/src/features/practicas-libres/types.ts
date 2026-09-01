@@ -17,5 +17,7 @@ export type FreePractice = {
   estimatedEnd: string;
   actualEnd?: string;
   status: FreePracticeStatus;
+  responsibleType: "MONITOR" | "TECNICO" | "ASISTENCIAL";
+  requestedSoftware: string;
 };
 

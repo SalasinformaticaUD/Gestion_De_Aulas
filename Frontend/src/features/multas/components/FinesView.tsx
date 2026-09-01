@@ -18,6 +18,7 @@ export function FinesView() {
   const [showReason, setShowReason] = useState(false);
   const [transition, setTransition] = useState<{ item: FineRecord; action: "cumplir" | "anular" } | null>(null);
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  const [prefillCode, setPrefillCode] = useState("");
 
   const activeFines = fines.filter((fine) => fine.status === "ACTIVA");
   const historicalFines = fines.filter((fine) => fine.status !== "ACTIVA");
@@ -31,6 +32,7 @@ export function FinesView() {
 
   const reload = async () => { try { const data = await cargarMultas(); setFines(data.fines); setReasons(data.reasons); } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible cargar las multas." }); } };
   useEffect(() => { void reload(); }, []);
+  useEffect(() => { const code = new URLSearchParams(window.location.search).get("codigoEstudiante"); if (code) { setPrefillCode(code); setShowCreate(true); } }, []);
   const createFine = async (payload: { student: FineStudent; reasonId: string; description?: string }) => {
     try { await crearMulta({ codigoEstudiante: payload.student.code, motivoId: payload.reasonId, descripcion: payload.description }); await reload(); setShowCreate(false); setView("activas"); setNotice({ tone: "success", text: `Multa impuesta a ${payload.student.name}.` }); } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible crear la multa." }); }
   };
@@ -66,7 +68,7 @@ export function FinesView() {
     {view !== "motivos" ? <section className={styles.contentCard}><header className={styles.cardHeader}><div><h2>{view === "activas" ? "Restricciones vigentes" : "Trazabilidad de multas"}</h2><p>{view === "activas" ? "Estos estudiantes no pueden registrar prácticas libres." : "Registros cumplidos o anulados, conservados sin eliminación física."}</p></div><span>{visibleFines.length} registro(s)</span></header><div className={styles.toolbar}><label className={styles.search}><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar estudiante, código, motivo o folio..." aria-label="Buscar multas" /></label>{view === "historial" && <label><span>Estado</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="todas">Todos</option><option value="CUMPLIDA">Cumplidas</option><option value="ANULADA">Anuladas</option></select></label>}<span className={styles.resultCount}>{visibleFines.length} resultado(s)</span></div><div className="table-wrap"><table className={styles.finesTable}><thead><tr><th>Multa</th><th>Estudiante</th><th>Motivo</th><th>Fecha</th><th>Descripción</th><th>Estado</th><th>{view === "activas" ? "Acciones" : "Resolución"}</th></tr></thead><tbody>{visibleFines.map((fine) => <FineRow key={fine.id} fine={fine} reason={reasons.find((reason) => reason.id === fine.reasonId)} onFulfill={() => setTransition({ item: fine, action: "cumplir" })} onAnnul={() => setTransition({ item: fine, action: "anular" })} />)}{visibleFines.length === 0 && <tr><td colSpan={7} className={styles.emptyTable}>No hay multas para los filtros seleccionados.</td></tr>}</tbody></table></div></section> : <ReasonsView reasons={reasons} fines={fines} onCreate={() => setShowReason(true)} />}
 
     
-    {showCreate && <CreateFineDialog reasons={reasons} onClose={() => setShowCreate(false)} onCreate={createFine} />}
+    {showCreate && <CreateFineDialog reasons={reasons} initialCode={prefillCode} onClose={() => setShowCreate(false)} onCreate={createFine} />}
     {transition && <TransitionDialog item={transition.item} action={transition.action} onClose={() => setTransition(null)} onConfirm={completeTransition} />}
     {showReason && <ReasonDialog onClose={() => setShowReason(false)} onCreate={createReason} />}
   </>;
@@ -88,8 +90,8 @@ function ReasonsView({ reasons, fines, onCreate }: { reasons: FineReason[]; fine
   return <section className={styles.reasonsCard}><header><div><h2>Motivos de multa</h2><p>Catálogo utilizado para clasificar nuevas restricciones.</p></div><button type="button" className="button-primary" onClick={onCreate}>+ Nuevo motivo</button></header><div className={styles.reasonGrid}>{reasons.map((reason) => <article key={reason.id}><header><span>{fines.filter((fine) => fine.reasonId === reason.id).length}</span><strong>{reason.name}</strong></header><p>{reason.description || "Sin descripción registrada."}</p><footer>{fines.filter((fine) => fine.reasonId === reason.id && fine.status === "ACTIVA").length} multa(s) activa(s)</footer></article>)}</div></section>;
 }
 
-function CreateFineDialog({ reasons, onClose, onCreate }: { reasons: FineReason[]; onClose: () => void; onCreate: (payload: { student: FineStudent; reasonId: string; description?: string }) => void | Promise<void> }) {
-  const [code, setCode] = useState("");
+function CreateFineDialog({ reasons, initialCode, onClose, onCreate }: { reasons: FineReason[]; initialCode?: string; onClose: () => void; onCreate: (payload: { student: FineStudent; reasonId: string; description?: string }) => void | Promise<void> }) {
+  const [code, setCode] = useState(initialCode ?? "");
   const [student, setStudent] = useState<FineStudent | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [reasonId, setReasonId] = useState(reasons[0]?.id ?? "");

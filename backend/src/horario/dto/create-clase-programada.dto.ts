@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  MaxLength,
   Matches,
   Max,
   Min,
@@ -62,4 +63,19 @@ export class CreateClaseProgramadaDto {
   @IsInt()
   @Min(0)
   inscritos?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  modeloPc?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  software?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  hardware?: string;
 }

@@ -35,6 +35,10 @@
 .statusMetric_mantenimiento>i { background:#dc2626; box-shadow:0 0 0 6px #fee2e2; }
 .statusMetric_bloqueada>i { background:#7c3aed; box-shadow:0 0 0 6px #ede9fe; }
 .stateBadge i,.legend i { width:6px; height:6px; display:inline-block; border-radius:50%; background:currentColor; }
+.attendanceBadge { display:inline-flex; width:max-content; margin-top:7px; padding:4px 7px; border:1px solid transparent; border-radius:5px; font-size:11.7px; font-style:normal; font-weight:800; }
+.attendance_ASISTIO { color:#16803c; border-color:#b6e4c6; background:#edfaf1; }
+.attendance_AUSENTE { color:#b42318; border-color:#f1b5b0; background:#fff1f0; }
+.attendance_PENDIENTE { color:#8a5a00; border-color:#efd59b; background:#fff8e8; }
 .tone_disponible { color:#078839!important; background:#ecfbf1!important; }
 .tone_ocupada { color:#175cc4!important; background:#edf4ff!important; }
 .tone_reservada { color:#b45d00!important; background:#fff8e8!important; }

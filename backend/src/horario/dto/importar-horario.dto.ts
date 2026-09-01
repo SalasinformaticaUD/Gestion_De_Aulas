@@ -9,6 +9,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
   ValidateNested,
 } from 'class-validator';
@@ -16,14 +17,18 @@ import { OmitType } from '@nestjs/mapped-types';
 import { CreateClaseProgramadaDto } from './create-clase-programada.dto';
 
 export class DocenteImportacionDto {
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @MaxLength(50)
-  documento!: string;
+  @Matches(/^\d+$/, { message: 'documento debe contener solo números.' })
+  documento?: string;
 
   @IsString()
   @IsNotEmpty()
   @MaxLength(200)
+  @Matches(/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:[\s'-][A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*$/, {
+    message: 'nombre debe contener solo letras.',
+  })
   nombre!: string;
 
   @IsOptional()
@@ -49,6 +54,11 @@ export class ClaseImportacionDto extends OmitType(CreateClaseProgramadaDto, [
   'docenteId',
   'asignaturaId',
 ] as const) {
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  proyectoCurricularNombre?: string;
+
   @IsOptional()
   @IsUUID()
   docenteId?: string;

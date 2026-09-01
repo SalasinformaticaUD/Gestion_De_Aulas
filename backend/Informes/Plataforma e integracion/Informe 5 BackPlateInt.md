@@ -1,7 +1,7 @@
 # Informe 5 - Cierre funcional de módulos
 
 FECHA: 31/08/2026  
-AUTORES: 
+AUTORES: Julian Dario Romero Buitrago 
 FECHA: 31/08/2026  
 AUTORES: Juan Esteban Cañon Solorza 
 

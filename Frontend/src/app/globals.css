@@ -348,3 +348,156 @@ html[data-theme="dark"] .university-logo-dark,
 .paginacion-monitores button:disabled { cursor:not-allowed; opacity:.42; }
 @media(max-width:560px){.paginacion-monitores{align-items:flex-start;flex-direction:column}.paginacion-monitores>div{width:100%}.paginacion-monitores button{flex:1}}
 .theme-toggle{width:38px;height:38px;display:grid;place-items:center;flex:0 0 38px;padding:0;border:1px solid var(--line);border-radius:8px;color:var(--ink);background:var(--surface);font-size:21px;line-height:1}.theme-toggle:hover{border-color:var(--primary)}.app-selector>.theme-toggle,.auth-page>.theme-toggle{position:absolute;top:20px;right:20px}.topbar>.theme-toggle{margin-left:auto}.nav-module-switcher{width:100%;border:0;text-align:left;font:inherit}
+
+/* Tabla de consulta de horarios: las columnas usan la misma rejilla en
+   encabezado y cuerpo, como en el formato institucional de referencia. */
+.schedule.schedule-list { min-width:1080px; table-layout:fixed; font-size:13px; }
+.schedule.schedule-list th, .schedule.schedule-list td { box-sizing:border-box; overflow-wrap:anywhere; text-align:left; vertical-align:middle; }
+.schedule.schedule-list th { height:44px; padding:8px 12px; white-space:nowrap; font-size:12px; letter-spacing:.02em; }
+.schedule.schedule-list td { min-width:0; height:52px; padding:9px 12px; line-height:1.25; }
+.schedule.schedule-list th:nth-child(1), .schedule.schedule-list td:nth-child(1) { width:9%; }
+.schedule.schedule-list th:nth-child(2), .schedule.schedule-list td:nth-child(2) { width:10%; white-space:nowrap; }
+.schedule.schedule-list th:nth-child(3), .schedule.schedule-list td:nth-child(3) { width:14%; }
+.schedule.schedule-list th:nth-child(4), .schedule.schedule-list td:nth-child(4) { width:10%; }
+.schedule.schedule-list th:nth-child(5), .schedule.schedule-list td:nth-child(5) { width:21%; }
+.schedule.schedule-list th:nth-child(6), .schedule.schedule-list td:nth-child(6) { width:20%; }
+.schedule.schedule-list th:nth-child(7), .schedule.schedule-list td:nth-child(7) { width:16%; }
+.schedule.schedule-list th:nth-child(8), .schedule.schedule-list td:nth-child(8) { width:18%; }
+.attendance-date { display:grid; gap:3px; color:var(--muted); font-size:10px; font-weight:750; text-transform:uppercase; }
+.attendance-date input { width:100%; min-width:112px; min-height:28px; padding:3px 5px; border:1px solid var(--line); border-radius:5px; color:var(--ink); background:var(--surface); font-size:12px; }
+.attendance-actions { display:flex; gap:6px; margin-top:6px; }
+.attendance-actions button { width:30px; height:30px; display:grid; place-items:center; border:1px solid var(--line); border-radius:50%; color:#fff; font-size:17px; font-weight:900; line-height:1; cursor:pointer; }
+.attendance-actions button:disabled { cursor:wait; opacity:.55; }
+.attendance-state { display:block; color:var(--muted); font-size:12px; font-weight:800; }
+.attendance-asistio { color:#9b1325; }
+.attendance-ausente { color:#9b1325; }
+.attendance-help { display:block; margin-top:3px; color:var(--muted); font-size:10px; }
+.attendance-check { background:#16803c; }
+.attendance-cross { background:transparent; border-color:var(--primary)!important; color:var(--primary)!important; }
+.filters .button-secondary { min-height:37px; padding:0 14px; border:1px solid var(--line); border-radius:7px; color:var(--ink); background:transparent; font-size:15.6px; font-weight:750; cursor:pointer; }
+.filters .button-secondary:hover { color:var(--primary); border-color:var(--primary); background:transparent; }
+.filters .button-primary { background:var(--primary); color:#fff; }
+.filters .button-primary:hover { background:var(--primary-hover); }
+.attendance-check { background:var(--primary); border-color:var(--primary)!important; }
+/* Ajustes de contraste y ancho para la gestión de aulas */
+.room-filters { grid-template-columns: minmax(190px, 1fr); }
+.room-filters select { min-width: 190px; }
+.rooms-heading .button-secondary { color: #fff; background: #343841; border-color: #343841; }
+.rooms-heading .button-secondary:hover { background: #24262c; border-color: #24262c; }
+.sidebar-footer .nav-module-switcher { color: var(--sidebar-text); background: #24262b; border: 1px solid #34363d; border-radius: 7px; }
+.sidebar-footer .nav-module-switcher:hover { color: #fff; background: #2d3036; }
+
+/* Asistencia: estados claramente diferenciados en modo claro y oscuro. */
+.attendance-actions .attendance-check { color:#fff!important; background:#16803c!important; border-color:#16803c!important; }
+.attendance-actions .attendance-check:hover:not(:disabled) { color:#fff!important; background:#126b32!important; border-color:#126b32!important; }
+.attendance-actions .attendance-cross { color:var(--primary)!important; background:transparent!important; border-color:var(--primary)!important; }
+.attendance-actions .attendance-cross:hover:not(:disabled) { color:#850d1b!important; background:#fff1f1!important; border-color:#850d1b!important; }
+
+/* Aulas: mismo lenguaje visual que los botones de Horarios. */
+.rooms-heading .room-upload-button,
+.rooms-heading .room-actions > .button-secondary { color:var(--primary); background:var(--surface); border-color:var(--primary); cursor:pointer; }
+.rooms-heading .room-upload-button:hover,
+.rooms-heading .room-actions > .button-secondary:hover { color:var(--primary-hover); background:#fff1f1; border-color:var(--primary-hover); }
+
+/* En oscuro se mantienen los mismos colores, con contraste reforzado contra
+   las reglas generales de controles del tema. */
+html[data-theme="dark"] main .rooms-heading .room-actions > .button-primary { color:#fff!important; background:var(--primary)!important; border-color:var(--primary)!important; }
+html[data-theme="dark"] main .rooms-heading .room-actions > .button-primary:hover { color:#fff!important; background:var(--primary-hover)!important; border-color:var(--primary-hover)!important; }
+html[data-theme="dark"] main .rooms-heading .room-upload-button,
+html[data-theme="dark"] main .rooms-heading .room-actions > .button-secondary { color:#f29aa5!important; background:var(--surface)!important; border-color:#c84558!important; }
+html[data-theme="dark"] main .rooms-heading .room-upload-button:hover,
+html[data-theme="dark"] main .rooms-heading .room-actions > .button-secondary:hover { color:#ffb5be!important; background:#351f24!important; border-color:#ff7180!important; }
+
+/* Aulas: cargar y descargar son botones neutros; el hover usa el acento rojo. */
+.rooms-heading .room-upload-button,
+.rooms-heading .room-actions > .button-secondary { color:var(--ink)!important; background:#eef0f3!important; border-color:#c7cbd3!important; }
+.rooms-heading .room-upload-button:hover,
+.rooms-heading .room-actions > .button-secondary:hover { color:var(--primary)!important; background:#fff!important; border-color:var(--primary)!important; }
+html[data-theme="dark"] main .rooms-heading .room-upload-button,
+html[data-theme="dark"] main .rooms-heading .room-actions > .button-secondary { color:#f1f3f5!important; background:#343841!important; border-color:#50545e!important; }
+html[data-theme="dark"] main .rooms-heading .room-upload-button:hover,
+html[data-theme="dark"] main .rooms-heading .room-actions > .button-secondary:hover { color:#ff9eaa!important; background:#351f24!important; border-color:#ff7180!important; }
+
+/* Prioridad final para el encabezado de Aulas en modo oscuro. */
+html[data-theme="dark"] body main .rooms-heading .room-actions > .button-primary,
+html[data-theme="dark"] body main .rooms-heading .room-actions > .button-primary:hover { color:#fff!important; background:#a51022!important; border-color:#a51022!important; }
+html[data-theme="dark"] body main .rooms-heading .room-upload-button,
+html[data-theme="dark"] body main .rooms-heading .room-actions > .button-secondary { color:#f1f3f5!important; background:#343841!important; border-color:#50545e!important; }
+html[data-theme="dark"] body main .rooms-heading .room-upload-button:hover,
+html[data-theme="dark"] body main .rooms-heading .room-actions > .button-secondary:hover { color:#ff9eaa!important; background:#351f24!important; border-color:#ff7180!important; }
+
+html[data-theme="dark"] .rooms-heading .room-create-button { color:#fff!important; background:#a51022!important; border-color:#a51022!important; }
+html[data-theme="dark"] .rooms-heading .room-create-button:hover,
+html[data-theme="dark"] .rooms-heading .room-create-button:focus { color:#fff!important; background:#850d1b!important; border-color:#850d1b!important; }
+html[data-theme="dark"] .rooms-heading .room-upload-button,
+html[data-theme="dark"] .rooms-heading .room-download-button { color:#f1f3f5!important; background:#343841!important; border-color:#50545e!important; }
+html[data-theme="dark"] .rooms-heading .room-upload-button:hover,
+html[data-theme="dark"] .rooms-heading .room-download-button:hover { color:#ff9eaa!important; background:#351f24!important; border-color:#ff7180!important; }
+
+/* Gana a la regla global que estiliza todos los botones dentro de acciones. */
+html[data-theme="dark"] main .rooms-heading.rooms-heading .room-actions.room-actions > button.button-primary,
+html[data-theme="dark"] main .rooms-heading.rooms-heading .room-actions.room-actions > button.button-primary:hover { color:#fff!important; background:#a51022!important; border-color:#a51022!important; }
+html[data-theme="dark"] main .rooms-heading.rooms-heading .room-actions.room-actions > label.room-upload-button,
+html[data-theme="dark"] main .rooms-heading.rooms-heading .room-actions.room-actions > button.room-download-button { color:#f1f3f5!important; background:#343841!important; border-color:#50545e!important; }
+html[data-theme="dark"] main .rooms-heading.rooms-heading .room-actions.room-actions > label.room-upload-button:hover,
+html[data-theme="dark"] main .rooms-heading.rooms-heading .room-actions.room-actions > button.room-download-button:hover { color:#ff9eaa!important; background:#351f24!important; border-color:#ff7180!important; }
+
+/* Aula seleccionada: contraste equivalente al resaltado negro del modo claro. */
+html[data-theme="dark"] main .rooms-layout .room-list-item.is-selected,
+html[data-theme="dark"] main .rooms-layout .room-list-item.is-selected:hover { color:#fff!important; background:#343841!important; border-color:#5b616d!important; border-left-color:var(--room-status)!important; box-shadow:inset 0 0 0 1px #464b55!important; }
+html[data-theme="dark"] main .rooms-layout .room-list-item.is-selected small { color:#d7dae0!important; }
+
+/* Asistencia: el relleno representa exclusivamente el estado guardado. */
+.attendance-actions .attendance-check,
+.attendance-actions .attendance-cross { color:var(--muted)!important; background:transparent!important; border-color:var(--line)!important; }
+.attendance-actions .attendance-check:hover:not(:disabled) { color:#16803c!important; border-color:#16803c!important; background:#effcf3!important; }
+.attendance-actions .attendance-cross:hover:not(:disabled) { color:var(--primary)!important; border-color:var(--primary)!important; background:#fff1f1!important; }
+.schedule-list td:has(.attendance-asistio) .attendance-check { color:#fff!important; background:#16803c!important; border-color:#16803c!important; }
+.schedule-list td:has(.attendance-ausente) .attendance-cross { color:#fff!important; background:var(--primary)!important; border-color:var(--primary)!important; }
+html[data-theme="dark"] .schedule-list td:has(.attendance-asistio) .attendance-check { color:#fff!important; background:#16803c!important; border-color:#16803c!important; }
+html[data-theme="dark"] .schedule-list td:has(.attendance-ausente) .attendance-cross { color:#fff!important; background:#c84558!important; border-color:#c84558!important; }
+
+/* Encabezado del detalle del aula: contraste visible en modo oscuro. */
+html[data-theme="dark"] .room-detail .room-detail-header { color:#fff!important; background:#24272e!important; border-bottom:1px solid #464b55!important; }
+html[data-theme="dark"] .room-detail .room-detail-header p { color:#d0d4dc!important; }
+
+/* Resaltado fuerte del módulo grande del aula seleccionada en oscuro. */
+html[data-theme="dark"] body main .rooms-layout .room-detail .room-detail-header {
+  color:#fff!important;
+  background:#343841!important;
+  border:1px solid #5b616d!important;
+  border-bottom-color:#707783!important;
+  box-shadow:inset 4px 0 0 #16803c!important;
+}
+html[data-theme="dark"] body main .rooms-layout .room-detail .room-detail-header h2 { color:#fff!important; }
+html[data-theme="dark"] body main .rooms-layout .room-detail .room-detail-header p { color:#e0e3e8!important; }
+
+/* Estados de asistencia en oscuro con el mismo código de color que claro. */
+html[data-theme="dark"] body main .schedule.schedule-list td:has(> .attendance-state.attendance-asistio) .attendance-actions button.attendance-check {
+  color:#fff!important; background:#16803c!important; border-color:#16803c!important;
+}
+html[data-theme="dark"] body main .schedule.schedule-list td:has(> .attendance-state.attendance-ausente) .attendance-actions button.attendance-cross {
+  color:#fff!important; background:#c84558!important; border-color:#c84558!important;
+}
+html[data-theme="dark"] body main .schedule.schedule-list td:has(> .attendance-state.attendance-pendiente) .attendance-actions button.attendance-check,
+html[data-theme="dark"] body main .schedule.schedule-list td:has(> .attendance-state.attendance-pendiente) .attendance-actions button.attendance-cross {
+  color:#aab0ba!important; background:transparent!important; border-color:#50545e!important;
+}
+
+/* Fallback directo para el encabezado, independiente del contenedor raíz. */
+html[data-theme="dark"] .rooms-heading .button-primary,
+html[data-theme="dark"] .rooms-heading .button-primary:hover,
+html[data-theme="dark"] .rooms-heading .button-primary:focus { color:#fff!important; background:#a51022!important; border-color:#a51022!important; }
+html[data-theme="dark"] .rooms-heading .room-upload-button,
+html[data-theme="dark"] .rooms-heading .room-actions .button-secondary { color:#f1f3f5!important; background:#343841!important; border-color:#50545e!important; }
+html[data-theme="dark"] .rooms-heading .room-upload-button:hover,
+html[data-theme="dark"] .rooms-heading .room-actions .button-secondary:hover { color:#ff9eaa!important; background:#351f24!important; border-color:#ff7180!important; }
+
+/* Estado definitivo en oscuro: crear siempre rojo y carga/descarga iguales. */
+html[data-theme="dark"] body main .rooms-heading .room-actions > .button-primary,
+html[data-theme="dark"] body main .rooms-heading .room-actions > .button-primary:hover,
+html[data-theme="dark"] body main .rooms-heading .room-actions > .button-primary:focus { color:#fff!important; background:#a51022!important; border-color:#a51022!important; }
+html[data-theme="dark"] body main .rooms-heading .room-upload-button,
+html[data-theme="dark"] body main .rooms-heading .room-actions > .button-secondary { color:#f1f3f5!important; background:#343841!important; border-color:#50545e!important; }
+html[data-theme="dark"] body main .rooms-heading .room-upload-button:hover,
+html[data-theme="dark"] body main .rooms-heading .room-actions > .button-secondary:hover { color:#ff9eaa!important; background:#351f24!important; border-color:#ff7180!important; }
