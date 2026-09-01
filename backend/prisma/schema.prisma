@@ -100,7 +100,8 @@ model Usuario {
   importacionesSoftware            ImportacionSoftware[]
   multasImpuestas                  Multa[]               @relation("MultaImpuestaPor")
   multasCumplidas                  Multa[]               @relation("MultaCumplidaPor")
-  multasAnuladas                   Multa[]               @relation("MultaAnuladaPor")
+    multasAnuladas                   Multa[]               @relation("MultaAnuladaPor")
+    prestamosDocentesCreados         PrestamoDocente[]     @relation("PrestamoDocenteEncargado")
   limpiezasRegistradas             Limpieza[]            @relation("RegistroLimpieza")
   creadoEn                         DateTime              @default(now())
   actualizadoEn                    DateTime              @updatedAt
@@ -359,17 +360,20 @@ model PracticaLibre {
 }
 
 model PrestamoDocente {
-  id        String         @id @default(uuid()) @db.Uuid
-  docenteId String         @db.Uuid
-  aulaId    String         @db.Uuid
+    id        String         @id @default(uuid()) @db.Uuid
+    docenteId String         @db.Uuid
+    aulaId    String         @db.Uuid
+    encargadoId String?      @db.Uuid
   inicio    DateTime
   fin       DateTime
   estado    EstadoPrestamo @default(SOLICITADO)
   motivo    String?
-  docente   Docente        @relation(fields: [docenteId], references: [id])
-  aula      Aula           @relation(fields: [aulaId], references: [id])
+    docente   Docente        @relation(fields: [docenteId], references: [id])
+    aula      Aula           @relation(fields: [aulaId], references: [id])
+    encargado Usuario?       @relation("PrestamoDocenteEncargado", fields: [encargadoId], references: [id])
 
-  @@index([aulaId, inicio, fin])
+    @@index([aulaId, inicio, fin])
+    @@index([encargadoId])
 }
 
 model EquipoAudiovisual {
@@ -388,8 +392,15 @@ model EquipoAudiovisual {
 
 model PrestamoAudiovisual {
   id                 String                       @id @default(uuid()) @db.Uuid
-  docenteId          String                       @db.Uuid
-  aulaId             String                       @db.Uuid
+  docenteId          String?                      @db.Uuid
+  aulaId             String?                      @db.Uuid
+  responsableTipo    String
+  docenteNombre      String
+  docenteDocumento   String
+  salonTexto         String
+  elementosAdicionales Json?
+  recibidoPorTipo    String?
+  observacionesDevolucion String?
   entregadoPorId     String?                      @db.Uuid
   recibidoPorId      String?                      @db.Uuid
   canceladoPorId     String?                      @db.Uuid
@@ -399,8 +410,8 @@ model PrestamoAudiovisual {
   canceladoEn        DateTime?
   motivoCancelacion  String?
   estado             EstadoPrestamo               @default(SOLICITADO)
-  docente            Docente                      @relation(fields: [docenteId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  aula               Aula                         @relation(fields: [aulaId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  docente            Docente?                     @relation(fields: [docenteId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  aula               Aula?                        @relation(fields: [aulaId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   entregadoPor       Usuario?                     @relation("EntregaPrestamoAudiovisual", fields: [entregadoPorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   recibidoPor        Usuario?                     @relation("RecepcionPrestamoAudiovisual", fields: [recibidoPorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   canceladoPor       Usuario?                     @relation("CancelacionPrestamoAudiovisual", fields: [canceladoPorId], references: [id], onDelete: Restrict, onUpdate: Cascade)

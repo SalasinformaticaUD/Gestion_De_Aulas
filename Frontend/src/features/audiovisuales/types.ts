@@ -33,5 +33,10 @@ export type AudiovisualLoan = {
   status: AudiovisualLoanStatus;
   equipmentIds: string[];
   deliveredBy: string;
+  responsibleType: "MONITOR" | "TECNICO" | "ASISTENCIAL";
+  teacherDocument: string;
+  extras: string[];
+  receivedByType?: "MONITOR" | "TECNICO" | "ASISTENCIAL";
+  returnObservations?: string;
 };
 

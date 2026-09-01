@@ -28,6 +28,8 @@ const modulos = [
   ['REPORTES', 'Reportes'],
   ['ADMINISTRACION', 'Administración'],
   ['MONITORES', 'Gestión de Monitores'],
+  ['ESTUDIANTES', 'Gestión de estudiantes'],
+  ['DOCENTES', 'Gestión de docentes'],
 ] as const;
 
 const acciones = [

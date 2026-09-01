@@ -75,6 +75,11 @@
 .formGrid label>span small { float:right; color:#8a9099; font-size:11.7px; font-weight:600; letter-spacing:0; text-transform:none; }
 .formGrid input,.formGrid select,.formGrid textarea { width:100%; min-height:38px; padding:8px 10px; border:1px solid var(--line); border-radius:6px; outline:0; color:var(--ink); background:#f8f9fb; font:inherit; font-size:15.6px; text-transform:none; resize:vertical; }
 .formGrid input:focus,.formGrid select:focus,.formGrid textarea:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(165,16,34,.09); }
+.documentSearch { display:flex; gap:8px; }
+.documentSearch input { flex:1; }
+.documentSearch button { min-width:84px; border:1px solid #b9bec7; border-radius:6px; color:#3e4651; background:#f3f5f7; font-weight:750; }
+.documentSearch button:hover { border-color:var(--primary); color:var(--primary); background:#fff5f6; }
+.documentError { color:#b42318 !important; font-size:12px !important; font-weight:700 !important; letter-spacing:0 !important; text-transform:none !important; }
 .wideField { grid-column:1/-1; }
 .roomSuggestions { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:7px; }
 .roomSuggestions button { min-width:0; min-height:78px; display:flex; flex-direction:column; align-items:flex-start; padding:9px 10px; border:1px solid #b7e7c7; border-radius:7px; color:#3f4650; background:#f1fbf4; text-align:left; }
@@ -121,6 +126,8 @@
   .dialog>header { padding:15px; }
   .dialog form { padding:15px; }
   .formGrid { grid-template-columns:1fr; }
+  .documentSearch { flex-direction:column; }
+  .documentSearch button { min-height:38px; }
   .wideField { grid-column:auto; }
   .roomSuggestions { grid-template-columns:1fr 1fr; }
   .dialog form>footer { align-items:stretch; flex-direction:column-reverse; }

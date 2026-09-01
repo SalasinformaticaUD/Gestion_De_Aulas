@@ -4,10 +4,12 @@ import {
   ArrayUnique,
   IsArray,
   IsDateString,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
+  MaxLength,
   ValidateNested,
 } from 'class-validator';
 
@@ -27,14 +29,40 @@ export class EquipoPrestamoAudiovisualDto {
 }
 
 export class CreatePrestamoAudiovisualDto {
-  @IsUUID()
-  docenteId!: string;
-
-  @IsUUID()
-  aulaId!: string;
-
+  @IsOptional()
   @IsDateString()
-  salidaEn!: string;
+  salidaEn?: string;
+
+  @IsOptional()
+  @IsUUID()
+  docenteId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  aulaId?: string;
+
+  @IsEnum(['MONITOR', 'TECNICO', 'ASISTENCIAL'])
+  responsableTipo!: 'MONITOR' | 'TECNICO' | 'ASISTENCIAL';
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(160)
+  docenteNombre!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(50)
+  docenteDocumento!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(200)
+  salonTexto!: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  elementosAdicionales?: string[];
 
   @IsDateString()
   devolucionEstimada!: string;

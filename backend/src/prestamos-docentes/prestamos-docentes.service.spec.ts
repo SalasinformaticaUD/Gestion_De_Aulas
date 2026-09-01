@@ -48,7 +48,9 @@ describe('PrestamosDocentesService', () => {
   });
 
   it('crea una solicitud para docente y aula disponibles', async () => {
-    await expect(service.create(dto)).resolves.toMatchObject({
+    await expect(
+      service.create(dto, '00000000-0000-4000-8000-000000000003'),
+    ).resolves.toMatchObject({
       estado: EstadoPrestamo.SOLICITADO,
     });
     expect(disponibilidad.findOne).toHaveBeenCalledWith(dto.aulaId, {
@@ -64,7 +66,9 @@ describe('PrestamosDocentesService', () => {
       motivo: 'Existe una clase programada.',
     });
 
-    await expect(service.create(dto)).rejects.toBeInstanceOf(ConflictException);
+    await expect(
+      service.create(dto, '00000000-0000-4000-8000-000000000003'),
+    ).rejects.toBeInstanceOf(ConflictException);
     expect(prisma.prestamoDocente.create).not.toHaveBeenCalled();
   });
 

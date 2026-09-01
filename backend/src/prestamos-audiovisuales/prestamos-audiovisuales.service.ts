@@ -163,8 +163,30 @@ export class PrestamosAudiovisualesService {
     }
   }
 
+  async removeEquipo(id: string, usuarioId?: string) {
+    const previo = await this.findEquipo(id);
+    if (previo.estado === EstadoEquipo.PRESTADO) {
+      throw new ConflictException('No se puede eliminar un equipo prestado.');
+    }
+    if (previo.detallesPrestamo.length) {
+      throw new ConflictException(
+        'No se puede eliminar un equipo con historial de préstamos.',
+      );
+    }
+    const equipo = await this.prisma.equipoAudiovisual.delete({ where: { id } });
+    await this.registrar(
+      usuarioId,
+      'EquipoAudiovisual',
+      id,
+      'DELETE',
+      previo,
+      undefined,
+    );
+    return equipo;
+  }
+
   async create(dto: CreatePrestamoAudiovisualDto, usuarioId?: string) {
-    const salidaEn = new Date(dto.salidaEn);
+    const salidaEn = dto.salidaEn ? new Date(dto.salidaEn) : new Date();
     const devolucionEstimada = new Date(dto.devolucionEstimada);
     this.validarRangoFechas(salidaEn, devolucionEstimada);
 
@@ -176,9 +198,18 @@ export class PrestamosAudiovisualesService {
       );
       return tx.prestamoAudiovisual.create({
         data: {
-          docenteId: dto.docenteId,
-          aulaId: dto.aulaId,
+          ...(dto.docenteId && { docenteId: dto.docenteId }),
+          ...(dto.aulaId && { aulaId: dto.aulaId }),
           ...(usuarioId && { entregadoPorId: usuarioId }),
+          responsableTipo: dto.responsableTipo ?? 'MONITOR',
+          docenteNombre: dto.docenteNombre?.trim() ?? 'Sin información',
+          docenteDocumento: dto.docenteDocumento?.trim() ?? 'Sin información',
+          salonTexto: dto.salonTexto?.trim() ?? 'Sin ubicación registrada',
+          ...(dto.elementosAdicionales && {
+            elementosAdicionales: dto.elementosAdicionales.map((item) =>
+              item.trim(),
+            ),
+          }),
           salidaEn,
           devolucionEstimada,
           estado: EstadoPrestamo.ACTIVO,
@@ -292,6 +323,8 @@ export class PrestamosAudiovisualesService {
           estado: EstadoPrestamo.DEVUELTO,
           devolucionReal,
           ...(usuarioId && { recibidoPorId: usuarioId }),
+          recibidoPorTipo: dto.recibidoPorTipo,
+          observacionesDevolucion: dto.observaciones?.trim() || null,
         },
         include: prestamoInclude,
       });
@@ -376,11 +409,15 @@ export class PrestamosAudiovisualesService {
     usuarioId?: string,
   ) {
     const [docente, aula, usuario] = await Promise.all([
-      tx.docente.findUnique({
-        where: { id: dto.docenteId },
-        select: { id: true },
-      }),
-      tx.aula.findUnique({ where: { id: dto.aulaId }, select: { id: true } }),
+      dto.docenteId
+        ? tx.docente.findUnique({
+            where: { id: dto.docenteId },
+            select: { id: true },
+          })
+        : Promise.resolve(null),
+      dto.aulaId
+        ? tx.aula.findUnique({ where: { id: dto.aulaId }, select: { id: true } })
+        : Promise.resolve(null),
       usuarioId
         ? tx.usuario.findUnique({
             where: { id: usuarioId },
@@ -388,8 +425,10 @@ export class PrestamosAudiovisualesService {
           })
         : Promise.resolve({ id: null }),
     ]);
-    if (!docente) throw new NotFoundException('El docente indicado no existe.');
-    if (!aula) throw new NotFoundException('El aula indicada no existe.');
+    if (dto.docenteId && !docente)
+      throw new NotFoundException('El docente indicado no existe.');
+    if (dto.aulaId && !aula)
+      throw new NotFoundException('El aula indicada no existe.');
     if (!usuario) {
       throw new NotFoundException('El usuario autenticado no existe.');
     }
@@ -534,7 +573,7 @@ export class PrestamosAudiovisualesService {
     usuarioId: string | undefined,
     entidad: 'EquipoAudiovisual' | 'PrestamoAudiovisual',
     entidadId: string,
-    accion: 'CREATE' | 'UPDATE' | 'CANCEL',
+    accion: 'CREATE' | 'UPDATE' | 'CANCEL' | 'DELETE',
     datosPrevios?: unknown,
     datosNuevos?: unknown,
   ) {

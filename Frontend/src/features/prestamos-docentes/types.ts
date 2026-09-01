@@ -22,4 +22,5 @@ export type TeacherLoan = {
   end: string;
   reason?: string;
   status: TeacherLoanStatus;
+  manager?: string;
 };

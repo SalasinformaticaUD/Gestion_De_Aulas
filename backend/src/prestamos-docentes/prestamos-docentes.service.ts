@@ -25,6 +25,7 @@ type DatosPrestamoDocente = {
   fin: Date;
   motivo?: string;
   estado: EstadoPrestamo;
+  encargadoId: string;
 };
 
 type PrestamoParaEstado = {
@@ -44,14 +45,19 @@ export class PrestamosDocentesService {
   ) {}
 
   async create(dto: CreatePrestamosDocenteDto, usuarioId?: string) {
+    if (!usuarioId) {
+      throw new BadRequestException(
+        'No fue posible identificar al encargado de la solicitud.',
+      );
+    }
     await this.validarDocente(dto.docenteId);
     const bloque = this.normalizarBloque(dto.inicio, dto.fin);
     await this.validarDisponibilidad(dto.aulaId, bloque);
-    const data = this.construirDatosPrestamo(dto);
+    const data = this.construirDatosPrestamo(dto, usuarioId);
 
     const prestamo = await this.prisma.prestamoDocente.create({
       data,
-      include: { docente: true, aula: true },
+      include: { docente: true, aula: true, encargado: true },
     });
     await this.auditoria?.registrar({
       usuarioId,
@@ -81,7 +87,7 @@ export class PrestamosDocentesService {
             inicio: { gte: inicioDia, lte: finDia },
           }),
       },
-      include: { docente: true, aula: true },
+      include: { docente: true, aula: true, encargado: true },
       orderBy: { inicio: 'asc' },
     });
   }
@@ -89,7 +95,7 @@ export class PrestamosDocentesService {
   async findOne(id: string) {
     const prestamo = await this.prisma.prestamoDocente.findUnique({
       where: { id },
-      include: { docente: true, aula: true },
+      include: { docente: true, aula: true, encargado: true },
     });
     if (!prestamo) {
       throw new NotFoundException(`No existe préstamo docente con id ${id}.`);
@@ -106,7 +112,7 @@ export class PrestamosDocentesService {
           lte: new Date(`${fecha}T23:59:59.999-05:00`),
         },
       },
-      include: { docente: true, aula: true },
+      include: { docente: true, aula: true, encargado: true },
       orderBy: { inicio: 'asc' },
     });
   }
@@ -247,6 +253,7 @@ export class PrestamosDocentesService {
 
   private construirDatosPrestamo(
     dto: CreatePrestamosDocenteDto,
+    encargadoId: string,
   ): DatosPrestamoDocente {
     return {
       docenteId: dto.docenteId,
@@ -255,6 +262,7 @@ export class PrestamosDocentesService {
       fin: new Date(dto.fin),
       ...(dto.motivo !== undefined && { motivo: dto.motivo.trim() }),
       estado: EstadoPrestamo.SOLICITADO,
+      encargadoId,
     };
   }
 

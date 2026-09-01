@@ -17,7 +17,16 @@ export class PermissionsGuard implements CanActivate {
       REQUIRED_PERMISSIONS_KEY,
       [context.getHandler(), context.getClass()],
     );
-    if (!required?.length || this.isPermissiveMode()) return true;
+    if (
+      !required?.length ||
+      (this.isPermissiveMode() &&
+        !required.some((permission) =>
+          /^(ESTUDIANTES|DOCENTES)_(LEER|CREAR|ACTUALIZAR|ELIMINAR)$/i.test(
+            permission,
+          ),
+        ))
+    )
+      return true;
 
     const usuario = context.switchToHttp().getRequest<RequestConUsuario>().user;
     const permissions = new Set(

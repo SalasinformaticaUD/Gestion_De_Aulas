@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
@@ -62,6 +63,15 @@ export class PrestamosAudiovisualesController {
       dto,
       usuario?.id,
     );
+  }
+
+  @Delete('equipos/:id')
+  @RequirePermissions('AUDIOVISUALES_ELIMINAR')
+  removeEquipo(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() usuario?: UsuarioAutenticado,
+  ) {
+    return this.prestamosAudiovisualesService.removeEquipo(id, usuario?.id);
   }
 
   @Post()

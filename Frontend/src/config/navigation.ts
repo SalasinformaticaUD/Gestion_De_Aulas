@@ -3,10 +3,14 @@ export const operationNavigation = [
   { href: "/horarios", label: "Horarios" },
   { href: "/aulas", label: "Aulas" },
   { href: "/disponibilidad", label: "Disponibilidad" },
+  { href: "/practicas-libres", label: "Prácticas Libres" },
   { href: "/prestamos-docentes", label: "Préstamos Docentes" },
+  { href: "/audiovisuales", label: "Préstamos Audiovisuales" },
   { href: "/software", label: "Software Instalado" },
   { href: "/credenciales", label: "Credenciales" },
   { href: "/usuarios", label: "Usuarios" },
+  { href: "/estudiantes", label: "Estudiantes" },
+  { href: "/docentes", label: "Docentes" },
 ] as const;
 
 export const followUpNavigation = [

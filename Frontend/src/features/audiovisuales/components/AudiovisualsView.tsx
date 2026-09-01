@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { cargarAudiovisuales, cancelarPrestamoAudiovisual, crearPrestamoAudiovisual, devolverPrestamoAudiovisual } from "@/features/audiovisuales/api/audiovisualesApi";
+import { actualizarEquipoAudiovisual, cargarAudiovisuales, cancelarPrestamoAudiovisual, crearEquipoAudiovisual, crearPrestamoAudiovisual, devolverPrestamoAudiovisual, eliminarEquipoAudiovisual } from "@/features/audiovisuales/api/audiovisualesApi";
 import { listarAulas } from "@/features/aulas/api/aulasApi";
 import { listarDocentes, type DocenteCatalogo } from "@/features/catalogos/api/catalogosApi";
 import type { Room } from "@/features/aulas/types";
@@ -33,13 +33,15 @@ export function AudiovisualsView() {
   const [loans, setLoans] = useState<AudiovisualLoan[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [teachers, setTeachers] = useState<DocenteCatalogo[]>([]);
-  const [view, setView] = useState<View>("inventario");
+  const [view, setView] = useState<View>("prestamos");
   const [query, setQuery] = useState("");
   const [type, setType] = useState("todos");
   const [status, setStatus] = useState<"todos" | AudiovisualEquipmentStatus>("todos");
   const [loanEquipment, setLoanEquipment] = useState<AudiovisualEquipment | null>(null);
   const [returnLoan, setReturnLoan] = useState<AudiovisualLoan | null>(null);
+  const [equipmentDialogOpen, setEquipmentDialogOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [loanFilter, setLoanFilter] = useState<"actuales" | "todos">("actuales");
 
   const types = useMemo(() => [...new Set(equipment.map((item) => item.type))], [equipment]);
   const filteredEquipment = useMemo(() => {
@@ -52,29 +54,38 @@ export function AudiovisualsView() {
   }, [equipment, query, status, type]);
 
   const activeLoans = loans.filter((loan) => loan.status === "ACTIVO" || loan.status === "VENCIDO");
+  const shownLoans = loanFilter === "actuales" ? activeLoans : loans;
   const count = (value: AudiovisualEquipmentStatus) => equipment.filter((item) => item.status === value).length;
   const equipmentById = (id: string) => equipment.find((item) => item.id === id);
 
   const reload = async () => { try { const [data, nextRooms, nextTeachers] = await Promise.all([cargarAudiovisuales(), listarAulas(), listarDocentes()]); setEquipment(data.equipment); setLoans(data.loans); setRooms(nextRooms); setTeachers(nextTeachers); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible cargar audiovisuales."); } };
   useEffect(() => { void reload(); }, []);
   const registerLoan = async (payload: { teacherId: string; roomId: string; dueAt: string; equipmentIds: string[] }) => {
-    try { await crearPrestamoAudiovisual({ docenteId: payload.teacherId, aulaId: payload.roomId, salidaEn: new Date().toISOString(), devolucionEstimada: new Date(payload.dueAt).toISOString(), equipos: payload.equipmentIds.map((equipoId) => ({ equipoId })) }); await reload(); setLoanEquipment(null); setNotice(`Préstamo registrado con ${payload.equipmentIds.length} equipo(s).`); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible registrar el préstamo."); }
+    const teacher = teachers.find((item) => item.id === payload.teacherId); const room = rooms.find((item) => item.id === payload.roomId);
+    const responsible = window.prompt("Responsable del préstamo: MONITOR, TECNICO o ASISTENCIAL", "MONITOR")?.trim().toUpperCase(); const name = window.prompt("Nombre del profesor responsable", teacher?.nombre ?? "")?.trim(); const document = window.prompt("Cédula del profesor responsable", teacher?.documento ?? "")?.trim(); const location = window.prompt("Salón o ubicación del videobeam", room ? "Aula " + room.code : "")?.trim(); const extras = window.prompt("Elementos adicionales separados por coma (HDMI, Extensión VGA)", "")?.split(",").map((item) => item.trim()).filter(Boolean) ?? [];
+    if (!responsible || !["MONITOR", "TECNICO", "ASISTENCIAL"].includes(responsible) || !name || !document || !location) { setNotice("Complete responsable, docente, cédula y ubicación para registrar el préstamo."); return; }
+    try { await crearPrestamoAudiovisual({ responsableTipo: responsible as "MONITOR" | "TECNICO" | "ASISTENCIAL", docenteNombre: name, docenteDocumento: document, salonTexto: location, elementosAdicionales: extras, devolucionEstimada: new Date(payload.dueAt).toISOString(), equipos: payload.equipmentIds.map((equipoId) => ({ equipoId })) }); await reload(); setLoanEquipment(null); setNotice("Préstamo registrado con fecha y hora automática."); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible registrar el préstamo."); }
   };
 
   const completeReturn = async (conditions: Record<string, "DISPONIBLE" | "MANTENIMIENTO">) => {
     if (!returnLoan) return;
-    try { await devolverPrestamoAudiovisual(returnLoan.id, returnLoan.equipmentIds.map((equipoId) => ({ equipoId, estadoFisicoDevolucion: "Sin novedades", estadoFuncionalDevolucion: conditions[equipoId] }))); await reload(); setNotice(`Devolución registrada.`); setReturnLoan(null); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible registrar la devolución."); }
+    const received = window.prompt("Quién recibe: MONITOR, TECNICO o ASISTENCIAL", "MONITOR")?.trim().toUpperCase(); const observations = window.prompt("Observaciones de devolución", "") ?? "";
+    if (!received || !["MONITOR", "TECNICO", "ASISTENCIAL"].includes(received)) { setNotice("Indique quién recibió el préstamo."); return; }
+    try { await devolverPrestamoAudiovisual(returnLoan.id, received as "MONITOR" | "TECNICO" | "ASISTENCIAL", observations, returnLoan.equipmentIds.map((equipoId) => ({ equipoId, estadoFisicoDevolucion: "Sin novedades", estadoFuncionalDevolucion: conditions[equipoId] }))); await reload(); setNotice(`Devolución registrada.`); setReturnLoan(null); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible registrar la devolución."); }
   };
 
   const cancelLoan = async (loan: AudiovisualLoan) => {
     try { await cancelarPrestamoAudiovisual(loan.id); await reload(); setNotice("Préstamo cancelado; los equipos fueron liberados."); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible cancelar el préstamo."); }
   };
+  const addEquipment = async (input: { codigoInventario: string; nombre: string; tipo: string; estado: AudiovisualEquipmentStatus; observacion?: string }) => { try { await crearEquipoAudiovisual(input); await reload(); setNotice("Equipo agregado al inventario."); return true; } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible agregar el equipo."); return false; } };
+  const editEquipment = async (item: AudiovisualEquipment) => { const nombre = window.prompt("Nombre del equipo:", item.name)?.trim(); const tipoEquipo = window.prompt("Tipo de equipo:", item.type)?.trim(); const observacion = window.prompt("Observación:", item.observation ?? "") ?? ""; if (!nombre || !tipoEquipo) return; try { await actualizarEquipoAudiovisual(item.id, { nombre, tipo: tipoEquipo, observacion }); await reload(); setNotice("Equipo actualizado."); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible modificar el equipo."); } };
+  const deleteEquipment = async (item: AudiovisualEquipment) => { if (!window.confirm("¿Eliminar el equipo " + item.inventoryCode + "?")) return; try { await eliminarEquipoAudiovisual(item.id); await reload(); setNotice("Equipo eliminado."); } catch (error) { setNotice(error instanceof Error ? error.message : "No fue posible eliminar el equipo."); } };
 
   return (
     <>
       <section className="page-heading audiovisual-heading">
         <div><h1>Equipos Audiovisuales</h1><p>Control de inventario, préstamos, devoluciones y estado de equipos.</p></div>
-        <button type="button" className="button-primary audiovisual-new" disabled={!equipment.some((item) => item.status === "DISPONIBLE")} onClick={() => setLoanEquipment(equipment.find((item) => item.status === "DISPONIBLE") ?? null)}>+ Registrar préstamo</button>
+        <button type="button" className="button-primary audiovisual-new" onClick={() => { const available = equipment.find((item) => item.status === "DISPONIBLE"); if (available) setLoanEquipment(available); else setNotice("No hay equipos disponibles. Agregue o habilite un equipo desde Inventario."); }}>+ Registrar préstamo</button>
       </section>
 
       <section className="audiovisual-metrics" aria-label="Resumen de equipos">
@@ -96,14 +107,15 @@ export function AudiovisualsView() {
           <label className="audiovisual-search"><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por código, equipo o tipo..." aria-label="Buscar equipos" /></label>
           <label className="field"><span>Tipo</span><select value={type} onChange={(event) => setType(event.target.value)}><option value="todos">Todos los tipos</option>{types.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
           <label className="field"><span>Estado</span><select value={status} onChange={(event) => setStatus(event.target.value as typeof status)}><option value="todos">Todos los estados</option>{Object.entries(equipmentStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-          <span className="audiovisual-results">{filteredEquipment.length} resultado(s)</span>
+          <span className="audiovisual-results">{filteredEquipment.length} resultado(s)</span><button type="button" className="button-primary" onClick={() => setEquipmentDialogOpen(true)}>+ Agregar equipo</button>
         </section>
-        <EquipmentTable equipment={filteredEquipment} activeLoans={activeLoans} onLoan={setLoanEquipment} onReturn={setReturnLoan} />
+        <EquipmentTable equipment={filteredEquipment} activeLoans={activeLoans} onLoan={setLoanEquipment} onReturn={setReturnLoan} onEdit={editEquipment} onDelete={deleteEquipment} />
         <UsageNotice equipment={equipment} />
-      </> : <LoansTable loans={loans} equipmentById={equipmentById} onReturn={setReturnLoan} onCancel={cancelLoan} />}
+      </> : <><section className="audiovisual-toolbar"><label className="field"><span>Mostrar préstamos</span><select value={loanFilter} onChange={(event) => setLoanFilter(event.target.value as "actuales" | "todos")}><option value="actuales">Préstamos actuales</option><option value="todos">Todos los préstamos</option></select></label><span className="audiovisual-results">{shownLoans.length} resultado(s)</span></section><LoansTable loans={shownLoans} equipmentById={equipmentById} onReturn={setReturnLoan} onCancel={cancelLoan} /></>}
 
       {loanEquipment && <LoanDialog initial={loanEquipment} equipment={equipment} rooms={rooms} teachers={teachers} initialRoom={initialRoom} onClose={() => setLoanEquipment(null)} onSubmit={registerLoan} />}
       {returnLoan && <ReturnDialog loan={returnLoan} equipmentById={equipmentById} onClose={() => setReturnLoan(null)} onSubmit={completeReturn} />}
+      {equipmentDialogOpen && <EquipmentDialog onClose={() => setEquipmentDialogOpen(false)} onSubmit={addEquipment} />}
     </>
   );
 }
@@ -116,12 +128,37 @@ function StatusBadge({ status }: { status: AudiovisualEquipmentStatus }) {
   return <span className={`equipment-status equipment-status-${status.toLocaleLowerCase().replaceAll("_", "-")}`}><i aria-hidden="true" />{equipmentStatus[status]}</span>;
 }
 
-function EquipmentTable({ equipment, activeLoans, onLoan, onReturn }: { equipment: AudiovisualEquipment[]; activeLoans: AudiovisualLoan[]; onLoan: (item: AudiovisualEquipment) => void; onReturn: (loan: AudiovisualLoan) => void }) {
+function EquipmentDialog({ onClose, onSubmit }: { onClose: () => void; onSubmit: (input: { codigoInventario: string; nombre: string; tipo: string; estado: AudiovisualEquipmentStatus; observacion?: string }) => Promise<boolean> }) {
+  const [codigoInventario, setCodigoInventario] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [tipo, setTipo] = useState("Videobeam");
+  const [estado, setEstado] = useState<AudiovisualEquipmentStatus>("DISPONIBLE");
+  const [observacion, setObservacion] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const codigo = codigoInventario.trim();
+    const equipo = nombre.trim();
+    const clase = tipo.trim();
+    if (!codigo || !equipo || !clase) { setError("Ingrese la placa/código, el nombre y el tipo de equipo."); return; }
+    setSaving(true);
+    setError(null);
+    const saved = await onSubmit({ codigoInventario: codigo, nombre: equipo, tipo: clase, estado, observacion: observacion.trim() || undefined });
+    setSaving(false);
+    if (saved) onClose();
+  };
+
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className="audiovisual-dialog" role="dialog" aria-modal="true" aria-labelledby="equipment-title"><header><div><h2 id="equipment-title">Agregar equipo audiovisual</h2><p>Registre la información base del equipo en inventario.</p></div><button type="button" onClick={onClose} aria-label="Cerrar">×</button></header><form onSubmit={submit}><div className="dialog-grid"><label className="dialog-field"><span>Placa o código de inventario *</span><input value={codigoInventario} onChange={(event) => setCodigoInventario(event.target.value)} maxLength={80} required autoFocus placeholder="Ej. VB-001" /></label><label className="dialog-field"><span>Nombre del equipo *</span><input value={nombre} onChange={(event) => setNombre(event.target.value)} maxLength={200} required placeholder="Ej. Videobeam Epson EB-X49" /></label><label className="dialog-field"><span>Tipo de equipo *</span><input value={tipo} onChange={(event) => setTipo(event.target.value)} maxLength={100} required placeholder="Ej. Videobeam" /></label><label className="dialog-field"><span>Estado inicial *</span><select value={estado} onChange={(event) => setEstado(event.target.value as AudiovisualEquipmentStatus)}>{Object.entries(equipmentStatus).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label className="dialog-field dialog-field-wide"><span>Observaciones</span><textarea rows={3} value={observacion} onChange={(event) => setObservacion(event.target.value)} maxLength={2000} placeholder="Marca, modelo, ubicación, estado físico u otra información relevante." /></label></div>{error && <p className="dialog-error" role="alert">{error}</p>}<footer><button type="button" className="dialog-cancel" onClick={onClose} disabled={saving}>Cancelar</button><button type="submit" className="button-primary" disabled={saving}>{saving ? "Guardando…" : "Guardar equipo"}</button></footer></form></section></div>;
+}
+
+function EquipmentTable({ equipment, activeLoans, onLoan, onReturn, onEdit, onDelete }: { equipment: AudiovisualEquipment[]; activeLoans: AudiovisualLoan[]; onLoan: (item: AudiovisualEquipment) => void; onReturn: (loan: AudiovisualLoan) => void; onEdit: (item: AudiovisualEquipment) => void; onDelete: (item: AudiovisualEquipment) => void }) {
   const maxLoans = Math.max(1, ...equipment.map((item) => item.loanCount));
   return <section className="audiovisual-card"><div className="table-wrap"><table className="audiovisual-table"><thead><tr><th>Código</th><th>Equipo</th><th>Tipo</th><th>Estado</th><th>Uso acumulado</th><th>Préstamos</th><th>Responsable</th><th>Acciones</th></tr></thead><tbody>
     {equipment.map((item) => {
       const loan = activeLoans.find((current) => current.equipmentIds.includes(item.id));
-      return <tr key={item.id}><td><b className="inventory-code">{item.inventoryCode}</b></td><td><strong>{item.name}</strong>{item.observation && <small>{item.observation}</small>}</td><td><span className="equipment-type">{item.type}</span></td><td><StatusBadge status={item.status} /></td><td>{item.usageHours ? <><b>{item.usageHours} h</b><Progress value={Math.min(100, item.usageHours / 3)} danger={item.usageHours > 200} /></> : <span className="table-empty">—</span>}</td><td><b>{item.loanCount}</b><Progress value={(item.loanCount / maxLoans) * 100} danger={item.loanCount > maxLoans * .8} /></td><td>{loan ? <><strong>{loan.teacher}</strong><small>Aula {loan.room} · hasta {formatTime(loan.dueAt)}</small></> : <span className="table-empty">—</span>}</td><td>{item.status === "DISPONIBLE" ? <button className="table-action table-action-primary" type="button" onClick={() => onLoan(item)}>Prestar</button> : item.status === "PRESTADO" && loan ? <button className="table-action table-action-success" type="button" onClick={() => onReturn(loan)}>Devolver</button> : <span className="table-empty">—</span>}</td></tr>;
+       return <tr key={item.id}><td><b className="inventory-code">{item.inventoryCode}</b></td><td><strong>{item.name}</strong>{item.observation && <small>{item.observation}</small>}</td><td><span className="equipment-type">{item.type}</span></td><td><StatusBadge status={item.status} /></td><td>{item.usageHours ? <><b>{item.usageHours} h</b><Progress value={Math.min(100, item.usageHours / 3)} danger={item.usageHours > 200} /></> : <span className="table-empty">—</span>}</td><td><b>{item.loanCount}</b><Progress value={(item.loanCount / maxLoans) * 100} danger={item.loanCount > maxLoans * .8} /></td><td>{loan ? <><strong>{loan.teacher}</strong><small>Aula {loan.room} · hasta {formatTime(loan.dueAt)}</small></> : <span className="table-empty">—</span>}</td><td><div className="loan-actions">{item.status === "DISPONIBLE" && <button className="table-action table-action-primary" type="button" onClick={() => onLoan(item)}>Prestar</button>}{item.status === "PRESTADO" && loan && <button className="table-action table-action-success" type="button" onClick={() => onReturn(loan)}>Devolver</button>}<button className="table-action" type="button" onClick={() => onEdit(item)} disabled={item.status === "PRESTADO"}>Modificar</button><button className="table-action table-action-muted" type="button" onClick={() => onDelete(item)} disabled={item.status === "PRESTADO"}>Eliminar</button></div></td></tr>;
     })}
     {equipment.length === 0 && <tr><td colSpan={8} className="audiovisual-empty">No hay equipos para los filtros seleccionados.</td></tr>}
   </tbody></table></div></section>;

@@ -12,3 +12,7 @@ export async function buscarEstudiantePractica(codigo: string) {
   try { const item = await solicitarAulas<{ id: string; codigo: string; nombre: string; correo: string | null; multas: unknown[] }>(`/practicas-libres/estudiantes/${encodeURIComponent(codigo)}`, auth()); return { id: item.id, code: item.codigo, name: item.nombre, email: item.correo ?? undefined, activeFine: item.multas.length > 0 }; }
   catch (error) { if (typeof error === "object" && error && "estado" in error && (error as { estado: number }).estado === 404) return null; throw error; }
 }
+export async function crearEstudianteDesdePractica(input: { codigo: string; nombre: string; correo?: string }) {
+  const item = await solicitarAulas<{ id: string; codigo: string; nombre: string; correo: string | null }>("/practicas-libres/estudiantes", auth(), { method: "POST", body: JSON.stringify(input) });
+  return { id: item.id, code: item.codigo, name: item.nombre, email: item.correo ?? undefined, activeFine: false } satisfies PracticeStudent;
+}

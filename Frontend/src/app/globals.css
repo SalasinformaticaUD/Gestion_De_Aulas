@@ -97,6 +97,7 @@ html[data-theme="dark"] { --ink:#f1f3f5; --muted:#aab0ba; --line:#383b43; --surf
 .audiovisual-dialog>header p { margin:4px 0 0; color:#aeb3bd; font-size:13px; }
 .audiovisual-dialog>header button { width:29px; height:29px; border:0; border-radius:5px; color:#d7d9dd; background:#303238; font-size:23.4px; }
 .audiovisual-dialog form { display:grid; gap:15px; padding:19px; }
+.dialog-error { margin:0; padding:10px 12px; border:1px solid #f0b6bd; border-radius:7px; color:#a20f25; background:#fff1f3; font-size:13px; font-weight:700; }
 .dialog-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 .dialog-field { display:grid; gap:5px; }
 .dialog-field-wide { grid-column:1/-1; }
@@ -291,6 +292,7 @@ html[data-theme="dark"] .software-list article,
 html[data-theme="dark"] .history-list article { color:var(--ink); background:var(--surface-soft); border-color:var(--line); }
 html[data-theme="dark"] .audiovisual-table tbody tr:nth-child(even) { background:var(--surface-soft); }
 html[data-theme="dark"] .audiovisual-table tbody tr:hover { background:#292c33; }
+html[data-theme="dark"] .dialog-error { border-color:#813340; color:#ffb8c1; background:#3b1e25; }
 
 /* Casos compuestos que no comparten una clase base de superficie. */
 html[data-theme="dark"] main :is(

@@ -140,14 +140,14 @@ export class ReportesService {
         F8: [...new Set(equipos.map((equipo) => equipo.tipo))].join(', '),
         C9: equipos.map((equipo) => equipo.nombre).join(', '),
         C10: 'No aplica',
-        C11: prestamo.aula.proyectoCurricular?.nombre ?? 'No aplica',
-        C13: prestamo.aula.codigo,
+        C11: prestamo.aula?.proyectoCurricular?.nombre ?? 'No aplica',
+        C13: prestamo.aula?.codigo ?? prestamo.salonTexto,
         C14: this.horaBogota(salida),
         C15: this.horaBogota(prestamo.devolucionEstimada),
         C17: observaciones,
         C21: responsable,
       },
-      `${nombreArchivo}-${prestamo.aula.codigo}`,
+      `${nombreArchivo}-${prestamo.aula?.codigo ?? prestamo.salonTexto}`,
     );
   }
 
@@ -297,8 +297,8 @@ export class ReportesService {
                 devolucionEstimada: r.devolucionEstimada,
                 devolucionReal: r.devolucionReal,
                 estado: r.estado,
-                aula: r.aula.codigo,
-                docente: r.docente.nombre,
+                aula: r.aula?.codigo ?? r.salonTexto,
+                docente: r.docente?.nombre ?? r.docenteNombre,
                 equipos: r.detalles
                   .map(
                     (d) => `${d.equipo.codigoInventario} — ${d.equipo.nombre}`,

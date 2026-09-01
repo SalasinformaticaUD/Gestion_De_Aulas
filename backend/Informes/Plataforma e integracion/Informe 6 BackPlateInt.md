@@ -161,6 +161,3 @@ asistencia. La información de softwares instalados queda pendiente del flujo pr
 del Módulo de Software Instalado. El desarrollo debe continuar con Disponibilidad,
 Prácticas Libres y los ajustes de Préstamos Docentes, manteniendo las reglas de
 negocio ya establecidas.
-
-
-}

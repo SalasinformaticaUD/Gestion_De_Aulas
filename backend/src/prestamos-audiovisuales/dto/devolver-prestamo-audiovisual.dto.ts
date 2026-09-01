@@ -4,9 +4,12 @@ import {
   ArrayUnique,
   IsArray,
   IsDateString,
+  IsEnum,
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsUUID,
+  MaxLength,
   ValidateNested,
 } from 'class-validator';
 
@@ -33,4 +36,12 @@ export class DevolverPrestamoAudiovisualDto {
   @ValidateNested({ each: true })
   @Type(() => EquipoDevueltoAudiovisualDto)
   equipos!: EquipoDevueltoAudiovisualDto[];
+
+  @IsEnum(['MONITOR', 'TECNICO', 'ASISTENCIAL'])
+  recibidoPorTipo!: 'MONITOR' | 'TECNICO' | 'ASISTENCIAL';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  observaciones?: string;
 }
