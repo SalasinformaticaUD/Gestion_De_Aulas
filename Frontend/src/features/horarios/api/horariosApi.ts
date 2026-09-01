@@ -3,7 +3,15 @@ import { solicitarAulas } from "@/features/monitores/api/clienteMonitores";
 
 export type Periodo = { id: string; nombre: string; activo: boolean; fechaInicio: string; fechaFin: string };
 export type ClaseApi = { id: string; aulaId: string; semana?: number; diaSemana: number; horaInicio: string; horaFin: string; grupo: string; modeloPc?: string | null; software?: string | null; hardware?: string | null; aula: { codigo: string }; asignatura: { nombre: string }; docente: { nombre: string }; proyectoCurricular?: { nombre: string } | null; asistencias?: Array<{ id: string; fecha: string; estado: "PENDIENTE" | "ASISTIO" | "AUSENTE" }> };
-export type ResultadoImportacionExcel = { procesados: number; creados: number; actualizados: number; eliminadosPorReemplazo: number };
+export type ResultadoImportacionExcel = {
+  procesados: number;
+  creados: number;
+  actualizados: number;
+  eliminadosPorReemplazo: number;
+  rechazados: number;
+  detallesRechazados: Array<{ fila: number; motivo: string }>;
+  advertencias?: Array<{ fila: number; motivo: string }>;
+};
 const token = () => { const value = obtenerSesion()?.tokenAcceso; if (!value) throw new Error("La sesión expiró. Inicie sesión nuevamente."); return value; };
 export const listarPeriodos = () => solicitarAulas<Periodo[]>("/horario/periodos", token());
 export const iniciarSemestre = (input: { nombre: string; fechaInicio: string; fechaFin: string; passwordConfirmacion: string }) =>

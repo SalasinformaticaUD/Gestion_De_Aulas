@@ -33,6 +33,7 @@ describe('AulasService', () => {
     aula: {
       create: jest.Mock;
       findMany: jest.Mock;
+      findFirst: jest.Mock;
       findUnique: jest.Mock;
       update: jest.Mock;
       delete: jest.Mock;
@@ -47,6 +48,7 @@ describe('AulasService', () => {
       aula: {
         create: jest.fn(),
         findMany: jest.fn(),
+        findFirst: jest.fn(),
         findUnique: jest.fn(),
         update: jest.fn(),
         delete: jest.fn(),
@@ -61,7 +63,7 @@ describe('AulasService', () => {
 
   it('normaliza los textos antes de crear un aula', async () => {
     prisma.aula.create.mockResolvedValue({ id: 'aula-id' });
-    prisma.aula.findUnique.mockResolvedValue(aulaPublicaMock);
+    prisma.aula.findFirst.mockResolvedValue(aulaPublicaMock);
 
     await service.create({
       codigo: ' LAB-01 ',
@@ -116,7 +118,7 @@ describe('AulasService', () => {
   });
 
   it('retorna 404 cuando el aula no existe', async () => {
-    prisma.aula.findUnique.mockResolvedValue(null);
+    prisma.aula.findFirst.mockResolvedValue(null);
 
     await expect(service.findOne('aula-id')).rejects.toBeInstanceOf(
       NotFoundException,
@@ -124,7 +126,7 @@ describe('AulasService', () => {
   });
 
   it('expone el contrato minimo acordado con software e historial basico', async () => {
-    prisma.aula.findUnique.mockResolvedValue({
+    prisma.aula.findFirst.mockResolvedValue({
       id: 'aula-id',
       codigo: 'LAB-401',
       ubicacion: 'Edificio Sabio de Caldas, Piso 4',
@@ -183,7 +185,7 @@ describe('AulasService', () => {
   });
 
   it('actualiza un aula existente', async () => {
-    prisma.aula.findUnique
+    prisma.aula.findFirst
       .mockResolvedValueOnce({ id: 'aula-id' })
       .mockResolvedValueOnce(aulaPublicaMock);
     prisma.aula.update.mockResolvedValue({
@@ -201,43 +203,16 @@ describe('AulasService', () => {
     });
   });
 
-  it('bloquea la eliminación cuando existe historial operativo', async () => {
-    prisma.aula.findUnique.mockResolvedValue({
-      id: 'aula-id',
-      _count: {
-        clases: 1,
-        practicasLibres: 0,
-        prestamosDocentes: 0,
-        prestamosAudiovisuales: 0,
-        observaciones: 0,
-        tareas: 0,
-      },
-    });
-
-    await expect(service.remove('aula-id')).rejects.toBeInstanceOf(
-      ConflictException,
-    );
-    expect(prisma.aula.delete).not.toHaveBeenCalled();
-  });
-
-  it('elimina un aula sin historial operativo', async () => {
-    prisma.aula.findUnique.mockResolvedValue({
-      id: 'aula-id',
-      _count: {
-        clases: 0,
-        practicasLibres: 0,
-        prestamosDocentes: 0,
-        prestamosAudiovisuales: 0,
-        observaciones: 0,
-        tareas: 0,
-      },
-    });
-    prisma.aula.delete.mockResolvedValue({ id: 'aula-id' });
+  it('elimina lógicamente un aula y conserva su historial asociado', async () => {
+    prisma.aula.findFirst.mockResolvedValue({ id: 'aula-id', codigo: 'LAB-01' });
+    prisma.aula.update.mockResolvedValue({ id: 'aula-id' });
 
     await service.remove('aula-id');
 
-    expect(prisma.aula.delete).toHaveBeenCalledWith({
+    expect(prisma.aula.update).toHaveBeenCalledWith({
       where: { id: 'aula-id' },
+      data: expect.objectContaining({ estado: EstadoAula.FUERA_DE_SERVICIO }),
     });
+    expect(prisma.aula.delete).not.toHaveBeenCalled();
   });
 });

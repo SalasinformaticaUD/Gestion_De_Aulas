@@ -80,6 +80,7 @@ export class DisponibilidadAulasService {
     const bloque = this.normalizarBloque(query);
     const aulas = await this.prisma.aula.findMany({
       where: {
+        eliminadoEn: null,
         ...(query.capacidadMin !== undefined && {
           capacidad: { gte: query.capacidadMin },
         }),
@@ -111,8 +112,8 @@ export class DisponibilidadAulasService {
     query: ConsultarDisponibilidadDto,
   ): Promise<DisponibilidadAula> {
     const bloque = this.normalizarBloque(query);
-    const aula = await this.prisma.aula.findUnique({
-      where: { id: aulaId },
+    const aula = await this.prisma.aula.findFirst({
+      where: { id: aulaId, eliminadoEn: null },
       select: {
         id: true,
         codigo: true,
@@ -168,8 +169,8 @@ export class DisponibilidadAulasService {
       );
     }
 
-    const aula = await this.prisma.aula.findUnique({
-      where: { id: query.aulaId },
+    const aula = await this.prisma.aula.findFirst({
+      where: { id: query.aulaId, eliminadoEn: null },
       select: { id: true },
     });
     if (!aula) {

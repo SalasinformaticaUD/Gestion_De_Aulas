@@ -204,6 +204,7 @@ model Aula {
   observaciones          Observacion[]
   tareas                 Tarea[]
   limpiezas              Limpieza[]
+  eliminadoEn            DateTime?
   creadoEn               DateTime                 @default(now())
   actualizadoEn          DateTime                 @updatedAt
 }

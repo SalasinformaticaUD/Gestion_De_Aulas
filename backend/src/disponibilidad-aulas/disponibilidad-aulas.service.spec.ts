@@ -5,7 +5,7 @@ import { ObservacionesService } from '../observaciones/observaciones.service';
 import { DisponibilidadAulasService } from './disponibilidad-aulas.service';
 
 type PrismaMock = {
-  aula: { findMany: jest.Mock; findUnique: jest.Mock };
+  aula: { findMany: jest.Mock; findUnique: jest.Mock; findFirst: jest.Mock };
   limpieza: { findFirst: jest.Mock };
   observacion: { findFirst: jest.Mock; findMany: jest.Mock };
   claseProgramada: { findFirst: jest.Mock; findMany: jest.Mock };
@@ -36,6 +36,7 @@ describe('DisponibilidadAulasService', () => {
       aula: {
         findMany: jest.fn().mockResolvedValue([aula]),
         findUnique: jest.fn().mockResolvedValue(aula),
+        findFirst: jest.fn().mockResolvedValue(aula),
       },
       limpieza: { findFirst: jest.fn().mockResolvedValue(null) },
       observacion: {
@@ -80,7 +81,7 @@ describe('DisponibilidadAulasService', () => {
   });
 
   it('hace prevalecer mantenimiento sobre una clase programada', async () => {
-    prisma.aula.findUnique.mockResolvedValue({
+    prisma.aula.findFirst.mockResolvedValue({
       ...aula,
       estado: EstadoAula.MANTENIMIENTO,
     });

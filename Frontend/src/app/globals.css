@@ -449,6 +449,12 @@ html[data-theme="dark"] main .rooms-layout .room-list-item.is-selected,
 html[data-theme="dark"] main .rooms-layout .room-list-item.is-selected:hover { color:#fff!important; background:#343841!important; border-color:#5b616d!important; border-left-color:var(--room-status)!important; box-shadow:inset 0 0 0 1px #464b55!important; }
 html[data-theme="dark"] main .rooms-layout .room-list-item.is-selected small { color:#d7dae0!important; }
 
+.room-status-fuera-de-servicio { --room-status:#6b7280; }
+.room-badge-fuera-de-servicio { color:#4b5563; background:#e5e7eb; }
+.room-value-fuera-de-servicio { color:#4b5563; }
+html[data-theme="dark"] .room-badge-fuera-de-servicio { color:#c2c6ce; background:#30333a; border-color:#4e535e; }
+html[data-theme="dark"] .room-value-fuera-de-servicio { color:#c2c6ce; }
+
 /* Asistencia: el relleno representa exclusivamente el estado guardado. */
 .attendance-actions .attendance-check,
 .attendance-actions .attendance-cross { color:var(--muted)!important; background:transparent!important; border-color:var(--line)!important; }

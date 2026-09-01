@@ -1,4 +1,4 @@
-export type RoomStatus = "disponible" | "en-clase" | "reservada" | "mantenimiento";
+export type RoomStatus = "disponible" | "en-clase" | "reservada" | "mantenimiento" | "fuera-de-servicio";
 
 export type Workstation = {
   number: number;

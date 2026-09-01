@@ -10,6 +10,7 @@ import {
   Query,
   UseInterceptors,
   UploadedFile,
+  ForbiddenException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AulasService } from './aulas.service';
@@ -31,6 +32,7 @@ export class AulasController {
     @Body() createAulaDto: CreateAulaDto,
     @CurrentUser() usuario?: UsuarioAutenticado,
   ) {
+    this.ensureAdministrator(usuario);
     return this.aulasService.create(createAulaDto, usuario?.id);
   }
 
@@ -43,6 +45,7 @@ export class AulasController {
     archivo: { buffer: Buffer; originalname: string } | undefined,
     @CurrentUser() usuario?: UsuarioAutenticado,
   ) {
+    this.ensureAdministrator(usuario);
     return this.aulasService.importarExcel(archivo, usuario?.id);
   }
 
@@ -62,6 +65,7 @@ export class AulasController {
     @Body() updateAulaDto: UpdateAulaDto,
     @CurrentUser() usuario?: UsuarioAutenticado,
   ) {
+    this.ensureAdministrator(usuario);
     return this.aulasService.update(id, updateAulaDto, usuario?.id);
   }
 
@@ -70,6 +74,15 @@ export class AulasController {
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() usuario?: UsuarioAutenticado,
   ) {
+    this.ensureAdministrator(usuario);
     return this.aulasService.remove(id, usuario?.id);
+  }
+
+  private ensureAdministrator(usuario?: UsuarioAutenticado): void {
+    if (!usuario?.roles.some((rol) => rol.toUpperCase() === 'ADMINISTRADOR')) {
+      throw new ForbiddenException(
+        'Solo un administrador puede crear, modificar, eliminar o importar aulas.',
+      );
+    }
   }
 }

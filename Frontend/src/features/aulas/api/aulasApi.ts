@@ -38,7 +38,9 @@ export type CrearAulaInput = {
 };
 
 function estadoInterfaz(estado: EstadoAulaApi): RoomStatus {
-  return estado === "MANTENIMIENTO" ? "mantenimiento" : "disponible";
+  if (estado === "MANTENIMIENTO") return "mantenimiento";
+  if (estado === "FUERA_DE_SERVICIO") return "fuera-de-servicio";
+  return "disponible";
 }
 
 function aRoom(aula: AulaApi): Room {
@@ -82,7 +84,7 @@ export async function crearAula(input: CrearAulaInput) {
 
 export async function importarAulasExcel(archivo: File) {
   const formulario = new FormData(); formulario.append("archivo", archivo);
-  return solicitarAulas<{ totalRecibidas: number; totalCreadas: number; totalActualizadas: number; totalEliminadas: number }>("/aulas/importar/excel", tokenActual(), { method: "POST", body: formulario });
+  return solicitarAulas<{ totalRecibidas: number; totalCreadas: number; totalActualizadas: number; totalEliminadas: number; totalConservadasPorHistorial: number }>("/aulas/importar/excel", tokenActual(), { method: "POST", body: formulario });
 }
 
 export async function actualizarAula(id: string, input: CrearAulaInput) {
@@ -91,4 +93,8 @@ export async function actualizarAula(id: string, input: CrearAulaInput) {
     body: JSON.stringify(input),
   });
   return aRoom(aula);
+}
+
+export async function eliminarAula(id: string) {
+  await solicitarAulas<void>(`/aulas/${id}`, tokenActual(), { method: "DELETE" });
 }

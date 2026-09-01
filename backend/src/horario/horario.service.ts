@@ -429,15 +429,25 @@ export class HorarioService {
       select: { id: true, codigo: true },
     });
     const aulaPorCodigo = new Map<string, string>();
+    const aulaPorNumero = new Map<string, string | undefined>();
     aulas.forEach((aula) => {
       const codigo = aula.codigo.trim();
-      aulaPorCodigo.set(codigo.toUpperCase(), aula.id);
-      aulaPorCodigo.set(`AULA ${codigo}`.toUpperCase(), aula.id);
-      aulaPorCodigo.set(`AULA-${codigo}`.toUpperCase(), aula.id);
-      const numero = codigo.match(/\d+[A-Z]?$/i)?.[0];
-      if (numero) aulaPorCodigo.set(numero.toUpperCase(), aula.id);
+      aulaPorCodigo.set(this.normalizarCodigoAula(codigo), aula.id);
+      aulaPorCodigo.set(this.normalizarCodigoAula(`AULA ${codigo}`), aula.id);
+      // Solo las aulas cuyo código es exclusivamente numérico pueden
+      // encontrarse como alternativa por número. Así, “AULA 403” no se
+      // confunde con “SALA ESPECIALIZADA 403”.
+      const numero = /^\d+[A-Z]?$/i.test(codigo) ? codigo : undefined;
+      if (numero) {
+        const previo = aulaPorNumero.get(numero.toUpperCase());
+        aulaPorNumero.set(
+          numero.toUpperCase(),
+          previo && previo !== aula.id ? undefined : aula.id,
+        );
+      }
     });
     const rechazadas: Array<{ fila: number; motivo: string }> = [];
+    const advertencias: Array<{ fila: number; motivo: string }> = [];
     const entradas: Array<{ fila: number; clase: ClaseImportacionDto }> = [];
 
     const clavesLote = new Set<string>();
@@ -445,7 +455,9 @@ export class HorarioService {
       try {
         const salon = this.valorExcel(fila, 'SALON') || this.valorExcel(fila, 'AULA');
         const codigoAula = this.extraerCodigoAula(salon);
-        const aulaId = aulaPorCodigo.get(codigoAula.toUpperCase());
+        const aulaId =
+          aulaPorCodigo.get(this.normalizarCodigoAula(codigoAula)) ??
+          aulaPorNumero.get(codigoAula.match(/\d+[A-Z]?$/i)?.[0]?.toUpperCase() ?? '');
         if (!aulaId) {
           rechazadas.push({
             fila: index + 2,
@@ -469,6 +481,13 @@ export class HorarioService {
           fila: index + 2,
           clase,
         });
+        if (clase.docente?.nombre === 'Información no disponible') {
+          advertencias.push({
+            fila: index + 2,
+            motivo:
+              'No se indicó docente; la clase se registró con “Información no disponible”.',
+          });
+        }
       } catch (error: unknown) {
         rechazadas.push({ fila: index + 2, motivo: this.mensajeError(error) });
       }
@@ -578,6 +597,7 @@ export class HorarioService {
       ).length,
       eliminadosPorReemplazo: resultado.eliminados,
       detallesRechazados: rechazadas,
+      advertencias,
     };
   }
 
@@ -1095,7 +1115,8 @@ export class HorarioService {
         'HORA debe indicar un bloque válido, por ejemplo 6AM, 8AM, 2PM o 06:00 - 08:00.',
       );
     }
-    const nombreDocente = this.valorExcel(fila, 'DOCENTE');
+    const nombreDocente =
+      this.valorExcel(fila, 'DOCENTE') || 'Información no disponible';
     const documento = this.valorExcel(fila, 'DOCENTE_DOCUMENTO');
     const asignaturaTexto = this.valorExcel(fila, 'ASIGNATURA');
     const [codigoAsignatura, nombreAsignatura] = this.separarCatalogo(asignaturaTexto, 'ASIG');
@@ -1105,13 +1126,7 @@ export class HorarioService {
         'DOCENTE_DOCUMENTO debe contener solo números.',
       );
     }
-    if (nombreDocente && !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:[\s'-][A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*$/.test(nombreDocente)) {
-      throw new BadRequestException(
-        'DOCENTE_NOMBRE debe contener solo letras.',
-      );
-    }
     if (
-      !nombreDocente ||
       !codigoAsignatura ||
       !nombreAsignatura ||
       !grupo
@@ -1158,21 +1173,29 @@ export class HorarioService {
       throw new BadRequestException('HORA_INICIO y HORA_FIN deben usar formato HH:mm.');
     }
     const documento = this.valorExcel(fila, 'DOCENTE_DOCUMENTO');
-    const nombreDocente = this.valorExcel(fila, 'DOCENTE_NOMBRE');
+    const nombreDocente =
+      this.valorExcel(fila, 'DOCENTE_NOMBRE') || 'Información no disponible';
     const codigoAsignatura = this.valorExcel(fila, 'ASIGNATURA_CODIGO');
     const nombreAsignatura = this.valorExcel(fila, 'ASIGNATURA_NOMBRE');
     const grupo = this.valorExcel(fila, 'GRUPO');
-    if (!documento || !/^\d+$/.test(documento)) throw new BadRequestException('DOCENTE_DOCUMENTO debe contener solo números.');
-    if (!nombreDocente || !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:[\s'-][A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*$/.test(nombreDocente)) throw new BadRequestException('DOCENTE_NOMBRE debe contener solo letras.');
+    if (documento && !/^\d+$/.test(documento)) throw new BadRequestException('DOCENTE_DOCUMENTO debe contener solo números.');
     if (!codigoAsignatura || !nombreAsignatura || !grupo) throw new BadRequestException('La fila contiene campos académicos requeridos vacíos.');
-    return { aulaId, diaSemana, semana, horaInicio, horaFin, grupo, inscritos, docente: { documento, nombre: nombreDocente, ...(this.valorExcel(fila, 'DOCENTE_CORREO') && { correo: this.valorExcel(fila, 'DOCENTE_CORREO') }) }, asignatura: { codigo: codigoAsignatura, nombre: nombreAsignatura }, proyectoCurricularId: this.valorExcel(fila, 'PROYECTO_CURRICULAR_ID') || undefined };
+    return { aulaId, diaSemana, semana, horaInicio, horaFin, grupo, inscritos, docente: { nombre: nombreDocente, ...(documento && { documento }), ...(this.valorExcel(fila, 'DOCENTE_CORREO') && { correo: this.valorExcel(fila, 'DOCENTE_CORREO') }) }, asignatura: { codigo: codigoAsignatura, nombre: nombreAsignatura }, proyectoCurricularId: this.valorExcel(fila, 'PROYECTO_CURRICULAR_ID') || undefined };
   }
 
   private extraerCodigoAula(salon: string): string {
     const limpio = salon.trim();
-    const sinCapacidad = limpio.replace(/\s+CAP\s*\(.*\)$/i, '').trim();
-    const numero = sinCapacidad.match(/\d+[A-Z]?$/i)?.[0];
-    return numero ?? sinCapacidad;
+    return limpio.replace(/\s+CAP\s*\(.*\)$/i, '').trim();
+  }
+
+  private normalizarCodigoAula(valor: string): string {
+    return valor
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[-_]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toUpperCase();
   }
 
   private convertirHoraExcel(valor: string): [string, string] {
