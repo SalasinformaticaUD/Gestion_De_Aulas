@@ -11,16 +11,16 @@ import {
   UseInterceptors,
   UploadedFile,
   ForbiddenException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { CreateClaseProgramadaDto } from './dto/create-clase-programada.dto';
-import { CreatePeriodoAcademicoDto } from './dto/create-periodo-academico.dto';
 import { FindClasesDto } from './dto/find-clases.dto';
 import { UpdateClaseProgramadaDto } from './dto/update-clase-programada.dto';
 import { UpdatePeriodoAcademicoDto } from './dto/update-periodo-academico.dto';
-import { ImportarHorarioDto } from './dto/importar-horario.dto';
 import { ImportarHorarioExcelDto } from './dto/importar-horario-excel.dto';
+import { IniciarSemestreDto } from './dto/iniciar-semestre.dto';
 import { HorarioService } from './horario.service';
+import { AuthService } from '../auth/auth.service';
 import { MODULOS } from '../auth/auth.constants';
 import { RequireModule } from '../auth/decorators/require-module.decorator';
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
@@ -30,7 +30,10 @@ import type { UsuarioAutenticado } from '../auth/auth.types';
 @RequireModule(MODULOS.HORARIOS)
 @Controller('horario')
 export class HorarioController {
-  constructor(private readonly horarioService: HorarioService) {}
+  constructor(
+    private readonly horarioService: HorarioService,
+    private readonly authService: AuthService,
+  ) {}
 
   @Get('periodos')
   @RequirePermissions('HORARIOS_LEER')
@@ -38,14 +41,24 @@ export class HorarioController {
     return this.horarioService.findPeriodos();
   }
 
-  @Post('periodos')
+  @Post('periodos/iniciar-semestre')
   @RequirePermissions('HORARIOS_CREAR')
-  createPeriodo(
-    @Body() dto: CreatePeriodoAcademicoDto,
+  async iniciarSemestre(
+    @Body() dto: IniciarSemestreDto,
     @CurrentUser() usuario?: UsuarioAutenticado,
   ) {
     this.ensureAdministrator(usuario);
-    return this.horarioService.createPeriodo(dto, usuario?.id);
+    if (
+      !usuario ||
+      !(await this.authService.verifyCurrentPassword(
+        usuario.id,
+        dto.passwordConfirmacion,
+      ))
+    ) {
+      throw new UnauthorizedException('La contraseña de confirmación es incorrecta.');
+    }
+    const { passwordConfirmacion: _passwordConfirmacion, ...periodo } = dto;
+    return this.horarioService.createPeriodo({ ...periodo, activo: true }, usuario.id);
   }
 
   @Get('periodos/:id')
@@ -88,30 +101,10 @@ export class HorarioController {
     return this.horarioService.findClases(filters);
   }
 
-  @Post('clases')
-  @RequirePermissions('HORARIOS_CREAR')
-  createClase(
-    @Body() dto: CreateClaseProgramadaDto,
-    @CurrentUser() usuario?: UsuarioAutenticado,
-  ) {
-    this.ensureAdministrator(usuario);
-    return this.horarioService.createClase(dto, usuario?.id);
-  }
-
-  @Post('importar')
-  @RequirePermissions('HORARIOS_CREAR')
-  importar(
-    @Body() dto: ImportarHorarioDto,
-    @CurrentUser() usuario?: UsuarioAutenticado,
-  ) {
-    this.ensureAdministrator(usuario);
-    return this.horarioService.importar(dto);
-  }
-
   @Post('importar/excel')
   @RequirePermissions('HORARIOS_CREAR')
   @UseInterceptors(
-    FileInterceptor('archivo', { limits: { fileSize: 5_000_000 } }),
+    FileInterceptor('archivo', { limits: { fileSize: 20_000_000 } }),
   )
   importarExcel(
     @UploadedFile()

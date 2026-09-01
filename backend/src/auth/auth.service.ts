@@ -83,6 +83,18 @@ export class AuthService {
     return this.toAuthenticatedUser(usuario);
   }
 
+  async verifyCurrentPassword(usuarioId: string, password: string): Promise<boolean> {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: { estado: true, passwordHash: true },
+    });
+    return Boolean(
+      usuario &&
+        usuario.estado === EstadoCuenta.ACTIVA &&
+        this.passwordHash.verify(password, usuario.passwordHash),
+    );
+  }
+
   private toAuthenticatedUser(usuario: {
     id: string;
     nombreCompleto: string;

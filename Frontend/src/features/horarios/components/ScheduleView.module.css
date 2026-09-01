@@ -136,6 +136,28 @@
   padding-top: 2px;
 }
 
+.weekRange {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  margin: 0 0 14px;
+  padding: 9px 13px;
+  border: 1px solid #cad8ed;
+  border-radius: 8px;
+  color: #315e9d;
+  background: #eef5ff;
+  font-size: 13px;
+}
+
+.weekRange span {
+  font-weight: 800;
+}
+
+.weekRange strong {
+  color: var(--ink);
+}
+
 .cancelButton {
   min-height: 37px;
   padding: 0 14px;

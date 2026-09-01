@@ -1017,9 +1017,9 @@ export class HorarioService {
     );
     if (filas.length === 0)
       throw new BadRequestException('El archivo Excel no contiene registros.');
-    if (filas.length > 500)
+    if (filas.length > 5_000)
       throw new BadRequestException(
-        'El archivo Excel supera el máximo de 500 filas.',
+        'El archivo Excel supera el máximo de 5.000 filas.',
       );
     const encabezados = new Set(
       Object.keys(filas[0]).map((encabezado) =>
