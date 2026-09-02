@@ -1,6 +1,6 @@
 import { obtenerSesion } from "@/features/auth/lib/sesion";
 import { solicitarAulas } from "@/features/monitores/api/clienteMonitores";
-import type { FreePractice } from "@/features/practicas-libres/types";
+import type { FreePractice, PracticeStudent } from "@/features/practicas-libres/types";
 type ApiPractice = { id: string; estado: FreePractice["status"]; inicio: string; finEstimada: string; finReal: string | null; aulaId: string; responsableTipo: FreePractice["responsibleType"]; softwareSolicitado: string | null; aula: { codigo: string }; estudiante: { id: string; codigo: string; nombre: string; correo: string | null } };
 const auth = () => { const token = obtenerSesion()?.tokenAcceso; if (!token) throw new Error("La sesión expiró. Inicie sesión nuevamente."); return token; };
 const map = (p: ApiPractice): FreePractice => ({ id: p.id, status: p.estado, roomId: p.aulaId, roomCode: p.aula.codigo, start: p.inicio, estimatedEnd: p.finEstimada, actualEnd: p.finReal ?? undefined, responsibleType: p.responsableTipo, requestedSoftware: p.softwareSolicitado ?? "Sin especificar", student: { id: p.estudiante.id, code: p.estudiante.codigo, name: p.estudiante.nombre, email: p.estudiante.correo ?? undefined, activeFine: false } });

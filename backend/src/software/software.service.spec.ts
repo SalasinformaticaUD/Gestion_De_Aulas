@@ -1,4 +1,5 @@
 import { ConflictException } from '@nestjs/common';
+import * as XLSX from 'xlsx';
 import { PrismaService } from '../prisma/prisma.service';
 import { SoftwareService } from './software.service';
 
@@ -19,6 +20,7 @@ describe('SoftwareService', () => {
       count: jest.Mock;
       create: jest.Mock;
       upsert: jest.Mock;
+      deleteMany: jest.Mock;
     };
     usuario: {
       findUnique: jest.Mock;
@@ -46,6 +48,7 @@ describe('SoftwareService', () => {
         count: jest.fn(),
         create: jest.fn(),
         upsert: jest.fn(),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
       usuario: {
         findUnique: jest.fn(),
@@ -178,7 +181,7 @@ describe('SoftwareService', () => {
   });
 
   it('importa filas normalizadas y registra historial exitoso', async () => {
-    prisma.aula.findUnique.mockResolvedValue({ id: 'aula-id' });
+    prisma.aula.findMany.mockResolvedValue([{ id: 'aula-id', codigo: '404' }]);
     prisma.software.upsert.mockResolvedValue({ id: 'software-id' });
     prisma.aulaSoftware.upsert.mockResolvedValue({
       aulaId: 'aula-id',
@@ -224,9 +227,7 @@ describe('SoftwareService', () => {
   });
 
   it('registra importación parcial cuando una fila referencia un aula inexistente', async () => {
-    prisma.aula.findUnique
-      .mockResolvedValueOnce({ id: 'aula-id' })
-      .mockResolvedValueOnce(null);
+    prisma.aula.findMany.mockResolvedValue([{ id: 'aula-id', codigo: '404' }]);
     prisma.software.upsert.mockResolvedValue({ id: 'software-id' });
     prisma.aulaSoftware.upsert.mockResolvedValue({
       aulaId: 'aula-id',
@@ -255,6 +256,8 @@ describe('SoftwareService', () => {
       registrosProcesados: 1,
       registrosConError: 1,
       resultado: 'PARCIAL',
+      asociacionesReemplazadas: 0,
+      reemplazoAplicado: false,
     });
     expect(prisma.importacionSoftware.create).toHaveBeenCalledTimes(1);
     const createCalls = prisma.importacionSoftware.create.mock.calls as Array<
@@ -272,6 +275,41 @@ describe('SoftwareService', () => {
         error: 'No existe un aula con el codigo indicado.',
       },
     ]);
+  });
+
+  it('lee un Excel y asocia Aula 306 con el software indicado', async () => {
+    prisma.aula.findMany.mockResolvedValue([{ id: 'aula-306', codigo: '306' }]);
+    prisma.software.upsert.mockResolvedValue({ id: 'software-id' });
+    prisma.aulaSoftware.upsert.mockResolvedValue({
+      aulaId: 'aula-306',
+      softwareId: 'software-id',
+    });
+    prisma.importacionSoftware.create.mockResolvedValue({ id: 'importacion-id' });
+    const hoja = XLSX.utils.json_to_sheet([
+      { Aula: 'Aula 306', Software: '7-Zip', 'Software Versión': '25.00' },
+    ]);
+    const libro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(libro, hoja, 'Software instalado');
+
+    const resultado = await service.importInventoryExcel({
+      buffer: XLSX.write(libro, { bookType: 'xlsx', type: 'buffer' }),
+      originalname: 'software.xlsx',
+      mimetype:
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+
+    expect(resultado.resumen).toMatchObject({
+      totalRegistros: 1,
+      registrosProcesados: 1,
+      resultado: 'EXITOSA',
+    });
+    expect(prisma.aulaSoftware.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          aulaId_softwareId: { aulaId: 'aula-306', softwareId: 'software-id' },
+        },
+      }),
+    );
   });
 });
 

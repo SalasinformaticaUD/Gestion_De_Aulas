@@ -2,7 +2,9 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
+import * as XLSX from 'xlsx';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSoftwareDto } from './dto/create-software.dto';
 import { UpdateSoftwareDto } from './dto/update-software.dto';
@@ -237,7 +239,10 @@ export class SoftwareService {
     });
   }
 
-  async importInventory(importarSoftwareDto: ImportarSoftwareDto) {
+  async importInventory(
+    importarSoftwareDto: ImportarSoftwareDto,
+    reemplazarAnterior = false,
+  ) {
     const { filas, nombreArchivo, usuarioId } = importarSoftwareDto;
 
     if (usuarioId) {
@@ -253,18 +258,42 @@ export class SoftwareService {
 
     return this.prisma.$transaction(async (tx) => {
       const errores: ImportacionSoftwareError[] = [];
+      const asociacionesCargadas: Array<{ aulaId: string; softwareId: string }> = [];
       let registrosProcesados = 0;
+      const aulas = await tx.aula.findMany({
+        where: { eliminadoEn: null },
+        select: { id: true, codigo: true },
+      });
+      const aulasPorCodigo = new Map<string, string>();
+      aulas.forEach((aula) => {
+        aulasPorCodigo.set(this.normalizarCodigoAula(aula.codigo), aula.id);
+        if (/^\d+[A-Z]?$/i.test(aula.codigo.trim())) {
+          aulasPorCodigo.set(
+            this.normalizarCodigoAula(`Aula ${aula.codigo}`),
+            aula.id,
+          );
+        }
+      });
 
       for (const [index, fila] of filas.entries()) {
         const normalized = this.normalizeImportRow(fila);
 
         try {
-          const aula = await tx.aula.findUnique({
-            where: { codigo: normalized.aulaCodigo },
-            select: { id: true },
-          });
+          if (!normalized.aulaCodigo || !normalized.nombre || !normalized.version) {
+            errores.push({
+              fila: index + 1,
+              aulaCodigo: normalized.aulaCodigo,
+              nombre: normalized.nombre,
+              version: normalized.version,
+              error: 'Aula, Software y Software Versión son obligatorios.',
+            });
+            continue;
+          }
+          const aulaId = aulasPorCodigo.get(
+            this.normalizarCodigoAula(normalized.aulaCodigo),
+          );
 
-          if (!aula) {
+          if (!aulaId) {
             errores.push({
               fila: index + 1,
               aulaCodigo: normalized.aulaCodigo,
@@ -295,17 +324,18 @@ export class SoftwareService {
           await tx.aulaSoftware.upsert({
             where: {
               aulaId_softwareId: {
-                aulaId: aula.id,
+                aulaId,
                 softwareId: software.id,
               },
             },
             create: {
-              aulaId: aula.id,
+              aulaId,
               softwareId: software.id,
             },
             update: {},
           });
 
+          asociacionesCargadas.push({ aulaId, softwareId: software.id });
           registrosProcesados += 1;
         } catch (error: unknown) {
           errores.push({
@@ -316,6 +346,21 @@ export class SoftwareService {
             error: this.getErrorMessage(error),
           });
         }
+      }
+
+      let asociacionesReemplazadas = 0;
+      if (reemplazarAnterior && errores.length === 0 && asociacionesCargadas.length > 0) {
+        const eliminacion = await tx.aulaSoftware.deleteMany({
+          where: {
+            NOT: {
+              OR: asociacionesCargadas.map((asociacion) => ({
+                aulaId: asociacion.aulaId,
+                softwareId: asociacion.softwareId,
+              })),
+            },
+          },
+        });
+        asociacionesReemplazadas = eliminacion.count;
       }
 
       const resultado = this.getImportResult(filas.length, registrosProcesados);
@@ -340,10 +385,62 @@ export class SoftwareService {
           registrosProcesados,
           registrosConError: errores.length,
           resultado,
+          asociacionesReemplazadas,
+          reemplazoAplicado: reemplazarAnterior && errores.length === 0,
         },
         errores,
       };
+    }, {
+      // Un inventario institucional puede contener miles de instalaciones.
+      // El valor predeterminado de Prisma (5 s) finaliza antes de completar
+      // un archivo grande aunque sus filas sean válidas.
+      maxWait: 30_000,
+      timeout: 1_800_000,
     });
+  }
+
+  async importInventoryExcel(
+    archivo:
+      | { buffer: Buffer; originalname: string; mimetype: string }
+      | undefined,
+  ) {
+    if (!archivo?.buffer.length) {
+      throw new BadRequestException('Debe adjuntar un archivo Excel.');
+    }
+    if (!/\.(xlsx|xls)$/i.test(archivo.originalname)) {
+      throw new BadRequestException('El archivo debe tener extensión .xlsx o .xls.');
+    }
+
+    let workbook: XLSX.WorkBook;
+    try {
+      workbook = XLSX.read(archivo.buffer, { type: 'buffer' });
+    } catch {
+      throw new BadRequestException('No fue posible leer el archivo Excel.');
+    }
+    const hoja = workbook.Sheets[workbook.SheetNames[0] ?? ''];
+    if (!hoja) throw new BadRequestException('El archivo Excel no contiene hojas.');
+    const registros = XLSX.utils.sheet_to_json<Record<string, unknown>>(hoja, {
+      defval: '',
+    });
+    if (!registros.length) {
+      throw new BadRequestException('El archivo Excel no contiene filas de software.');
+    }
+
+    const filas = registros.map((fila) => ({
+      aulaCodigo: this.valorExcel(fila, 'AULA'),
+      nombre: this.valorExcel(fila, 'SOFTWARE'),
+      version:
+        this.valorExcel(fila, 'SOFTWARE VERSION') ||
+        this.valorExcel(fila, 'SOFTWARE VERSIONES') ||
+        this.valorExcel(fila, 'VERSION'),
+    }));
+    if (!filas.some((fila) => fila.aulaCodigo || fila.nombre || fila.version)) {
+      throw new BadRequestException('El archivo Excel no contiene datos válidos.');
+    }
+    return this.importInventory(
+      { filas, nombreArchivo: archivo.originalname },
+      true,
+    );
   }
 
   private async ensureSoftwareExists(id: string): Promise<void> {
@@ -400,13 +497,39 @@ export class SoftwareService {
     input: FilaImportacionSoftwareDto,
   ): FilaImportacionSoftwareDto {
     return {
-      aulaCodigo: input.aulaCodigo.trim(),
-      nombre: input.nombre.trim(),
-      version: input.version.trim(),
+      aulaCodigo: String(input.aulaCodigo ?? '').trim(),
+      nombre: String(input.nombre ?? '').trim(),
+      version: String(input.version ?? '').trim(),
       ...(input.descripcion !== undefined && {
         descripcion: input.descripcion.trim(),
       }),
     };
+  }
+
+  private valorExcel(fila: Record<string, unknown>, encabezado: string): string {
+    const clave = this.normalizarEncabezado(encabezado);
+    const encontrada = Object.entries(fila).find(
+      ([nombre]) => this.normalizarEncabezado(nombre) === clave,
+    );
+    return encontrada ? String(encontrada[1] ?? '').trim() : '';
+  }
+
+  private normalizarEncabezado(valor: string): string {
+    return valor
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toUpperCase();
+  }
+
+  private normalizarCodigoAula(valor: string): string {
+    return valor
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[-_]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toUpperCase();
   }
 
   private getImportResult(

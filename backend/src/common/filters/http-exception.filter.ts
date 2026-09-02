@@ -21,6 +21,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const status = this.getStatus(exception);
     const payload = this.getPayload(exception);
 
+    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+      // Mantiene el detalle técnico en el servidor sin exponerlo al frontend.
+      // Esto permite diagnosticar importaciones fallidas conservando el mensaje
+      // seguro para el usuario.
+      console.error(exception);
+    }
+
     response.status(status).json({
       statusCode: status,
       message: payload.message,

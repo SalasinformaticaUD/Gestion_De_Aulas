@@ -145,7 +145,6 @@ export class AulasService {
 
   async findAll(filters: FindAulasDto = {}): Promise<Aula[]> {
     const where: Prisma.AulaWhereInput = {
-      eliminadoEn: null,
       ...(filters.estado && { estado: filters.estado }),
       ...(filters.ubicacion && {
         ubicacion: { contains: filters.ubicacion, mode: 'insensitive' },
@@ -188,8 +187,8 @@ export class AulasService {
   }
 
   async findOne(id: string) {
-    const aula = await this.prisma.aula.findFirst({
-      where: { id, eliminadoEn: null },
+    const aula = await this.prisma.aula.findUnique({
+      where: { id },
       select: aulaPublicaSelect,
     });
 
@@ -201,9 +200,7 @@ export class AulasService {
   }
 
   async update(id: string, updateAulaDto: UpdateAulaDto, usuarioId?: string) {
-    const previa = await this.prisma.aula.findFirst({
-      where: { id, eliminadoEn: null },
-    });
+    const previa = await this.prisma.aula.findUnique({ where: { id } });
     if (!previa) {
       throw new NotFoundException(`No existe aula con id ${id}.`);
     }
@@ -244,19 +241,38 @@ export class AulasService {
   }
 
   async remove(id: string, usuarioId?: string) {
-    const aula = await this.prisma.aula.findFirst({
-      where: { id, eliminadoEn: null },
-      select: { id: true, codigo: true },
+    const aula = await this.prisma.aula.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        _count: {
+          select: {
+            clases: true,
+            practicasLibres: true,
+            prestamosDocentes: true,
+            prestamosAudiovisuales: true,
+            observaciones: true,
+            tareas: true,
+          },
+        },
+      },
     });
 
     if (!aula) {
       throw new NotFoundException(`No existe aula con id ${id}.`);
     }
 
-    const eliminada = await this.prisma.aula.update({
-      where: { id },
-      data: { eliminadoEn: new Date(), estado: 'FUERA_DE_SERVICIO' },
-    });
+    const hasOperationalHistory = Object.values(aula._count).some(
+      (count) => count > 0,
+    );
+
+    if (hasOperationalHistory) {
+      throw new ConflictException(
+        'El aula tiene información operativa asociada. Cambie su estado a FUERA_DE_SERVICIO para conservar la trazabilidad.',
+      );
+    }
+
+    const eliminada = await this.prisma.aula.delete({ where: { id } });
     await this.auditoria?.registrar({
       usuarioId,
       entidad: 'Aula',
@@ -353,7 +369,9 @@ export class AulasService {
         ...this.normalizeUpdateInput({ ...input, hardware: undefined }),
         caracteristicas: {
           hardware: input.hardware.trim(),
-          ...(input.caracteristica && { descripcion: input.caracteristica.trim() }),
+          ...(input.caracteristica && {
+            descripcion: input.caracteristica.trim(),
+          }),
         },
       };
     else if (input.caracteristica)
@@ -423,33 +441,32 @@ export class AulasService {
         'El Excel debe contener entre 1 y 500 aulas.',
       );
     const normalizarEncabezado = (valor: string) =>
-      valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+      valor
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toUpperCase();
     const valor = (fila: Record<string, unknown>, ...nombres: string[]) => {
       const claves = nombres.map(normalizarEncabezado);
-      const clave = Object.keys(fila).find((item) => claves.includes(normalizarEncabezado(item)));
+      const clave = Object.keys(fila).find((item) =>
+        claves.includes(normalizarEncabezado(item)),
+      );
+      // eslint-disable-next-line @typescript-eslint/no-base-to-string
       return String(clave ? (fila[clave] ?? '') : '').trim();
     };
     const requeridas = [
-      { nombre: 'Aula de software', aliases: ['AULA DE SOFTWARE'] },
-      { nombre: 'Capacidad', aliases: ['CAPACIDAD'] },
-      { nombre: 'Proyecto', aliases: ['PROYECTO'] },
-      { nombre: 'Año de equipo', aliases: ['ANO DE EQUIPO', 'ANO'] },
-      {
-        nombre: 'Marca y modelo de equipos de cómputo',
-        aliases: ['MARCA Y MODELO DE EQUIPOS DE COMPUTO', 'MARCA Y MODELO'],
-      },
-      {
-        nombre: 'Característica de equipos',
-        aliases: ['CARACTERISTICA DE EQUIPOS', 'CARACTERISTICA', 'CARACTERISTICAS'],
-      },
-      { nombre: 'Necesita renovación', aliases: ['NECESITA RENOVACION'] },
+      'AULA DE SOFTWARE',
+      'CAPACIDAD',
+      'PROYECTO',
+      'ANO',
+      'MARCA Y MODELO',
+      'CARACTERISTICA',
+      'NECESITA RENOVACION',
     ];
     const encabezados = new Set(
       Object.keys(filas[0]).map(normalizarEncabezado),
     );
-    const faltantes = requeridas
-      .filter((item) => !item.aliases.some((alias) => encabezados.has(alias)))
-      .map((item) => item.nombre);
+    const faltantes = requeridas.filter((item) => !encabezados.has(item));
     if (faltantes.length)
       throw new BadRequestException(
         `Faltan columnas requeridas: ${faltantes.join(', ')}.`,
@@ -458,12 +475,18 @@ export class AulasService {
     const entradas = filas.map((fila, indice) => {
       const codigo = valor(fila, 'AULA DE SOFTWARE', 'CODIGO');
       const proyecto = valor(fila, 'PROYECTO');
-      const anio = Number(valor(fila, 'AÑO DE EQUIPO', 'ANO DE EQUIPO', 'AÑO', 'ANO'));
-      const marcaModelo = valor(fila, 'MARCA Y MODELO DE EQUIPOS DE CÓMPUTO', 'MARCA Y MODELO DE EQUIPOS DE COMPUTO', 'MARCA Y MODELO');
-      const caracteristica = valor(fila, 'CARACTERÍSTICA DE EQUIPOS', 'CARACTERISTICA DE EQUIPOS', 'CARACTERISTICA', 'CARACTERISTICAS');
-      const renovacionTexto = valor(fila, 'NECESITA RENOVACIÓN', 'NECESITA RENOVACION').toUpperCase();
+      const anio = Number(valor(fila, 'AÑO', 'ANO'));
+      const marcaModelo = valor(fila, 'MARCA Y MODELO');
+      const caracteristica = valor(fila, 'CARACTERISTICA', 'CARACTERISTICAS');
+      const renovacionTexto = valor(
+        fila,
+        'NECESITA RENOVACIÓN',
+        'NECESITA RENOVACION',
+      ).toUpperCase();
       const capacidad = Number(valor(fila, 'CAPACIDAD'));
-      const necesitaRenovacion = ['SI', 'SÍ', 'TRUE', '1', 'YES'].includes(renovacionTexto);
+      const necesitaRenovacion = ['SI', 'SÍ', 'TRUE', '1', 'YES'].includes(
+        renovacionTexto,
+      );
       if (
         !codigo ||
         !proyecto ||
@@ -476,7 +499,7 @@ export class AulasService {
         capacidad < 1
       )
         throw new BadRequestException(
-          `Fila ${indice + 2}: aula, capacidad, proyecto, año de equipo, marca y modelo de equipos de cómputo, característica de equipos y renovación son obligatorios y válidos.`,
+          `Fila ${indice + 2}: aula, capacidad, proyecto, año, marca y modelo, característica y renovación son obligatorios y válidos.`,
         );
       if (codigos.has(codigo.toUpperCase()))
         throw new ConflictException(
@@ -539,13 +562,12 @@ export class AulasService {
             where: { id: existente.id },
             data: {
               codigo: entrada.codigo,
-              eliminadoEn: null,
               capacidad: entrada.capacidad,
               anioAdquisicion: entrada.anio,
               marca: entrada.marcaModelo,
               renovacionTecnologica: entrada.necesitaRenovacion,
               proyectoCurricular: { connect: { id: proyecto.id } },
-              caracteristicas: caracteristicas as Prisma.InputJsonValue,
+              caracteristicas: caracteristicas,
             },
           });
           actualizadas.push(aula);
@@ -566,19 +588,26 @@ export class AulasService {
           creadas.push(aula);
         }
       }
-      const codigosCargados = new Set(entradas.map((entrada) => entrada.codigo.toUpperCase()));
-      const ausentes = existentes.filter((aula) => !codigosCargados.has(aula.codigo.toUpperCase()));
-      const relacionadas = ausentes.filter((aula) => Object.values(aula._count).some((cantidad) => cantidad > 0));
-      const eliminables = ausentes.filter((aula) => !relacionadas.includes(aula));
-      const eliminadas = eliminables.length
-        ? await tx.aula.deleteMany({ where: { id: { in: eliminables.map((aula) => aula.id) } } })
+      const codigosCargados = new Set(
+        entradas.map((entrada) => entrada.codigo.toUpperCase()),
+      );
+      const ausentes = existentes.filter(
+        (aula) => !codigosCargados.has(aula.codigo.toUpperCase()),
+      );
+      const relacionados = ausentes.filter((aula) =>
+        Object.values(aula._count).some((cantidad) => cantidad > 0),
+      );
+      if (relacionados.length) {
+        throw new ConflictException(
+          `No se pueden reemplazar las aulas ausentes porque tienen información relacionada: ${relacionados.map((aula) => aula.codigo).join(', ')}.`,
+        );
+      }
+      const eliminadas = ausentes.length
+        ? await tx.aula.deleteMany({
+            where: { id: { in: ausentes.map((aula) => aula.id) } },
+          })
         : { count: 0 };
-      return {
-        creadas,
-        actualizadas,
-        eliminadas: eliminadas.count,
-        conservadasPorHistorial: relacionadas.length,
-      };
+      return { creadas, actualizadas, eliminadas: eliminadas.count };
     });
     return {
       nombreArchivo: archivo.originalname,
@@ -586,7 +615,6 @@ export class AulasService {
       totalCreadas: resultado.creadas.length,
       totalActualizadas: resultado.actualizadas.length,
       totalEliminadas: resultado.eliminadas,
-      totalConservadasPorHistorial: resultado.conservadasPorHistorial,
       creadas: await Promise.all(
         [...resultado.creadas, ...resultado.actualizadas].map((item) =>
           this.findOne(item.id),

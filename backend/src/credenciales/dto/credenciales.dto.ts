@@ -1,5 +1,6 @@
 import {
   IsBoolean,
+  IsArray,
   IsEnum,
   IsOptional,
   IsString,
@@ -9,9 +10,17 @@ import {
 import { EstadoCredencial } from '../../../generated/prisma/enums.js';
 export class FindCredencialesDto {
   @IsOptional() @IsString() nombre?: string;
-  @IsOptional() @IsString() categoria?: string;
   @IsOptional() @IsUUID() responsableId?: string;
   @IsOptional() @IsEnum(EstadoCredencial) estado?: EstadoCredencial;
+}
+export class GuardarSecretoCredencialDto {
+  @IsString() @MaxLength(4000) secreto!: string;
+}
+export class ActualizarRolesCredencialDto {
+  @IsArray() @IsUUID('4', { each: true }) rolIds!: string[];
+}
+export class ConsultarSecretoCredencialDto {
+  @IsString() @MaxLength(200) contrasena!: string;
 }
 export class CrearAccesoCredencialDto {
   @IsUUID() usuarioId!: string;

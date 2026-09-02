@@ -49,3 +49,14 @@ export async function asignarSoftware(roomId: string, softwareId: string, instal
 export async function retirarSoftware(roomId: string, softwareId: string) {
   await solicitarAulas(`/software/aulas/${roomId}/${softwareId}`, token(), { method: "DELETE" });
 }
+
+export type ResultadoImportacionSoftwareExcel = {
+  resumen: { totalRegistros: number; registrosProcesados: number; registrosConError: number; resultado: "EXITOSA" | "PARCIAL" | "FALLIDA"; asociacionesReemplazadas: number; reemplazoAplicado: boolean };
+  errores: Array<{ fila: number; aulaCodigo: string; nombre: string; version: string; error: string }>;
+};
+
+export async function importarSoftwareExcel(archivo: File) {
+  const formulario = new FormData();
+  formulario.append("archivo", archivo);
+  return solicitarAulas<ResultadoImportacionSoftwareExcel>("/software/importaciones/excel", token(), { method: "POST", body: formulario });
+}

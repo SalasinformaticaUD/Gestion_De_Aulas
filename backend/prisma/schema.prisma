@@ -94,6 +94,7 @@ model Usuario {
   tareasAsignadas                  Tarea[]               @relation("ResponsableTarea")
   auditorias                       Auditoria[]
   accesosCredencial                AccesoCredencial[]
+  secretosCredencial               SecretoCredencial[]
   prestamosAudiovisualesEntregados PrestamoAudiovisual[] @relation("EntregaPrestamoAudiovisual")
   prestamosAudiovisualesRecibidos  PrestamoAudiovisual[] @relation("RecepcionPrestamoAudiovisual")
   prestamosAudiovisualesCancelados PrestamoAudiovisual[] @relation("CancelacionPrestamoAudiovisual")
@@ -129,6 +130,7 @@ model Rol {
   descripcion String?
   usuarios    UsuarioRol[]
   permisos    RolPermiso[]
+  credencialesAutorizadas CredencialRol[]
 }
 
 model Permiso {
@@ -531,14 +533,24 @@ model Limpieza {
 model CredencialOperativa {
   id             String             @id @default(uuid()) @db.Uuid
   nombre         String
-  categoria      String
   usuario        String?
-  secretoCifrado String
+  secretoCifrado String?
   descripcion    String?
   estado         EstadoCredencial   @default(ACTIVA)
   accesos        AccesoCredencial[]
+  secretos       SecretoCredencial[]
+  rolesAutorizados CredencialRol[]
   creadoEn       DateTime           @default(now())
   actualizadoEn  DateTime           @updatedAt
+}
+
+model CredencialRol {
+  credencialId String              @db.Uuid
+  rolId        String              @db.Uuid
+  credencial   CredencialOperativa @relation(fields: [credencialId], references: [id], onDelete: Cascade)
+  rol          Rol                 @relation(fields: [rolId], references: [id], onDelete: Cascade)
+
+  @@id([credencialId, rolId])
 }
 
 model AccesoCredencial {
@@ -550,4 +562,18 @@ model AccesoCredencial {
   usuario      Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@id([credencialId, usuarioId])
+}
+
+model SecretoCredencial {
+  id             String             @id @default(uuid()) @db.Uuid
+  credencialId   String             @db.Uuid
+  usuarioId      String             @db.Uuid
+  secretoCifrado String
+  credencial     CredencialOperativa @relation(fields: [credencialId], references: [id], onDelete: Cascade)
+  usuario        Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  creadoEn       DateTime             @default(now())
+  actualizadoEn  DateTime             @updatedAt
+
+  @@unique([credencialId, usuarioId])
+  @@index([usuarioId])
 }

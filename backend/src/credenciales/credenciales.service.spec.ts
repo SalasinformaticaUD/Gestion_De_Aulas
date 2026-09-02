@@ -8,9 +8,15 @@ describe('CredencialesService', () => {
   const otroId = '00000000-0000-4000-8000-000000000002';
   const secreto = new CredencialesCifradoService();
   const prisma = {
+    usuario: {
+      findUnique: jest.fn<() => Promise<unknown>>().mockResolvedValue({ roles: [] }),
+    },
     credencialOperativa: {
       findMany: jest.fn<() => Promise<unknown[]>>(),
       findUnique: jest.fn<() => Promise<unknown>>(),
+    },
+    secretoCredencial: {
+      findUnique: jest.fn<() => Promise<unknown>>().mockResolvedValue(null),
     },
   };
   const auditoria = {
@@ -23,6 +29,7 @@ describe('CredencialesService', () => {
       >()
       .mockResolvedValue(undefined),
   };
+  const auth = { verifyCurrentPassword: jest.fn().mockResolvedValue(true) };
   let service: CredencialesService;
   beforeEach(() => {
     process.env.CREDENTIALS_ENCRYPTION_KEY =
@@ -32,6 +39,7 @@ describe('CredencialesService', () => {
       prisma as never,
       secreto,
       auditoria as never,
+      auth as never,
     );
   });
   const credencial = (
@@ -39,7 +47,6 @@ describe('CredencialesService', () => {
   ) => ({
     id: '00000000-0000-4000-8000-000000000003',
     nombre: 'Servidor',
-    categoria: 'SERVIDORES',
     secretoCifrado: secreto.cifrar('clave-real'),
     descripcion: null,
     estado: 'ACTIVA',
@@ -54,6 +61,7 @@ describe('CredencialesService', () => {
   });
   it('solo revela secretos a responsables autorizados y audita sin incluirlos', async () => {
     prisma.credencialOperativa.findUnique.mockResolvedValue(credencial());
+    await service.verificarAcceso(usuarioId, 'clave-de-cuenta');
     await expect(
       service.revelar('00000000-0000-4000-8000-000000000003', usuarioId),
     ).resolves.toMatchObject({ secreto: 'clave-real' });

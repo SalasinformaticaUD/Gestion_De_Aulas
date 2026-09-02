@@ -9,7 +9,10 @@ import {
   ParseUUIDPipe,
   UsePipes,
   ValidationPipe,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { SoftwareService } from './software.service';
 import { CreateSoftwareDto } from './dto/create-software.dto';
 import { UpdateSoftwareDto } from './dto/update-software.dto';
@@ -75,6 +78,19 @@ export class SoftwareController {
   @Post('importaciones')
   importarInventario(@Body() importarSoftwareDto: ImportarSoftwareDto) {
     return this.softwareService.importInventory(importarSoftwareDto);
+  }
+
+  @Post('importaciones/excel')
+  @UseInterceptors(
+    FileInterceptor('archivo', { limits: { fileSize: 20_000_000 } }),
+  )
+  importarInventarioExcel(
+    @UploadedFile()
+    archivo:
+      | { buffer: Buffer; originalname: string; mimetype: string }
+      | undefined,
+  ) {
+    return this.softwareService.importInventoryExcel(archivo);
   }
 
   @Get('importaciones')

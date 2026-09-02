@@ -2,19 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { listarAulas } from "@/features/aulas/api/aulasApi";
-import { actualizarSoftware, asignarSoftware as guardarAsignacion, cargarSoftware, crearSoftware, eliminarSoftware, retirarSoftware } from "@/features/software/api/softwareApi";
-import type { InstalledSoftware, SoftwareAssignment, SoftwareImport } from "@/features/software/types";
+import { actualizarSoftware, asignarSoftware as guardarAsignacion, cargarSoftware, crearSoftware, eliminarSoftware, importarSoftwareExcel, retirarSoftware, type ResultadoImportacionSoftwareExcel } from "@/features/software/api/softwareApi";
+import type { InstalledSoftware, SoftwareAssignment } from "@/features/software/types";
 import type { Room } from "@/features/aulas/types";
 import styles from "./SoftwareView.module.css";
 
-type View = "catalogo" | "aulas" | "importaciones";
-type ImportRow = { roomCode: string; name: string; version: string; description?: string };
+type View = "catalogo" | "aulas";
 
 export function SoftwareView() {
   const [software, setSoftware] = useState<InstalledSoftware[]>([]);
   const [assignments, setAssignments] = useState<SoftwareAssignment[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [imports, setImports] = useState<SoftwareImport[]>([]);
   const [view, setView] = useState<View>("catalogo");
   const [query, setQuery] = useState("");
   const [roomFilter, setRoomFilter] = useState("todas");
@@ -22,6 +20,7 @@ export function SoftwareView() {
   const [editor, setEditor] = useState<InstalledSoftware | "new" | null>(null);
   const [showAssignment, setShowAssignment] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [importResult, setImportResult] = useState<ResultadoImportacionSoftwareExcel | null>(null);
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
@@ -117,53 +116,30 @@ export function SoftwareView() {
     }
   };
 
-  const importRows = (rows: ImportRow[], fileName?: string) => {
-    const nextSoftware = [...software];
-    const nextAssignments = [...assignments];
-    const errors: SoftwareImport["errors"] = [];
-    let processed = 0;
-    rows.forEach((row, index) => {
-      const room = rooms.find((item) => item.code === row.roomCode.trim());
-      if (!room) {
-        errors.push({ row: index + 1, roomCode: row.roomCode, name: row.name, version: row.version, error: "No existe un aula con el código indicado." });
-        return;
-      }
-      let item = nextSoftware.find((entry) => entry.name.toLocaleLowerCase("es") === row.name.trim().toLocaleLowerCase("es") && entry.version.toLocaleLowerCase("es") === row.version.trim().toLocaleLowerCase("es"));
-      if (!item) {
-        item = { id: `30000000-0000-4000-8000-${String(nextSoftware.length + 1).padStart(12, "0")}`, name: row.name.trim(), version: row.version.trim(), description: row.description?.trim() || undefined };
-        nextSoftware.push(item);
-      } else if (row.description?.trim()) {
-        item = { ...item, description: row.description.trim() };
-        const itemIndex = nextSoftware.findIndex((entry) => entry.id === item?.id);
-        nextSoftware[itemIndex] = item;
-      }
-      if (!nextAssignments.some((assignment) => assignment.roomId === room.id && assignment.softwareId === item.id)) {
-        nextAssignments.push({ roomId: room.id, softwareId: item.id, installedAt: "2026-08-25" });
-      }
-      processed += 1;
-    });
-    const result = processed === rows.length ? "EXITOSA" : processed > 0 ? "PARCIAL" : "FALLIDA";
-    const nextImportNumber = Math.max(0, ...imports.map((item) => Number(item.id.slice(-4)))) + 1;
-    const nextImport: SoftwareImport = { id: `IMP-2026-${String(nextImportNumber).padStart(4, "0")}`, fileName, createdAt: "2026-08-25T21:15:00-05:00", userName: "Carol Velasco", totalRecords: rows.length, processedRecords: processed, errorRecords: errors.length, result, errors };
-    setSoftware(nextSoftware.sort((a, b) => a.name.localeCompare(b.name, "es")));
-    setAssignments(nextAssignments);
-    setImports((current) => [nextImport, ...current]);
-    setShowImport(false);
-    setView("importaciones");
-    setNotice({ tone: result === "FALLIDA" ? "error" : "success", text: `Importación ${result.toLocaleLowerCase("es")}: ${processed} de ${rows.length} fila(s) procesadas.` });
+  const importExcel = async (archivo: File) => {
+    try {
+      const resultado = await importarSoftwareExcel(archivo);
+      const loadedSoftware = await cargarSoftware();
+      setSoftware(loadedSoftware.software);
+      setAssignments(loadedSoftware.assignments);
+      setShowImport(false);
+      setImportResult(resultado);
+      setNotice({ tone: resultado.resumen.resultado === "FALLIDA" ? "error" : "success", text: `Importación ${resultado.resumen.resultado.toLocaleLowerCase("es")}: ${resultado.resumen.registrosProcesados} de ${resultado.resumen.totalRegistros} filas asociadas.${resultado.resumen.registrosConError ? ` ${resultado.resumen.registrosConError} con error.` : ""}` });
+    } catch (cause) {
+      setNotice({ tone: "error", text: cause instanceof Error ? cause.message : "No fue posible importar el Excel." });
+    }
   };
 
   return <>
     <section className={`page-heading ${styles.heading}`}>
       <div><h1>Software Instalado</h1><p>Catálogo, instalaciones por aula e importaciones del inventario de software.</p></div>
-      <div className={styles.headingActions}><button type="button" className={styles.secondaryButton} disabled={!rooms.length || !software.length} onClick={() => setShowAssignment(true)}>Asignar a aula</button><button type="button" className="button-primary" onClick={() => setEditor("new")}>+ Nuevo software</button></div>
+      <div className={styles.headingActions}><button type="button" className={styles.secondaryButton} disabled={!rooms.length || !software.length} onClick={() => setShowAssignment(true)}>Asignar a aula</button><button type="button" className={styles.secondaryButton} onClick={() => setShowImport(true)}>Cargar software masivamente</button><button type="button" className="button-primary" onClick={() => setEditor("new")}>+ Nuevo software</button></div>
     </section>
 
     <section className={styles.metrics} aria-label="Resumen del software instalado">
       <Metric label="Catálogo" value={software.length} detail="Nombre y versión únicos" tone="red" />
       <Metric label="Instalaciones" value={assignments.length} detail="Asociaciones activas" tone="blue" />
       <Metric label="Aulas cubiertas" value={coveredRooms} detail={`de ${rooms.length} aulas registradas`} tone="green" />
-      <Metric label="Importaciones" value={imports.length} detail={`${imports.filter((item) => item.errorRecords > 0).length} con novedades`} tone="amber" />
     </section>
 
     {notice && <div className={`${styles.notice} ${notice.tone === "error" ? styles.noticeError : ""}`} role="status"><span>{notice.text}</span><button type="button" onClick={() => setNotice(null)} aria-label="Cerrar mensaje">×</button></div>}
@@ -171,17 +147,14 @@ export function SoftwareView() {
     <div className={styles.viewTabs} role="tablist" aria-label="Vistas de software instalado">
       <button type="button" role="tab" aria-selected={view === "catalogo"} className={view === "catalogo" ? styles.activeTab : ""} onClick={() => setView("catalogo")}>Catálogo <span>{software.length}</span></button>
       <button type="button" role="tab" aria-selected={view === "aulas"} className={view === "aulas" ? styles.activeTab : ""} onClick={() => setView("aulas")}>Instalación por aulas <span>{coveredRooms}</span></button>
-      <button type="button" role="tab" aria-selected={view === "importaciones"} className={view === "importaciones" ? styles.activeTab : ""} onClick={() => setView("importaciones")}>Importaciones <span>{imports.length}</span></button>
     </div>
 
     {view === "catalogo" && <CatalogView rooms={rooms} software={visibleSoftware} assignments={assignments} query={query} roomFilter={roomFilter} onQuery={setQuery} onRoomFilter={setRoomFilter} onEdit={setEditor} onDelete={deleteSoftware} />}
     {view === "aulas" && <RoomsSoftwareView software={software} assignments={assignments} selected={requiredSoftware} matchingRooms={matchingRooms} onToggle={(id) => setRequiredSoftware((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])} onClear={() => setRequiredSoftware([])} onRemove={removeAssignment} />}
-    {view === "importaciones" && <ImportsView imports={imports} onOpen={() => setShowImport(true)} />}
-
-    
     {editor && <SoftwareDialog item={editor === "new" ? undefined : editor} onClose={() => setEditor(null)} onSave={saveSoftware} />}
     {showAssignment && <AssignmentDialog rooms={rooms} software={software} assignments={assignments} onClose={() => setShowAssignment(false)} onAssign={assignSoftware} />}
-    {showImport && <ImportDialog onClose={() => setShowImport(false)} onImport={importRows} />}
+    {showImport && <ImportDialog onClose={() => setShowImport(false)} onImport={importExcel} />}
+    {importResult && <ImportResultDialog result={importResult} onClose={() => setImportResult(null)} />}
   </>;
 }
 
@@ -206,10 +179,6 @@ function RoomsSoftwareView({ software, assignments, selected, matchingRooms, onT
   })}</div></div></section>;
 }
 
-function ImportsView({ imports, onOpen }: { imports: SoftwareImport[]; onOpen: () => void }) {
-  return <section className={styles.contentCard}><header className={styles.importHeader}><div><h2>Historial de importaciones</h2><p>Resultados registrados por el servicio de importación de inventario.</p></div><button type="button" className="button-primary" onClick={onOpen}>Registrar lote</button></header><div className="table-wrap"><table className={`${styles.softwareTable} ${styles.importTable}`}><thead><tr><th>Importación</th><th>Fecha</th><th>Responsable</th><th>Registros</th><th>Procesados</th><th>Errores</th><th>Resultado</th></tr></thead><tbody>{imports.map((item) => <tr key={item.id}><td><strong>{item.id}</strong><small>{item.fileName || "Sin nombre de archivo"}</small></td><td><time>{formatDateTime(item.createdAt)}</time></td><td>{item.userName || "Sin usuario"}</td><td>{item.totalRecords}</td><td><b className={styles.processed}>{item.processedRecords}</b></td><td><b className={item.errorRecords ? styles.errors : ""}>{item.errorRecords}</b>{item.errors.length > 0 && <details><summary>Ver detalle</summary><ul>{item.errors.map((error) => <li key={`${item.id}-${error.row}`}>Fila {error.row} · Aula {error.roomCode}: {error.error}</li>)}</ul></details>}</td><td><span className={`${styles.importStatus} ${styles[`import_${item.result.toLocaleLowerCase()}`]}`}>{item.result}</span></td></tr>)}</tbody></table></div></section>;
-}
-
 function SoftwareDialog({ item, onClose, onSave }: { item?: InstalledSoftware; onClose: () => void; onSave: (payload: Omit<InstalledSoftware, "id">, id?: string) => Promise<boolean> }) {
   const [name, setName] = useState(item?.name ?? "");
   const [version, setVersion] = useState(item?.version ?? "");
@@ -227,19 +196,19 @@ function AssignmentDialog({ rooms, software, assignments, onClose, onAssign }: {
   return <DialogShell title="Asignar software a un aula" subtitle="Nueva instalación" description="El aula y el software deben existir previamente en sus catálogos." onClose={onClose}><form onSubmit={submit} className={styles.dialogForm}><div className={styles.formGrid}><label><span>Aula</span><select value={roomId} onChange={(event) => setRoomId(event.target.value)}><option value="">Seleccionar aula</option>{rooms.map((room) => <option key={room.id} value={room.id}>Aula {room.code} · {room.floor > 0 ? `Piso ${room.floor}` : "Sin piso registrado"}</option>)}</select></label><label><span>Software</span><select value={softwareId} onChange={(event) => setSoftwareId(event.target.value)}><option value="">Seleccionar software</option>{software.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.version}</option>)}</select></label><label className={styles.wideField}><span>Fecha de instalación <small>Opcional en el backend</small></span><input type="date" value={installedAt} onChange={(event) => setInstalledAt(event.target.value)} /></label></div>{duplicate && <div className={styles.inlineError}>El software ya está asociado con el aula seleccionada.</div>}<footer><button type="button" className={styles.dialogCancel} onClick={onClose}>Cancelar</button><button type="submit" className="button-primary" disabled={duplicate || !softwareId || !roomId}>Guardar asociación</button></footer></form></DialogShell>;
 }
 
-function ImportDialog({ onClose, onImport }: { onClose: () => void; onImport: (rows: ImportRow[], fileName?: string) => void }) {
-  const [fileName, setFileName] = useState("");
-  const [value, setValue] = useState("");
-  const rows = value.split(/\r?\n/).filter((line) => line.trim()).map((line) => { const [roomCode = "", name = "", version = "", description] = line.split(";"); return { roomCode, name, version, description }; });
-  const valid = rows.length > 0 && rows.every((row) => row.roomCode.trim() && row.name.trim() && row.version.trim());
-  const submit = (event: React.FormEvent) => { event.preventDefault(); if (valid) onImport(rows, fileName.trim() || undefined); };
-  return <DialogShell title="Registrar lote de inventario" subtitle="Importación estructurada" description="El backend recibe filas normalizadas; la lectura directa de archivos aún no está definida." onClose={onClose}><form onSubmit={submit} className={styles.dialogForm}><div className={styles.formGrid}><label className={styles.wideField}><span>Nombre del archivo <small>Opcional</small></span><input value={fileName} onChange={(event) => setFileName(event.target.value)} placeholder="Ej. inventario_agosto.json" /></label><label className={styles.wideField}><span>Filas <small>Aula;Software;Versión;Descripción opcional</small></span><textarea className={styles.importInput} value={value} onChange={(event) => setValue(event.target.value)} rows={7} required /></label></div><div className={styles.importPreview}><strong>{rows.length} fila(s) detectadas</strong><span>{valid ? "Estructura válida para enviar" : "Todas las filas requieren aula, nombre y versión"}</span></div><footer><button type="button" className={styles.dialogCancel} onClick={onClose}>Cancelar</button><button type="submit" className="button-primary" disabled={!valid}>Procesar lote</button></footer></form></DialogShell>;
+function ImportDialog({ onClose, onImport }: { onClose: () => void; onImport: (archivo: File) => Promise<void> }) {
+  const [archivo, setArchivo] = useState<File | null>(null);
+  const [sending, setSending] = useState(false);
+  const submit = async (event: React.FormEvent) => { event.preventDefault(); if (!archivo) return; setSending(true); try { await onImport(archivo); } finally { setSending(false); } };
+  return <DialogShell title="Cargar software masivamente" subtitle="Importación desde Excel" description="Use un archivo .xlsx o .xls con las columnas Aula, Software y Software Versión. Cada fila se asociará con el aula ya registrada." onClose={onClose}><form onSubmit={(event) => void submit(event)} className={styles.dialogForm}><div className={styles.formGrid}><label className={styles.wideField}><span>Archivo de Excel</span><input type="file" accept=".xlsx,.xls" required onChange={(event) => setArchivo(event.target.files?.[0] ?? null)} /></label></div><div className={styles.importPreview}><strong>{archivo ? archivo.name : "Seleccione un archivo"}</strong><span>Las filas con aulas inexistentes o datos incompletos se reportarán sin impedir el resto de la carga.</span></div><footer><button type="button" className={styles.dialogCancel} onClick={onClose} disabled={sending}>Cancelar</button><button type="submit" className="button-primary" disabled={!archivo || sending}>{sending ? "Cargando…" : "Importar Excel"}</button></footer></form></DialogShell>;
+}
+
+function ImportResultDialog({ result, onClose }: { result: ResultadoImportacionSoftwareExcel; onClose: () => void }) {
+  const { resumen, errores } = result;
+  return <DialogShell title="Resultado de la carga masiva" subtitle={resumen.resultado} description={`${resumen.registrosProcesados} de ${resumen.totalRegistros} filas fueron asociadas.`} onClose={onClose}><div className={styles.dialogForm}><div className={styles.importPreview}><strong>{resumen.registrosConError} fila(s) con error</strong><span>{resumen.reemplazoAplicado ? `Se reemplazaron ${resumen.asociacionesReemplazadas} asociación(es) anterior(es) que no estaban en el archivo.` : "No se reemplazó información anterior porque el archivo contiene errores."}</span></div>{errores.length > 0 && <div className={styles.inlineError}><strong>Detalle de errores</strong><ul>{errores.slice(0, 12).map((error) => <li key={`${error.fila}-${error.aulaCodigo}-${error.nombre}`}>Fila {error.fila}: {error.error}</li>)}</ul>{errores.length > 12 && <small>Se muestran los primeros 12 errores de {errores.length}.</small>}</div>}<footer><button type="button" className="button-primary" onClick={onClose}>Entendido</button></footer></div></DialogShell>;
 }
 
 function DialogShell({ title, subtitle, description, onClose, children }: { title: string; subtitle: string; description: string; onClose: () => void; children: React.ReactNode }) {
   return <div className={styles.backdrop} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className={styles.dialog} role="dialog" aria-modal="true" aria-label={title}><header><div><span>{subtitle}</span><h2>{title}</h2><p>{description}</p></div><button type="button" onClick={onClose} aria-label="Cerrar">×</button></header>{children}</section></div>;
 }
 
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("es-CO", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Bogota" }).format(new Date(value));
-}
