@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { anularMulta, buscarEstudiante, cargarMultas, crearMotivoMulta, crearMulta, cumplirMulta } from "@/features/multas/api/multasApi";
+import * as XLSX from "xlsx";
+import { anularMulta, buscarEstudiante, buscarMultasMasivo, cargarMultas, crearMotivoMulta, crearMulta, cumplirMulta, type BulkFineSearchResult } from "@/features/multas/api/multasApi";
 import type { FineReason, FineRecord, FineStatus, FineStudent } from "@/features/multas/types";
 import styles from "./FinesView.module.css";
 
@@ -19,6 +20,12 @@ export function FinesView() {
   const [transition, setTransition] = useState<{ item: FineRecord; action: "cumplir" | "anular" } | null>(null);
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
   const [prefillCode, setPrefillCode] = useState("");
+  const [prefillReason, setPrefillReason] = useState("");
+  const [prefillDescription, setPrefillDescription] = useState("");
+  const [prefillPracticeId, setPrefillPracticeId] = useState("");
+  const [prefillSuggestedFine, setPrefillSuggestedFine] = useState("");
+  const [showBulkSearch, setShowBulkSearch] = useState(false);
+  const [bulkResult, setBulkResult] = useState<BulkFineSearchResult | null>(null);
 
   const activeFines = fines.filter((fine) => fine.status === "ACTIVA");
   const historicalFines = fines.filter((fine) => fine.status !== "ACTIVA");
@@ -32,9 +39,20 @@ export function FinesView() {
 
   const reload = async () => { try { const data = await cargarMultas(); setFines(data.fines); setReasons(data.reasons); } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible cargar las multas." }); } };
   useEffect(() => { void reload(); }, []);
-  useEffect(() => { const code = new URLSearchParams(window.location.search).get("codigoEstudiante"); if (code) { setPrefillCode(code); setShowCreate(true); } }, []);
-  const createFine = async (payload: { student: FineStudent; reasonId: string; description?: string }) => {
-    try { await crearMulta({ codigoEstudiante: payload.student.code, motivoId: payload.reasonId, descripcion: payload.description }); await reload(); setShowCreate(false); setView("activas"); setNotice({ tone: "success", text: `Multa impuesta a ${payload.student.name}.` }); } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible crear la multa." }); }
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("codigoEstudiante");
+    if (code) {
+      setPrefillCode(code);
+      setPrefillReason(params.get("motivo") ?? "");
+      setPrefillDescription(params.get("descripcion") ?? "");
+      setPrefillPracticeId(params.get("practicaId") ?? "");
+      setPrefillSuggestedFine(params.get("multaSugerida") ?? "");
+      setShowCreate(true);
+    }
+  }, []);
+  const createFine = async (payload: { student: FineStudent; reasonId: string; description?: string; practiceId?: string }) => {
+    try { await crearMulta({ codigoEstudiante: payload.student.code, motivoId: payload.reasonId, descripcion: payload.description, practicaId: payload.practiceId }); await reload(); setShowCreate(false); setView("activas"); setNotice({ tone: "success", text: `Multa impuesta a ${payload.student.name}.` }); } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible crear la multa." }); }
   };
 
   const completeTransition = async (item: FineRecord, action: "cumplir" | "anular", detail: string) => {
@@ -52,7 +70,7 @@ export function FinesView() {
   const changeView = (next: View) => { setView(next); setStatusFilter("todas"); };
 
   return <>
-    <section className={`page-heading ${styles.heading}`}><div><h1>Multas</h1><p>Registro, cumplimiento y anulación de restricciones aplicadas a estudiantes.</p></div><button type="button" className="button-primary" onClick={() => setShowCreate(true)}>+ Nueva multa</button></section>
+    <section className={`page-heading ${styles.heading}`}><div><h1>Multas</h1><p>Registro, cumplimiento y anulación de restricciones aplicadas a estudiantes.</p></div><div className={styles.actions}><button type="button" className="button-secondary" onClick={downloadBulkTemplate}>Descargar plantilla Excel</button><button type="button" className="button-secondary" onClick={() => { setBulkResult(null); setShowBulkSearch(true); }}>Buscar multas masivamente</button><button type="button" className="button-primary" onClick={() => setShowCreate(true)}>+ Nueva multa</button></div></section>
 
     <section className={styles.metrics} aria-label="Resumen de multas">
       <Metric label="Activas" value={activeFines.length} detail="Bloquean prácticas libres" tone="red" />
@@ -68,10 +86,20 @@ export function FinesView() {
     {view !== "motivos" ? <section className={styles.contentCard}><header className={styles.cardHeader}><div><h2>{view === "activas" ? "Restricciones vigentes" : "Trazabilidad de multas"}</h2><p>{view === "activas" ? "Estos estudiantes no pueden registrar prácticas libres." : "Registros cumplidos o anulados, conservados sin eliminación física."}</p></div><span>{visibleFines.length} registro(s)</span></header><div className={styles.toolbar}><label className={styles.search}><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar estudiante, código, motivo o folio..." aria-label="Buscar multas" /></label>{view === "historial" && <label><span>Estado</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="todas">Todos</option><option value="CUMPLIDA">Cumplidas</option><option value="ANULADA">Anuladas</option></select></label>}<span className={styles.resultCount}>{visibleFines.length} resultado(s)</span></div><div className="table-wrap"><table className={styles.finesTable}><thead><tr><th>Multa</th><th>Estudiante</th><th>Motivo</th><th>Fecha</th><th>Descripción</th><th>Estado</th><th>{view === "activas" ? "Acciones" : "Resolución"}</th></tr></thead><tbody>{visibleFines.map((fine) => <FineRow key={fine.id} fine={fine} reason={reasons.find((reason) => reason.id === fine.reasonId)} onFulfill={() => setTransition({ item: fine, action: "cumplir" })} onAnnul={() => setTransition({ item: fine, action: "anular" })} />)}{visibleFines.length === 0 && <tr><td colSpan={7} className={styles.emptyTable}>No hay multas para los filtros seleccionados.</td></tr>}</tbody></table></div></section> : <ReasonsView reasons={reasons} fines={fines} onCreate={() => setShowReason(true)} />}
 
     
-    {showCreate && <CreateFineDialog reasons={reasons} initialCode={prefillCode} onClose={() => setShowCreate(false)} onCreate={createFine} />}
+    {showCreate && <CreateFineDialog reasons={reasons} initialCode={prefillCode} initialReason={prefillReason} initialDescription={prefillDescription} initialPracticeId={prefillPracticeId} initialSuggestedFine={prefillSuggestedFine} onClose={() => setShowCreate(false)} onCreate={createFine} />}
     {transition && <TransitionDialog item={transition.item} action={transition.action} onClose={() => setTransition(null)} onConfirm={completeTransition} />}
     {showReason && <ReasonDialog onClose={() => setShowReason(false)} onCreate={createReason} />}
+    {showBulkSearch && !bulkResult && <BulkFineSearchDialog onClose={() => setShowBulkSearch(false)} onResult={setBulkResult} />}
+    {bulkResult && <BulkFineResultDialog result={bulkResult} onClose={() => { setBulkResult(null); setShowBulkSearch(false); }} />}
   </>;
+}
+
+function downloadBulkTemplate() {
+  const sheet = XLSX.utils.json_to_sheet([{ Código: "", Nombre: "" }]);
+  sheet['!cols'] = [{ wch: 18 }, { wch: 42 }];
+  const book = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(book, sheet, "Busqueda multas");
+  XLSX.writeFile(book, "plantilla-busqueda-multas.xlsx");
 }
 
 function Metric({ label, value, detail, tone }: { label: string; value: number; detail: string; tone: string }) {
@@ -90,15 +118,41 @@ function ReasonsView({ reasons, fines, onCreate }: { reasons: FineReason[]; fine
   return <section className={styles.reasonsCard}><header><div><h2>Motivos de multa</h2><p>Catálogo utilizado para clasificar nuevas restricciones.</p></div><button type="button" className="button-primary" onClick={onCreate}>+ Nuevo motivo</button></header><div className={styles.reasonGrid}>{reasons.map((reason) => <article key={reason.id}><header><span>{fines.filter((fine) => fine.reasonId === reason.id).length}</span><strong>{reason.name}</strong></header><p>{reason.description || "Sin descripción registrada."}</p><footer>{fines.filter((fine) => fine.reasonId === reason.id && fine.status === "ACTIVA").length} multa(s) activa(s)</footer></article>)}</div></section>;
 }
 
-function CreateFineDialog({ reasons, initialCode, onClose, onCreate }: { reasons: FineReason[]; initialCode?: string; onClose: () => void; onCreate: (payload: { student: FineStudent; reasonId: string; description?: string }) => void | Promise<void> }) {
+function CreateFineDialog({ reasons, initialCode, initialReason, initialDescription, initialPracticeId, initialSuggestedFine, onClose, onCreate }: { reasons: FineReason[]; initialCode?: string; initialReason?: string; initialDescription?: string; initialPracticeId?: string; initialSuggestedFine?: string; onClose: () => void; onCreate: (payload: { student: FineStudent; reasonId: string; description?: string; practiceId?: string }) => void | Promise<void> }) {
   const [code, setCode] = useState(initialCode ?? "");
   const [student, setStudent] = useState<FineStudent | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [reasonId, setReasonId] = useState(reasons[0]?.id ?? "");
-  const [description, setDescription] = useState("");
+  const [description, setDescription] = useState(initialDescription ?? "");
+  const [multaSugerida, setMultaSugerida] = useState("");
   const lookup = async () => { try { const found = await buscarEstudiante(code.trim()); setStudent(found); setNotFound(!found); } catch { setStudent(null); setNotFound(true); } };
-  const submit = (event: React.FormEvent) => { event.preventDefault(); if (student && reasonId) void onCreate({ student, reasonId, description: description.trim() || undefined }); };
-  return <DialogShell title="Nueva multa" subtitle="Restricción estudiantil" description="Identifique un estudiante existente y seleccione el motivo." onClose={onClose}><form onSubmit={submit}><div className={styles.studentLookup}><label><span>Código estudiantil</span><input value={code} onChange={(event) => { setCode(event.target.value); setStudent(null); setNotFound(false); }} minLength={3} maxLength={30} required autoFocus placeholder="Ej. 2021102044" /></label><button type="button" onClick={lookup} disabled={code.trim().length < 3}>Buscar</button></div>{student && <div className={styles.studentResult}><b>✓</b><span><strong>{student.name}</strong><small>Código {student.code} · Estudiante encontrado</small></span></div>}{notFound && <div className={styles.inlineError}>El estudiante no existe. El backend no crea estudiantes desde el módulo de multas.</div>}<div className={styles.formGrid}><label className={styles.wideField}><span>Motivo</span><select value={reasonId} onChange={(event) => setReasonId(event.target.value)}>{reasons.map((reason) => <option key={reason.id} value={reason.id}>{reason.name}</option>)}</select></label><label className={styles.wideField}><span>Descripción <small>Opcional · {description.length}/2000</small></span><textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={2000} rows={5} placeholder="Detalle las circunstancias de la multa..." /></label></div><div className={styles.blockWarning}><strong>Esta acción bloqueará las prácticas libres</strong><span>La restricción permanecerá hasta registrar cumplimiento o anulación.</span></div><footer><button type="button" className={styles.dialogCancel} onClick={onClose}>Cancelar</button><button type="submit" className="button-primary" disabled={!student || !reasonId}>Imponer multa</button></footer></form></DialogShell>;
+  useEffect(() => { if (initialCode?.trim()) void lookup(); }, [initialCode]);
+  useEffect(() => {
+    if (!reasons.length) return;
+    const seleccionado = initialReason ? reasons.find((reason) => reason.name === initialReason) : undefined;
+    setReasonId((actual) => seleccionado?.id ?? (actual || reasons[0].id));
+  }, [initialReason, reasons]);
+  const practiceId = initialPracticeId || student?.activePracticeId;
+  const submit = (event: React.FormEvent) => { event.preventDefault(); if (student && reasonId && practiceId) void onCreate({ student, reasonId, description: description.trim() || undefined, practiceId }); };
+  return <DialogShell title="Nueva multa" subtitle="Restricción estudiantil" description={initialCode ? "Estudiante seleccionado desde la práctica libre." : "Identifique un estudiante con práctica libre activa y seleccione el motivo."} onClose={onClose}><form onSubmit={submit}>{initialCode ? <div className={styles.studentResult}>{student ? <><b>✓</b><span><strong>{student.name}</strong><small>Código {student.code} · Estudiante seleccionado</small></span></> : <span>Validando estudiante seleccionado…</span>}</div> : <><div className={styles.studentLookup}><label><span>Código estudiantil</span><input value={code} onChange={(event) => { setCode(event.target.value); setStudent(null); setNotFound(false); }} minLength={3} maxLength={30} required autoFocus placeholder="Ej. 2021102044" /></label><button type="button" onClick={lookup} disabled={code.trim().length < 3}>Buscar</button></div>{student && <div className={styles.studentResult}><b>{student.activePracticeId ? "✓" : "!"}</b><span><strong>{student.name}</strong><small>{student.activePracticeId ? `Práctica activa en ${student.activePracticeRoom ?? "aula asignada"}` : "No tiene una práctica libre activa"}</small></span></div>}{notFound && <div className={styles.inlineError}>El estudiante no existe.</div>}</>}<div className={styles.formGrid}><label className={styles.wideField}><span>Motivo</span><select value={reasonId} onChange={(event) => setReasonId(event.target.value)}>{reasons.map((reason) => <option key={reason.id} value={reason.id}>{reason.name}</option>)}</select></label><label className={styles.wideField}><span>Descripción <small>Opcional · {description.length}/2000</small></span><textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={2000} rows={5} placeholder="Detalle las circunstancias de la multa..." /></label><label className={styles.wideField}><span>Multa sugerida</span><textarea value={multaSugerida} onChange={(event) => setMultaSugerida(event.target.value)} maxLength={160} rows={2} /></label></div><div className={styles.blockWarning}><strong>Esta acción bloqueará las prácticas libres</strong><span>La restricción permanecerá hasta registrar cumplimiento o anulación.</span></div><footer><button type="button" className={styles.dialogCancel} onClick={onClose}>Cancelar</button><button type="submit" className="button-primary" disabled={!student || !reasonId || !practiceId}>Imponer multa</button></footer></form></DialogShell>;
+}
+
+function BulkFineSearchDialog({ onClose, onResult }: { onClose: () => void; onResult: (result: BulkFineSearchResult) => void }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!file) return;
+    if (!/\.(xlsx|xls)$/i.test(file.name)) { setError("Seleccione un archivo Excel .xlsx o .xls."); return; }
+    setLoading(true); setError(null);
+    try { onResult(await buscarMultasMasivo(file)); } catch (cause) { setError(cause instanceof Error ? cause.message : "No fue posible realizar la búsqueda masiva."); } finally { setLoading(false); }
+  };
+  return <DialogShell title="Búsqueda masiva de multas" subtitle="Consulta desde Excel" description="Use las columnas Código y Nombre. La coincidencia principal se realiza por código." onClose={onClose}><form onSubmit={(event) => void submit(event)}><div className={styles.formGrid}><label className={styles.wideField}><span>Archivo Excel</span><input type="file" accept=".xlsx,.xls" required onChange={(event) => { setFile(event.target.files?.[0] ?? null); setError(null); }} /></label></div>{file && <p className={styles.studentResult}>{file.name}</p>}{error && <p className={styles.inlineError}>{error}</p>}<div className={styles.blockWarning}><strong>Formato requerido</strong><span>La primera fila debe contener exactamente las columnas Código y Nombre. El nombre sirve como referencia; el código es el dato prioritario.</span></div><footer><button type="button" className={styles.dialogCancel} onClick={onClose} disabled={loading}>Cancelar</button><button type="submit" className="button-primary" disabled={!file || loading}>{loading ? "Buscando…" : "Buscar multas"}</button></footer></form></DialogShell>;
+}
+
+function BulkFineResultDialog({ result, onClose }: { result: BulkFineSearchResult; onClose: () => void }) {
+  return <DialogShell title="Resultado de búsqueda masiva" subtitle="Consulta finalizada" description={`${result.conMulta} estudiante(s) con multa de ${result.procesadas} fila(s) procesada(s).`} onClose={onClose}><div className={styles.bulkSummary}><span><strong>{result.conMulta}</strong>Con multa</span><span><strong>{result.sinMulta}</strong>Sin multa</span><span><strong>{result.noEncontradas}</strong>No encontrados</span><span><strong>{result.duplicadas}</strong>Duplicados omitidos</span></div><div className="table-wrap"><table className={styles.finesTable}><thead><tr><th>Código</th><th>Nombre</th><th>Resultado</th><th>Motivo(s)</th></tr></thead><tbody>{result.resultados.map((item) => <tr key={item.codigo}><td>{item.codigo}</td><td>{item.nombre}</td><td>{item.estado === "CON_MULTA" ? "Con multa" : item.estado === "SIN_MULTA" ? "Sin multa" : "No encontrado"}{item.nombreCoincide === false && <small className={styles.inlineNote}> Nombre distinto al registrado</small>}</td><td>{item.multas.length ? item.multas.map((multa) => `${multa.motivo.nombre} (${multa.estado})`).join(" · ") : "—"}</td></tr>)}</tbody></table></div><footer><button type="button" className="button-primary" onClick={onClose}>Entendido</button></footer></DialogShell>;
 }
 
 function TransitionDialog({ item, action, onClose, onConfirm }: { item: FineRecord; action: "cumplir" | "anular"; onClose: () => void; onConfirm: (item: FineRecord, action: "cumplir" | "anular", detail: string) => void | Promise<void> }) {

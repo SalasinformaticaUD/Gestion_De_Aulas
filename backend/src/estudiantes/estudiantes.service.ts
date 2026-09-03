@@ -18,10 +18,10 @@ export class EstudiantesService {
     try { const libro = XLSX.read(archivo.buffer, { type: 'buffer' }); const hoja = libro.Sheets[libro.SheetNames[0]]; filas = XLSX.utils.sheet_to_json<Record<string, unknown>>(hoja, { defval: '' }); } catch { throw new BadRequestException('No fue posible leer el archivo Excel.'); }
     if (!filas.length) throw new BadRequestException('El Excel debe contener al menos un estudiante.');
     const normalizar = (valor: string) => valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
-    const valor = (fila: Record<string, unknown>, encabezado: string) => { const clave = Object.keys(fila).find((item) => normalizar(item) === normalizar(encabezado)); return String(clave ? fila[clave] ?? '' : '').trim(); };
+    const valor = (fila: Record<string, unknown>, encabezado: string, conservarContenido = false) => { const clave = Object.keys(fila).find((item) => normalizar(item) === normalizar(encabezado)); const contenido = String(clave ? fila[clave] ?? '' : ''); return conservarContenido ? contenido : contenido.trim(); };
     const encabezados = Object.keys(filas[0]).map(normalizar); const faltantes = ['CODIGO', 'NOMBRE', 'CORREO'].filter((item) => !encabezados.includes(item));
     if (faltantes.length) throw new BadRequestException(`Faltan columnas requeridas: ${faltantes.join(', ')}.`);
-    const codigos = new Set<string>(); const datos = filas.map((fila, indice) => { const codigo = valor(fila, 'CODIGO'); const nombre = valor(fila, 'NOMBRE'); const correo = valor(fila, 'CORREO').toLowerCase(); if (!/^\d{3,50}$/.test(codigo)) throw new BadRequestException(`Fila ${indice + 2}: el código debe contener solo números.`); if (!/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]{3,160}$/.test(nombre)) throw new BadRequestException(`Fila ${indice + 2}: el nombre debe contener solo letras y espacios.`); if (!correo || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) throw new BadRequestException(`Fila ${indice + 2}: el correo es obligatorio y debe ser válido.`); if (codigos.has(codigo)) throw new ConflictException(`Fila ${indice + 2}: código duplicado dentro del archivo.`); codigos.add(codigo); return { codigo, nombre, correo }; });
+    const codigos = new Set<string>(); const datos = filas.map((fila, indice) => { const codigo = valor(fila, 'CODIGO'); const nombre = valor(fila, 'NOMBRE', true); const correo = valor(fila, 'CORREO').toLowerCase(); if (!/^\d{3,50}$/.test(codigo)) throw new BadRequestException(`Fila ${indice + 2}: el código debe contener solo números.`); if (!nombre.trim()) throw new BadRequestException(`Fila ${indice + 2}: el nombre es obligatorio.`); if (!correo || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) throw new BadRequestException(`Fila ${indice + 2}: el correo es obligatorio y debe ser válido.`); if (codigos.has(codigo)) throw new ConflictException(`Fila ${indice + 2}: código duplicado dentro del archivo.`); codigos.add(codigo); return { codigo, nombre, correo }; });
     const resultado = await this.prisma.$transaction(async (tx) => {
       let creados = 0; let actualizados = 0;
       for (const dato of datos) {
@@ -33,7 +33,7 @@ export class EstudiantesService {
       const eliminables = anteriores.filter((estudiante) => !estudiante._count.practicas && !estudiante._count.multas).map((estudiante) => estudiante.id);
       const eliminados = eliminables.length ? (await tx.estudiante.deleteMany({ where: { id: { in: eliminables } } })).count : 0;
       return { total: datos.length, creados, actualizados, eliminados, conservadosPorHistorial: anteriores.length - eliminados };
-    });
+    }, { maxWait: 15_000, timeout: 120_000 });
     await this.auditoria?.registrar({ usuarioId, entidad: 'Estudiante', entidadId: 'importacion-masiva', accion: 'CREATE', datosNuevos: resultado }); return resultado;
   }
 }

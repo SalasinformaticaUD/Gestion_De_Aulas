@@ -1,10 +1,12 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
   Optional,
 } from '@nestjs/common';
-import { EstadoMulta, Prisma } from '@prisma/client';
+import * as XLSX from 'xlsx';
+import { EstadoMulta, EstadoPrestamo, Prisma } from '@prisma/client';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AnularMultaDto } from './dto/anular-multa.dto';
@@ -27,6 +29,14 @@ const includeMulta = {
   },
 } as const;
 
+const motivosPredeterminados = [
+  'Entrego el aula tarde',
+  'Ingresos sin autorizacion',
+  'Uso indebido del aula',
+  'No entrego el aula',
+  'Otro (Observaciones)',
+] as const;
+
 @Injectable()
 export class MultasService {
   constructor(
@@ -36,6 +46,7 @@ export class MultasService {
 
   async create(dto: CreateMultaDto, usuarioId?: string) {
     const estudiante = await this.resolveEstudiante(dto);
+    await this.validarPracticaParaMulta(estudiante.id, dto.practicaId);
     const motivo = await this.prisma.motivoMulta.findUnique({
       where: { id: dto.motivoId },
       select: { id: true },
@@ -84,6 +95,85 @@ export class MultasService {
     return multa;
   }
 
+  async buscarEstudianteConPracticaActiva(codigo: string) {
+    const estudiante = await this.prisma.estudiante.findFirst({
+      where: { codigo: { equals: codigo.trim(), mode: 'insensitive' } },
+      select: {
+        id: true,
+        codigo: true,
+        nombre: true,
+        practicas: {
+          where: { estado: { in: [EstadoPrestamo.ACTIVO, EstadoPrestamo.VENCIDO] } },
+          orderBy: { inicio: 'desc' },
+          take: 1,
+          select: { id: true, estado: true, aula: { select: { codigo: true } } },
+        },
+      },
+    });
+    if (!estudiante) return null;
+    const practica = estudiante.practicas[0];
+    return {
+      id: estudiante.id,
+      codigo: estudiante.codigo,
+      nombre: estudiante.nombre,
+      tienePracticaActiva: Boolean(practica),
+      practicaActiva: practica
+        ? { id: practica.id, estado: practica.estado, aula: practica.aula.codigo }
+        : null,
+    };
+  }
+
+  async buscarMasivo(archivo: { buffer: Buffer; originalname: string } | undefined) {
+    if (!archivo?.buffer?.length || !/\.(xlsx|xls)$/i.test(archivo.originalname)) {
+      throw new BadRequestException('Debe adjuntar un archivo Excel .xlsx o .xls.');
+    }
+    let filas: Array<Record<string, unknown>>;
+    try {
+      const libro = XLSX.read(archivo.buffer, { type: 'buffer' });
+      const hoja = libro.Sheets[libro.SheetNames[0]];
+      filas = XLSX.utils.sheet_to_json<Record<string, unknown>>(hoja, { defval: '', blankrows: true });
+    } catch {
+      throw new BadRequestException('No fue posible leer el archivo Excel.');
+    }
+    const normalizar = (valor: string) => valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+    const valor = (fila: Record<string, unknown>, encabezado: string) => {
+      const clave = Object.keys(fila).find((item) => normalizar(item) === normalizar(encabezado));
+      return String(clave ? fila[clave] ?? '' : '').trim();
+    };
+    const filasConDatos = filas.filter((fila) => Object.values(fila).some((celda) => String(celda).trim() !== ''));
+    if (!filasConDatos.length) throw new BadRequestException('El Excel debe contener al menos una persona.');
+    const encabezados = Object.keys(filasConDatos[0]).map(normalizar);
+    const faltantes = ['CODIGO', 'NOMBRE'].filter((item) => !encabezados.includes(item));
+    if (faltantes.length) throw new BadRequestException(`Faltan columnas requeridas: ${faltantes.join(', ')}.`);
+    const codigos = new Set<string>();
+    let duplicados = 0;
+    const datos = filasConDatos.flatMap((fila, indice) => {
+      const codigo = valor(fila, 'CODIGO');
+      const nombre = valor(fila, 'NOMBRE');
+      if (!/^\d{3,50}$/.test(codigo)) throw new BadRequestException(`Fila ${indice + 2}: el código debe contener solo números.`);
+      if (!nombre) throw new BadRequestException(`Fila ${indice + 2}: el nombre es obligatorio.`);
+      if (codigos.has(codigo)) { duplicados++; return []; }
+      codigos.add(codigo);
+      return [{ codigo, nombre }];
+    });
+    const estudiantes = await this.prisma.estudiante.findMany({
+      where: { codigo: { in: datos.map((dato) => dato.codigo) } },
+      select: {
+        id: true,
+        codigo: true,
+        nombre: true,
+        multas: { orderBy: { fecha: 'desc' }, select: { id: true, fecha: true, estado: true, descripcion: true, motivo: { select: { nombre: true } } } },
+      },
+    });
+    const porCodigo = new Map(estudiantes.map((estudiante) => [estudiante.codigo, estudiante]));
+    const resultados = datos.map((dato) => {
+      const estudiante = porCodigo.get(dato.codigo);
+      if (!estudiante) return { codigo: dato.codigo, nombre: dato.nombre, estado: 'NO_ENCONTRADO', multas: [] };
+      return { codigo: dato.codigo, nombre: dato.nombre, nombreRegistrado: estudiante.nombre, nombreCoincide: normalizar(dato.nombre) === normalizar(estudiante.nombre), estado: estudiante.multas.length ? 'CON_MULTA' : 'SIN_MULTA', multas: estudiante.multas };
+    });
+    return { totalFilas: filasConDatos.length, procesadas: datos.length, duplicadas: duplicados, conMulta: resultados.filter((resultado) => resultado.estado === 'CON_MULTA').length, sinMulta: resultados.filter((resultado) => resultado.estado === 'SIN_MULTA').length, noEncontradas: resultados.filter((resultado) => resultado.estado === 'NO_ENCONTRADO').length, resultados };
+  }
+
   async cumplir(id: string, dto: CumplirMultaDto, usuarioId?: string) {
     const previa = await this.findOne(id);
     if (previa.estado !== EstadoMulta.ACTIVA) {
@@ -122,7 +212,11 @@ export class MultasService {
     return multa;
   }
 
-  findAllMotivos() {
+  async findAllMotivos() {
+    await this.prisma.motivoMulta.createMany({
+      data: motivosPredeterminados.map((nombre) => ({ nombre })),
+      skipDuplicates: true,
+    });
     return this.prisma.motivoMulta.findMany({
       include: { _count: { select: { multas: true } } },
       orderBy: { nombre: 'asc' },
@@ -193,6 +287,35 @@ export class MultasService {
     });
     if (!estudiante) throw new NotFoundException('El estudiante no existe.');
     return estudiante;
+  }
+
+  private async validarPracticaParaMulta(
+    estudianteId: string,
+    practicaId?: string,
+  ) {
+    const practica = await this.prisma.practicaLibre.findFirst({
+      where: {
+        estudianteId,
+        ...(practicaId
+          ? {
+              id: practicaId,
+              estado: {
+                in: [
+                  EstadoPrestamo.ACTIVO,
+                  EstadoPrestamo.VENCIDO,
+                  EstadoPrestamo.DEVUELTO,
+                ],
+              },
+            }
+          : { estado: { in: [EstadoPrestamo.ACTIVO, EstadoPrestamo.VENCIDO] } }),
+      },
+      select: { id: true },
+    });
+    if (!practica) {
+      throw new ConflictException(
+        'El estudiante no tiene una práctica libre activa para registrar esta multa.',
+      );
+    }
   }
 
   private parseEstado(value?: string): EstadoMulta | undefined {

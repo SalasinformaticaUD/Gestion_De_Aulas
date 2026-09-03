@@ -7,7 +7,10 @@ import {
   Param,
   ParseUUIDPipe,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { MODULOS } from '../auth/auth.constants';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequireModule } from '../auth/decorators/require-module.decorator';
@@ -48,6 +51,19 @@ export class MultasController {
   @RequirePermissions('MULTAS_LEER')
   findAllMotivos() {
     return this.multasService.findAllMotivos();
+  }
+
+  @Post('busqueda-masiva')
+  @RequirePermissions('MULTAS_LEER')
+  @UseInterceptors(FileInterceptor('archivo', { limits: { fileSize: 20_000_000 } }))
+  buscarMasivo(@UploadedFile() archivo: { buffer: Buffer; originalname: string } | undefined) {
+    return this.multasService.buscarMasivo(archivo);
+  }
+
+  @Get('estudiantes/:codigo/practica-activa')
+  @RequirePermissions('MULTAS_LEER')
+  buscarEstudianteConPracticaActiva(@Param('codigo') codigo: string) {
+    return this.multasService.buscarEstudianteConPracticaActiva(codigo);
   }
 
   @Post('motivos')

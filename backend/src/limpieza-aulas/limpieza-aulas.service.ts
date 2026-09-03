@@ -40,13 +40,13 @@ export class LimpiezaAulasService {
 
   async create(input: CreateLimpiezaAulaDto, usuarioId?: string) {
     await this.ensureAulaExists(input.aulaId);
+    const realizadaEn = input.realizadaEn ? this.toDate(input.realizadaEn) : new Date();
+    this.asegurarFechaEditable(realizadaEn);
     const limpieza = await this.prisma.limpieza.create({
       data: {
         aulaId: input.aulaId,
         ...(usuarioId && { responsableId: usuarioId }),
-        ...(input.realizadaEn && {
-          realizadaEn: this.toDate(input.realizadaEn),
-        }),
+        realizadaEn,
         ...(input.observacion !== undefined && {
           observacion: this.normalizarObservacion(input.observacion),
         }),
@@ -88,6 +88,10 @@ export class LimpiezaAulasService {
 
   async update(id: string, input: UpdateLimpiezaAulaDto, usuarioId?: string) {
     const previa = await this.findOne(id);
+    const realizadaEn = input.realizadaEn
+      ? this.toDate(input.realizadaEn)
+      : previa.realizadaEn;
+    this.asegurarFechaEditable(realizadaEn);
     if (input.aulaId && input.aulaId !== previa.aulaId) {
       await this.ensureAulaExists(input.aulaId);
     }
@@ -95,9 +99,7 @@ export class LimpiezaAulasService {
       where: { id },
       data: {
         ...(input.aulaId !== undefined && { aulaId: input.aulaId }),
-        ...(input.realizadaEn !== undefined && {
-          realizadaEn: this.toDate(input.realizadaEn),
-        }),
+        ...(input.realizadaEn !== undefined && { realizadaEn }),
         ...(input.observacion !== undefined && {
           observacion: this.normalizarObservacion(input.observacion),
         }),
@@ -398,6 +400,18 @@ export class LimpiezaAulasService {
     return /^\d{4}-\d{2}-\d{2}$/.test(value)
       ? new Date(`${value}T23:59:59.999Z`)
       : this.toDate(value);
+  }
+
+  private asegurarFechaEditable(fecha: Date): void {
+    const hoy = this.fechaBogota(new Date());
+    const ayer = new Date(`${hoy}T12:00:00.000Z`);
+    ayer.setUTCDate(ayer.getUTCDate() - 1);
+    const fechaRegistro = this.fechaBogota(fecha);
+    if (fechaRegistro !== hoy && fechaRegistro !== ayer.toISOString().slice(0, 10)) {
+      throw new BadRequestException(
+        'Solo se pueden registrar o modificar limpiezas del día actual o del día anterior.',
+      );
+    }
   }
 
   private rangoDiaBogota(fecha: Date) {

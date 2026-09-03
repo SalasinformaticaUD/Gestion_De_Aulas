@@ -352,7 +352,7 @@ model Estudiante {
   id        String          @id @default(uuid()) @db.Uuid
   codigo    String          @unique
   nombre    String
-  correo    String?         @unique
+  correo    String?
   practicas PracticaLibre[]
   multas    Multa[]
 }

@@ -4,6 +4,8 @@ export type FineStudent = {
   id: string;
   code: string;
   name: string;
+  activePracticeId?: string;
+  activePracticeRoom?: string;
 };
 
 export type FineReason = {

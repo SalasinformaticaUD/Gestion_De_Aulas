@@ -32,6 +32,10 @@ export class CreateMultaDto {
   @IsUUID()
   motivoId!: string;
 
+  @IsOptional()
+  @IsUUID()
+  practicaId?: string;
+
   @Transform(trim)
   @IsOptional()
   @IsString()

@@ -19,6 +19,19 @@
 .viewTabs button.activeTab { color:var(--ink); background:#fff; box-shadow:0 1px 3px rgba(18,24,40,.1); font-weight:750; }
 .viewTabs button span { display:inline-grid; place-items:center; min-width:20px; height:18px; margin-left:5px; padding:0 5px; border-radius:9px; color:#666c75; background:#e7e9ed; font-size:13px; }
 .contentCard,.coverageCard { overflow:hidden; border:1px solid var(--line); border-radius:var(--radius); background:#fff; }
+.matrixWorkspace { display:grid; grid-template-columns:minmax(0,1fr) 250px; align-items:start; gap:14px; }
+.recommendationPanel { overflow:hidden; display:grid; gap:11px; padding:0 12px 12px; border:1px solid var(--line); border-radius:var(--radius); background:#fff; }
+.recommendationPanel>header { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 -12px; padding:12px; color:#fff; background:#18191c; }
+.recommendationPanel>header strong { font-size:15px; }
+.recommendationPanel>header span { color:#cbd0d8; font-size:11px; }
+.recommendationPanel>p { margin:0; color:var(--muted); font-size:12px; line-height:1.4; }
+.recommendationPanel>div { display:grid; gap:7px; max-height:390px; overflow:auto; }
+.recommendationPanel>div>button { display:grid; gap:3px; padding:9px; border:1px solid #e3e5e8; border-left:3px solid var(--primary); border-radius:6px; color:var(--ink); background:#fafbfc; text-align:left; }
+.recommendationPanel>div>button:hover { border-color:#d28c96; background:#fff6f7; }
+.recommendationPanel>div>button b { color:var(--primary); font-size:14px; }
+.recommendationPanel>div>button span,.recommendationPanel>div>small { color:var(--muted); font-size:11px; line-height:1.35; }
+.recommendationPanel>.button-primary { min-height:38px; width:100%; margin-top:2px; }
+.monthClosing { padding:8px; border:1px solid #f1d39b; border-radius:6px; color:#81520a; background:#fff8e8; font-size:11px; font-weight:700; line-height:1.35; }
 .toolbar { display:flex; align-items:flex-end; gap:10px; padding:13px 15px; border-bottom:1px solid var(--line); background:#fafbfc; }
 .search { min-width:250px; max-width:420px; height:37px; flex:1; display:flex; align-items:center; gap:8px; padding:0 10px; border:1px solid var(--line); border-radius:7px; background:#fff; }
 .search input { width:100%; border:0; outline:0; background:transparent; font-size:15.6px; }
@@ -31,6 +44,28 @@
 .cleaningTable td { padding:12px 14px; border-bottom:1px solid var(--line); vertical-align:middle; }
 .cleaningTable tbody tr:nth-child(even) { background:#fafafa; }
 .cleaningTable tbody tr:last-child td { border-bottom:0; }
+.matrixToolbar { display:flex; align-items:flex-end; flex-wrap:wrap; gap:12px; padding:13px 15px; border-bottom:1px solid var(--line); background:#fafbfc; }
+.matrixToolbar label { display:grid; gap:5px; color:var(--muted); font-size:13px; font-weight:800; text-transform:uppercase; }
+.matrixToolbar input,.matrixToolbar select { min-height:37px; padding:0 9px; border:1px solid var(--line); border-radius:7px; color:var(--ink); background:#fff; font-size:14px; }
+.registrationMode { margin:0; padding:9px 15px; border-bottom:1px solid #b7e7c7; color:#166534; background:#f1fbf4; font-size:13px; font-weight:700; }
+.legend { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-left:auto; color:var(--muted); font-size:13px; }
+.legend span { display:flex; align-items:center; gap:4px; }
+.legend b { display:inline-grid; place-items:center; width:22px; height:22px; border-radius:5px; font-size:15px; }
+.stateRealizado,.cell_realizado { color:#166534; background:#dcfce7; }
+.stateSinRegistro,.cell_sin-registro { color:#6b7280; background:#f3f4f6; }
+.stateNovedad,.cell_novedad { color:#991b1b; background:#fee2e2; }
+.matrixActions { display:flex; flex-wrap:wrap; gap:7px; }
+.matrixScroll { overflow:auto; max-height:70vh; }
+.matrixTable { min-width:920px; width:100%; border-collapse:separate; border-spacing:0; font-size:13px; }
+.matrixTable th,.matrixTable td { border-right:1px solid var(--line); border-bottom:1px solid var(--line); text-align:center; }
+.matrixTable thead th { position:sticky; z-index:2; top:0; padding:8px 5px; color:#fff; background:#18191c; font-size:12px; }
+.matrixTable thead th:first-child { left:0; z-index:3; min-width:100px; text-align:left; }
+.matrixTable thead small { display:block; margin-top:3px; color:#c5c8ce; font-size:10px; font-weight:500; text-transform:capitalize; }
+.matrixTable tbody th { position:sticky; z-index:1; left:0; min-width:100px; padding:9px; color:var(--ink); background:#fff; text-align:left; }
+.matrixTable td { padding:4px; background:#fff; }
+.matrixTable td button { width:31px; height:31px; border:1px solid transparent; border-radius:6px; cursor:pointer; font-size:16px; font-weight:800; }
+.matrixTable td button:hover { border-color:var(--primary); box-shadow:0 0 0 2px rgba(165,16,34,.12); }
+.matrixTable td button:disabled { cursor:not-allowed; opacity:.72; }
 .cleaningTable td>strong,.cleaningTable td>small,.cleaningTable td>time,.cleaningTable td>span { display:block; }
 .cleaningTable td>small { max-width:230px; margin-top:4px; color:var(--muted); font-size:11.7px; }
 .cleaningTable time { font-size:14.3px; font-weight:700; }
@@ -86,6 +121,9 @@
   .search { max-width:none; flex:1 1 100%; }
   .resultCount { margin-left:0; }
   .floorGroups>section>div { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .matrixWorkspace { grid-template-columns:1fr; }
+  .recommendationPanel { grid-template-columns:1fr; }
+  .recommendationPanel>div { grid-template-columns:repeat(2,minmax(0,1fr)); max-height:none; }
 }
 @media (max-width:760px) {
   .floorGroups>section>div { grid-template-columns:repeat(3,minmax(0,1fr)); }
@@ -115,4 +153,18 @@
   .formSummary { align-items:flex-start; flex-direction:column; }
   .dialog form>footer { align-items:stretch; flex-direction:column-reverse; }
   .dialog form>footer button { width:100%; }
+  .legend { margin-left:0; }
+  .matrixActions { width:100%; }
+  .matrixActions button { flex:1; }
+  .recommendationPanel>div { grid-template-columns:1fr; }
+}
+@media print {
+  .heading,.metrics,.notice,.viewTabs,.matrixToolbar,.matrixActions,.recommendationPanel { display:none !important; }
+  .contentCard { border:0; }
+  .matrixScroll { max-height:none; overflow:visible; }
+  .matrixTable { min-width:0; font-size:9px; }
+  .matrixTable thead th { position:static; padding:4px 2px; }
+  .matrixTable tbody th { position:static; padding:4px; }
+  .matrixTable td { padding:2px; }
+  .matrixTable td button { width:20px; height:20px; border:0; font-size:11px; }
 }
