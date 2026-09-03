@@ -14,7 +14,7 @@ describe('PrestamosDocentesService', () => {
     motivo: 'Semillero de investigación',
   };
   const prisma = {
-    docente: { findUnique: jest.fn() },
+    docente: { findUnique: jest.fn(), create: jest.fn() },
     software: { findUnique: jest.fn() },
     aulaSoftware: { findUnique: jest.fn() },
     prestamoDocente: {
@@ -29,8 +29,10 @@ describe('PrestamosDocentesService', () => {
   let service: PrestamosDocentesService;
 
   beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-08-19T12:00:00-05:00'));
     jest.clearAllMocks();
     prisma.docente.findUnique.mockResolvedValue({ id: dto.docenteId });
+    prisma.docente.create.mockResolvedValue({ id: dto.docenteId });
     prisma.software.findUnique.mockResolvedValue({
       nombre: 'AutoCAD',
       estado: 'ACTIVO',
@@ -56,6 +58,10 @@ describe('PrestamosDocentesService', () => {
     );
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('crea una solicitud para docente y aula disponibles', async () => {
     await expect(
       service.create(dto, '00000000-0000-4000-8000-000000000003'),
@@ -67,6 +73,83 @@ describe('PrestamosDocentesService', () => {
       horaInicio: '08:00',
       horaFin: '10:00',
     });
+    expect(prisma.prestamoDocente.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          docenteId: dto.docenteId,
+          encargadoId: '00000000-0000-4000-8000-000000000003',
+        }),
+      }),
+    );
+  });
+
+  it('rechaza la solicitud si el aula tiene una clase, aunque el docente esté ausente', async () => {
+    disponibilidad.findOne.mockResolvedValue({
+      estadoCalculado: 'disponible',
+      motivo: 'La asistencia del docente está ausente.',
+      fuentes: [{ tipo: 'clase-programada', estado: 'AUSENTE' }],
+    });
+
+    await expect(
+      service.create(dto, '00000000-0000-4000-8000-000000000003'),
+    ).rejects.toThrow('El aula tiene una clase programada para este bloque');
+    expect(prisma.prestamoDocente.create).not.toHaveBeenCalled();
+  });
+
+  it('rechaza la solicitud cuando no se puede identificar al encargado autenticado', async () => {
+    await expect(service.create(dto)).rejects.toThrow(
+      'No fue posible identificar al encargado de la solicitud.',
+    );
+    expect(prisma.prestamoDocente.create).not.toHaveBeenCalled();
+  });
+
+  it('rechaza software sin licencia antes de crear la solicitud', async () => {
+    prisma.software.findUnique.mockResolvedValue({
+      nombre: 'AutoCAD',
+      estado: 'SIN_LICENCIA',
+    });
+
+    await expect(
+      service.create(dto, '00000000-0000-4000-8000-000000000003'),
+    ).rejects.toThrow('no tiene licencia vigente');
+    expect(prisma.prestamoDocente.create).not.toHaveBeenCalled();
+  });
+
+  it('rechaza un bloque actual al que le quedan menos de 30 minutos', async () => {
+    jest.setSystemTime(new Date('2026-08-20T09:35:00-05:00'));
+
+    await expect(
+      service.create(dto, '00000000-0000-4000-8000-000000000003'),
+    ).rejects.toThrow('le quedan menos de 30 minutos');
+    expect(prisma.prestamoDocente.create).not.toHaveBeenCalled();
+  });
+
+  it('resuelve un profesor externo por cédula y conserva el encargado autenticado', async () => {
+    const docenteExterno = {
+      aulaId: dto.aulaId,
+      softwareId: dto.softwareId,
+      docenteNuevoNombre: 'Profesora invitada',
+      docenteNuevoDocumento: '90000001',
+      inicio: dto.inicio,
+      fin: dto.fin,
+    };
+    prisma.docente.findUnique.mockResolvedValue({ id: 'docente-externo-id' });
+
+    await expect(
+      service.create(docenteExterno, '00000000-0000-4000-8000-000000000003'),
+    ).resolves.toMatchObject({ estado: EstadoPrestamo.SOLICITADO });
+    expect(prisma.docente.findUnique).toHaveBeenCalledWith({
+      where: { documento: '90000001' },
+      select: { id: true },
+    });
+    expect(prisma.prestamoDocente.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          docenteId: 'docente-externo-id',
+          encargadoId: '00000000-0000-4000-8000-000000000003',
+        }),
+      }),
+    );
   });
 
   it('rechaza la solicitud cuando disponibilidad reporta ocupación', async () => {
