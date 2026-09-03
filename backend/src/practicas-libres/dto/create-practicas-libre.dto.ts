@@ -1,4 +1,6 @@
 import {
+  ArrayMinSize,
+  IsArray,
   IsEmail,
   IsEnum,
   IsISO8601,
@@ -7,7 +9,9 @@ import {
   IsUUID,
   Length,
   MaxLength,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export enum ResponsablePracticaLibre {
   MONITOR = 'MONITOR',
@@ -15,7 +19,22 @@ export enum ResponsablePracticaLibre {
   ASISTENCIAL = 'ASISTENCIAL',
 }
 
+export enum TipoSolicitantePracticaLibre { ESTUDIANTE = 'ESTUDIANTE', DOCENTE = 'DOCENTE' }
+
+export class ResponsableSolicitudPracticaDto {
+  @IsEnum(TipoSolicitantePracticaLibre) tipo!: TipoSolicitantePracticaLibre;
+  @IsString() @Length(3, 50) documento!: string;
+  @IsString() @Length(3, 160) nombre!: string;
+  @IsOptional() @IsEmail() @MaxLength(160) correo?: string;
+}
+
 export class CreatePracticasLibreDto {
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => ResponsableSolicitudPracticaDto)
+  responsables?: ResponsableSolicitudPracticaDto[];
   @IsString()
   @Length(3, 30)
   codigoEstudiante!: string;
@@ -32,8 +51,9 @@ export class CreatePracticasLibreDto {
   @IsUUID()
   aulaId!: string;
 
+  @IsOptional()
   @IsUUID()
-  softwareId!: string;
+  softwareId?: string;
 
   @IsString()
   @Length(1, 160)

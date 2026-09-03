@@ -12,14 +12,16 @@ describe('PracticasLibresService', () => {
     softwareId: '00000000-0000-4000-8000-000000000002',
     softwareSolicitado: 'AutoCAD',
     responsableTipo: 'MONITOR' as const,
-    inicio: '2026-08-20T08:00:00-05:00',
-    finEstimada: '2026-08-20T10:00:00-05:00',
+    inicio: '2099-08-20T08:00:00-05:00',
+    finEstimada: '2099-08-20T10:00:00-05:00',
   };
   const tx = {
     estudiante: {
       findUnique: jest.fn(),
+      upsert: jest.fn(),
       create: jest.fn(),
     },
+    docente: { upsert: jest.fn() },
     multa: { findFirst: jest.fn() },
     practicaLibre: { create: jest.fn() },
   };
@@ -45,12 +47,24 @@ describe('PracticasLibresService', () => {
     disponibilidad.findOne.mockResolvedValue({
       estadoCalculado: 'disponible',
       motivo: 'Sin actividades.',
+      fuentes: [],
     });
-    tx.estudiante.findUnique.mockResolvedValue(null);
-    tx.estudiante.findUnique.mockResolvedValue({ id: 'estudiante-id' });
-    prisma.software.findUnique.mockResolvedValue({ id: dto.softwareId, nombre: 'AutoCAD' });
+    tx.estudiante.upsert.mockResolvedValue({ id: 'estudiante-id' });
+    prisma.software.findUnique.mockResolvedValue({
+      id: dto.softwareId,
+      nombre: 'AutoCAD',
+      estado: 'ACTIVO',
+    });
     prisma.aulaSoftware.findUnique.mockResolvedValue({ aulaId: dto.aulaId });
-    tx.practicaLibre.create.mockResolvedValue({ id: 'practica-id' });
+    tx.practicaLibre.create.mockResolvedValue({
+      id: 'practica-id',
+      estudiante: { correo: null, nombre: dto.nombreEstudiante },
+      docente: null,
+      aula: { codigo: 'Aula 101' },
+      softwareSolicitado: dto.softwareSolicitado,
+      inicio: new Date(dto.inicio),
+      finEstimada: new Date(dto.finEstimada),
+    });
     service = new PracticasLibresService(
       prisma as unknown as PrismaService,
       disponibilidad as unknown as DisponibilidadAulasService,
@@ -58,10 +72,12 @@ describe('PracticasLibresService', () => {
   });
 
   it('crea una práctica para un estudiante existente cuando el aula está disponible', async () => {
-    await expect(service.create(dto)).resolves.toMatchObject({ id: 'practica-id' });
+    await expect(service.create(dto)).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'practica-id' })]),
+    );
 
     expect(disponibilidad.findOne).toHaveBeenCalledWith(dto.aulaId, {
-      fecha: '2026-08-20',
+      fecha: '2099-08-20',
       horaInicio: '08:00',
       horaFin: '10:00',
     });
@@ -70,7 +86,7 @@ describe('PracticasLibresService', () => {
   });
 
   it('bloquea la práctica cuando el estudiante tiene multa activa', async () => {
-    tx.estudiante.findUnique.mockResolvedValue({ id: 'estudiante-id' });
+    tx.estudiante.upsert.mockResolvedValue({ id: 'estudiante-id' });
     tx.multa.findFirst.mockResolvedValue({ id: 'multa-id' });
 
     await expect(service.create(dto)).rejects.toBeInstanceOf(ConflictException);
@@ -81,9 +97,25 @@ describe('PracticasLibresService', () => {
     disponibilidad.findOne.mockResolvedValue({
       estadoCalculado: 'ocupada',
       motivo: 'Existe una clase programada.',
+      fuentes: [],
     });
 
     await expect(service.create(dto)).rejects.toBeInstanceOf(ConflictException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('bloquea la práctica cuando el software no está licenciado ni activo', async () => {
+    prisma.software.findUnique.mockResolvedValue({
+      id: dto.softwareId,
+      nombre: 'AutoCAD',
+      estado: 'EN_REVISION',
+    });
+
+    await expect(service.create(dto)).rejects.toMatchObject({
+      message:
+        'El software AutoCAD está en revisión o mantenimiento y no está disponible para préstamo.',
+    });
+    expect(prisma.aulaSoftware.findUnique).not.toHaveBeenCalled();
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
@@ -151,7 +183,7 @@ describe('PracticasLibresService', () => {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         finReal: expect.any(Date),
       },
-      include: { estudiante: true, aula: true },
+      include: { estudiante: true, docente: true, aula: true },
     });
   });
 

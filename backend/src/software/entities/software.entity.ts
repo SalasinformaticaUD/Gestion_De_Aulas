@@ -9,5 +9,6 @@ export class SoftwareEntity implements PrismaSoftware {
   declare nombre: string;
   declare version: string;
   declare descripcion: string | null;
+  declare estado: PrismaSoftware['estado'];
   declare aulas?: Array<AulaSoftware & { aula?: Aula }>;
 }

@@ -10,6 +10,7 @@ export type PracticeStudent = {
 
 export type FreePractice = {
   id: string;
+  requesterType: "ESTUDIANTE" | "DOCENTE";
   student: PracticeStudent;
   roomId: string;
   roomCode: string;

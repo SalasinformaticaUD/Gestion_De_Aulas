@@ -5,8 +5,8 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
-import { EstadoMulta, EstadoPrestamo } from '../../generated/prisma/enums.js';
+import { EstadoSoftware, type Prisma } from '@prisma/client';
+import { EstadoAsistencia, EstadoMulta, EstadoPrestamo } from '../../generated/prisma/enums.js';
 import { DisponibilidadAulasService } from '../disponibilidad-aulas/disponibilidad-aulas.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePracticasLibreDto } from './dto/create-practicas-libre.dto';
@@ -14,6 +14,7 @@ import { FinalizarPracticaLibreDto } from './dto/finalizar-practica-libre.dto';
 import { FindPracticasLibresDto } from './dto/find-practicas-libres.dto';
 import { ResponsablePracticaLibre } from './dto/create-practicas-libre.dto';
 import { PracticasLibresEmailService } from './practicas-libres-email.service';
+import { randomUUID } from 'crypto';
 
 type BloqueDisponibilidad = {
   fecha: string;
@@ -29,7 +30,9 @@ type PartesFechaBogota = {
 };
 
 type DatosPracticaLibre = {
-  estudianteId: string;
+  estudianteId?: string;
+  docenteId?: string;
+  grupoId?: string;
   aulaId: string;
   responsableTipo: ResponsablePracticaLibre;
   softwareSolicitado: string;
@@ -48,46 +51,105 @@ export class PracticasLibresService {
 
   async create(dto: CreatePracticasLibreDto) {
     const bloque = this.normalizarBloque(dto.inicio, dto.finEstimada);
-    const software = await this.prisma.software.findUnique({
-      where: { id: dto.softwareId },
-      select: { id: true, nombre: true },
-    });
-    if (!software) {
+    this.validarTiempoMinimoParaPrestamo(dto.inicio, dto.finEstimada);
+    const software = dto.softwareId
+      ? await this.prisma.software.findUnique({
+          where: { id: dto.softwareId },
+          select: { id: true, nombre: true, estado: true },
+        })
+      : null;
+    if (dto.softwareId && !software) {
       throw new NotFoundException('El software solicitado no existe.');
     }
-    const asociacion = await this.prisma.aulaSoftware.findUnique({
-      where: {
-        aulaId_softwareId: { aulaId: dto.aulaId, softwareId: dto.softwareId },
-      },
-      select: { aulaId: true },
-    });
-    if (!asociacion) {
-      throw new ConflictException(
-        'El aula seleccionada no cuenta con el software solicitado.',
-      );
-    }
-    const estadoAula = await this.disponibilidad.findOne(dto.aulaId, bloque);
-    if (estadoAula.estadoCalculado !== 'disponible') {
-      throw new ConflictException(
-        `El aula no está disponible: ${estadoAula.motivo}`,
-      );
-    }
-
-    return this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const estudianteExistente = await tx.estudiante.findUnique({
-        where: { codigo: dto.codigoEstudiante },
+    if (software) {
+      this.validarSoftwareParaPrestamo(software);
+      const asociacion = await this.prisma.aulaSoftware.findUnique({
+        where: {
+          aulaId_softwareId: { aulaId: dto.aulaId, softwareId: dto.softwareId! },
+        },
+        select: { aulaId: true },
       });
-
-      if (!estudianteExistente) {
-        throw new NotFoundException(
-          'El estudiante no existe. Debe estar registrado antes de solicitar una práctica libre.',
+      if (!asociacion) {
+        throw new ConflictException(
+          'El aula seleccionada no cuenta con el software solicitado.',
         );
       }
+    }
+    const estadoAula = await this.disponibilidad.findOne(dto.aulaId, bloque);
+    const claseEnCurso = estadoAula.fuentes.some(
+      (fuente) =>
+        fuente.tipo === 'clase-programada' && fuente.estado !== EstadoAsistencia.AUSENTE,
+    );
+    if (estadoAula.estadoCalculado !== 'disponible' || claseEnCurso) {
+      throw new ConflictException(
+        claseEnCurso
+          ? 'El aula tiene una clase con asistencia registrada o pendiente durante el bloque.'
+          : `El aula no está disponible: ${estadoAula.motivo}`,
+      );
+    }
 
-      if (estudianteExistente) {
+    const responsables = dto.responsables ?? [
+      {
+        tipo: 'ESTUDIANTE' as const,
+        documento: dto.codigoEstudiante,
+        nombre: dto.nombreEstudiante,
+        correo: dto.correoEstudiante,
+      },
+    ];
+    const responsablesUnicos = new Set<string>();
+    for (const responsable of responsables) {
+      const clave = responsable.tipo + ':' + responsable.documento;
+      if (responsablesUnicos.has(clave)) {
+        throw new BadRequestException(
+          'No se puede agregar la misma persona más de una vez a la práctica libre.',
+        );
+      }
+      responsablesUnicos.add(clave);
+    }
+    const grupoId = responsables.length > 1 ? randomUUID() : undefined;
+    const practicas = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const creadas: Prisma.PracticaLibreGetPayload<{
+        include: { estudiante: true; docente: true; aula: true };
+      }>[] = [];
+      for (const responsable of responsables) {
+        if (responsable.tipo === 'DOCENTE') {
+          const docente = await tx.docente.upsert({
+            where: { documento: responsable.documento },
+            update: {
+              nombre: responsable.nombre,
+              ...(responsable.correo && { correo: responsable.correo }),
+            },
+            create: {
+              documento: responsable.documento,
+              nombre: responsable.nombre,
+              correo: responsable.correo,
+            },
+          });
+          creadas.push(await tx.practicaLibre.create({
+            data: {
+              ...this.construirDatosPractica(dto, undefined, software?.nombre ?? dto.softwareSolicitado),
+              docenteId: docente.id,
+              grupoId,
+            },
+            include: { estudiante: true, docente: true, aula: true },
+          }));
+          continue;
+        }
+        const estudiante = await tx.estudiante.upsert({
+          where: { codigo: responsable.documento },
+          update: {
+            nombre: responsable.nombre,
+            ...(responsable.correo && { correo: responsable.correo }),
+          },
+          create: {
+            codigo: responsable.documento,
+            nombre: responsable.nombre,
+            correo: responsable.correo,
+          },
+        });
         const multa = await tx.multa.findFirst({
           where: {
-            estudianteId: estudianteExistente.id,
+            estudianteId: estudiante.id,
             estado: EstadoMulta.ACTIVA,
           },
           select: { id: true },
@@ -97,35 +159,29 @@ export class PracticasLibresService {
             'El estudiante tiene una multa activa y no puede registrar prácticas libres.',
           );
         }
+        creadas.push(await tx.practicaLibre.create({
+          data: {
+            ...this.construirDatosPractica(dto, estudiante.id, software?.nombre ?? dto.softwareSolicitado),
+            grupoId,
+          },
+          include: { estudiante: true, docente: true, aula: true },
+        }));
       }
-
-      const datosPractica = this.construirDatosPractica(
-        dto,
-        estudianteExistente.id,
-        software.nombre,
-      );
-      const practica = await tx.practicaLibre.create({
-        data: datosPractica,
-        include: { estudiante: true, aula: true },
-      });
-      const confirmacionCorreo = await this.email?.enviarConfirmacion({
-        correo: estudianteExistente.correo,
-        estudiante: estudianteExistente.nombre,
-        aula: practica.aula.codigo,
-        software: software.nombre,
-        inicio: practica.inicio,
-        fin:
-          practica.finEstimada ??
-          new Date(practica.inicio.getTime() + 2 * 60 * 60 * 1000),
-      });
-      return {
-        ...practica,
-        confirmacionCorreo: confirmacionCorreo ?? {
-          enviado: false,
-          motivo: 'Servicio de correo no disponible.',
-        },
-      };
+      return creadas;
     });
+    await Promise.all(
+      practicas.map((practica) =>
+        this.email?.enviarConfirmacion({
+          correo: practica.estudiante?.correo ?? practica.docente?.correo ?? null,
+          estudiante: practica.estudiante?.nombre ?? practica.docente?.nombre ?? 'Responsable',
+          aula: practica.aula.codigo,
+          software: practica.softwareSolicitado ?? 'Ninguno',
+          inicio: practica.inicio,
+          fin: practica.finEstimada ?? practica.inicio,
+        }),
+      ),
+    );
+    return practicas;
   }
 
   async findAll(filters: FindPracticasLibresDto) {
@@ -146,9 +202,50 @@ export class PracticasLibresService {
             inicio: { gte: inicioDia, lte: finDia },
           }),
       },
-      include: { estudiante: true, aula: true },
+      include: { estudiante: true, docente: true, aula: true },
       orderBy: { inicio: 'desc' },
     });
+  }
+
+  private validarSoftwareParaPrestamo(software: {
+    nombre: string;
+    estado: EstadoSoftware;
+  }) {
+    if (
+      software.estado === EstadoSoftware.ACTIVO ||
+      software.estado === EstadoSoftware.LICENCIADO
+    ) {
+      return;
+    }
+
+    const mensajes: Record<
+      'SIN_LICENCIA' | 'EN_REVISION' | 'INACTIVO',
+      string
+    > = {
+      [EstadoSoftware.SIN_LICENCIA]: `El software ${software.nombre} no tiene licencia vigente y no puede usarse para prestar un aula.`,
+      [EstadoSoftware.EN_REVISION]: `El software ${software.nombre} está en revisión o mantenimiento y no está disponible para préstamo.`,
+      [EstadoSoftware.INACTIVO]: `El software ${software.nombre} está inactivo y no puede usarse para prestar un aula.`,
+    };
+
+    throw new ConflictException(
+      mensajes[software.estado as keyof typeof mensajes],
+    );
+  }
+
+  private validarTiempoMinimoParaPrestamo(inicioIso: string, finIso: string) {
+    const ahora = new Date();
+    const inicio = new Date(inicioIso);
+    const fin = new Date(finIso);
+    if (fin <= ahora) {
+      throw new ConflictException(
+        'No se puede registrar una práctica libre en un bloque que ya terminó.',
+      );
+    }
+    if (ahora >= inicio && fin.getTime() - ahora.getTime() < 30 * 60 * 1000) {
+      throw new ConflictException(
+        'No se puede prestar el aula porque al bloque seleccionado le quedan menos de 30 minutos.',
+      );
+    }
   }
 
   async findStudent(codigo: string) {
@@ -164,6 +261,17 @@ export class PracticasLibresService {
       throw new NotFoundException(`No existe estudiante con código ${codigo}.`);
     }
     return estudiante;
+  }
+
+  async findTeacher(documento: string) {
+    const docente = await this.prisma.docente.findUnique({
+      where: { documento },
+      select: { id: true, documento: true, nombre: true, correo: true },
+    });
+    if (!docente) {
+      throw new NotFoundException(`No existe docente con cédula ${documento}.`);
+    }
+    return docente;
   }
 
   async finish(id: string, dto: FinalizarPracticaLibreDto) {
@@ -182,7 +290,7 @@ export class PracticasLibresService {
         estado: EstadoPrestamo.DEVUELTO,
         finReal: dto.finReal ? new Date(dto.finReal) : new Date(),
       },
-      include: { estudiante: true, aula: true },
+      include: { estudiante: true, docente: true, aula: true },
     });
     if (dto.cumplioReglas === false) {
       return {
@@ -207,7 +315,7 @@ export class PracticasLibresService {
     return this.prisma.practicaLibre.update({
       where: { id },
       data: { estado: EstadoPrestamo.CANCELADO, finReal: new Date() },
-      include: { estudiante: true, aula: true },
+      include: { estudiante: true, docente: true, aula: true },
     });
   }
 
@@ -260,11 +368,11 @@ export class PracticasLibresService {
 
   private construirDatosPractica(
     dto: CreatePracticasLibreDto,
-    estudianteId: string,
+    estudianteId: string | undefined,
     softwareNombre: string,
   ): DatosPracticaLibre {
     return {
-      estudianteId,
+      ...(estudianteId && { estudianteId }),
       aulaId: dto.aulaId,
       responsableTipo: dto.responsableTipo,
       softwareSolicitado: softwareNombre,

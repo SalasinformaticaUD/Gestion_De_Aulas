@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { MODULOS } from '../auth/auth.constants';
 import { RequireAuth } from '../auth/decorators/require-auth.decorator';
 import { RequireModule } from '../auth/decorators/require-module.decorator';
@@ -17,6 +18,10 @@ export class EstudiantesController {
 
   @Post() @RequirePermissions('ESTUDIANTES_CREAR')
   create(@Body() dto: CreateEstudianteDto, @CurrentUser() user?: UsuarioAutenticado) { return this.service.create(dto, user?.id); }
+
+  @Post('importar/excel') @RequirePermissions('ESTUDIANTES_CREAR')
+  @UseInterceptors(FileInterceptor('archivo', { limits: { fileSize: 20_000_000 } }))
+  importarExcel(@UploadedFile() archivo: { buffer: Buffer; originalname: string } | undefined, @CurrentUser() user?: UsuarioAutenticado) { return this.service.importarExcel(archivo, user?.id); }
 
   @Get() @RequirePermissions('ESTUDIANTES_LEER')
   findAll(@Query('q') q?: string) { return this.service.findAll(q); }

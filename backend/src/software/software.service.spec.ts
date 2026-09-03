@@ -19,6 +19,8 @@ describe('SoftwareService', () => {
     aulaSoftware: {
       count: jest.Mock;
       create: jest.Mock;
+      delete: jest.Mock;
+      findMany: jest.Mock;
       upsert: jest.Mock;
       deleteMany: jest.Mock;
     };
@@ -47,6 +49,8 @@ describe('SoftwareService', () => {
       aulaSoftware: {
         count: jest.fn(),
         create: jest.fn(),
+        delete: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
         upsert: jest.fn(),
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
@@ -268,13 +272,53 @@ describe('SoftwareService', () => {
     expect(createArg.data.resultado).toBe('PARCIAL');
     expect(createArg.data.errores).toEqual([
       {
-        fila: 2,
+        fila: 3,
         aulaCodigo: '999',
         nombre: 'Python',
         version: '3.12',
         error: 'No existe un aula con el codigo indicado.',
       },
     ]);
+  });
+
+  it('reemplaza la versión instalada cuando el aula ya tiene el mismo software', async () => {
+    prisma.aula.findMany.mockResolvedValue([{ id: 'aula-id', codigo: '404' }]);
+    prisma.aulaSoftware.findMany.mockResolvedValue([
+      {
+        aulaId: 'aula-id',
+        softwareId: 'software-anterior',
+        software: { nombre: 'MATLAB' },
+      },
+    ]);
+    prisma.software.upsert.mockResolvedValue({ id: 'software-nuevo' });
+    prisma.aulaSoftware.upsert.mockResolvedValue({
+      aulaId: 'aula-id',
+      softwareId: 'software-nuevo',
+    });
+    prisma.importacionSoftware.create.mockResolvedValue({ id: 'importacion-id' });
+
+    await service.importInventory({
+      filas: [{ aulaCodigo: '404', nombre: 'MATLAB', version: 'R2026a' }],
+    });
+
+    expect(prisma.aulaSoftware.delete).toHaveBeenCalledWith({
+      where: {
+        aulaId_softwareId: {
+          aulaId: 'aula-id',
+          softwareId: 'software-anterior',
+        },
+      },
+    });
+    expect(prisma.aulaSoftware.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          aulaId_softwareId: {
+            aulaId: 'aula-id',
+            softwareId: 'software-nuevo',
+          },
+        },
+      }),
+    );
   });
 
   it('lee un Excel y asocia Aula 306 con el software indicado', async () => {

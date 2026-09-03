@@ -933,13 +933,36 @@ export class HorarioService {
             ).id;
           }
           const existente = await database.docente.findFirst({
-            where: { nombre },
+            where: {
+              nombre: { equals: nombre, mode: 'insensitive' },
+              documento: { not: null },
+            },
             select: { id: true },
           });
           if (existente) return existente.id;
+          const nombreNormalizado = this.normalizarNombreDocente(nombre);
+          const docentesConDocumento = await database.docente.findMany({
+            where: { documento: { not: null } },
+            select: { id: true, nombre: true },
+          });
+          const existenteConNombreNormalizado = docentesConDocumento.find(
+            (docente) =>
+              this.normalizarNombreDocente(docente.nombre) === nombreNormalizado,
+          );
+          if (existenteConNombreNormalizado) return existenteConNombreNormalizado.id;
+          const existenteSinDocumento = await database.docente.findFirst({
+            where: { nombre: { equals: nombre, mode: 'insensitive' } },
+            select: { id: true },
+          });
+          if (existenteSinDocumento) return existenteSinDocumento.id;
           return (
-            await database.docente.create({
-              data: { nombre },
+            await database.docente.upsert({
+              where: { documento: 'DOCENTE_NO_IDENTIFICADO' },
+              update: { nombre: 'Información no disponible' },
+              create: {
+                documento: 'DOCENTE_NO_IDENTIFICADO',
+                nombre: 'Información no disponible',
+              },
               select: { id: true },
             })
           ).id;
@@ -980,6 +1003,23 @@ export class HorarioService {
         ).id;
 
     return { docenteId, asignaturaId };
+  }
+
+  private normalizarNombreDocente(nombre: string): string {
+    let valor = nombre;
+    if (/[ÃÂ]/.test(valor)) {
+      try {
+        valor = Buffer.from(valor, 'latin1').toString('utf8');
+      } catch {
+        // Si no es texto mal codificado, se conserva el valor original.
+      }
+    }
+    return valor
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .replace(/\s+/g, ' ')
+      .toUpperCase();
   }
 
   private validateExclusiveCatalogReference(

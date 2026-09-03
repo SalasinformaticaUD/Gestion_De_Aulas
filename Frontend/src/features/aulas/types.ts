@@ -21,7 +21,6 @@ export type RoomHistoryEntry = {
 export type Room = {
   id: string;
   code: string;
-  floor: number;
   capacity: number;
   status: RoomStatus;
   software: RoomSoftware[];

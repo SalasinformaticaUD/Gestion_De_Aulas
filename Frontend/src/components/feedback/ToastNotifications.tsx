@@ -14,7 +14,7 @@ export function ToastNotifications() {
       if (!detail?.message) return;
       const toast: Toast = { id: Date.now(), message: detail.message, tone: detail.tone ?? "info" };
       setToasts((current) => [...current, toast].slice(-3));
-      window.setTimeout(() => setToasts((current) => current.filter((item) => item.id !== toast.id)), 5000);
+      window.setTimeout(() => setToasts((current) => current.filter((item) => item.id !== toast.id)), 15000);
     };
     window.addEventListener(notificationEvent, receive);
     return () => window.removeEventListener(notificationEvent, receive);

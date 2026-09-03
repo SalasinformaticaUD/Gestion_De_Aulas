@@ -233,7 +233,7 @@ export class DisponibilidadAulasService {
         id: practica.id,
         inicio: practica.inicio,
         fin: practica.finReal ?? practica.finEstimada,
-        descripcion: `Práctica libre del estudiante ${practica.estudiante.codigo}.`,
+        descripcion: `Práctica libre de ${practica.estudiante?.codigo ?? 'docente responsable'}.`,
         estado: practica.estado,
       })),
       ...observaciones.map((observacion) => ({
@@ -369,7 +369,7 @@ export class DisponibilidadAulasService {
       fuentes.push({
         tipo: 'practica-libre',
         id: practica.id,
-        descripcion: `Práctica libre del estudiante ${practica.estudiante.codigo}.`,
+        descripcion: `Práctica libre de ${practica.estudiante?.codigo ?? 'docente responsable'}.`,
         estado: practica.estado,
       });
     }
@@ -720,7 +720,7 @@ export class DisponibilidadAulasService {
         fuente: {
           tipo: 'practica-libre',
           id: practica.id,
-          descripcion: `Práctica libre del estudiante ${practica.estudiante.codigo}.`,
+          descripcion: `Práctica libre de ${practica.estudiante?.codigo ?? 'docente responsable'}.`,
           estado: practica.estado,
         },
       });

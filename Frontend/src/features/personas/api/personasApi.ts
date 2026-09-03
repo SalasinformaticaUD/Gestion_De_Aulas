@@ -7,10 +7,12 @@ export type Persona = {
   documento?: string | null;
   nombre: string;
   correo?: string | null;
+  proyecto?: string | null;
 };
 
 type TipoPersona = "estudiantes" | "docentes";
-type DatosPersona = { codigo?: string; documento?: string; nombre: string; correo?: string };
+type DatosPersona = { codigo?: string; documento?: string; nombre: string; correo?: string; proyecto?: string };
+type ResultadoImportacion = { total: number; procesados?: number; omitidasDuplicadas?: number; creados: number; actualizados: number; eliminados: number; conservadosPorHistorial: number };
 
 function token() {
   const value = obtenerSesion()?.tokenAcceso;
@@ -45,4 +47,16 @@ export function eliminarPersona(tipo: TipoPersona, id: string) {
   return solicitarAulas<Persona>("/" + tipo + "/" + id, token(), {
     method: "DELETE",
   });
+}
+
+export function importarEstudiantesExcel(archivo: File) {
+  const formData = new FormData();
+  formData.append("archivo", archivo);
+  return solicitarAulas<ResultadoImportacion>("/estudiantes/importar/excel", token(), { method: "POST", body: formData });
+}
+
+export function importarDocentesExcel(archivo: File) {
+  const formData = new FormData();
+  formData.append("archivo", archivo);
+  return solicitarAulas<ResultadoImportacion>("/docentes/importar/excel", token(), { method: "POST", body: formData });
 }

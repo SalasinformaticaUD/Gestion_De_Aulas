@@ -55,6 +55,11 @@ export class PracticasLibresController {
     return this.practicasLibresService.findStudent(params.codigo);
   }
 
+  @Get('docentes/:documento')
+  findTeacher(@Param('documento') documento: string) {
+    return this.practicasLibresService.findTeacher(documento);
+  }
+
   @Patch(':id/finalizar')
   finish(
     @Param('id', ParseUUIDPipe) id: string,

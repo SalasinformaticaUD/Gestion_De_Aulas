@@ -59,8 +59,8 @@ export class ReportesService {
     return this.pdf().generar(
       'Ficha - Practicas libres',
       {
-        B10: `NOMBRE:\n${practica.estudiante.nombre}`,
-        G10: `CÉDULA/CÓDIGO:\n${practica.estudiante.codigo}`,
+        B10: `NOMBRE:\n${practica.estudiante?.nombre ?? 'Docente responsable'}`,
+        G10: `CÉDULA/CÓDIGO:\n${practica.estudiante?.codigo ?? 'No disponible'}`,
         B12: 'TÍTULO DE LA PRÁCTICA O ESPACIO ACADÉMICO: Práctica Libre',
         G12: 'CÓDIGO DE GRUPO: No Aplica',
         B16: fecha.dia,
@@ -78,7 +78,7 @@ export class ReportesService {
         J20: this.horaBogota(practica.finEstimada),
         B25: `OBSERVACIONES: ${observaciones}`,
         B26: `ATENDIDO POR: ${atendidoPor}`,
-        G26: `USUARIO:\n${practica.estudiante.nombre}`,
+        G26: `USUARIO:\n${practica.estudiante?.nombre ?? 'Docente responsable'}`,
         G28: 'DOCENTE: No Aplica',
       },
       `Ficha_PracticaLibre_${consecutivo}`,
@@ -261,8 +261,8 @@ export class ReportesService {
                 aula: (r.aula as unknown as { codigo: string }).codigo,
                 ubicacion: (r.aula as unknown as { ubicacion: string })
                   .ubicacion,
-                estudiante: r.estudiante.nombre,
-                codigoEstudiante: r.estudiante.codigo,
+                estudiante: r.estudiante?.nombre ?? 'Docente responsable',
+                codigoEstudiante: r.estudiante?.codigo ?? 'No disponible',
               })),
             ),
         ]);

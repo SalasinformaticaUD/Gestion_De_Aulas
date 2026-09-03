@@ -1,12 +1,13 @@
 import { obtenerSesion } from "@/features/auth/lib/sesion";
 import { solicitarAulas } from "@/features/monitores/api/clienteMonitores";
-import type { InstalledSoftware, SoftwareAssignment } from "@/features/software/types";
+import type { InstalledSoftware, SoftwareAssignment, SoftwareStatus } from "@/features/software/types";
 
 type SoftwareApi = {
   id: string;
   nombre: string;
   version: string;
   descripcion: string | null;
+  estado: SoftwareStatus;
   aulas?: Array<{ aulaId: string; instaladoEn: string }>;
 };
 
@@ -17,7 +18,7 @@ function token() {
 }
 
 function toSoftware(item: SoftwareApi): InstalledSoftware {
-  return { id: item.id, name: item.nombre, version: item.version, description: item.descripcion ?? undefined };
+  return { id: item.id, name: item.nombre, version: item.version, description: item.descripcion ?? undefined, status: item.estado };
 }
 
 export async function cargarSoftware() {
@@ -29,12 +30,12 @@ export async function cargarSoftware() {
 }
 
 export async function crearSoftware(input: Omit<InstalledSoftware, "id">) {
-  const data = await solicitarAulas<SoftwareApi>("/software", token(), { method: "POST", body: JSON.stringify({ nombre: input.name, version: input.version, descripcion: input.description }) });
+  const data = await solicitarAulas<SoftwareApi>("/software", token(), { method: "POST", body: JSON.stringify({ nombre: input.name, version: input.version, descripcion: input.description, estado: input.status }) });
   return toSoftware(data);
 }
 
 export async function actualizarSoftware(id: string, input: Omit<InstalledSoftware, "id">) {
-  const data = await solicitarAulas<SoftwareApi>(`/software/${id}`, token(), { method: "PATCH", body: JSON.stringify({ nombre: input.name, version: input.version, descripcion: input.description }) });
+  const data = await solicitarAulas<SoftwareApi>(`/software/${id}`, token(), { method: "PATCH", body: JSON.stringify({ nombre: input.name, version: input.version, descripcion: input.description, estado: input.status }) });
   return toSoftware(data);
 }
 

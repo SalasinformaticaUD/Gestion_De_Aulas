@@ -31,3 +31,20 @@
 .studentCreateDialog footer { display:flex; justify-content:flex-end; gap:8px; margin-top:2px; }
 :global(html[data-theme="dark"]) .studentCreateDialog { background:#202126; border-color:#41444d; }
 :global(html[data-theme="dark"]) .studentCreateDialog input { color:#f7f8fa; border-color:#4a4d56; background:#2a2c32; }
+
+.lookupAction { display:flex; align-items:end; }
+.lookupAction button { width:100%; height:37px; border:1px solid var(--line); border-radius:6px; color:#fff; background:#3e444e; font-size:13px; font-weight:750; }
+.lookupAction button:disabled { cursor:not-allowed; opacity:.55; }
+.responsibleRow { display:flex; align-items:center; gap:6px; padding:7px 9px; margin:0; border:1px solid var(--line); border-radius:6px; color:var(--ink); background:var(--surface-muted,#f8f9fb); font-size:13px; }
+.responsibleRow button { margin-left:auto; border:0; color:#b51e30; background:transparent; font-weight:750; }
+.addResponsibleButton { width:max-content; min-height:32px; margin-top:9px; padding:0 12px; border:0; border-radius:6px; color:#fff; background:var(--primary); font-size:13px; font-weight:800; box-shadow:0 2px 5px rgba(121,12,28,.22); }.addResponsibleButton:hover { filter:brightness(.93); }
+.finishDialog { width:min(500px,100%); overflow:hidden; border-radius:11px; background:var(--surface,#fff); box-shadow:0 24px 70px rgba(0,0,0,.35); }
+.finishDialog>header { padding:18px 20px; color:#fff; background:#18191c; }
+.finishDialog>header span { color:#d9919b; font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.finishDialog>header h2 { margin:5px 0; font-size:21px; }
+.finishDialog>header p { margin:0; color:#d3d7df; font-size:14px; }
+.finishBody { display:grid; gap:17px; padding:20px; }
+.finishBody p { margin:0; color:var(--ink); font-size:15px; line-height:1.5; }
+.finishBody footer { display:flex; justify-content:flex-end; gap:8px; }
+.finishBody footer button { min-height:37px; padding:0 13px; border-radius:7px; font-weight:750; }
+.dialog form > .inlineError { order:-1; margin:0; padding:10px 12px; border:1px solid #fecaca; border-radius:7px; color:#b42318; background:#fff1f1; font-size:13px; font-weight:750; }

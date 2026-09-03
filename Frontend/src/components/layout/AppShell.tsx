@@ -9,7 +9,7 @@ import { applyTheme, defaultProfile, getInitials, loadProfile, loadTheme, profil
 import { CosmosLogo } from "@/components/brand/CosmosLogo";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { ModuleSwitcher } from "@/components/layout/ModuleSwitcher";
-import { cerrarSesion } from "@/features/auth/lib/sesion";
+import { cerrarSesion, eventoSesion, obtenerSesion } from "@/features/auth/lib/sesion";
 
 type AppShellProps = { children: React.ReactNode };
 
@@ -18,6 +18,7 @@ export function AppShell({ children }: AppShellProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [profileData, setProfileData] = useState<UserProfile>(defaultProfile);
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
+  const [isAdministrator, setIsAdministrator] = useState(false);
   const closeMenu = () => setIsMenuOpen(false);
   const salir = () => {
     cerrarSesion();
@@ -31,6 +32,15 @@ export function AppShell({ children }: AppShellProps) {
     applyTheme(loadTheme());
     window.addEventListener(profileEvent, refreshProfile);
     return () => window.removeEventListener(profileEvent, refreshProfile);
+  }, []);
+
+  useEffect(() => {
+    const refreshAdministrator = () => setIsAdministrator(
+      obtenerSesion()?.usuario.roles.some((rol) => rol.trim().toUpperCase() === "ADMINISTRADOR") ?? false,
+    );
+    refreshAdministrator();
+    window.addEventListener(eventoSesion, refreshAdministrator);
+    return () => window.removeEventListener(eventoSesion, refreshAdministrator);
   }, []);
 
   useEffect(() => {
@@ -60,7 +70,7 @@ export function AppShell({ children }: AppShellProps) {
         <div className="brand"><CosmosLogo className="sidebar-cosmos-logo" variant="light" priority /><span><small>Aulas de Software</small></span></div>
         <nav className="nav">
           <p className="nav-label">Operación</p>
-          {operationNavigation.map(({ href, label }) => navLink(href, label))}
+          {operationNavigation.filter(({ href }) => href !== "/usuarios" || isAdministrator).map(({ href, label }) => navLink(href, label))}
           <p className="nav-label">Seguimiento</p>
           {followUpNavigation.map(({ href, label }) => navLink(href, label))}
         </nav>
@@ -74,7 +84,6 @@ export function AppShell({ children }: AppShellProps) {
           <button className="menu-button" type="button" aria-label="Abrir menú" aria-expanded={isMenuOpen} onClick={() => setIsMenuOpen(true)}>☰</button>
           <span className="period">2026-3</span>
           <div className="date-time"><span>{formattedDate}</span><time dateTime={currentDate?.toISOString()}>{formattedTime}</time></div>
-          <label className="search"><span aria-hidden="true">⌕</span><input type="search" placeholder="Buscar aula, docente, asignatura..." aria-label="Buscar en el sistema" /></label>
           <span className="topbar-spacer" />
           <ThemeToggle />
           <Link href="/perfil" className="profile" aria-current={pathname === "/perfil" ? "page" : undefined}>

@@ -8,7 +8,6 @@ type AulaApi = {
   id: string;
   codigo: string;
   ubicacion: string;
-  piso: number | null;
   capacidad: number;
   estado: EstadoAulaApi;
   anioAdquisicion: number | null;
@@ -47,7 +46,6 @@ function aRoom(aula: AulaApi): Room {
   return {
     id: aula.id,
     code: aula.codigo,
-    floor: aula.piso ?? 0,
     capacity: aula.capacidad,
     status: estadoInterfaz(aula.estado),
     software: (aula.software ?? []).map((item) => ({ name: item.nombre, version: item.version, licenses: 0, status: "activo" })),

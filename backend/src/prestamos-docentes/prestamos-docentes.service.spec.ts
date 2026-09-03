@@ -8,12 +8,15 @@ describe('PrestamosDocentesService', () => {
   const dto = {
     docenteId: '00000000-0000-4000-8000-000000000002',
     aulaId: '00000000-0000-4000-8000-000000000001',
+    softwareId: '00000000-0000-4000-8000-000000000004',
     inicio: '2026-08-20T08:00:00-05:00',
     fin: '2026-08-20T10:00:00-05:00',
     motivo: 'Semillero de investigación',
   };
   const prisma = {
     docente: { findUnique: jest.fn() },
+    software: { findUnique: jest.fn() },
+    aulaSoftware: { findUnique: jest.fn() },
     prestamoDocente: {
       create: jest.fn(),
       findMany: jest.fn(),
@@ -28,6 +31,11 @@ describe('PrestamosDocentesService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     prisma.docente.findUnique.mockResolvedValue({ id: dto.docenteId });
+    prisma.software.findUnique.mockResolvedValue({
+      nombre: 'AutoCAD',
+      estado: 'ACTIVO',
+    });
+    prisma.aulaSoftware.findUnique.mockResolvedValue({ aulaId: dto.aulaId });
     prisma.prestamoDocente.create.mockResolvedValue({
       id: 'prestamo-id',
       estado: EstadoPrestamo.SOLICITADO,
@@ -40,6 +48,7 @@ describe('PrestamosDocentesService', () => {
     disponibilidad.findOne.mockResolvedValue({
       estadoCalculado: 'disponible',
       motivo: 'Sin actividades.',
+      fuentes: [],
     });
     service = new PrestamosDocentesService(
       prisma as unknown as PrismaService,
@@ -64,6 +73,7 @@ describe('PrestamosDocentesService', () => {
     disponibilidad.findOne.mockResolvedValue({
       estadoCalculado: 'ocupada',
       motivo: 'Existe una clase programada.',
+      fuentes: [{ tipo: 'clase-programada' }],
     });
 
     await expect(

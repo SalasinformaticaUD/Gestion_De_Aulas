@@ -6,6 +6,9 @@
 .viewTabs button span { font-size:18.2px; }
 .viewTabs button.active { color:var(--ink); background:#fff; box-shadow:0 1px 3px rgba(18,24,40,.1); font-weight:750; }
 .timePanel { display:grid; grid-template-columns:150px minmax(0,1fr) 280px; gap:16px; align-items:end; padding:15px 17px; margin-bottom:13px; border:1px solid var(--line); border-radius:var(--radius); background:#fff; }
+.refreshButton { height:36px; display:inline-flex; align-items:center; justify-content:center; padding:0 16px; border:1px solid var(--primary); border-radius:6px; color:#fff; background:var(--primary); font-size:14.3px; font-weight:800; transition:background .18s ease,border-color .18s ease,transform .18s ease; }
+.refreshButton:hover:not(:disabled) { border-color:#850d1b; background:#850d1b; transform:translateY(-1px); }
+.refreshButton:disabled { cursor:wait; opacity:.7; }
 .control { min-width:0; display:grid; gap:5px; color:var(--muted); font-size:11.7px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
 .control input,.control select { min-width:0; width:100%; height:36px; padding:0 9px; border:1px solid var(--line); border-radius:6px; outline:0; color:var(--ink); background:#f8f9fb; font-size:14.3px; letter-spacing:normal; text-transform:none; }
 .control input:focus,.control select:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(165,16,34,.09); }
@@ -21,11 +24,12 @@
 .readOnlyNote p { font-size:11.7px; line-height:1.35; }
 .readOnlyNote strong { font-size:13px; }
 .statusBar { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:16px; }
-.statusMetric { min-height:98px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 17px; border:1px solid var(--line); border-radius:var(--radius); color:inherit; background:var(--surface,#fff); text-align:left; cursor:pointer; }
+.statusMetric { min-height:112px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:17px 19px; border:1px solid var(--line); border-radius:var(--radius); color:inherit; background:var(--surface,#fff); text-align:left; cursor:pointer; transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease; }
+.statusMetric:hover { transform:translateY(-1px); box-shadow:0 7px 16px rgba(18,24,40,.08); }
 .statusMetric>div { min-width:0; }
 .statusMetric span,.statusMetric strong,.statusMetric small { display:block; }
 .statusMetric span { color:var(--muted); font-size:15.6px; font-weight:700; }
-.statusMetric strong { margin-top:6px; font-size:33.8px; line-height:1; color:var(--ink); }
+.statusMetric strong { margin-top:6px; font-size:36px; line-height:1; color:var(--ink); }
 .statusMetric small { margin-top:7px; color:var(--muted); font-size:14.3px; }
 .statusMetric>i { width:10px; height:10px; flex:0 0 auto; border-radius:50%; background:#737984; box-shadow:0 0 0 6px var(--surface-soft,#eff1f4); }
 .statusMetric.statusActive { border-color:var(--primary); box-shadow:0 0 0 2px color-mix(in srgb,var(--primary) 16%,transparent); }
@@ -34,6 +38,11 @@
 .statusMetric_reservada>i { background:#d97706; box-shadow:0 0 0 6px #fef3c7; }
 .statusMetric_mantenimiento>i { background:#dc2626; box-shadow:0 0 0 6px #fee2e2; }
 .statusMetric_bloqueada>i { background:#7c3aed; box-shadow:0 0 0 6px #ede9fe; }
+.statusMetric_disponible { border-color:#b6e4c6; background:linear-gradient(135deg,#fff 0%,#edfaf1 100%); }
+.statusMetric_ocupada { border-color:#bdd5ff; background:linear-gradient(135deg,#fff 0%,#edf4ff 100%); }
+.statusMetric_reservada { border-color:#efd59b; background:linear-gradient(135deg,#fff 0%,#fff8e8 100%); }
+.statusMetric_mantenimiento { border-color:#f1b5b0; background:linear-gradient(135deg,#fff 0%,#fff0f0 100%); }
+.statusMetric_bloqueada { border-color:#d8c7f6; background:linear-gradient(135deg,#fff 0%,#f5efff 100%); }
 .stateBadge i,.legend i { width:6px; height:6px; display:inline-block; border-radius:50%; background:currentColor; }
 .attendanceBadge { display:inline-flex; width:max-content; margin-top:7px; padding:4px 7px; border:1px solid transparent; border-radius:5px; font-size:11.7px; font-style:normal; font-weight:800; }
 .attendance_ASISTIO { color:#16803c; border-color:#b6e4c6; background:#edfaf1; }
@@ -68,25 +77,25 @@
 .floorGroup h2,.floorGroup p { margin:0; }
 .floorGroup h2 { font-size:14.3px; text-transform:uppercase; letter-spacing:.07em; }
 .floorGroup p { margin-top:2px; color:var(--muted); font-size:11.7px; }
-.roomGrid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:11px; }
-.roomCard { min-width:0; overflow:hidden; border:1px solid var(--line); border-top:3px solid #7b818a; border-radius:var(--radius); background:#fff; box-shadow:0 2px 7px rgba(18,24,40,.035); }
+.roomGrid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.roomCard { min-width:0; min-height:226px; overflow:hidden; border:1px solid var(--line); border-top:4px solid #7b818a; border-radius:var(--radius); background:#fff; box-shadow:0 2px 7px rgba(18,24,40,.035); }
 .roomCard:hover { box-shadow:0 7px 18px rgba(18,24,40,.08); transform:translateY(-1px); }
 .border_disponible { border-top-color:#16a34a; }
 .border_ocupada { border-top-color:#2563eb; }
 .border_reservada { border-top-color:#d97706; }
 .border_mantenimiento { border-top-color:#dc2626; }
 .border_bloqueada { border-top-color:#7048c8; }
-.roomCard>header { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:13px 14px 10px; }
+.roomCard>header { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:17px 18px 14px; }
 .roomIdentity { min-width:0; display:flex; align-items:center; gap:8px; }
-.roomIdentity>span { width:35px; height:35px; flex:0 0 auto; display:grid; place-items:center; border-radius:7px; color:var(--primary); background:#fff1f3; font-size:14.3px; font-weight:800; }
+.roomIdentity>span { width:42px; height:42px; flex:0 0 auto; display:grid; place-items:center; border-radius:8px; color:var(--primary); background:#fff1f3; font-size:15.6px; font-weight:800; }
 .roomIdentity h3,.roomIdentity p { margin:0; }
 .roomIdentity h3 { font-size:15.6px; }
 .roomIdentity p { margin-top:3px; color:var(--muted); font-size:11.7px; }
 .stateBadge { display:inline-flex; align-items:center; gap:5px; padding:4px 7px; border-radius:4px; font-size:11.7px; font-weight:750; white-space:nowrap; }
-.activity { min-height:84px; padding:10px 14px; border-top:1px solid #f0f1f3; border-bottom:1px solid #f0f1f3; background:#fafbfc; }
+.activity { min-height:143px; padding:15px 18px; border-top:1px solid #f0f1f3; border-bottom:1px solid #f0f1f3; background:#fafbfc; }
 .activity>span,.nextActivity>span,.software>span { display:block; margin-bottom:5px; color:var(--muted); font-size:10.4px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
 .activity strong { display:block; overflow:hidden; color:#363b43; font-size:13px; line-height:1.35; text-overflow:ellipsis; white-space:nowrap; }
-.activity p { margin:5px 0 0; color:var(--muted); font-size:11.7px; line-height:1.35; }
+.activity p { margin:8px 0 0; color:var(--muted); font-size:13px; line-height:1.48; }
 .nextActivity { min-height:55px; padding:9px 14px 7px; }
 .nextActivity p { display:flex; align-items:flex-start; gap:7px; margin:0; color:#555b65; font-size:11.7px; line-height:1.3; }
 .nextActivity p b { flex:0 0 auto; color:var(--primary); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11.7px; }
@@ -186,6 +195,7 @@
 .roomCard>header { align-items:flex-start; }
 .roomCard>header>b { flex:0 0 auto; max-width:45%; text-align:right; overflow-wrap:anywhere; }
 .activity { overflow:hidden; }
+.activity>span { display:none; }
 .activity strong { overflow-wrap:anywhere; white-space:normal; }
 
 /* Contraste específico del módulo en modo oscuro. */
@@ -201,6 +211,8 @@
 :global(html[data-theme="dark"]) .blockScroller button,
 :global(html[data-theme="dark"]) .searchControl>div,
 :global(html[data-theme="dark"]) .clearButton { color:var(--ink); background:var(--surface-soft); border-color:var(--line); }
+:global(html[data-theme="dark"]) .refreshButton { color:#fff; border-color:#c2132a; background:#b20f25; }
+:global(html[data-theme="dark"]) .refreshButton:hover:not(:disabled) { border-color:#e33a4d; background:#c2132a; }
 :global(html[data-theme="dark"]) .statusMetric strong,
 :global(html[data-theme="dark"]) .roomIdentity h3,
 :global(html[data-theme="dark"]) .activity strong,
@@ -213,6 +225,11 @@
 :global(html[data-theme="dark"]) .dailyTable tbody th { color:var(--ink); background:var(--surface-soft); }
 :global(html[data-theme="dark"]) .timeline time,
 :global(html[data-theme="dark"]) .timeline article>div>strong { color:var(--ink); }
+:global(html[data-theme="dark"]) .statusMetric_disponible { border-color:#23784b; background:linear-gradient(135deg,#1d2922 0%,#16251c 100%); }
+:global(html[data-theme="dark"]) .statusMetric_ocupada { border-color:#365f9c; background:linear-gradient(135deg,#1b2638 0%,#172333 100%); }
+:global(html[data-theme="dark"]) .statusMetric_reservada { border-color:#95702d; background:linear-gradient(135deg,#302819 0%,#272115 100%); }
+:global(html[data-theme="dark"]) .statusMetric_mantenimiento { border-color:#97484a; background:linear-gradient(135deg,#311d20 0%,#29191b 100%); }
+:global(html[data-theme="dark"]) .statusMetric_bloqueada { border-color:#6950a5; background:linear-gradient(135deg,#28203b 0%,#211b31 100%); }
 
 /* Escala tipográfica alineada con Aulas y Audiovisuales */
-.viewTabs button { font-size:15.6px; }.control,.blockControl { font-size:13px; }.control input,.control select { font-size:15.6px; }.blockScroller button { font-size:14.3px; }.blockScroller button small { font-size:11.7px; }.readOnlyNote p { font-size:13px; }.readOnlyNote strong { font-size:14.3px; }.characteristics { font-size:13px; }.characteristics button { font-size:13px; }.suggestionToggle b { font-size:13px; }.suggestionToggle small { font-size:11.7px; }.resultsMeta { font-size:13px; }.resultsMeta strong { font-size:15.6px; }.floorGroup h2 { font-size:15.6px; }.floorGroup p { font-size:13px; }.roomIdentity h3 { font-size:16.9px; }.roomIdentity p { font-size:13px; }.stateBadge { font-size:13px; }.activity>span,.nextActivity>span,.software>span { font-size:11.7px; }.activity strong { font-size:14.3px; }.activity p,.nextActivity p { font-size:13px; }.nextActivity p b { font-size:13px; }.software i { font-size:11.7px; }.roomCard>footer button,.roomCard>footer a { font-size:14.3px; }.dailyCard h2,.timelineCard h2 { font-size:16.9px; }.dailyCard p,.dailyCard>header>span,.timelineCard p,.timelineCard>header>span { font-size:13px; }.dailyTable thead th { font-size:13px; }.dailyTable thead small { font-size:11.7px; }.dailyTable tbody th strong { font-size:14.3px; }.dailyTable tbody th small { font-size:11.7px; }.compactBadge { font-size:11.7px; }.historyFilters h2 { font-size:18.2px; }.historyFilters>p { font-size:14.3px; }.derivedNote p { font-size:13px; }.derivedNote strong { font-size:14.3px; }.timeline time { font-size:13px; }.timeline time small { font-size:11.7px; }.timeline article>div>span { font-size:11.7px; }.timeline article>div>strong { font-size:14.3px; }.timeline article>div>small { font-size:11.7px; }.timelineCard>footer { font-size:11.7px; }.dialog>header span { font-size:13px; }.dialogStatus p { font-size:14.3px; }.dialog dt { font-size:11.7px; }.dialog dd { font-size:14.3px; }.dialogBody section h3 { font-size:14.3px; }.sourceList span { font-size:11.7px; }.sourceList p { font-size:14.3px; }.noSources { font-size:13px; }.dialogNext time,.dialogNext strong { font-size:13px; }.dialogNext span { font-size:11.7px; }.calculationMeta { font-size:11.7px; }.dialog>footer button,.dialog>footer a { font-size:14.3px; }
+.viewTabs button { font-size:15.6px; }.control,.blockControl { font-size:13px; }.control input,.control select { font-size:15.6px; }.blockScroller button { font-size:14.3px; }.blockScroller button small { font-size:11.7px; }.readOnlyNote p { font-size:13px; }.readOnlyNote strong { font-size:14.3px; }.characteristics { font-size:13px; }.characteristics button { font-size:13px; }.suggestionToggle b { font-size:13px; }.suggestionToggle small { font-size:11.7px; }.resultsMeta { font-size:13px; }.resultsMeta strong { font-size:15.6px; }.floorGroup h2 { font-size:15.6px; }.floorGroup p { font-size:13px; }.roomIdentity h3 { font-size:18.2px; }.roomIdentity p { font-size:13px; }.stateBadge { font-size:13px; }.activity>span,.nextActivity>span,.software>span { font-size:11.7px; }.activity strong { font-size:15.6px; }.activity p,.nextActivity p { font-size:13px; }.nextActivity p b { font-size:13px; }.software i { font-size:11.7px; }.roomCard>footer button,.roomCard>footer a { font-size:14.3px; }.dailyCard h2,.timelineCard h2 { font-size:16.9px; }.dailyCard p,.dailyCard>header>span,.timelineCard p,.timelineCard>header>span { font-size:13px; }.dailyTable thead th { font-size:13px; }.dailyTable thead small { font-size:11.7px; }.dailyTable tbody th strong { font-size:14.3px; }.dailyTable tbody th small { font-size:11.7px; }.compactBadge { font-size:11.7px; }.historyFilters h2 { font-size:18.2px; }.historyFilters>p { font-size:14.3px; }.derivedNote p { font-size:13px; }.derivedNote strong { font-size:14.3px; }.timeline time { font-size:13px; }.timeline time small { font-size:11.7px; }.timeline article>div>span { font-size:11.7px; }.timeline article>div>strong { font-size:14.3px; }.timeline article>div>small { font-size:11.7px; }.timelineCard>footer { font-size:11.7px; }.dialog>header span { font-size:13px; }.dialogStatus p { font-size:14.3px; }.dialog dt { font-size:11.7px; }.dialog dd { font-size:14.3px; }.dialogBody section h3 { font-size:14.3px; }.sourceList span { font-size:11.7px; }.sourceList p { font-size:14.3px; }.noSources { font-size:13px; }.dialogNext time,.dialogNext strong { font-size:13px; }.dialogNext span { font-size:11.7px; }.calculationMeta { font-size:11.7px; }.dialog>footer button,.dialog>footer a { font-size:14.3px; }

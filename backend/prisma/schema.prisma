@@ -78,6 +78,14 @@ enum ResultadoImportacionSoftware {
   FALLIDA
 }
 
+enum EstadoSoftware {
+  ACTIVO
+  SIN_LICENCIA
+  LICENCIADO
+  EN_REVISION
+  INACTIVO
+}
+
 // Identidad, autorización y auditoría
 model Usuario {
   id                               String                @id @default(uuid()) @db.Uuid
@@ -253,8 +261,10 @@ model Docente {
   documento              String?               @unique
   nombre                 String
   correo                 String?               @unique
+  proyecto               String?
   clases                 ClaseProgramada[]
   prestamos              PrestamoDocente[]
+  practicasLibres        PracticaLibre[]
   prestamosAudiovisuales PrestamoAudiovisual[]
 }
 
@@ -304,6 +314,7 @@ model Software {
   nombre      String
   version     String
   descripcion String?
+  estado      EstadoSoftware @default(ACTIVO)
   aulas       AulaSoftware[]
 
   @@unique([nombre, version])
@@ -348,7 +359,9 @@ model Estudiante {
 
 model PracticaLibre {
   id           String         @id @default(uuid()) @db.Uuid
-  estudianteId String         @db.Uuid
+  estudianteId String?        @db.Uuid
+  docenteId    String?        @db.Uuid
+  grupoId      String?        @db.Uuid
   aulaId       String         @db.Uuid
   responsableTipo String      @default("ASISTENCIAL")
   softwareSolicitado String?
@@ -356,10 +369,12 @@ model PracticaLibre {
   finEstimada  DateTime?
   finReal      DateTime?
   estado       EstadoPrestamo @default(ACTIVO)
-  estudiante   Estudiante     @relation(fields: [estudianteId], references: [id])
+  estudiante   Estudiante?    @relation(fields: [estudianteId], references: [id])
+  docente      Docente?       @relation(fields: [docenteId], references: [id])
   aula         Aula           @relation(fields: [aulaId], references: [id])
 
   @@index([aulaId, inicio])
+  @@index([grupoId])
 }
 
 model PrestamoDocente {

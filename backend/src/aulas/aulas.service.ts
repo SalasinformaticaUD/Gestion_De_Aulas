@@ -145,6 +145,7 @@ export class AulasService {
 
   async findAll(filters: FindAulasDto = {}): Promise<Aula[]> {
     const where: Prisma.AulaWhereInput = {
+      eliminadoEn: null,
       ...(filters.estado && { estado: filters.estado }),
       ...(filters.ubicacion && {
         ubicacion: { contains: filters.ubicacion, mode: 'insensitive' },
@@ -187,8 +188,8 @@ export class AulasService {
   }
 
   async findOne(id: string) {
-    const aula = await this.prisma.aula.findUnique({
-      where: { id },
+    const aula = await this.prisma.aula.findFirst({
+      where: { id, eliminadoEn: null },
       select: aulaPublicaSelect,
     });
 
@@ -243,36 +244,20 @@ export class AulasService {
   async remove(id: string, usuarioId?: string) {
     const aula = await this.prisma.aula.findUnique({
       where: { id },
-      select: {
-        id: true,
-        _count: {
-          select: {
-            clases: true,
-            practicasLibres: true,
-            prestamosDocentes: true,
-            prestamosAudiovisuales: true,
-            observaciones: true,
-            tareas: true,
-          },
-        },
-      },
+      select: { id: true, codigo: true, eliminadoEn: true },
     });
 
     if (!aula) {
       throw new NotFoundException(`No existe aula con id ${id}.`);
     }
-
-    const hasOperationalHistory = Object.values(aula._count).some(
-      (count) => count > 0,
-    );
-
-    if (hasOperationalHistory) {
-      throw new ConflictException(
-        'El aula tiene información operativa asociada. Cambie su estado a FUERA_DE_SERVICIO para conservar la trazabilidad.',
-      );
+    if (aula.eliminadoEn) {
+      throw new NotFoundException(`No existe aula con id ${id}.`);
     }
 
-    const eliminada = await this.prisma.aula.delete({ where: { id } });
+    const eliminada = await this.prisma.aula.update({
+      where: { id },
+      data: { eliminadoEn: new Date() },
+    });
     await this.auditoria?.registrar({
       usuarioId,
       entidad: 'Aula',
@@ -674,7 +659,6 @@ export class AulasService {
       id: aula.id,
       codigo: aula.codigo,
       ubicacion: aula.ubicacion,
-      piso: this.extraerPiso(aula.ubicacion),
       capacidad: aula.capacidad,
       estado: aula.estado,
       anioAdquisicion: aula.anioAdquisicion,
@@ -742,7 +726,7 @@ export class AulasService {
         fecha: practica.inicio,
         tipo: 'PRACTICA_LIBRE' as const,
         descripcion: `Práctica libre (${practica.estado}).`,
-        responsable: `${practica.estudiante.nombre} (${practica.estudiante.codigo})`,
+        responsable: practica.estudiante ? `${practica.estudiante.nombre} (${practica.estudiante.codigo})` : 'Docente responsable',
       })),
       ...aula.prestamosDocentes.map((prestamo) => ({
         id: `prestamo:${prestamo.id}`,
@@ -760,8 +744,4 @@ export class AulasService {
       .slice(0, 10);
   }
 
-  private extraerPiso(ubicacion: string): number | null {
-    const match = /piso\s*(\d+)/i.exec(ubicacion);
-    return match ? Number(match[1]) : null;
-  }
 }

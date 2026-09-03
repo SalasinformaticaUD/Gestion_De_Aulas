@@ -29,7 +29,6 @@ export type AvailabilityRoom = {
   id: string;
   code: string;
   location: string;
-  floor: number;
   capacity: number;
   physicalStatus: "OPERATIVA" | "MANTENIMIENTO" | "FUERA_DE_SERVICIO";
   software: Array<{ id: string; name: string }>;

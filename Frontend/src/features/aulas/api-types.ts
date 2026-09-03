@@ -29,7 +29,6 @@ export type AulaApiResponse = {
   id: string;
   codigo: string;
   ubicacion: string;
-  piso: number | null;
   capacidad: number;
   estado: AulaEstadoFisico;
   caracteristicas: Record<string, unknown> | null;

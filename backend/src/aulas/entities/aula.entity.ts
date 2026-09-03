@@ -18,7 +18,6 @@ export class Aula {
   declare id: string;
   declare codigo: string;
   declare ubicacion: string;
-  declare piso: number | null;
   declare capacidad: number;
   declare estado: EstadoAula;
   declare anioAdquisicion: number | null;

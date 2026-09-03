@@ -5,6 +5,7 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
+import { EstadoSoftware } from '@prisma/client';
 import { EstadoPrestamo } from '../../generated/prisma/enums.js';
 import { DisponibilidadAulasService } from '../disponibilidad-aulas/disponibilidad-aulas.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -50,10 +51,14 @@ export class PrestamosDocentesService {
         'No fue posible identificar al encargado de la solicitud.',
       );
     }
-    await this.validarDocente(dto.docenteId);
+    const docenteId = await this.resolverDocente(dto);
+    if (dto.softwareId) {
+      await this.validarSoftwareParaPrestamo(dto.softwareId, dto.aulaId);
+    }
     const bloque = this.normalizarBloque(dto.inicio, dto.fin);
+    this.validarTiempoMinimoParaPrestamo(dto.inicio, dto.fin);
     await this.validarDisponibilidad(dto.aulaId, bloque);
-    const data = this.construirDatosPrestamo(dto, usuarioId);
+    const data = this.construirDatosPrestamo({ ...dto, docenteId }, usuarioId);
 
     const prestamo = await this.prisma.prestamoDocente.create({
       data,
@@ -208,9 +213,74 @@ export class PrestamosDocentesService {
     bloque: BloqueDisponibilidad,
   ): Promise<void> {
     const resultado = await this.disponibilidad.findOne(aulaId, bloque);
+    if (resultado.fuentes.some((fuente) => fuente.tipo === 'clase-programada')) {
+      throw new ConflictException(
+        'El aula tiene una clase programada para este bloque y no puede prestarse, aunque el docente no haya asistido.',
+      );
+    }
     if (resultado.estadoCalculado !== 'disponible') {
       throw new ConflictException(
         `El aula no está disponible: ${resultado.motivo}`,
+      );
+    }
+  }
+
+  private async resolverDocente(dto: CreatePrestamosDocenteDto): Promise<string> {
+    if (dto.docenteId) { await this.validarDocente(dto.docenteId); return dto.docenteId; }
+    const documento = dto.docenteNuevoDocumento?.trim();
+    const nombre = dto.docenteNuevoNombre?.trim();
+    if (!documento || !nombre || !/^\d+$/.test(documento)) throw new BadRequestException('Para otro profesor, ingrese nombre y cédula numérica.');
+    const existente = await this.prisma.docente.findUnique({ where: { documento }, select: { id: true } });
+    if (existente) return existente.id;
+    return (await this.prisma.docente.create({ data: { documento, nombre }, select: { id: true } })).id;
+  }
+
+  private async validarSoftwareParaPrestamo(
+    softwareId: string,
+    aulaId: string,
+  ): Promise<void> {
+    const software = await this.prisma.software.findUnique({
+      where: { id: softwareId },
+      select: { nombre: true, estado: true },
+    });
+    if (!software) {
+      throw new NotFoundException('El software solicitado no existe.');
+    }
+    if (
+      software.estado !== EstadoSoftware.ACTIVO &&
+      software.estado !== EstadoSoftware.LICENCIADO
+    ) {
+      const mensaje =
+        software.estado === EstadoSoftware.SIN_LICENCIA
+          ? `El software ${software.nombre} no tiene licencia vigente.`
+          : software.estado === EstadoSoftware.EN_REVISION
+            ? `El software ${software.nombre} está en revisión o mantenimiento.`
+            : `El software ${software.nombre} está inactivo.`;
+      throw new ConflictException(`${mensaje} No puede usarse para prestar un aula.`);
+    }
+    const instalacion = await this.prisma.aulaSoftware.findUnique({
+      where: { aulaId_softwareId: { aulaId, softwareId } },
+      select: { aulaId: true },
+    });
+    if (!instalacion) {
+      throw new ConflictException(
+        'El aula seleccionada no cuenta con el software solicitado.',
+      );
+    }
+  }
+
+  private validarTiempoMinimoParaPrestamo(inicioIso: string, finIso: string) {
+    const ahora = new Date();
+    const inicio = new Date(inicioIso);
+    const fin = new Date(finIso);
+    if (fin <= ahora) {
+      throw new ConflictException(
+        'No se puede crear un préstamo docente en un bloque que ya terminó.',
+      );
+    }
+    if (ahora >= inicio && fin.getTime() - ahora.getTime() < 30 * 60 * 1000) {
+      throw new ConflictException(
+        'No se puede prestar el aula porque al bloque seleccionado le quedan menos de 30 minutos.',
       );
     }
   }
@@ -256,7 +326,7 @@ export class PrestamosDocentesService {
     encargadoId: string,
   ): DatosPrestamoDocente {
     return {
-      docenteId: dto.docenteId,
+      docenteId: dto.docenteId!,
       aulaId: dto.aulaId,
       inicio: new Date(dto.inicio),
       fin: new Date(dto.fin),

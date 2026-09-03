@@ -26,6 +26,8 @@
 .search { min-width:260px; max-width:470px; height:37px; flex:1; display:flex; align-items:center; gap:8px; padding:0 10px; border:1px solid var(--line); border-radius:7px; background:var(--surface,#fff); }
 .search input { width:100%; border:0; outline:0; background:transparent; color:var(--ink); font-size:15.6px; }
 .search>span { color:var(--muted); font-size:20.8px; }
+.search button { min-height:27px; padding:0 9px; border:1px solid var(--line); border-radius:5px; color:var(--ink); background:var(--surface-soft,#f4f5f7); font-size:13px; font-weight:750; white-space:nowrap; }
+.search button:hover { border-color:var(--primary); color:var(--primary); }
 .toolbar>label:not(.search) { display:grid; gap:5px; color:var(--muted); font-size:13px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
 .toolbar select { min-width:155px; height:37px; padding:0 9px; border:1px solid var(--line); border-radius:7px; color:var(--ink); background:var(--surface,#fff); font-size:15.6px; text-transform:none; }
 .resultCount { margin:0 0 10px auto; color:var(--muted); font-size:14.3px; white-space:nowrap; }
@@ -38,6 +40,7 @@
 .softwareTable td>strong { font-size:15.6px; }
 .softwareTable td>small { margin-top:4px; color:var(--muted); font-size:13px; }
 .softwareTable code { padding:4px 7px; border-radius:4px; color:var(--ink); background:var(--surface-soft,#eceef1); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:14.3px; font-weight:700; }
+.softwareStatus { display:inline-flex; padding:4px 7px; border:1px solid var(--line); border-radius:4px; color:var(--ink); background:var(--surface-soft,#eceef1); font-size:11.7px; font-weight:800; white-space:nowrap; }
 .description { max-width:245px; display:-webkit-box; overflow:hidden; color:var(--muted); font-size:14.3px; line-height:1.4; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
 .roomTags { display:flex; align-items:center; flex-wrap:wrap; gap:4px; }
 .roomTags span,.roomTags b { min-width:30px; padding:4px 6px; border-radius:4px; color:#175cc4; background:#dbeafe; font-size:13px; text-align:center; }
@@ -55,17 +58,27 @@
 .requirements h2,.roomsResult h2,.importHeader h2 { margin:3px 0 0; font-size:18.2px; }
 .requirements>header button { border:0; color:#f0c6cb; background:transparent; font-size:13px; font-weight:750; }
 .requirements>p { margin:0; padding:12px 14px; border-bottom:1px solid var(--line); color:var(--muted); font-size:14.3px; line-height:1.45; background:var(--surface,#fff); }
-.requirements>div { max-height:510px; display:grid; gap:6px; padding:10px; overflow:auto; }
+.requirementSearch { display:flex; align-items:center; gap:8px; margin:10px 10px 0; padding:0 10px !important; border-color:var(--line) !important; background:var(--surface,#fff) !important; cursor:text !important; }
+.requirementSearch>span { color:var(--muted); font-size:18px; }
+.requirements .requirementSearch input { min-width:0; width:100%; height:34px; padding:0; border:0; outline:0; color:var(--ink); background:transparent; font-size:13px; accent-color:auto; }
+.requirementSearch:focus-within { border-color:var(--primary) !important; box-shadow:0 0 0 3px rgba(165,16,34,.09); }
+.selectionSummary { padding:9px 14px 2px; color:var(--muted); font-size:11.7px; font-weight:700; }
+.softwareSelectionList { max-height:455px; display:grid; gap:6px; padding:8px 10px 10px; overflow:auto; }
 .requirements label { display:flex; align-items:center; gap:9px; padding:9px 10px; border:1px solid var(--line); border-radius:6px; background:var(--surface-soft,#fafbfc); cursor:pointer; }
 .requirements label.selectedRequirement { border-color:#e3a6ae; background:#fff3f4; }
 .requirements input { accent-color:var(--primary); }
 .requirements label span,.requirements label strong,.requirements label small { display:block; min-width:0; }
 .requirements label strong { color:var(--ink); font-size:14.3px; }
 .requirements label small { margin-top:3px; color:var(--muted); font-size:11.7px; }
+.noSoftwareMatch { margin:0; padding:18px 8px; color:var(--muted); font-size:13px; text-align:center; }
 .roomsResult { overflow:hidden; }
 .roomsResult>header,.importHeader { min-height:65px; display:flex; align-items:center; justify-content:space-between; gap:14px; padding:13px 16px; border-bottom:1px solid var(--line); background:var(--surface,#fff); }
 .roomsResult>header p,.importHeader p { margin:5px 0 0; color:var(--muted); font-size:14.3px; }
 .roomsResult>header>span { padding:5px 8px; border-radius:4px; color:#175cc4; background:#dbeafe; font-size:13px; font-weight:750; white-space:nowrap; }
+.roomSearch { display:flex; align-items:center; gap:8px; padding:10px 12px; border-bottom:1px solid var(--line); background:var(--surface-soft,#fafbfc); }
+.roomSearch>span { color:var(--muted); font-size:18px; }
+.roomSearch input { min-width:0; flex:1; height:35px; padding:0 10px; border:1px solid var(--line); border-radius:6px; outline:0; color:var(--ink); background:var(--surface,#fff); font-size:14.3px; }
+.roomSearch input:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(165,16,34,.09); }
 .roomGrid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding:12px; }
 .roomGrid>article { min-width:0; overflow:hidden; border:1px solid var(--line); border-radius:8px; background:var(--surface-soft,#fafbfc); }
 .roomGrid>article>header { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 12px; border-bottom:1px solid var(--line); background:var(--surface,#f1f2f4); }
@@ -128,7 +141,7 @@
   .search { max-width:none; flex:1 1 100%; }
   .resultCount { margin-left:0; }
   .roomsLayout { grid-template-columns:1fr; }
-  .requirements>div { max-height:250px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .softwareSelectionList { max-height:250px; grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 @media (max-width:560px) {
   .heading { align-items:stretch; }
@@ -144,7 +157,7 @@
   .toolbar>label:not(.search) { width:100%; }
   .toolbar select { width:100%; }
   .resultCount { margin:0; }
-  .requirements>div { grid-template-columns:1fr; }
+  .softwareSelectionList { grid-template-columns:1fr; }
   .roomsResult>header,.importHeader { align-items:flex-start; flex-direction:column; }
   .importHeader button { width:100%; }
   .roomGrid { padding:8px; }

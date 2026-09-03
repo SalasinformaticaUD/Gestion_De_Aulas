@@ -1,8 +1,11 @@
+export type SoftwareStatus = "ACTIVO" | "SIN_LICENCIA" | "LICENCIADO" | "EN_REVISION" | "INACTIVO";
+
 export type InstalledSoftware = {
   id: string;
   name: string;
   version: string;
   description?: string;
+  status?: SoftwareStatus;
 };
 
 export type SoftwareAssignment = {

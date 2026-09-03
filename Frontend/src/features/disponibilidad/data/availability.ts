@@ -8,7 +8,6 @@ export const availabilityRooms: AvailabilityRoom[] = rooms.map((room) => ({
   id: room.id,
   code: room.code,
   location: room.location,
-  floor: room.floor,
   capacity: room.capacity,
   physicalStatus: room.status === "mantenimiento" ? "MANTENIMIENTO" : "OPERATIVA",
   software: room.software.map((item) => ({ id: `software-${item.name}`, name: item.name })),

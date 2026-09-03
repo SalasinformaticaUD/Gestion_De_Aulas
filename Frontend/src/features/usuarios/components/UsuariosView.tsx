@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import styles from "./UsuariosView.module.css";
 import type { Usuario } from "../types";
 import { actualizarCargo, actualizarRol, actualizarUsuario, crearCargo, crearRol, crearUsuario, listarCargos, listarPermisos, listarRoles, listarUsuarios, type CargoCatalogo, type PermisoCatalogo, type RolCatalogo } from "@/features/usuarios/api/usuariosApi";
+import { obtenerSesion } from "@/features/auth/lib/sesion";
 
 const vacio = { nombreCompleto: "", nombreUsuario: "", correo: "", cargo: "", dependencia: "Aulas de Software", permisos: [] as string[], password: "", rolIds: [] as string[] };
 
 export function UsuariosView() {
+  const router = useRouter();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [roles, setRoles] = useState<RolCatalogo[]>([]);
   const [cargos, setCargos] = useState<CargoCatalogo[]>([]);
@@ -23,6 +26,7 @@ export function UsuariosView() {
   const [rolPermisoIds, setRolPermisoIds] = useState<string[]>([]);
   const [cargoNombre, setCargoNombre] = useState("");
   const [cargoDescripcion, setCargoDescripcion] = useState("");
+  const [isAdministrator, setIsAdministrator] = useState<boolean | null>(null);
 
   const cargar = async () => {
     try {
@@ -37,8 +41,17 @@ export function UsuariosView() {
     }
   };
 
-  useEffect(() => { void cargar(); }, []);
+  useEffect(() => {
+    const allowed = obtenerSesion()?.usuario.roles.some((rol) => rol.trim().toUpperCase() === "ADMINISTRADOR") ?? false;
+    setIsAdministrator(allowed);
+    if (!allowed) {
+      router.replace("/?acceso=denegado");
+      return;
+    }
+    void cargar();
+  }, [router]);
   const visibles = useMemo(() => usuarios.filter((usuario) => `${usuario.nombreCompleto} ${usuario.nombreUsuario} ${usuario.correo}`.toLowerCase().includes(busqueda.toLowerCase())), [usuarios, busqueda]);
+  if (isAdministrator !== true) return <main className="access-guard-loading">{isAdministrator === false ? "Acceso exclusivo para el administrador." : "Verificando acceso..."}</main>;
   const alternarRol = (rolId: string) => setForm((actual) => ({ ...actual, rolIds: actual.rolIds.includes(rolId) ? actual.rolIds.filter((id) => id !== rolId) : [...actual.rolIds, rolId] }));
   const alternarPermiso = (permisoId: string) => setRolPermisoIds((actual) => actual.includes(permisoId) ? actual.filter((id) => id !== permisoId) : [...actual, permisoId]);
   const seleccionarRol = (id: string) => {

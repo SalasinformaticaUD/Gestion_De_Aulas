@@ -9,6 +9,7 @@ import { PasswordHashService } from './password-hash.service';
 import { AuthenticationGuard } from './guards/authentication.guard';
 import { ModulePermissionsGuard } from './guards/module-permissions.guard';
 import { PermissionsGuard } from './guards/permissions.guard';
+import { AdministratorGuard } from './guards/administrator.guard';
 
 @Module({
   imports: [PrismaModule, JwtModule.register({})],
@@ -18,6 +19,7 @@ import { PermissionsGuard } from './guards/permissions.guard';
     AuthTokenService,
     PasswordHashService,
     { provide: APP_GUARD, useClass: AuthenticationGuard },
+    { provide: APP_GUARD, useClass: AdministratorGuard },
     { provide: APP_GUARD, useClass: ModulePermissionsGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
   ],

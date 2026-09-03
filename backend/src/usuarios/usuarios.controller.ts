@@ -16,7 +16,9 @@ import { RequireModule } from '../auth/decorators/require-module.decorator';
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { UsuarioAutenticado } from '../auth/auth.types';
+import { RequireAdministrator } from '../auth/decorators/require-administrator.decorator';
 
+@RequireAdministrator()
 @RequireModule('ADMINISTRACION')
 @Controller('usuarios')
 export class UsuariosController {

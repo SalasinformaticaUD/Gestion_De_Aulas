@@ -3,10 +3,12 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequireModule } from '../auth/decorators/require-module.decorator';
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 import type { UsuarioAutenticado } from '../auth/auth.types';
+import { RequireAdministrator } from '../auth/decorators/require-administrator.decorator';
 import { CargosService } from './cargos.service';
 import { CreateCargoDto } from './dto/create-cargo.dto';
 import { UpdateCargoDto } from './dto/update-cargo.dto';
 
+@RequireAdministrator()
 @RequireModule('ADMINISTRACION')
 @Controller('cargos')
 export class CargosController {

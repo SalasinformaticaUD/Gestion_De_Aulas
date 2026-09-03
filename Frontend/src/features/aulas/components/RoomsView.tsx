@@ -44,6 +44,7 @@ export function RoomsView() {
   const [activeTab, setActiveTab] = useState<Tab>("Información general");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [importNotice, setImportNotice] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -63,6 +64,11 @@ export function RoomsView() {
   };
 
   useEffect(() => { void loadRooms(); }, []);
+  useEffect(() => {
+    if (!importNotice) return;
+    const timer = window.setTimeout(() => setImportNotice(null), 15000);
+    return () => window.clearTimeout(timer);
+  }, [importNotice]);
 
   const filteredRooms = useMemo(
     () => rooms.filter((room) => status === "todos" || room.status === status),
@@ -102,9 +108,10 @@ export function RoomsView() {
     <>
       <section className="page-heading rooms-heading">
         <div><h1>Aulas de Software</h1><p>{loading ? "Cargando aulas registradas…" : `Información detallada de ${rooms.length} aula(s) registradas.`}</p></div>
-        <div className="room-actions">{canManage && <><button type="button" className="button-primary room-create-button" onClick={() => setIsCreateOpen(true)}>+ Crear aula</button><label className="button-secondary room-upload-button">Subir aulas masivamente<input type="file" accept=".xlsx,.xls" hidden onChange={async (event) => { const archivo = event.target.files?.[0]; if (!archivo) return; setUploading(true); try { const result = await importarAulasExcel(archivo); const preservadas = result.totalConservadasPorHistorial ? `; ${result.totalConservadasPorHistorial} conservadas por historial relacionado` : ""; setError(`Carga completa: ${result.totalRecibidas} fila(s): ${result.totalCreadas} creadas, ${result.totalActualizadas} actualizadas y ${result.totalEliminadas} eliminadas${preservadas}.`); await loadRooms(); } catch (cause) { setError(cause instanceof Error ? cause.message : "No fue posible importar el Excel."); } finally { setUploading(false); event.target.value = ""; } }} />{uploading ? " Cargando…" : ""}</label></>}<button type="button" className="button-secondary room-download-button" onClick={() => descargarPlantillaAulas(rooms)}>Descargar plantilla Excel</button></div>
+        <div className="room-actions">{canManage && <><button type="button" className="button-primary room-create-button" onClick={() => setIsCreateOpen(true)}>+ Crear aula</button><label className="button-secondary room-upload-button">Subir aulas masivamente<input type="file" accept=".xlsx,.xls" hidden onChange={async (event) => { const archivo = event.target.files?.[0]; if (!archivo) return; setUploading(true); try { const result = await importarAulasExcel(archivo); const preservadas = result.totalConservadasPorHistorial ? `; ${result.totalConservadasPorHistorial} conservadas por historial relacionado` : ""; setImportNotice(`Carga completa: ${result.totalRecibidas} fila(s): ${result.totalCreadas} creadas, ${result.totalActualizadas} actualizadas y ${result.totalEliminadas} eliminadas${preservadas}.`); await loadRooms(); } catch (cause) { setError(cause instanceof Error ? cause.message : "No fue posible importar el Excel."); } finally { setUploading(false); event.target.value = ""; } }} />{uploading ? " Cargando…" : ""}</label></>}<button type="button" className="button-secondary room-download-button" onClick={() => descargarPlantillaAulas(rooms)}>Descargar plantilla Excel</button></div>
       </section>
 
+      {importNotice && <div className="audiovisual-notice" role="status"><span>{importNotice}</span><button type="button" onClick={() => setImportNotice(null)} aria-label="Cerrar mensaje">×</button></div>}
       {error && <div className="audiovisual-notice audiovisual-notice-error" role="alert"><span>{error}</span><button type="button" onClick={() => void loadRooms()}>Reintentar</button></div>}
 
       <section className="rooms-layout" aria-label="Administración de aulas">
