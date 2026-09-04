@@ -16,10 +16,18 @@ type AppShellProps = { children: React.ReactNode };
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [profileData, setProfileData] = useState<UserProfile>(defaultProfile);
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [isAdministrator, setIsAdministrator] = useState(false);
   const closeMenu = () => setIsMenuOpen(false);
+  const toggleSidebar = () => {
+    if (window.matchMedia("(max-width: 820px)").matches) {
+      setIsMenuOpen((open) => !open);
+      return;
+    }
+    setIsSidebarCollapsed((collapsed) => !collapsed);
+  };
   const salir = () => {
     cerrarSesion();
     closeMenu();
@@ -64,9 +72,9 @@ export function AppShell({ children }: AppShellProps) {
   );
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${isSidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       {isMenuOpen && <button className="menu-overlay" aria-label="Cerrar menú" onClick={closeMenu} />}
-      <aside className={`sidebar ${isMenuOpen ? "is-open" : ""}`} aria-label="Navegación principal">
+      <aside className={`sidebar ${isMenuOpen ? "is-open" : ""} ${isSidebarCollapsed ? "is-collapsed" : ""}`} aria-label="Navegación principal">
         <div className="brand"><CosmosLogo className="sidebar-cosmos-logo" variant="light" priority /><span><small>Aulas de Software</small></span></div>
         <nav className="nav">
           <p className="nav-label">Operación</p>
@@ -81,7 +89,7 @@ export function AppShell({ children }: AppShellProps) {
       </aside>
       <section className="workspace">
         <header className="topbar">
-          <button className="menu-button" type="button" aria-label="Abrir menú" aria-expanded={isMenuOpen} onClick={() => setIsMenuOpen(true)}>☰</button>
+          <button className="menu-button" type="button" aria-label={isSidebarCollapsed ? "Mostrar panel de módulos" : "Ocultar panel de módulos"} aria-expanded={!isSidebarCollapsed} onClick={toggleSidebar}>☰</button>
           <span className="period">2026-3</span>
           <div className="date-time"><span>{formattedDate}</span><time dateTime={currentDate?.toISOString()}>{formattedTime}</time></div>
           <span className="topbar-spacer" />

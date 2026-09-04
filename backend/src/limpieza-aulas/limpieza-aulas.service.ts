@@ -6,9 +6,6 @@ import {
 } from '@nestjs/common';
 import {
   EstadoAula,
-  EstadoPrestamo,
-  EstadoTarea,
-  TipoObservacion,
 } from '../../generated/prisma/enums.js';
 import type { Prisma } from '@prisma/client';
 import { AuditoriaService } from '../auditoria/auditoria.service';
@@ -42,11 +39,13 @@ export class LimpiezaAulasService {
     await this.ensureAulaExists(input.aulaId);
     const realizadaEn = input.realizadaEn ? this.toDate(input.realizadaEn) : new Date();
     this.asegurarFechaEditable(realizadaEn);
+    await this.asegurarIntervaloEntreLimpiezas(input.aulaId, realizadaEn);
     const limpieza = await this.prisma.limpieza.create({
       data: {
         aulaId: input.aulaId,
         ...(usuarioId && { responsableId: usuarioId }),
         realizadaEn,
+        estado: input.estado ?? 'REALIZADA',
         ...(input.observacion !== undefined && {
           observacion: this.normalizarObservacion(input.observacion),
         }),
@@ -95,12 +94,19 @@ export class LimpiezaAulasService {
     if (input.aulaId && input.aulaId !== previa.aulaId) {
       await this.ensureAulaExists(input.aulaId);
     }
+    await this.asegurarIntervaloEntreLimpiezas(
+      input.aulaId ?? previa.aulaId,
+      realizadaEn,
+      id,
+    );
     const limpieza = await this.prisma.limpieza.update({
       where: { id },
       data: {
         ...(input.aulaId !== undefined && { aulaId: input.aulaId }),
         ...(input.realizadaEn !== undefined && { realizadaEn }),
-        ...(input.observacion !== undefined && {
+        ...(input.estado !== undefined && { estado: input.estado }),
+        ...(input.limpiarObservacion && { observacion: null }),
+        ...(!input.limpiarObservacion && input.observacion !== undefined && {
           observacion: this.normalizarObservacion(input.observacion),
         }),
       },
@@ -110,20 +116,17 @@ export class LimpiezaAulasService {
     return limpieza;
   }
 
+  async remove(id: string, usuarioId?: string) {
+    const previa = await this.findOne(id);
+    this.asegurarFechaEditable(previa.realizadaEn);
+    const limpieza = await this.prisma.limpieza.delete({ where: { id } });
+    await this.registrar(usuarioId, id, 'DELETE', previa);
+    return limpieza;
+  }
+
   async findSugerencias(query: ConsultarSugerenciasLimpiezaDto) {
-    const { inicio, fin, diaSemana } = this.rangoDiaBogota(
-      this.toDate(query.fecha),
-    );
-    const [
-      aulas,
-      restricciones,
-      clases,
-      prestamos,
-      practicas,
-      tareas,
-      limpiezasDelDia,
-    ] = await Promise.all([
-      this.prisma.aula.findMany({
+    const { inicio } = this.rangoDiaBogota(this.toDate(query.fecha));
+    const aulas = await this.prisma.aula.findMany({
         where: { estado: EstadoAula.OPERATIVA },
         select: {
           id: true,
@@ -132,81 +135,12 @@ export class LimpiezaAulasService {
           limpiezas: {
             select: { realizadaEn: true },
             orderBy: { realizadaEn: 'desc' },
+            take: 1,
           },
         },
         orderBy: { codigo: 'asc' },
-      }),
-      this.prisma.observacion.findMany({
-        where: {
-          tipo: TipoObservacion.RESTRICCION,
-          creadoEn: { lt: fin },
-          OR: [{ vigenteHasta: null }, { vigenteHasta: { gt: inicio } }],
-        },
-        select: { aulaId: true },
-      }),
-      this.prisma.claseProgramada.findMany({
-        where: {
-          diaSemana,
-          periodo: {
-            activo: true,
-            fechaInicio: { lte: fin },
-            fechaFin: { gte: inicio },
-          },
-        },
-        select: { aulaId: true },
-      }),
-      this.prisma.prestamoDocente.findMany({
-        where: {
-          estado: { in: [EstadoPrestamo.APROBADO, EstadoPrestamo.ACTIVO] },
-          inicio: { lt: fin },
-          fin: { gt: inicio },
-        },
-        select: { aulaId: true },
-      }),
-      this.prisma.practicaLibre.findMany({
-        where: {
-          estado: EstadoPrestamo.ACTIVO,
-          inicio: { lt: fin },
-          OR: [
-            { finReal: { gt: inicio } },
-            {
-              finReal: null,
-              OR: [{ finEstimada: null }, { finEstimada: { gt: inicio } }],
-            },
-          ],
-        },
-        select: { aulaId: true },
-      }),
-      this.prisma.tarea.findMany({
-        where: {
-          aulaId: { not: null },
-          afectaDisponibilidad: true,
-          estado: { in: [EstadoTarea.PENDIENTE, EstadoTarea.EN_PROCESO] },
-          AND: [
-            { OR: [{ inicio: null }, { inicio: { lt: fin } }] },
-            { OR: [{ fin: null }, { fin: { gt: inicio } }] },
-          ],
-        },
-        select: { aulaId: true },
-      }),
-      this.prisma.limpieza.findMany({
-        where: { realizadaEn: { gte: inicio, lt: fin } },
-        select: { aulaId: true },
-      }),
-    ]);
-
-    const bloqueadas = new Set(
-      [
-        ...restricciones,
-        ...clases,
-        ...prestamos,
-        ...practicas,
-        ...tareas,
-        ...limpiezasDelDia,
-      ].map(({ aulaId }) => aulaId),
-    );
+      });
     const sugerencias = aulas
-      .filter((aula) => !bloqueadas.has(aula.id))
       .map((aula) => {
         const ultimaLimpieza = aula.limpiezas[0]?.realizadaEn ?? null;
         const diasSinLimpieza = ultimaLimpieza
@@ -223,10 +157,13 @@ export class LimpiezaAulasService {
           ultimaLimpieza,
           diasSinLimpieza,
           motivo: ultimaLimpieza
-            ? `Disponible y sin limpieza registrada hoy; última limpieza hace ${diasSinLimpieza} día(s).`
+            ? `Última limpieza hace ${diasSinLimpieza} día(s).`
             : 'Disponible y sin historial de limpieza registrado.',
         };
       })
+      .filter(({ diasSinLimpieza }) =>
+        diasSinLimpieza === null || diasSinLimpieza >= 2,
+      )
       .sort((a, b) => {
         const prioridadA = a.diasSinLimpieza ?? Number.MAX_SAFE_INTEGER;
         const prioridadB = b.diasSinLimpieza ?? Number.MAX_SAFE_INTEGER;
@@ -239,7 +176,7 @@ export class LimpiezaAulasService {
     return {
       fecha: query.fecha,
       criterio:
-        'Aulas operativas sin restricciones, clases, préstamos, prácticas, tareas que afecten disponibilidad ni limpieza registrada durante la jornada.',
+        'Aulas operativas con dos o más días sin limpieza, ordenadas desde la que lleva más tiempo sin atención.',
       sugerencias,
     };
   }
@@ -261,6 +198,7 @@ export class LimpiezaAulasService {
           id: true,
           aulaId: true,
           realizadaEn: true,
+          estado: true,
           observacion: true,
         },
         orderBy: { realizadaEn: 'asc' },
@@ -407,11 +345,46 @@ export class LimpiezaAulasService {
     const ayer = new Date(`${hoy}T12:00:00.000Z`);
     ayer.setUTCDate(ayer.getUTCDate() - 1);
     const fechaRegistro = this.fechaBogota(fecha);
+    if (fechaRegistro > hoy) {
+      throw new BadRequestException(
+        'No se permite registrar ni modificar una limpieza con fecha futura.',
+      );
+    }
     if (fechaRegistro !== hoy && fechaRegistro !== ayer.toISOString().slice(0, 10)) {
       throw new BadRequestException(
         'Solo se pueden registrar o modificar limpiezas del día actual o del día anterior.',
       );
     }
+  }
+
+  private async asegurarIntervaloEntreLimpiezas(
+    aulaId: string,
+    fecha: Date,
+    excluirId?: string,
+  ): Promise<void> {
+    const { inicio, fin } = this.rangoDiaBogota(fecha);
+    const registroReciente = await this.prisma.limpieza.findFirst({
+      where: {
+        aulaId,
+        ...(excluirId && { id: { not: excluirId } }),
+        realizadaEn: {
+          gte: this.inicioDiasAntes(inicio, 2),
+          lt: fin,
+        },
+      },
+      select: { id: true },
+    });
+    if (registroReciente) {
+      throw new BadRequestException(
+        'No se permite registrar limpieza: el aula ya fue atendida hoy o durante los dos días anteriores.',
+      );
+    }
+  }
+
+  private inicioDiasAntes(inicioDia: Date, dias: number): Date {
+    const inicioAnterior = new Date(inicioDia);
+    inicioAnterior.setDate(inicioAnterior.getDate() - dias);
+    return inicioAnterior;
   }
 
   private rangoDiaBogota(fecha: Date) {
@@ -454,7 +427,7 @@ export class LimpiezaAulasService {
   private registrar(
     usuarioId: string | undefined,
     entidadId: string,
-    accion: 'CREATE' | 'UPDATE',
+    accion: 'CREATE' | 'UPDATE' | 'DELETE',
     datosPrevios?: unknown,
     datosNuevos?: unknown,
   ) {

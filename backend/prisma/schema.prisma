@@ -86,6 +86,11 @@ enum EstadoSoftware {
   INACTIVO
 }
 
+enum EstadoLimpieza {
+  REALIZADA
+  NOVEDAD
+}
+
 // Identidad, autorización y auditoría
 model Usuario {
   id                               String                @id @default(uuid()) @db.Uuid
@@ -536,6 +541,7 @@ model Limpieza {
   aulaId        String   @db.Uuid
   responsableId String?  @db.Uuid
   realizadaEn   DateTime @default(now())
+  estado        EstadoLimpieza @default(REALIZADA)
   observacion   String?
   aula          Aula     @relation(fields: [aulaId], references: [id])
   responsable   Usuario? @relation("RegistroLimpieza", fields: [responsableId], references: [id], onDelete: SetNull)

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
@@ -75,5 +76,14 @@ export class LimpiezaAulasController {
     @CurrentUser() usuario?: UsuarioAutenticado,
   ) {
     return this.limpiezaAulasService.update(id, dto, usuario?.id);
+  }
+
+  @Delete(':id')
+  @RequirePermissions('LIMPIEZA_ACTUALIZAR')
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() usuario?: UsuarioAutenticado,
+  ) {
+    return this.limpiezaAulasService.remove(id, usuario?.id);
   }
 }

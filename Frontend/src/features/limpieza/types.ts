@@ -4,5 +4,6 @@ export type CleaningRecord = {
   roomId: string;
   roomCode: string;
   performedAt: string;
+  status: "REALIZADA" | "NOVEDAD";
   observation?: string;
 };
