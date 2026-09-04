@@ -8,6 +8,8 @@ export class EquipoAudiovisualEntity implements PrismaEquipoAudiovisual {
   declare codigoInventario: string;
   declare nombre: string;
   declare tipo: string;
+  declare marca: string | null;
+  declare modelo: string | null;
   declare estado: PrismaEquipoAudiovisual['estado'];
   declare observacion: string | null;
   declare detallesPrestamo?: DetallePrestamoAudiovisualEntity[];

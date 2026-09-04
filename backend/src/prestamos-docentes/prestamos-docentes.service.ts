@@ -5,8 +5,7 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
-import { EstadoSoftware } from '@prisma/client';
-import { EstadoPrestamo } from '../../generated/prisma/enums.js';
+import { EstadoPrestamo, EstadoSoftware } from '@prisma/client';
 import { DisponibilidadAulasService } from '../disponibilidad-aulas/disponibilidad-aulas.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePrestamosDocenteDto } from './dto/create-prestamos-docente.dto';

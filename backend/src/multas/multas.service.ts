@@ -174,6 +174,71 @@ export class MultasService {
     return { totalFilas: filasConDatos.length, procesadas: datos.length, duplicadas: duplicados, conMulta: resultados.filter((resultado) => resultado.estado === 'CON_MULTA').length, sinMulta: resultados.filter((resultado) => resultado.estado === 'SIN_MULTA').length, noEncontradas: resultados.filter((resultado) => resultado.estado === 'NO_ENCONTRADO').length, resultados };
   }
 
+  async cargarExcel(
+    archivo: { buffer: Buffer; originalname: string } | undefined,
+    usuarioId?: string,
+  ) {
+    if (!archivo?.buffer?.length || !/\.(xlsx|xls)$/i.test(archivo.originalname))
+      throw new BadRequestException('Debe adjuntar un archivo Excel .xlsx o .xls.');
+    let filas: Array<Record<string, unknown>>;
+    try {
+      const libro = XLSX.read(archivo.buffer, { type: 'buffer', cellDates: true });
+      const hoja = libro.Sheets[libro.SheetNames[0]];
+      filas = XLSX.utils.sheet_to_json<Record<string, unknown>>(hoja, { defval: '', raw: false });
+    } catch {
+      throw new BadRequestException('No fue posible leer el archivo Excel.');
+    }
+    const normalizar = (valor: string) => valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+    const valor = (fila: Record<string, unknown>, encabezado: string) => {
+      const clave = Object.keys(fila).find((item) => normalizar(item) === normalizar(encabezado));
+      return String(clave ? fila[clave] ?? '' : '').trim();
+    };
+    const conDatos = filas.filter((fila) => Object.values(fila).some((celda) => String(celda).trim()));
+    if (!conDatos.length) throw new BadRequestException('El Excel no contiene multas para cargar.');
+    if (conDatos.length > 5_000) throw new BadRequestException('El Excel supera el máximo de 5.000 filas.');
+    const encabezados = Object.keys(conDatos[0]).map(normalizar);
+    const requeridos = ['MULTA', 'ESTUDIANTE', 'MOTIVO', 'FECHA', 'DESCRIPCION', 'ESTADO'];
+    const faltantes = requeridos.filter((encabezado) => !encabezados.includes(encabezado));
+    if (faltantes.length) throw new BadRequestException(`Faltan columnas requeridas: ${faltantes.join(', ')}.`);
+
+    const errores: Array<{ fila: number; motivo: string }> = [];
+    let creadas = 0;
+    let actualizadas = 0;
+    for (const [indice, fila] of conDatos.entries()) {
+      try {
+        const estudianteTexto = valor(fila, 'ESTUDIANTE');
+        const codigo = estudianteTexto.match(/^\s*(\d{3,50})(?:\s*-|\s|$)/)?.[1];
+        const motivoNombre = valor(fila, 'MOTIVO');
+        const fechaTexto = valor(fila, 'FECHA');
+        const descripcion = valor(fila, 'DESCRIPCION');
+        const estadoTexto = normalizar(valor(fila, 'ESTADO'));
+        if (!codigo) throw new BadRequestException('Estudiante debe iniciar con su código numérico, por ejemplo: 20261001 - NOMBRE.');
+        if (!motivoNombre) throw new BadRequestException('Motivo es obligatorio.');
+        const fecha = new Date(fechaTexto);
+        if (Number.isNaN(fecha.getTime())) throw new BadRequestException('Fecha no es válida.');
+        const estado = ({ ACTIVA: EstadoMulta.ACTIVA, CUMPLIDA: EstadoMulta.CUMPLIDA, ANULADA: EstadoMulta.ANULADA } as const)[estadoTexto];
+        if (!estado) throw new BadRequestException('Estado debe ser ACTIVA, CUMPLIDA o ANULADA.');
+        const estudiante = await this.prisma.estudiante.findUnique({ where: { codigo }, select: { id: true } });
+        if (!estudiante) throw new NotFoundException(`No existe un estudiante con código ${codigo}.`);
+        const motivo = await this.prisma.motivoMulta.upsert({ where: { nombre: motivoNombre }, create: { nombre: motivoNombre }, update: {}, select: { id: true } });
+        const existente = await this.prisma.multa.findFirst({ where: { estudianteId: estudiante.id, motivoId: motivo.id, fecha, descripcion: descripcion || null }, select: { id: true, estado: true } });
+        if (existente) {
+          if (existente.estado !== estado) {
+            await this.prisma.multa.update({ where: { id: existente.id }, data: { estado } });
+            actualizadas += 1;
+          }
+          continue;
+        }
+        const creada = await this.prisma.multa.create({ data: { estudianteId: estudiante.id, motivoId: motivo.id, fecha, descripcion: descripcion || null, estado, ...(usuarioId && { impuestaPorId: usuarioId }) } });
+        await this.registrar(usuarioId, creada.id, 'CREATE', undefined, creada);
+        creadas += 1;
+      } catch (error: unknown) {
+        errores.push({ fila: indice + 2, motivo: this.mensajeError(error) });
+      }
+    }
+    return { procesadas: conDatos.length, creadas, actualizadas, errores };
+  }
+
   async cumplir(id: string, dto: CumplirMultaDto, usuarioId?: string) {
     const previa = await this.findOne(id);
     if (previa.estado !== EstadoMulta.ACTIVA) {
@@ -350,5 +415,9 @@ export class MultasService {
       error !== null &&
       (error as { code?: string }).code === code
     );
+  }
+
+  private mensajeError(error: unknown): string {
+    return error instanceof Error ? error.message : 'Error desconocido al procesar la fila.';
   }
 }

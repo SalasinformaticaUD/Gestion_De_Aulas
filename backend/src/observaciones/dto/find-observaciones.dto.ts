@@ -1,6 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsBoolean, IsEnum, IsOptional, IsUUID } from 'class-validator';
-import { TipoObservacion } from '../../../generated/prisma/enums.js';
+import { TipoObservacion } from '@prisma/client';
 
 export class FindObservacionesDto {
   @IsOptional()

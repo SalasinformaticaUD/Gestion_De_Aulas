@@ -7,7 +7,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { TipoObservacion } from '../../../generated/prisma/enums.js';
+import { TipoObservacion } from '@prisma/client';
 
 export class CreateObservacioneDto {
   @IsUUID()
@@ -21,6 +21,10 @@ export class CreateObservacioneDto {
   @MinLength(1)
   @MaxLength(2000)
   contenido!: string;
+
+  @IsOptional()
+  @IsDateString()
+  vigenteDesde?: string | null;
 
   @IsOptional()
   @IsDateString()

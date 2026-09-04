@@ -1,5 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { TipoObservacion } from '../../generated/prisma/enums.js';
+import { TipoObservacion } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ObservacionesService } from './observaciones.service';
 
@@ -35,23 +35,49 @@ describe('ObservacionesService', () => {
       where: {
         aulaId,
         tipo: TipoObservacion.RESTRICCION,
-        creadoEn: { lt: fin },
-        OR: [{ vigenteHasta: null }, { vigenteHasta: { gt: inicio } }],
+        OR: [{ vigenteDesde: null }, { vigenteDesde: { lt: fin } }],
+        AND: [{ OR: [{ vigenteHasta: null }, { vigenteHasta: { gt: inicio } }] }],
       },
       orderBy: { creadoEn: 'desc' },
     });
   });
 
-  it('exige fecha de cierre para observaciones semanales', async () => {
+  it('exige desde y hasta para las restricciones', async () => {
     await expect(
       service.create({
         aulaId,
-        tipo: TipoObservacion.SEMANAL,
-        contenido: 'Restricción semanal',
+        tipo: TipoObservacion.RESTRICCION,
+        contenido: 'Restricción temporal',
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
 
     expect(prisma.observacion.create).not.toHaveBeenCalled();
+  });
+
+  it('registra el autor de la sesión y el rango de la restricción', async () => {
+    const usuarioId = '00000000-0000-4000-8000-000000000003';
+    prisma.observacion.create.mockResolvedValue({ id: observacionId });
+
+    await service.create(
+      {
+        aulaId,
+        tipo: TipoObservacion.RESTRICCION,
+        contenido: 'Mantenimiento temporal',
+        vigenteDesde: '2026-09-05T13:00:00.000Z',
+        vigenteHasta: '2026-09-05T15:00:00.000Z',
+      },
+      usuarioId,
+    );
+
+    expect(prisma.observacion.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          autorId: usuarioId,
+          vigenteDesde: new Date('2026-09-05T13:00:00.000Z'),
+          vigenteHasta: new Date('2026-09-05T15:00:00.000Z'),
+        }),
+      }),
+    );
   });
 
   it('cierra logicamente una observacion sin borrarla', async () => {
@@ -61,6 +87,7 @@ describe('ObservacionesService', () => {
       tipo: TipoObservacion.RESTRICCION,
       contenido: 'Aula restringida',
       vigenteHasta: null,
+      vigenteDesde: creadaEn,
       creadoEn: creadaEn,
     });
     type UpdateInput = {
@@ -80,7 +107,10 @@ describe('ObservacionesService', () => {
     if (!argumentos) throw new Error('No se capturaron argumentos de update.');
     expect(argumentos.where).toEqual({ id: observacionId });
     expect(argumentos.data.vigenteHasta).toBeInstanceOf(Date);
-    expect(argumentos.include).toEqual({ aula: true });
+    expect(argumentos.include).toEqual({
+      aula: true,
+      autor: { select: { id: true, nombreCompleto: true } },
+    });
   });
 
   it('responde 404 cuando la observacion no existe', async () => {

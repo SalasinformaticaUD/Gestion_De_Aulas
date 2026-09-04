@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
-import { anularMulta, buscarEstudiante, buscarMultasMasivo, cargarMultas, crearMotivoMulta, crearMulta, cumplirMulta, type BulkFineSearchResult } from "@/features/multas/api/multasApi";
+import { anularMulta, buscarEstudiante, cargarMultas, cargarMultasExcel, crearMotivoMulta, crearMulta, cumplirMulta, type ResultadoCargaMultas } from "@/features/multas/api/multasApi";
 import type { FineReason, FineRecord, FineStatus, FineStudent } from "@/features/multas/types";
 import styles from "./FinesView.module.css";
 
@@ -24,8 +24,8 @@ export function FinesView() {
   const [prefillDescription, setPrefillDescription] = useState("");
   const [prefillPracticeId, setPrefillPracticeId] = useState("");
   const [prefillSuggestedFine, setPrefillSuggestedFine] = useState("");
-  const [showBulkSearch, setShowBulkSearch] = useState(false);
-  const [bulkResult, setBulkResult] = useState<BulkFineSearchResult | null>(null);
+  const [showLoad, setShowLoad] = useState(false);
+  const [loadResult, setLoadResult] = useState<ResultadoCargaMultas | null>(null);
 
   const activeFines = fines.filter((fine) => fine.status === "ACTIVA");
   const historicalFines = fines.filter((fine) => fine.status !== "ACTIVA");
@@ -70,7 +70,7 @@ export function FinesView() {
   const changeView = (next: View) => { setView(next); setStatusFilter("todas"); };
 
   return <>
-    <section className={`page-heading ${styles.heading}`}><div><h1>Multas</h1><p>Registro, cumplimiento y anulación de restricciones aplicadas a estudiantes.</p></div><div className={styles.actions}><button type="button" className="button-secondary" onClick={downloadBulkTemplate}>Descargar plantilla Excel</button><button type="button" className="button-secondary" onClick={() => { setBulkResult(null); setShowBulkSearch(true); }}>Buscar multas masivamente</button><button type="button" className="button-primary" onClick={() => setShowCreate(true)}>+ Nueva multa</button></div></section>
+    <section className={`page-heading ${styles.heading}`}><div><h1>Multas</h1><p>Registro, cumplimiento y anulación de restricciones aplicadas a estudiantes.</p></div><div className={styles.actions}><button type="button" className={styles.saveButton} onClick={() => downloadFines(fines, reasons)}>Guardar multas</button><button type="button" className={styles.loadButton} onClick={() => { setLoadResult(null); setShowLoad(true); }}>Cargar multas</button><button type="button" className="button-primary" onClick={() => setShowCreate(true)}>+ Nueva multa</button></div></section>
 
     <section className={styles.metrics} aria-label="Resumen de multas">
       <Metric label="Activas" value={activeFines.length} detail="Bloquean prácticas libres" tone="red" />
@@ -89,17 +89,17 @@ export function FinesView() {
     {showCreate && <CreateFineDialog reasons={reasons} initialCode={prefillCode} initialReason={prefillReason} initialDescription={prefillDescription} initialPracticeId={prefillPracticeId} initialSuggestedFine={prefillSuggestedFine} onClose={() => setShowCreate(false)} onCreate={createFine} />}
     {transition && <TransitionDialog item={transition.item} action={transition.action} onClose={() => setTransition(null)} onConfirm={completeTransition} />}
     {showReason && <ReasonDialog onClose={() => setShowReason(false)} onCreate={createReason} />}
-    {showBulkSearch && !bulkResult && <BulkFineSearchDialog onClose={() => setShowBulkSearch(false)} onResult={setBulkResult} />}
-    {bulkResult && <BulkFineResultDialog result={bulkResult} onClose={() => { setBulkResult(null); setShowBulkSearch(false); }} />}
+    {showLoad && !loadResult && <LoadFinesDialog onClose={() => setShowLoad(false)} onResult={setLoadResult} />}
+    {loadResult && <LoadFinesResultDialog result={loadResult} onClose={() => { setLoadResult(null); setShowLoad(false); void reload(); }} />}
   </>;
 }
 
-function downloadBulkTemplate() {
-  const sheet = XLSX.utils.json_to_sheet([{ Código: "", Nombre: "" }]);
-  sheet['!cols'] = [{ wch: 18 }, { wch: 42 }];
+function downloadFines(fines: FineRecord[], reasons: FineReason[]) {
+  const sheet = XLSX.utils.json_to_sheet(fines.map((fine) => ({ Multa: fine.folio, Estudiante: `${fine.student.code} - ${fine.student.name}`, Motivo: reasons.find((reason) => reason.id === fine.reasonId)?.name ?? "", Fecha: fine.date, Descripción: fine.description ?? "", Estado: fine.status })));
+  sheet['!cols'] = [{ wch: 18 }, { wch: 42 }, { wch: 34 }, { wch: 25 }, { wch: 55 }, { wch: 16 }];
   const book = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(book, sheet, "Busqueda multas");
-  XLSX.writeFile(book, "plantilla-busqueda-multas.xlsx");
+  XLSX.utils.book_append_sheet(book, sheet, "Multas");
+  XLSX.writeFile(book, "multas.xlsx");
 }
 
 function Metric({ label, value, detail, tone }: { label: string; value: number; detail: string; tone: string }) {
@@ -137,7 +137,7 @@ function CreateFineDialog({ reasons, initialCode, initialReason, initialDescript
   return <DialogShell title="Nueva multa" subtitle="Restricción estudiantil" description={initialCode ? "Estudiante seleccionado desde la práctica libre." : "Identifique un estudiante con práctica libre activa y seleccione el motivo."} onClose={onClose}><form onSubmit={submit}>{initialCode ? <div className={styles.studentResult}>{student ? <><b>✓</b><span><strong>{student.name}</strong><small>Código {student.code} · Estudiante seleccionado</small></span></> : <span>Validando estudiante seleccionado…</span>}</div> : <><div className={styles.studentLookup}><label><span>Código estudiantil</span><input value={code} onChange={(event) => { setCode(event.target.value); setStudent(null); setNotFound(false); }} minLength={3} maxLength={30} required autoFocus placeholder="Ej. 2021102044" /></label><button type="button" onClick={lookup} disabled={code.trim().length < 3}>Buscar</button></div>{student && <div className={styles.studentResult}><b>{student.activePracticeId ? "✓" : "!"}</b><span><strong>{student.name}</strong><small>{student.activePracticeId ? `Práctica activa en ${student.activePracticeRoom ?? "aula asignada"}` : "No tiene una práctica libre activa"}</small></span></div>}{notFound && <div className={styles.inlineError}>El estudiante no existe.</div>}</>}<div className={styles.formGrid}><label className={styles.wideField}><span>Motivo</span><select value={reasonId} onChange={(event) => setReasonId(event.target.value)}>{reasons.map((reason) => <option key={reason.id} value={reason.id}>{reason.name}</option>)}</select></label><label className={styles.wideField}><span>Descripción <small>Opcional · {description.length}/2000</small></span><textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={2000} rows={5} placeholder="Detalle las circunstancias de la multa..." /></label><label className={styles.wideField}><span>Multa sugerida</span><textarea value={multaSugerida} onChange={(event) => setMultaSugerida(event.target.value)} maxLength={160} rows={2} /></label></div><div className={styles.blockWarning}><strong>Esta acción bloqueará las prácticas libres</strong><span>La restricción permanecerá hasta registrar cumplimiento o anulación.</span></div><footer><button type="button" className={styles.dialogCancel} onClick={onClose}>Cancelar</button><button type="submit" className="button-primary" disabled={!student || !reasonId || !practiceId}>Imponer multa</button></footer></form></DialogShell>;
 }
 
-function BulkFineSearchDialog({ onClose, onResult }: { onClose: () => void; onResult: (result: BulkFineSearchResult) => void }) {
+function LoadFinesDialog({ onClose, onResult }: { onClose: () => void; onResult: (result: ResultadoCargaMultas) => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -146,13 +146,13 @@ function BulkFineSearchDialog({ onClose, onResult }: { onClose: () => void; onRe
     if (!file) return;
     if (!/\.(xlsx|xls)$/i.test(file.name)) { setError("Seleccione un archivo Excel .xlsx o .xls."); return; }
     setLoading(true); setError(null);
-    try { onResult(await buscarMultasMasivo(file)); } catch (cause) { setError(cause instanceof Error ? cause.message : "No fue posible realizar la búsqueda masiva."); } finally { setLoading(false); }
+    try { onResult(await cargarMultasExcel(file)); } catch (cause) { setError(cause instanceof Error ? cause.message : "No fue posible cargar las multas."); } finally { setLoading(false); }
   };
-  return <DialogShell title="Búsqueda masiva de multas" subtitle="Consulta desde Excel" description="Use las columnas Código y Nombre. La coincidencia principal se realiza por código." onClose={onClose}><form onSubmit={(event) => void submit(event)}><div className={styles.formGrid}><label className={styles.wideField}><span>Archivo Excel</span><input type="file" accept=".xlsx,.xls" required onChange={(event) => { setFile(event.target.files?.[0] ?? null); setError(null); }} /></label></div>{file && <p className={styles.studentResult}>{file.name}</p>}{error && <p className={styles.inlineError}>{error}</p>}<div className={styles.blockWarning}><strong>Formato requerido</strong><span>La primera fila debe contener exactamente las columnas Código y Nombre. El nombre sirve como referencia; el código es el dato prioritario.</span></div><footer><button type="button" className={styles.dialogCancel} onClick={onClose} disabled={loading}>Cancelar</button><button type="submit" className="button-primary" disabled={!file || loading}>{loading ? "Buscando…" : "Buscar multas"}</button></footer></form></DialogShell>;
+  return <DialogShell title="Cargar multas" subtitle="Importación desde Excel" description="Cargue un archivo guardado desde este módulo para registrar o actualizar las multas." onClose={onClose}><form onSubmit={(event) => void submit(event)}><div className={styles.formGrid}><label className={styles.wideField}><span>Archivo Excel</span><input type="file" accept=".xlsx,.xls" required onChange={(event) => { setFile(event.target.files?.[0] ?? null); setError(null); }} /></label></div>{file && <p className={styles.studentResult}>{file.name}</p>}{error && <p className={styles.inlineError}>{error}</p>}<div className={styles.blockWarning}><strong>Formato requerido</strong><span>La primera fila debe contener: Multa, Estudiante, Motivo, Fecha, Descripción y Estado. Estudiante debe conservar el formato código - nombre.</span></div><footer><button type="button" className={styles.dialogCancel} onClick={onClose} disabled={loading}>Cancelar</button><button type="submit" className="button-primary" disabled={!file || loading}>{loading ? "Cargando…" : "Cargar multas"}</button></footer></form></DialogShell>;
 }
 
-function BulkFineResultDialog({ result, onClose }: { result: BulkFineSearchResult; onClose: () => void }) {
-  return <DialogShell title="Resultado de búsqueda masiva" subtitle="Consulta finalizada" description={`${result.conMulta} estudiante(s) con multa de ${result.procesadas} fila(s) procesada(s).`} onClose={onClose}><div className={styles.bulkSummary}><span><strong>{result.conMulta}</strong>Con multa</span><span><strong>{result.sinMulta}</strong>Sin multa</span><span><strong>{result.noEncontradas}</strong>No encontrados</span><span><strong>{result.duplicadas}</strong>Duplicados omitidos</span></div><div className="table-wrap"><table className={styles.finesTable}><thead><tr><th>Código</th><th>Nombre</th><th>Resultado</th><th>Motivo(s)</th></tr></thead><tbody>{result.resultados.map((item) => <tr key={item.codigo}><td>{item.codigo}</td><td>{item.nombre}</td><td>{item.estado === "CON_MULTA" ? "Con multa" : item.estado === "SIN_MULTA" ? "Sin multa" : "No encontrado"}{item.nombreCoincide === false && <small className={styles.inlineNote}> Nombre distinto al registrado</small>}</td><td>{item.multas.length ? item.multas.map((multa) => `${multa.motivo.nombre} (${multa.estado})`).join(" · ") : "—"}</td></tr>)}</tbody></table></div><footer><button type="button" className="button-primary" onClick={onClose}>Entendido</button></footer></DialogShell>;
+function LoadFinesResultDialog({ result, onClose }: { result: ResultadoCargaMultas; onClose: () => void }) {
+  return <DialogShell title="Resultado de carga" subtitle={result.errores.length ? "Carga parcial" : "Carga completada"} description={`${result.procesadas} fila(s) procesada(s): ${result.creadas} creada(s) y ${result.actualizadas} actualizada(s).`} onClose={onClose}><div className={styles.loadResultContent}><div className={styles.bulkSummary}><span><strong>{result.creadas}</strong>Creadas</span><span><strong>{result.actualizadas}</strong>Actualizadas</span><span><strong>{result.errores.length}</strong>Con error</span></div>{result.errores.length > 0 && <div className={styles.inlineError}><strong>Detalle de errores</strong><ul>{result.errores.slice(0, 12).map((error) => <li key={`${error.fila}-${error.motivo}`}>Fila {error.fila}: {error.motivo}</li>)}</ul>{result.errores.length > 12 && <small>Se muestran los primeros 12 errores de {result.errores.length}.</small>}</div>}</div><footer className={styles.loadResultFooter}><button type="button" className="button-primary" onClick={onClose}>Entendido</button></footer></DialogShell>;
 }
 
 function TransitionDialog({ item, action, onClose, onConfirm }: { item: FineRecord; action: "cumplir" | "anular"; onClose: () => void; onConfirm: (item: FineRecord, action: "cumplir" | "anular", detail: string) => void | Promise<void> }) {

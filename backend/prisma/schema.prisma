@@ -34,6 +34,7 @@ enum EstadoPrestamo {
   APROBADO
   ACTIVO
   DEVUELTO
+  DEVUELTO_INCOMPLETO
   CANCELADO
   VENCIDO
 }
@@ -54,8 +55,22 @@ enum EstadoMulta {
 enum EstadoTarea {
   PENDIENTE
   EN_PROCESO
+  SUSPENDIDA
   COMPLETADA
+  RECHAZADA
   CANCELADA
+}
+
+enum PrioridadTarea {
+  CRITICA
+  ALTA
+  MEDIA
+  BAJA
+}
+
+enum DecisionTarea {
+  ACEPTADA
+  RECHAZADA
 }
 
 enum EstadoCredencial {
@@ -67,7 +82,6 @@ enum EstadoCredencial {
 
 enum TipoObservacion {
   GENERAL
-  SEMANAL
   NOVEDAD
   RESTRICCION
 }
@@ -93,32 +107,39 @@ enum EstadoLimpieza {
 
 // Identidad, autorización y auditoría
 model Usuario {
-  id                               String                @id @default(uuid()) @db.Uuid
+  id                               String                      @id @default(uuid()) @db.Uuid
   nombreCompleto                   String
-  nombreUsuario                    String                @unique
-  correo                           String                @unique
+  nombreUsuario                    String                      @unique
+  correo                           String                      @unique
   passwordHash                     String
   cargo                            String?
-  estado                           EstadoCuenta          @default(ACTIVA)
-  dependenciaId                    String?               @db.Uuid
-  dependencia                      Dependencia?          @relation(fields: [dependenciaId], references: [id])
+  estado                           EstadoCuenta                @default(ACTIVA)
+  dependenciaId                    String?                     @db.Uuid
+  dependencia                      Dependencia?                @relation(fields: [dependenciaId], references: [id])
   roles                            UsuarioRol[]
-  asistencias                      AsistenciaDocente[]   @relation("RegistroAsistencia")
-  tareasAsignadas                  Tarea[]               @relation("ResponsableTarea")
+  asistencias                      AsistenciaDocente[]         @relation("RegistroAsistencia")
+  tareasAsignadas                  Tarea[]                     @relation("ResponsableTarea")
+  tareasOperativasCreadas          Tarea[]                     @relation("CreadorTareaOperativa")
+  tareasOperativasCanceladas       Tarea[]                     @relation("CanceladorTareaOperativa")
+  decisionesTarea                  DecisionTareaOperativa[]    @relation("DecisionTareaUsuario")
+  informesTarea                    InformeSeguimientoTarea[]   @relation("InformeTareaUsuario")
+  observacionesCreadas             Observacion[]               @relation("AutorObservacion")
+  responsabilidadesTarea           ResponsableTareaOperativa[] @relation("ResponsableOperativoUsuario")
+  responsablesTareaAgregados       ResponsableTareaOperativa[] @relation("ResponsableOperativoAgregadoPor")
   auditorias                       Auditoria[]
   accesosCredencial                AccesoCredencial[]
   secretosCredencial               SecretoCredencial[]
-  prestamosAudiovisualesEntregados PrestamoAudiovisual[] @relation("EntregaPrestamoAudiovisual")
-  prestamosAudiovisualesRecibidos  PrestamoAudiovisual[] @relation("RecepcionPrestamoAudiovisual")
-  prestamosAudiovisualesCancelados PrestamoAudiovisual[] @relation("CancelacionPrestamoAudiovisual")
+  prestamosAudiovisualesEntregados PrestamoAudiovisual[]       @relation("EntregaPrestamoAudiovisual")
+  prestamosAudiovisualesRecibidos  PrestamoAudiovisual[]       @relation("RecepcionPrestamoAudiovisual")
+  prestamosAudiovisualesCancelados PrestamoAudiovisual[]       @relation("CancelacionPrestamoAudiovisual")
   importacionesSoftware            ImportacionSoftware[]
-  multasImpuestas                  Multa[]               @relation("MultaImpuestaPor")
-  multasCumplidas                  Multa[]               @relation("MultaCumplidaPor")
-    multasAnuladas                   Multa[]               @relation("MultaAnuladaPor")
-    prestamosDocentesCreados         PrestamoDocente[]     @relation("PrestamoDocenteEncargado")
-  limpiezasRegistradas             Limpieza[]            @relation("RegistroLimpieza")
-  creadoEn                         DateTime              @default(now())
-  actualizadoEn                    DateTime              @updatedAt
+  multasImpuestas                  Multa[]                     @relation("MultaImpuestaPor")
+  multasCumplidas                  Multa[]                     @relation("MultaCumplidaPor")
+  multasAnuladas                   Multa[]                     @relation("MultaAnuladaPor")
+  prestamosDocentesCreados         PrestamoDocente[]           @relation("PrestamoDocenteEncargado")
+  limpiezasRegistradas             Limpieza[]                  @relation("RegistroLimpieza")
+  creadoEn                         DateTime                    @default(now())
+  actualizadoEn                    DateTime                    @updatedAt
 }
 
 model Dependencia {
@@ -129,20 +150,20 @@ model Dependencia {
 }
 
 model Cargo {
-  id          String   @id @default(uuid()) @db.Uuid
-  nombre      String   @unique
-  descripcion String?
-  activo      Boolean  @default(true)
-  creadoEn    DateTime @default(now())
+  id            String   @id @default(uuid()) @db.Uuid
+  nombre        String   @unique
+  descripcion   String?
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now())
   actualizadoEn DateTime @updatedAt
 }
 
 model Rol {
-  id          String       @id @default(uuid()) @db.Uuid
-  nombre      String       @unique
-  descripcion String?
-  usuarios    UsuarioRol[]
-  permisos    RolPermiso[]
+  id                      String          @id @default(uuid()) @db.Uuid
+  nombre                  String          @unique
+  descripcion             String?
+  usuarios                UsuarioRol[]
+  permisos                RolPermiso[]
   credencialesAutorizadas CredencialRol[]
 }
 
@@ -363,40 +384,40 @@ model Estudiante {
 }
 
 model PracticaLibre {
-  id           String         @id @default(uuid()) @db.Uuid
-  estudianteId String?        @db.Uuid
-  docenteId    String?        @db.Uuid
-  grupoId      String?        @db.Uuid
-  aulaId       String         @db.Uuid
-  responsableTipo String      @default("ASISTENCIAL")
+  id                 String         @id @default(uuid()) @db.Uuid
+  estudianteId       String?        @db.Uuid
+  docenteId          String?        @db.Uuid
+  grupoId            String?        @db.Uuid
+  aulaId             String         @db.Uuid
+  responsableTipo    String         @default("ASISTENCIAL")
   softwareSolicitado String?
-  inicio       DateTime
-  finEstimada  DateTime?
-  finReal      DateTime?
-  estado       EstadoPrestamo @default(ACTIVO)
-  estudiante   Estudiante?    @relation(fields: [estudianteId], references: [id])
-  docente      Docente?       @relation(fields: [docenteId], references: [id])
-  aula         Aula           @relation(fields: [aulaId], references: [id])
+  inicio             DateTime
+  finEstimada        DateTime?
+  finReal            DateTime?
+  estado             EstadoPrestamo @default(ACTIVO)
+  estudiante         Estudiante?    @relation(fields: [estudianteId], references: [id])
+  docente            Docente?       @relation(fields: [docenteId], references: [id])
+  aula               Aula           @relation(fields: [aulaId], references: [id])
 
   @@index([aulaId, inicio])
   @@index([grupoId])
 }
 
 model PrestamoDocente {
-    id        String         @id @default(uuid()) @db.Uuid
-    docenteId String         @db.Uuid
-    aulaId    String         @db.Uuid
-    encargadoId String?      @db.Uuid
-  inicio    DateTime
-  fin       DateTime
-  estado    EstadoPrestamo @default(SOLICITADO)
-  motivo    String?
-    docente   Docente        @relation(fields: [docenteId], references: [id])
-    aula      Aula           @relation(fields: [aulaId], references: [id])
-    encargado Usuario?       @relation("PrestamoDocenteEncargado", fields: [encargadoId], references: [id])
+  id          String         @id @default(uuid()) @db.Uuid
+  docenteId   String         @db.Uuid
+  aulaId      String         @db.Uuid
+  encargadoId String?        @db.Uuid
+  inicio      DateTime
+  fin         DateTime
+  estado      EstadoPrestamo @default(SOLICITADO)
+  motivo      String?
+  docente     Docente        @relation(fields: [docenteId], references: [id])
+  aula        Aula           @relation(fields: [aulaId], references: [id])
+  encargado   Usuario?       @relation("PrestamoDocenteEncargado", fields: [encargadoId], references: [id])
 
-    @@index([aulaId, inicio, fin])
-    @@index([encargadoId])
+  @@index([aulaId, inicio, fin])
+  @@index([encargadoId])
 }
 
 model EquipoAudiovisual {
@@ -404,6 +425,8 @@ model EquipoAudiovisual {
   codigoInventario String                           @unique
   nombre           String
   tipo             String
+  marca            String?
+  modelo           String?
   estado           EstadoEquipo                     @default(DISPONIBLE)
   observacion      String?
   detallesPrestamo DetallePrestamoAudiovisual[]
@@ -414,31 +437,33 @@ model EquipoAudiovisual {
 }
 
 model PrestamoAudiovisual {
-  id                 String                       @id @default(uuid()) @db.Uuid
-  docenteId          String?                      @db.Uuid
-  aulaId             String?                      @db.Uuid
-  responsableTipo    String
-  docenteNombre      String
-  docenteDocumento   String
-  salonTexto         String
-  elementosAdicionales Json?
-  recibidoPorTipo    String?
+  id                      String                       @id @default(uuid()) @db.Uuid
+  docenteId               String?                      @db.Uuid
+  aulaId                  String?                      @db.Uuid
+  responsableTipo         String
+  docenteNombre           String
+  docenteDocumento        String
+  salonTexto              String
+  elementosAdicionales    Json?
+  observacionesPrestamo   String?
+  recibidoPorTipo         String?
   observacionesDevolucion String?
-  entregadoPorId     String?                      @db.Uuid
-  recibidoPorId      String?                      @db.Uuid
-  canceladoPorId     String?                      @db.Uuid
-  salidaEn           DateTime?
-  devolucionEstimada DateTime
-  devolucionReal     DateTime?
-  canceladoEn        DateTime?
-  motivoCancelacion  String?
-  estado             EstadoPrestamo               @default(SOLICITADO)
-  docente            Docente?                     @relation(fields: [docenteId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  aula               Aula?                        @relation(fields: [aulaId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  entregadoPor       Usuario?                     @relation("EntregaPrestamoAudiovisual", fields: [entregadoPorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  recibidoPor        Usuario?                     @relation("RecepcionPrestamoAudiovisual", fields: [recibidoPorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  canceladoPor       Usuario?                     @relation("CancelacionPrestamoAudiovisual", fields: [canceladoPorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  detalles           DetallePrestamoAudiovisual[]
+  devolucionCompleta      Boolean?
+  entregadoPorId          String?                      @db.Uuid
+  recibidoPorId           String?                      @db.Uuid
+  canceladoPorId          String?                      @db.Uuid
+  salidaEn                DateTime?
+  devolucionEstimada      DateTime
+  devolucionReal          DateTime?
+  canceladoEn             DateTime?
+  motivoCancelacion       String?
+  estado                  EstadoPrestamo               @default(SOLICITADO)
+  docente                 Docente?                     @relation(fields: [docenteId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  aula                    Aula?                        @relation(fields: [aulaId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  entregadoPor            Usuario?                     @relation("EntregaPrestamoAudiovisual", fields: [entregadoPorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  recibidoPor             Usuario?                     @relation("RecepcionPrestamoAudiovisual", fields: [recibidoPorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  canceladoPor            Usuario?                     @relation("CancelacionPrestamoAudiovisual", fields: [canceladoPorId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  detalles                DetallePrestamoAudiovisual[]
 
   @@index([estado, salidaEn])
   @@index([docenteId, salidaEn])
@@ -515,36 +540,104 @@ model Multa {
 model Observacion {
   id           String          @id @default(uuid()) @db.Uuid
   aulaId       String          @db.Uuid
+  autorId      String?         @db.Uuid
   tipo         TipoObservacion @default(GENERAL)
   contenido    String
+  vigenteDesde DateTime?
   vigenteHasta DateTime?
   aula         Aula            @relation(fields: [aulaId], references: [id])
+  autor        Usuario?        @relation("AutorObservacion", fields: [autorId], references: [id], onDelete: SetNull)
   creadoEn     DateTime        @default(now())
+
+  @@index([autorId, creadoEn])
+  @@index([aulaId, tipo, vigenteDesde, vigenteHasta])
 }
 
 model Tarea {
-  id                   String      @id @default(uuid()) @db.Uuid
-  aulaId               String?     @db.Uuid
-  responsableId        String?     @db.Uuid
-  titulo               String
-  descripcion          String?
-  estado               EstadoTarea @default(PENDIENTE)
-  afectaDisponibilidad Boolean     @default(false)
-  inicio               DateTime?
-  fin                  DateTime?
-  aula                 Aula?       @relation(fields: [aulaId], references: [id])
-  responsable          Usuario?    @relation("ResponsableTarea", fields: [responsableId], references: [id])
+  id                     String                      @id @default(uuid()) @db.Uuid
+  aulaId                 String?                     @db.Uuid
+  responsableId          String?                     @db.Uuid
+  creadorId              String?                     @db.Uuid
+  canceladaPorId         String?                     @db.Uuid
+  titulo                 String
+  descripcion            String?
+  tipo                   String                      @default("OTRA")
+  prioridad              PrioridadTarea              @default(MEDIA)
+  estado                 EstadoTarea                 @default(PENDIENTE)
+  afectaDisponibilidad   Boolean                     @default(false)
+  inicio                 DateTime?
+  fin                    DateTime?
+  observaciones          String?
+  completadaEn           DateTime?
+  canceladaEn            DateTime?
+  motivoCancelacion      String?
+  estadoAntesCancelacion EstadoTarea?
+  creadoEn               DateTime                    @default(now())
+  actualizadoEn          DateTime                    @updatedAt
+  aula                   Aula?                       @relation(fields: [aulaId], references: [id])
+  responsable            Usuario?                    @relation("ResponsableTarea", fields: [responsableId], references: [id])
+  creador                Usuario?                    @relation("CreadorTareaOperativa", fields: [creadorId], references: [id], onDelete: SetNull)
+  canceladaPor           Usuario?                    @relation("CanceladorTareaOperativa", fields: [canceladaPorId], references: [id], onDelete: SetNull)
+  decisiones             DecisionTareaOperativa[]
+  informes               InformeSeguimientoTarea[]
+  responsables           ResponsableTareaOperativa[]
+
+  @@index([aulaId, inicio, fin])
+  @@index([responsableId, estado])
+  @@index([creadorId, estado])
+  @@index([canceladaPorId])
+}
+
+model ResponsableTareaOperativa {
+  id            String   @id @default(uuid()) @db.Uuid
+  tareaId       String   @db.Uuid
+  usuarioId     String   @db.Uuid
+  agregadoPorId String   @db.Uuid
+  agregadoEn    DateTime @default(now())
+  tarea         Tarea    @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+  usuario       Usuario  @relation("ResponsableOperativoUsuario", fields: [usuarioId], references: [id])
+  agregadoPor   Usuario  @relation("ResponsableOperativoAgregadoPor", fields: [agregadoPorId], references: [id])
+
+  @@unique([tareaId, usuarioId])
+  @@index([usuarioId, agregadoEn])
+}
+
+model DecisionTareaOperativa {
+  id            String        @id @default(uuid()) @db.Uuid
+  tareaId       String        @db.Uuid
+  usuarioId     String        @db.Uuid
+  decision      DecisionTarea
+  participantes Json?
+  tomadaEn      DateTime      @default(now())
+  tarea         Tarea         @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+  usuario       Usuario       @relation("DecisionTareaUsuario", fields: [usuarioId], references: [id])
+
+  @@index([tareaId, tomadaEn])
+}
+
+model InformeSeguimientoTarea {
+  id                    String   @id @default(uuid()) @db.Uuid
+  tareaId               String   @db.Uuid
+  autorId               String   @db.Uuid
+  actividadesRealizadas String
+  accionesPendientes    String?
+  responsables          Json?
+  creadoEn              DateTime @default(now())
+  tarea                 Tarea    @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+  autor                 Usuario  @relation("InformeTareaUsuario", fields: [autorId], references: [id])
+
+  @@index([tareaId, creadoEn])
 }
 
 model Limpieza {
-  id            String   @id @default(uuid()) @db.Uuid
-  aulaId        String   @db.Uuid
-  responsableId String?  @db.Uuid
-  realizadaEn   DateTime @default(now())
+  id            String         @id @default(uuid()) @db.Uuid
+  aulaId        String         @db.Uuid
+  responsableId String?        @db.Uuid
+  realizadaEn   DateTime       @default(now())
   estado        EstadoLimpieza @default(REALIZADA)
   observacion   String?
-  aula          Aula     @relation(fields: [aulaId], references: [id])
-  responsable   Usuario? @relation("RegistroLimpieza", fields: [responsableId], references: [id], onDelete: SetNull)
+  aula          Aula           @relation(fields: [aulaId], references: [id])
+  responsable   Usuario?       @relation("RegistroLimpieza", fields: [responsableId], references: [id], onDelete: SetNull)
 
   @@index([aulaId, realizadaEn])
   @@index([realizadaEn])
@@ -552,17 +645,17 @@ model Limpieza {
 }
 
 model CredencialOperativa {
-  id             String             @id @default(uuid()) @db.Uuid
-  nombre         String
-  usuario        String?
-  secretoCifrado String?
-  descripcion    String?
-  estado         EstadoCredencial   @default(ACTIVA)
-  accesos        AccesoCredencial[]
-  secretos       SecretoCredencial[]
+  id               String              @id @default(uuid()) @db.Uuid
+  nombre           String
+  usuario          String?
+  secretoCifrado   String?
+  descripcion      String?
+  estado           EstadoCredencial    @default(ACTIVA)
+  accesos          AccesoCredencial[]
+  secretos         SecretoCredencial[]
   rolesAutorizados CredencialRol[]
-  creadoEn       DateTime           @default(now())
-  actualizadoEn  DateTime           @updatedAt
+  creadoEn         DateTime            @default(now())
+  actualizadoEn    DateTime            @updatedAt
 }
 
 model CredencialRol {
@@ -586,14 +679,14 @@ model AccesoCredencial {
 }
 
 model SecretoCredencial {
-  id             String             @id @default(uuid()) @db.Uuid
-  credencialId   String             @db.Uuid
-  usuarioId      String             @db.Uuid
+  id             String              @id @default(uuid()) @db.Uuid
+  credencialId   String              @db.Uuid
+  usuarioId      String              @db.Uuid
   secretoCifrado String
   credencial     CredencialOperativa @relation(fields: [credencialId], references: [id], onDelete: Cascade)
   usuario        Usuario             @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  creadoEn       DateTime             @default(now())
-  actualizadoEn  DateTime             @updatedAt
+  creadoEn       DateTime            @default(now())
+  actualizadoEn  DateTime            @updatedAt
 
   @@unique([credencialId, usuarioId])
   @@index([usuarioId])

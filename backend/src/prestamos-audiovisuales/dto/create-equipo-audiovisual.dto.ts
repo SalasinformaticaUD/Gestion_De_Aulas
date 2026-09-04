@@ -34,6 +34,16 @@ export class CreateEquipoAudiovisualDto {
   tipo!: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  marca?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  modelo?: string;
+
+  @IsOptional()
   @IsEnum(EstadoEquipo)
   estado?: EstadoEquipo;
 

@@ -8,7 +8,10 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { MODULOS } from '../auth/auth.constants';
 import type { UsuarioAutenticado } from '../auth/auth.types';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -61,6 +64,28 @@ export class PrestamosAudiovisualesController {
     return this.prestamosAudiovisualesService.updateEquipo(
       id,
       dto,
+      usuario?.id,
+    );
+  }
+
+  @Get('responsables')
+  @RequirePermissions('AUDIOVISUALES_LEER')
+  findResponsables() {
+    return this.prestamosAudiovisualesService.findResponsables();
+  }
+
+  @Post('equipos/importar-excel')
+  @RequirePermissions('AUDIOVISUALES_CREAR')
+  @UseInterceptors(
+    FileInterceptor('archivo', { limits: { fileSize: 5_000_000 } }),
+  )
+  importarEquipos(
+    @UploadedFile()
+    archivo: { buffer: Buffer; originalname: string } | undefined,
+    @CurrentUser() usuario?: UsuarioAutenticado,
+  ) {
+    return this.prestamosAudiovisualesService.importarEquipos(
+      archivo,
       usuario?.id,
     );
   }

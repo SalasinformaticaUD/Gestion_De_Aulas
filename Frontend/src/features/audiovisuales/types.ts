@@ -9,6 +9,7 @@ export type AudiovisualLoanStatus =
   | "APROBADO"
   | "ACTIVO"
   | "DEVUELTO"
+  | "DEVUELTO_INCOMPLETO"
   | "CANCELADO"
   | "VENCIDO";
 
@@ -17,9 +18,12 @@ export type AudiovisualEquipment = {
   inventoryCode: string;
   name: string;
   type: string;
+  brand?: string;
+  model?: string;
   status: AudiovisualEquipmentStatus;
   usageHours: number;
   loanCount: number;
+  availableFrom?: string;
   observation?: string;
 };
 
@@ -33,10 +37,22 @@ export type AudiovisualLoan = {
   status: AudiovisualLoanStatus;
   equipmentIds: string[];
   deliveredBy: string;
+  deliveredById?: string;
   responsibleType: "MONITOR" | "TECNICO" | "ASISTENCIAL";
   teacherDocument: string;
   extras: string[];
   receivedByType?: "MONITOR" | "TECNICO" | "ASISTENCIAL";
   returnObservations?: string;
+  loanObservations?: string;
+  receivedBy?: string;
+  receivedById?: string;
+  returnedAll?: boolean;
+};
+
+export type AudiovisualResponsible = {
+  id: string;
+  name: string;
+  username: string;
+  role?: string;
 };
 

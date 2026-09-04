@@ -1,5 +1,9 @@
 .heading { align-items:center; margin-bottom:18px; }
 .heading>button { min-height:39px; padding:0 16px; }
+.downloadButton { min-height:37px; padding:0 14px; border:1px solid var(--primary); border-radius:7px; color:var(--primary); background:#fff; font-size:14.3px; font-weight:750; cursor:pointer; }
+.downloadButton:hover { color:#fff; background:var(--primary); }
+html[data-theme="dark"] .downloadButton { border-color:#d65061; color:#ff9eaa; background:transparent; }
+html[data-theme="dark"] .downloadButton:hover { color:#fff; background:#a51022; }
 .kicker { display:block; margin-bottom:5px; color:var(--primary); font-size:14.3px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; }
 .metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:16px; }
 .metric { min-height:98px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 17px; border:1px solid var(--line); border-radius:var(--radius); background:#fff; }
@@ -66,7 +70,6 @@
 .stateRealizado,.cell_realizado { color:#166534; background:#dcfce7; }
 .stateSinRegistro,.cell_sin-registro { color:#6b7280; background:#f3f4f6; }
 .stateNovedad,.cell_novedad { color:#991b1b; background:#fee2e2; }
-.matrixActions { display:flex; flex-wrap:wrap; gap:7px; }
 .matrixScroll { overflow:auto; max-height:70vh; }
 .matrixTable { min-width:920px; width:100%; border-collapse:separate; border-spacing:0; font-size:13px; }
 .matrixTable th,.matrixTable td { border-right:1px solid var(--line); border-bottom:1px solid var(--line); text-align:center; }
@@ -189,12 +192,10 @@
   .dialog form>footer { align-items:stretch; flex-direction:column-reverse; }
   .dialog form>footer button { width:100%; }
   .legend { margin-left:0; }
-  .matrixActions { width:100%; }
-  .matrixActions button { flex:1; }
   .recommendationPanel>div { grid-template-columns:1fr; }
 }
 @media print {
-  .heading,.metrics,.notice,.viewTabs,.matrixToolbar,.matrixActions,.recommendationPanel { display:none !important; }
+  .heading,.metrics,.notice,.viewTabs,.matrixToolbar,.recommendationPanel { display:none !important; }
   .contentCard { border:0; }
   .matrixScroll { max-height:none; overflow:visible; }
   .matrixTable { min-width:0; font-size:9px; }

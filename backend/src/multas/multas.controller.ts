@@ -60,6 +60,16 @@ export class MultasController {
     return this.multasService.buscarMasivo(archivo);
   }
 
+  @Post('cargar-excel')
+  @RequirePermissions('MULTAS_CREAR')
+  @UseInterceptors(FileInterceptor('archivo', { limits: { fileSize: 20_000_000 } }))
+  cargarExcel(
+    @UploadedFile() archivo: { buffer: Buffer; originalname: string } | undefined,
+    @CurrentUser() usuario?: UsuarioAutenticado,
+  ) {
+    return this.multasService.cargarExcel(archivo, usuario?.id);
+  }
+
   @Get('estudiantes/:codigo/practica-activa')
   @RequirePermissions('MULTAS_LEER')
   buscarEstudianteConPracticaActiva(@Param('codigo') codigo: string) {

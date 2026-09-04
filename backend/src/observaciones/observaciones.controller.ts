@@ -13,6 +13,8 @@ import { ObservacionesService } from './observaciones.service';
 import { CreateObservacioneDto } from './dto/create-observacione.dto';
 import { UpdateObservacioneDto } from './dto/update-observacione.dto';
 import { FindObservacionesDto } from './dto/find-observaciones.dto';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { UsuarioAutenticado } from '../auth/auth.types';
 import { MODULOS } from '../auth/auth.constants';
 import { RequireModule } from '../auth/decorators/require-module.decorator';
 
@@ -22,8 +24,8 @@ export class ObservacionesController {
   constructor(private readonly observacionesService: ObservacionesService) {}
 
   @Post()
-  create(@Body() createObservacioneDto: CreateObservacioneDto) {
-    return this.observacionesService.create(createObservacioneDto);
+  create(@Body() createObservacioneDto: CreateObservacioneDto, @CurrentUser() usuario?: UsuarioAutenticado) {
+    return this.observacionesService.create(createObservacioneDto, usuario?.id);
   }
 
   @Get()

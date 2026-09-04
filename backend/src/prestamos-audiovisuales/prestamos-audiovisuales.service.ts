@@ -5,8 +5,8 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
-import { EstadoEquipo, EstadoPrestamo } from '../../generated/prisma/enums.js';
+import { EstadoEquipo, EstadoPrestamo, type Prisma } from '@prisma/client';
+import * as XLSX from 'xlsx';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CancelarPrestamoAudiovisualDto } from './dto/cancelar-prestamo-audiovisual.dto';
@@ -37,6 +37,8 @@ const estadosActivos = [
   EstadoPrestamo.ACTIVO,
   EstadoPrestamo.VENCIDO,
 ];
+
+const ENFRIAMIENTO_VIDEOBEAM_MS = 20 * 60 * 1000;
 
 const hasPrismaCode = (error: unknown, code: string): boolean =>
   typeof error === 'object' &&
@@ -99,13 +101,141 @@ export class PrestamosAudiovisualesService {
     const [datos, total] = await this.prisma.$transaction([
       this.prisma.equipoAudiovisual.findMany({
         where,
+        include: {
+          detallesPrestamo: {
+            select: {
+              prestamo: {
+                select: { salidaEn: true, devolucionReal: true },
+              },
+            },
+          },
+        },
         orderBy: { codigoInventario: 'asc' },
         skip: (pagina - 1) * limite,
         take: limite,
       }),
       this.prisma.equipoAudiovisual.count({ where }),
     ]);
-    return { datos, total, pagina, limite };
+    return {
+      datos: datos.map((equipo) => {
+        const usoMinutos = equipo.detallesPrestamo.reduce((totalUso, detalle) => {
+          const inicio = detalle.prestamo.salidaEn;
+          const fin = detalle.prestamo.devolucionReal;
+          if (!inicio || !fin) return totalUso;
+          return totalUso + Math.max(0, fin.getTime() - inicio.getTime()) / 60_000;
+        }, 0);
+        const { detallesPrestamo, ...base } = equipo;
+        const ultimaDevolucion = detallesPrestamo
+          .map((detalle) => detalle.prestamo.devolucionReal)
+          .filter((fecha): fecha is Date => Boolean(fecha))
+          .sort((a, b) => b.getTime() - a.getTime())[0];
+        const disponibleDesde = ultimaDevolucion
+          ? new Date(ultimaDevolucion.getTime() + ENFRIAMIENTO_VIDEOBEAM_MS)
+          : null;
+        return {
+          ...base,
+          cantidadPrestamos: detallesPrestamo.length,
+          minutosUsoAcumulado: Math.round(usoMinutos),
+          disponibleDesde:
+            disponibleDesde && disponibleDesde > new Date()
+              ? disponibleDesde
+              : null,
+        };
+      }),
+      total,
+      pagina,
+      limite,
+    };
+  }
+
+  findResponsables() {
+    return this.prisma.usuario.findMany({
+      where: { estado: 'ACTIVA' },
+      select: {
+        id: true,
+        nombreCompleto: true,
+        nombreUsuario: true,
+        cargo: true,
+      },
+      orderBy: { nombreCompleto: 'asc' },
+    });
+  }
+
+  async importarEquipos(
+    archivo: { buffer: Buffer; originalname: string } | undefined,
+    usuarioId?: string,
+  ) {
+    if (!archivo?.buffer?.length || !/\.(xlsx|xls)$/i.test(archivo.originalname)) {
+      throw new BadRequestException('Debe adjuntar un archivo Excel .xlsx o .xls.');
+    }
+    let filas: Array<Record<string, unknown>>;
+    try {
+      const libro = XLSX.read(archivo.buffer, { type: 'buffer' });
+      const hoja = libro.Sheets[libro.SheetNames[0]];
+      filas = XLSX.utils.sheet_to_json<Record<string, unknown>>(hoja, {
+        defval: '',
+        raw: false,
+      });
+    } catch {
+      throw new BadRequestException('No fue posible leer el archivo Excel.');
+    }
+    if (!filas.length || filas.length > 2_000) {
+      throw new BadRequestException('El Excel debe contener entre 1 y 2.000 videobeams.');
+    }
+    const normalizar = (valor: string) =>
+      valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
+    const leer = (fila: Record<string, unknown>, columna: string) => {
+      const clave = Object.keys(fila).find((item) => normalizar(item) === normalizar(columna));
+      return clave ? String(fila[clave] ?? '').trim() : '';
+    };
+    const registros = filas.map((fila, indice) => ({
+      fila: indice + 2,
+      marca: leer(fila, 'Marca'),
+      codigoInventario: leer(fila, 'Numero Interno'),
+      modelo: leer(fila, 'Modelo'),
+    }));
+    const invalido = registros.find((item) => !item.marca || !item.codigoInventario || !item.modelo);
+    if (invalido) {
+      throw new BadRequestException(
+        `La fila ${invalido.fila} debe incluir Marca, Numero Interno y Modelo.`,
+      );
+    }
+    const codigos = registros.map((item) => item.codigoInventario);
+    if (new Set(codigos.map((item) => item.toUpperCase())).size !== codigos.length) {
+      throw new BadRequestException('El Excel contiene números internos repetidos.');
+    }
+    const existentes = await this.prisma.equipoAudiovisual.findMany({
+      where: { codigoInventario: { in: codigos } },
+      select: { codigoInventario: true },
+    });
+    if (existentes.length) {
+      throw new ConflictException(
+        `Ya existen equipos con estos números internos: ${existentes.map((item) => item.codigoInventario).join(', ')}.`,
+      );
+    }
+    const creados = await this.prisma.$transaction(
+      registros.map((item) =>
+        this.prisma.equipoAudiovisual.create({
+          data: {
+            codigoInventario: item.codigoInventario,
+            marca: item.marca,
+            modelo: item.modelo,
+            nombre: `Videobeam ${item.marca} ${item.modelo}`,
+            tipo: 'Videobeam',
+            estado: EstadoEquipo.DISPONIBLE,
+          },
+        }),
+      ),
+    );
+    await this.registrar(
+      usuarioId,
+      'EquipoAudiovisual',
+      creados[0].id,
+      'CREATE',
+      undefined,
+      { cargaMasiva: true, archivo: archivo.originalname, cantidad: creados.length },
+    );
+    return { creados: creados.length, archivo: archivo.originalname };
   }
 
   async findEquipo(id: string) {
@@ -191,6 +321,7 @@ export class PrestamosAudiovisualesService {
     this.validarRangoFechas(salidaEn, devolucionEstimada);
 
     const prestamo = await this.prisma.$transaction(async (tx) => {
+      this.validarContenidoPrestamo(dto);
       await this.validarReferenciasPrestamo(tx, dto, usuarioId);
       await this.reservarEquipos(
         tx,
@@ -200,7 +331,9 @@ export class PrestamosAudiovisualesService {
         data: {
           ...(dto.docenteId && { docenteId: dto.docenteId }),
           ...(dto.aulaId && { aulaId: dto.aulaId }),
-          ...(usuarioId && { entregadoPorId: usuarioId }),
+          ...((dto.entregadoPorId || usuarioId) && {
+            entregadoPorId: dto.entregadoPorId || usuarioId,
+          }),
           responsableTipo: dto.responsableTipo ?? 'MONITOR',
           docenteNombre: dto.docenteNombre?.trim() ?? 'Sin información',
           docenteDocumento: dto.docenteDocumento?.trim() ?? 'Sin información',
@@ -210,6 +343,7 @@ export class PrestamosAudiovisualesService {
               item.trim(),
             ),
           }),
+          observacionesPrestamo: dto.observaciones?.trim() || null,
           salidaEn,
           devolucionEstimada,
           estado: EstadoPrestamo.ACTIVO,
@@ -292,13 +426,29 @@ export class PrestamosAudiovisualesService {
   ) {
     const devolucionReal = new Date(dto.devolucionReal);
     const prestamo = await this.prisma.$transaction(async (tx) => {
+      if (dto.recibidoPorId) {
+        const receptor = await tx.usuario.findFirst({
+          where: { id: dto.recibidoPorId, estado: 'ACTIVA' },
+          select: { id: true },
+        });
+        if (!receptor) {
+          throw new NotFoundException(
+            'El usuario que recibe no existe o está inactivo.',
+          );
+        }
+      }
       const previo = await this.obtenerPrestamoParaCambio(tx, id);
       this.validarPrestamoRetornable(previo, devolucionReal);
       this.validarEquiposDevolucion(previo.detalles, dto);
-      for (const detalle of dto.equipos) {
-        const estado = this.estadoTrasDevolucion(
-          detalle.estadoFuncionalDevolucion,
+      if (!dto.devolucionCompleta && !dto.observaciones?.trim()) {
+        throw new BadRequestException(
+          'Debe describir qué elemento faltó o qué novedad ocurrió en la devolución.',
         );
+      }
+      for (const detalle of dto.equipos) {
+        const estado = dto.devolucionCompleta
+          ? this.estadoTrasDevolucion(detalle.estadoFuncionalDevolucion)
+          : EstadoEquipo.MANTENIMIENTO;
         await tx.detallePrestamoAudiovisual.update({
           where: {
             prestamoId_equipoId: { prestamoId: id, equipoId: detalle.equipoId },
@@ -320,11 +470,16 @@ export class PrestamosAudiovisualesService {
       return tx.prestamoAudiovisual.update({
         where: { id },
         data: {
-          estado: EstadoPrestamo.DEVUELTO,
+          estado: dto.devolucionCompleta
+            ? EstadoPrestamo.DEVUELTO
+            : EstadoPrestamo.DEVUELTO_INCOMPLETO,
           devolucionReal,
-          ...(usuarioId && { recibidoPorId: usuarioId }),
+          ...((dto.recibidoPorId || usuarioId) && {
+            recibidoPorId: dto.recibidoPorId || usuarioId,
+          }),
           recibidoPorTipo: dto.recibidoPorTipo,
           observacionesDevolucion: dto.observaciones?.trim() || null,
+          devolucionCompleta: dto.devolucionCompleta,
         },
         include: prestamoInclude,
       });
@@ -396,6 +551,8 @@ export class PrestamosAudiovisualesService {
       }),
       ...(dto.nombre !== undefined && { nombre: dto.nombre.trim() }),
       ...(dto.tipo !== undefined && { tipo: dto.tipo.trim() }),
+      ...(dto.marca !== undefined && { marca: dto.marca.trim() || null }),
+      ...(dto.modelo !== undefined && { modelo: dto.modelo.trim() || null }),
       ...(dto.estado !== undefined && { estado: dto.estado }),
       ...(dto.observacion !== undefined && {
         observacion: dto.observacion.trim() || null,
@@ -432,6 +589,15 @@ export class PrestamosAudiovisualesService {
     if (!usuario) {
       throw new NotFoundException('El usuario autenticado no existe.');
     }
+    const responsableIds = [dto.entregadoPorId].filter(Boolean) as string[];
+    if (responsableIds.length) {
+      const responsables = await tx.usuario.count({
+        where: { id: { in: responsableIds }, estado: 'ACTIVA' },
+      });
+      if (responsables !== responsableIds.length) {
+        throw new NotFoundException('El usuario que entrega no existe o está inactivo.');
+      }
+    }
   }
 
   private async validarAulaParaConsulta(aulaId: string) {
@@ -443,9 +609,23 @@ export class PrestamosAudiovisualesService {
   }
 
   private async reservarEquipos(tx: Prisma.TransactionClient, ids: string[]) {
+    if (!ids.length) return;
+    const enfriamientoDesde = new Date(
+      Date.now() - ENFRIAMIENTO_VIDEOBEAM_MS,
+    );
     const equipos = await tx.equipoAudiovisual.findMany({
       where: { id: { in: ids } },
-      select: { id: true, estado: true },
+      select: {
+        id: true,
+        estado: true,
+        detallesPrestamo: {
+          where: {
+            prestamo: { devolucionReal: { gt: enfriamientoDesde } },
+          },
+          select: { equipoId: true },
+          take: 1,
+        },
+      },
     });
     if (equipos.length !== ids.length) {
       throw new NotFoundException(
@@ -455,9 +635,20 @@ export class PrestamosAudiovisualesService {
     if (equipos.some((equipo) => equipo.estado !== EstadoEquipo.DISPONIBLE)) {
       throw new ConflictException('Uno o más equipos no están disponibles.');
     }
+    if (equipos.some((equipo) => equipo.detallesPrestamo.length > 0)) {
+      throw new ConflictException(
+        'Uno o más videobeams aún están en su periodo de enfriamiento de 20 minutos.',
+      );
+    }
     for (const id of ids) {
       const actualizado = await tx.equipoAudiovisual.updateMany({
-        where: { id, estado: EstadoEquipo.DISPONIBLE },
+        where: {
+          id,
+          estado: EstadoEquipo.DISPONIBLE,
+          detallesPrestamo: {
+            none: { prestamo: { devolucionReal: { gt: enfriamientoDesde } } },
+          },
+        },
         data: { estado: EstadoEquipo.PRESTADO },
       });
       if (actualizado.count !== 1) {
@@ -515,6 +706,15 @@ export class PrestamosAudiovisualesService {
     }
   }
 
+  private validarContenidoPrestamo(dto: CreatePrestamoAudiovisualDto) {
+    const adicionales = dto.elementosAdicionales?.filter((item) => item.trim()) ?? [];
+    if (!dto.equipos.length && !adicionales.length) {
+      throw new BadRequestException(
+        'Seleccione al menos un videobeam, cable, parlante u otro elemento.',
+      );
+    }
+  }
+
   private estadoTrasDevolucion(estadoFuncional: string): EstadoEquipo {
     const estado = estadoFuncional.trim().toUpperCase();
     if (estado === EstadoEquipo.DISPONIBLE) return EstadoEquipo.DISPONIBLE;
@@ -536,6 +736,16 @@ export class PrestamosAudiovisualesService {
       throw new BadRequestException(
         'La devolución estimada debe ser posterior a la salida.',
       );
+    }
+    const fechaLocal = (fecha: Date) =>
+      new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Bogota',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(fecha);
+    if (fechaLocal(salidaEn) !== fechaLocal(devolucionEstimada)) {
+      throw new BadRequestException('El préstamo y la devolución estimada deben ser del mismo día.');
     }
   }
 

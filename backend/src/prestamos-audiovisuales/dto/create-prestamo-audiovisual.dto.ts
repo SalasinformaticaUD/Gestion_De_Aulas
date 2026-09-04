@@ -1,6 +1,5 @@
 import { Type } from 'class-transformer';
 import {
-  ArrayNotEmpty,
   ArrayUnique,
   IsArray,
   IsDateString,
@@ -41,8 +40,13 @@ export class CreatePrestamoAudiovisualDto {
   @IsUUID()
   aulaId?: string;
 
+  @IsOptional()
   @IsEnum(['MONITOR', 'TECNICO', 'ASISTENCIAL'])
-  responsableTipo!: 'MONITOR' | 'TECNICO' | 'ASISTENCIAL';
+  responsableTipo?: 'MONITOR' | 'TECNICO' | 'ASISTENCIAL';
+
+  @IsOptional()
+  @IsUUID()
+  entregadoPorId?: string;
 
   @IsString()
   @IsNotEmpty()
@@ -64,11 +68,15 @@ export class CreatePrestamoAudiovisualDto {
   @IsString({ each: true })
   elementosAdicionales?: string[];
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  observaciones?: string;
+
   @IsDateString()
   devolucionEstimada!: string;
 
   @IsArray()
-  @ArrayNotEmpty()
   @ArrayUnique((equipo: EquipoPrestamoAudiovisualDto) => equipo.equipoId)
   @ValidateNested({ each: true })
   @Type(() => EquipoPrestamoAudiovisualDto)

@@ -1,4 +1,4 @@
-export type ObservationType = "GENERAL" | "SEMANAL" | "NOVEDAD" | "RESTRICCION";
+export type ObservationType = "GENERAL" | "NOVEDAD" | "RESTRICCION";
 
 export type OperationalObservation = {
   id: string;
@@ -8,5 +8,7 @@ export type OperationalObservation = {
   type: ObservationType;
   content: string;
   createdAt: string;
+  validFrom: string | null;
   validUntil: string | null;
+  author?: { id: string; name: string };
 };

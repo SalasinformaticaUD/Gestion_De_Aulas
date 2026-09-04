@@ -1,8 +1,8 @@
 import { Type } from 'class-transformer';
 import {
-  ArrayNotEmpty,
   ArrayUnique,
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsNotEmpty,
@@ -31,14 +31,21 @@ export class DevolverPrestamoAudiovisualDto {
   devolucionReal!: string;
 
   @IsArray()
-  @ArrayNotEmpty()
   @ArrayUnique((equipo: EquipoDevueltoAudiovisualDto) => equipo.equipoId)
   @ValidateNested({ each: true })
   @Type(() => EquipoDevueltoAudiovisualDto)
   equipos!: EquipoDevueltoAudiovisualDto[];
 
+  @IsOptional()
   @IsEnum(['MONITOR', 'TECNICO', 'ASISTENCIAL'])
-  recibidoPorTipo!: 'MONITOR' | 'TECNICO' | 'ASISTENCIAL';
+  recibidoPorTipo?: 'MONITOR' | 'TECNICO' | 'ASISTENCIAL';
+
+  @IsOptional()
+  @IsUUID()
+  recibidoPorId?: string;
+
+  @IsBoolean()
+  devolucionCompleta!: boolean;
 
   @IsOptional()
   @IsString()

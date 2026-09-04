@@ -22,7 +22,11 @@ describe('TareasOperativasController (e2e)', () => {
       ),
     },
     usuario: { findUnique: jest.fn() },
+    prestamoDocente: { findFirst: jest.fn(() => Promise.resolve(null)) },
+    practicaLibre: { findFirst: jest.fn(() => Promise.resolve(null)) },
+    claseProgramada: { findFirst: jest.fn(() => Promise.resolve(null)) },
     tarea: {
+      findFirst: jest.fn(() => Promise.resolve(null)),
       create: jest.fn(({ data }) => {
         tarea = {
           id: tareaId,

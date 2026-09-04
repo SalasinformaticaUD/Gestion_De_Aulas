@@ -586,6 +586,12 @@ export class HorarioService {
         eliminados = eliminacion.count;
       }
       return { creados, actualizados, eliminados };
+    }, {
+      // La importación oficial puede tener miles de filas y resuelve catálogos,
+      // cruces y actualizaciones por cada una. Se conserva una única
+      // transacción atómica, ampliando solo su ventana de ejecución.
+      maxWait: 10_000,
+      timeout: 120_000,
     });
 
     return {
@@ -1331,16 +1337,28 @@ export class HorarioService {
   }
 
   private convertirHoraExcel(valor: string): [string, string] {
-    const texto = valor.trim().toUpperCase().replace(/\s+/g, '');
+    // Los archivos institucionales han usado 12M, 12MD y MEDIODIA para el
+    // bloque 12:00-14:00. Se unifican antes de interpretar el rango.
+    const texto = valor
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g, '')
+      .replace(/MEDIOD[IÍ]A|12MD|12M(?=$|[-–])/g, '12PM');
     const rango = texto.match(
       /^(\d{1,2})(?::(\d{2}))?([AP]M)?[-–](\d{1,2})(?::(\d{2}))?([AP]M)?$/,
     );
     if (rango) {
       const inicio = this.normalizarHora(rango[1], rango[2] ?? '00', rango[3]);
+      let meridianoFin = rango[6] ?? rango[3];
+      // En un rango sin AM/PM, 12-2 representa el bloque de mediodía, no
+      // 12:00-02:00. No se altera la interpretación de rangos como 10-12.
+      if (!meridianoFin && !rango[3] && Number(rango[1]) >= 12 && Number(rango[4]) < Number(rango[1])) {
+        meridianoFin = 'PM';
+      }
       const fin = this.normalizarHora(
         rango[4],
         rango[5] ?? '00',
-        rango[6] ?? rango[3],
+        meridianoFin,
       );
       return [inicio, fin];
     }

@@ -5,6 +5,7 @@ import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
 import { RequireAuth } from './decorators/require-auth.decorator';
 import { LoginDto } from './dto/login.dto';
+import { VerifyPasswordDto } from './dto/verify-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -20,5 +21,17 @@ export class AuthController {
   @Get('me')
   me(@CurrentUser() usuario: UsuarioAutenticado) {
     return usuario;
+  }
+
+  @RequireAuth()
+  @Post('verificar-contrasena-tareas')
+  verificarContrasenaTareas(
+    @Body() dto: VerifyPasswordDto,
+    @CurrentUser() usuario: UsuarioAutenticado,
+  ) {
+    return this.authService.autorizarEstadosRestringidosTarea(
+      usuario.id,
+      dto.password,
+    );
   }
 }

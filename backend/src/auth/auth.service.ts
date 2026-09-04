@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { EstadoCuenta } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthTokenService } from './auth-token.service';
@@ -26,6 +26,7 @@ const usuarioAutenticadoInclude = {
 
 @Injectable()
 export class AuthService {
+  private readonly autorizacionesEstadosTarea = new Map<string, number>();
   constructor(
     private readonly prisma: PrismaService,
     private readonly passwordHash: PasswordHashService,
@@ -93,6 +94,22 @@ export class AuthService {
         usuario.estado === EstadoCuenta.ACTIVA &&
         this.passwordHash.verify(password, usuario.passwordHash),
     );
+  }
+
+  async autorizarEstadosRestringidosTarea(usuarioId: string, password: string) {
+    if (!(await this.verifyCurrentPassword(usuarioId, password)))
+      throw new UnauthorizedException('La contraseña de la sesión no es válida.');
+    const expiraEn = Date.now() + 10 * 60 * 1000;
+    this.autorizacionesEstadosTarea.set(usuarioId, expiraEn);
+    return { autorizado: true, expiraEn };
+  }
+
+  exigirAutorizacionEstadosRestringidosTarea(usuarioId?: string) {
+    const expiraEn = usuarioId ? this.autorizacionesEstadosTarea.get(usuarioId) : undefined;
+    if (!usuarioId || !expiraEn || expiraEn <= Date.now()) {
+      if (usuarioId) this.autorizacionesEstadosTarea.delete(usuarioId);
+      throw new ForbiddenException('Confirme la contraseña de la sesión para cambiar una tarea a este estado.');
+    }
   }
 
   private toAuthenticatedUser(usuario: {

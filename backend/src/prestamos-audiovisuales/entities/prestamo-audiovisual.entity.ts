@@ -18,8 +18,10 @@ export class PrestamoAudiovisualEntity implements PrismaPrestamoAudiovisual {
   declare docenteDocumento: string;
   declare salonTexto: string;
   declare elementosAdicionales: Prisma.JsonValue | null;
+  declare observacionesPrestamo: string | null;
   declare recibidoPorTipo: string | null;
   declare observacionesDevolucion: string | null;
+  declare devolucionCompleta: boolean | null;
   declare entregadoPorId: string | null;
   declare recibidoPorId: string | null;
   declare canceladoPorId: string | null;

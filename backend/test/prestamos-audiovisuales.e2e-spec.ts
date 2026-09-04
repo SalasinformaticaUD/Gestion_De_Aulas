@@ -27,7 +27,9 @@ describe('PrestamosAudiovisualesController (e2e)', () => {
         equipo = { id: ids.equipo, estado: 'DISPONIBLE', ...data };
         return Promise.resolve(equipo);
       }),
-      findMany: jest.fn(() => Promise.resolve(equipo ? [equipo] : [])),
+      findMany: jest.fn(() =>
+        Promise.resolve(equipo ? [{ ...equipo, detallesPrestamo: [] }] : []),
+      ),
       updateMany: jest.fn(({ data }) => {
         equipo = { ...equipo, ...data };
         return Promise.resolve({ count: 1 });
@@ -87,6 +89,9 @@ describe('PrestamosAudiovisualesController (e2e)', () => {
       .send({
         docenteId: ids.docente,
         aulaId: ids.aula,
+        docenteNombre: 'Laura Gómez',
+        docenteDocumento: '10203040',
+        salonTexto: 'Auditorio 1',
         salidaEn: '2026-08-20T08:00:00.000Z',
         devolucionEstimada: '2026-08-20T10:00:00.000Z',
         equipos: [
@@ -103,6 +108,7 @@ describe('PrestamosAudiovisualesController (e2e)', () => {
       .patch(`/prestamos-audiovisuales/${ids.prestamo}/devolver`)
       .send({
         devolucionReal: '2026-08-20T09:00:00.000Z',
+        devolucionCompleta: true,
         equipos: [
           {
             equipoId: ids.equipo,

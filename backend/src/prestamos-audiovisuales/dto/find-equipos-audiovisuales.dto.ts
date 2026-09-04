@@ -25,6 +25,6 @@ export class FindEquiposAudiovisualesDto {
   @Transform(({ value }: { value: unknown }) => Number(value))
   @IsInt()
   @Min(1)
-  @Max(100)
+  @Max(2000)
   limite = 20;
 }

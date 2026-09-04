@@ -597,7 +597,7 @@ export class DisponibilidadAulasService {
       where: {
         aulaId,
         afectaDisponibilidad: true,
-        estado: { in: [EstadoTarea.PENDIENTE, EstadoTarea.EN_PROCESO] },
+        estado: EstadoTarea.EN_PROCESO,
         AND: [
           { OR: [{ inicio: null }, { inicio: { lt: bloque.fin } }] },
           { OR: [{ fin: null }, { fin: { gt: bloque.inicio } }] },
@@ -668,7 +668,7 @@ export class DisponibilidadAulasService {
         where: {
           aulaId,
           afectaDisponibilidad: true,
-          estado: { in: [EstadoTarea.PENDIENTE, EstadoTarea.EN_PROCESO] },
+          estado: EstadoTarea.EN_PROCESO,
           inicio: { gte: bloque.fin, lt: bloque.finDiaBogota },
         },
         orderBy: { inicio: 'asc' },

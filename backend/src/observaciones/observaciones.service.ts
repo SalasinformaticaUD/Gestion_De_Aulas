@@ -3,8 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { Prisma } from '@prisma/client';
-import { TipoObservacion } from '../../generated/prisma/enums.js';
+import { Prisma, TipoObservacion } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateObservacioneDto } from './dto/create-observacione.dto';
 import { FindObservacionesDto } from './dto/find-observaciones.dto';
@@ -14,20 +13,23 @@ import { UpdateObservacioneDto } from './dto/update-observacione.dto';
 export class ObservacionesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(input: CreateObservacioneDto) {
+  async create(input: CreateObservacioneDto, usuarioId?: string) {
     await this.ensureAulaExists(input.aulaId);
     const tipo = input.tipo ?? TipoObservacion.GENERAL;
+    const vigenteDesde = this.normalizarVigencia(input.vigenteDesde);
     const vigenteHasta = this.normalizarVigencia(input.vigenteHasta);
-    this.validarVigencia(tipo, vigenteHasta, new Date());
+    this.validarVigencia(tipo, vigenteDesde, vigenteHasta);
 
     return this.prisma.observacion.create({
       data: {
         aulaId: input.aulaId,
+        autorId: usuarioId,
         tipo,
         contenido: input.contenido.trim(),
+        vigenteDesde,
         vigenteHasta,
       },
-      include: { aula: true },
+      include: this.detalle(),
     });
   }
 
@@ -39,13 +41,15 @@ export class ObservacionesService {
 
     if (filters.vigentes) {
       const ahora = new Date();
-      where.creadoEn = { lte: ahora };
-      where.OR = [{ vigenteHasta: null }, { vigenteHasta: { gt: ahora } }];
+      where.AND = [
+        { OR: [{ vigenteDesde: null }, { vigenteDesde: { lte: ahora } }] },
+        { OR: [{ vigenteHasta: null }, { vigenteHasta: { gt: ahora } }] },
+      ];
     }
 
     return this.prisma.observacion.findMany({
       where,
-      include: { aula: true },
+      include: this.detalle(),
       orderBy: { creadoEn: 'desc' },
     });
   }
@@ -53,7 +57,7 @@ export class ObservacionesService {
   async findOne(id: string) {
     const observacion = await this.prisma.observacion.findUnique({
       where: { id },
-      include: { aula: true },
+      include: this.detalle(),
     });
 
     if (!observacion) {
@@ -70,11 +74,15 @@ export class ObservacionesService {
     }
 
     const tipo = input.tipo ?? actual.tipo;
+    const vigenteDesde =
+      input.vigenteDesde === undefined
+        ? actual.vigenteDesde
+        : this.normalizarVigencia(input.vigenteDesde);
     const vigenteHasta =
       input.vigenteHasta === undefined
         ? actual.vigenteHasta
         : this.normalizarVigencia(input.vigenteHasta);
-    this.validarVigencia(tipo, vigenteHasta, actual.creadoEn);
+    this.validarVigencia(tipo, vigenteDesde, vigenteHasta);
 
     return this.prisma.observacion.update({
       where: { id },
@@ -84,9 +92,10 @@ export class ObservacionesService {
         ...(input.contenido !== undefined && {
           contenido: input.contenido.trim(),
         }),
+        ...(input.vigenteDesde !== undefined && { vigenteDesde }),
         ...(input.vigenteHasta !== undefined && { vigenteHasta }),
       },
-      include: { aula: true },
+      include: this.detalle(),
     });
   }
 
@@ -100,7 +109,7 @@ export class ObservacionesService {
     return this.prisma.observacion.update({
       where: { id },
       data: { vigenteHasta: fechaCierre },
-      include: { aula: true },
+      include: this.detalle(),
     });
   }
 
@@ -109,8 +118,11 @@ export class ObservacionesService {
       where: {
         aulaId,
         tipo: TipoObservacion.RESTRICCION,
-        creadoEn: { lt: hasta ?? fecha },
-        OR: [{ vigenteHasta: null }, { vigenteHasta: { gt: fecha } }],
+        OR: [
+          { vigenteDesde: null },
+          { vigenteDesde: { lt: hasta ?? fecha } },
+        ],
+        AND: [{ OR: [{ vigenteHasta: null }, { vigenteHasta: { gt: fecha } }] }],
       },
       orderBy: { creadoEn: 'desc' },
     });
@@ -130,20 +142,18 @@ export class ObservacionesService {
     return value ? new Date(value) : null;
   }
 
-  private validarVigencia(
-    tipo: TipoObservacion,
-    vigenteHasta: Date | null,
-    inicio: Date,
-  ): void {
-    if (tipo === TipoObservacion.SEMANAL && !vigenteHasta) {
+  private validarVigencia(tipo: TipoObservacion, vigenteDesde: Date | null, vigenteHasta: Date | null): void {
+    if (tipo === TipoObservacion.RESTRICCION && (!vigenteDesde || !vigenteHasta)) {
+      throw new BadRequestException('Una restricción debe definir las fechas desde y hasta.');
+    }
+    if (vigenteDesde && vigenteHasta && vigenteHasta <= vigenteDesde) {
       throw new BadRequestException(
-        'Una observación SEMANAL debe definir vigenteHasta.',
+        'La fecha hasta debe ser posterior a la fecha desde.',
       );
     }
-    if (vigenteHasta && vigenteHasta <= inicio) {
-      throw new BadRequestException(
-        'vigenteHasta debe ser posterior al inicio de la observación.',
-      );
-    }
+  }
+
+  private detalle() {
+    return { aula: true, autor: { select: { id: true, nombreCompleto: true } } };
   }
 }
