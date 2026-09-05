@@ -22,6 +22,7 @@ describe('PrestamosAudiovisualesService', () => {
     },
     prestamoAudiovisual: {
       create: jest.fn(),
+      findFirst: jest.fn(),
       findUnique: jest.fn(),
       findMany: jest.fn(),
       update: jest.fn(),
@@ -61,6 +62,7 @@ describe('PrestamosAudiovisualesService', () => {
     tx.docente.findUnique.mockResolvedValue({ id: ids.docente });
     tx.aula.findUnique.mockResolvedValue({ id: ids.aula });
     tx.usuario.findUnique.mockResolvedValue({ id: ids.usuario });
+    tx.prestamoAudiovisual.findFirst.mockResolvedValue(null);
     tx.equipoAudiovisual.findMany.mockResolvedValue([
       {
         id: ids.equipo,
@@ -108,6 +110,14 @@ describe('PrestamosAudiovisualesService', () => {
       ConflictException,
     );
     expect(tx.prestamoAudiovisual.create).not.toHaveBeenCalled();
+  });
+
+  it('bloquea un segundo préstamo activo para el mismo profesor', async () => {
+    tx.prestamoAudiovisual.findFirst.mockResolvedValue({ id: 'activo' });
+    await expect(service.create(dto, ids.usuario)).rejects.toThrow(
+      'ya tiene un préstamo audiovisual activo',
+    );
+    expect(tx.equipoAudiovisual.updateMany).not.toHaveBeenCalled();
   });
 
   it('bloquea durante 20 minutos un videobeam recién devuelto', async () => {

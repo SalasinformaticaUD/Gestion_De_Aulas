@@ -20,6 +20,7 @@ export type FineRecord = {
   student: FineStudent;
   reasonId: string;
   description?: string;
+  suggestedFine?: string;
   status: FineStatus;
   date: string;
   imposedBy?: string;

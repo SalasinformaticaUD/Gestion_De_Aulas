@@ -9,11 +9,11 @@ export const crearPractica = async (input: { codigoEstudiante: string; nombreEst
 export const finalizarPractica = async (id: string, cumplioReglas: boolean, observacionesIncumplimiento?: string) => map(await solicitarAulas<ApiPractice>(`/practicas-libres/${id}/finalizar`, auth(), { method: "PATCH", body: JSON.stringify({ cumplioReglas, observacionesIncumplimiento }) }));
 export const cancelarPractica = async (id: string) => map(await solicitarAulas<ApiPractice>(`/practicas-libres/${id}/cancelar`, auth(), { method: "PATCH", body: JSON.stringify({}) }));
 export async function buscarEstudiantePractica(codigo: string) {
-  try { const item = await solicitarAulas<{ id: string; codigo: string; nombre: string; correo: string | null; multas: unknown[] }>(`/practicas-libres/estudiantes/${encodeURIComponent(codigo)}`, auth()); return { id: item.id, code: item.codigo, name: item.nombre, email: item.correo ?? undefined, activeFine: item.multas.length > 0 }; }
+  try { const item = await solicitarAulas<{ id: string; codigo: string; nombre: string; correo: string | null; multas: unknown[]; practicas: unknown[] }>(`/practicas-libres/estudiantes/${encodeURIComponent(codigo)}`, auth()); return { id: item.id, code: item.codigo, name: item.nombre, email: item.correo ?? undefined, activeFine: item.multas.length > 0, activePractice: item.practicas.length > 0 }; }
   catch (error) { if (typeof error === "object" && error && "estado" in error && (error as { estado: number }).estado === 404) return null; throw error; }
 }
 export async function buscarDocentePractica(documento: string) {
-  try { const item = await solicitarAulas<{ id: string; documento: string | null; nombre: string; correo: string | null }>(`/practicas-libres/docentes/${encodeURIComponent(documento)}`, auth()); return { id: item.id, code: item.documento ?? documento, name: item.nombre, email: item.correo ?? undefined }; }
+  try { const item = await solicitarAulas<{ id: string; documento: string | null; nombre: string; correo: string | null; practicasLibres: unknown[] }>(`/practicas-libres/docentes/${encodeURIComponent(documento)}`, auth()); return { id: item.id, code: item.documento ?? documento, name: item.nombre, email: item.correo ?? undefined, activePractice: item.practicasLibres.length > 0 }; }
   catch (error) { if (typeof error === "object" && error && "estado" in error && (error as { estado: number }).estado === 404) return null; throw error; }
 }
 export async function crearEstudianteDesdePractica(input: { codigo: string; nombre: string; correo?: string }) {

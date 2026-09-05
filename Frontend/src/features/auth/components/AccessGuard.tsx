@@ -22,7 +22,8 @@ export function AccessGuard({ application, children }: AccessGuardProps) {
       return;
     }
     if (!tieneAccesoAplicacion(application, sesion)) {
-      router.replace(`${applications[sesion.aplicacion].destination}?acceso=denegado`);
+      const alternativa = sesion.aplicacionesAutorizadas[0];
+      router.replace(alternativa ? `${applications[alternativa].destination}?acceso=denegado` : `/login?app=${application}`);
       return;
     }
     const milisegundosRestantes = sesion.expiraEn - Date.now();
@@ -47,7 +48,8 @@ export function AccessGuard({ application, children }: AccessGuardProps) {
       .then(() => { if (activo) setIsAllowed(true); })
       .catch((error: unknown) => {
         if (error instanceof ErrorApi && error.estado === 403) {
-          router.replace(`${applications[sesion.aplicacion].destination}?acceso=denegado`);
+          const alternativa = sesion.aplicacionesAutorizadas[0];
+          router.replace(alternativa ? `${applications[alternativa].destination}?acceso=denegado` : `/login?app=${application}`);
           return;
         }
         cerrarSesion();
@@ -71,7 +73,10 @@ export function AccessGuard({ application, children }: AccessGuardProps) {
         cerrarSesion();
         router.replace(`/login?app=${application}`);
       }
-      if (estado === 403 && sesion) router.replace(`${applications[sesion.aplicacion].destination}?acceso=denegado`);
+      if (estado === 403 && sesion) {
+        const alternativa = sesion.aplicacionesAutorizadas[0];
+        router.replace(alternativa ? `${applications[alternativa].destination}?acceso=denegado` : `/login?app=${application}`);
+      }
     };
     window.addEventListener(eventoErrorAutorizacion, manejarError);
     return () => window.removeEventListener(eventoErrorAutorizacion, manejarError);

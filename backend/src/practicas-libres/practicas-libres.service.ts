@@ -80,7 +80,22 @@ export class PracticasLibresService {
       (fuente) =>
         fuente.tipo === 'clase-programada' && fuente.estado !== EstadoAsistencia.AUSENTE,
     );
-    if (estadoAula.estadoCalculado !== 'disponible' || claseEnCurso) {
+    const otraRestriccion = estadoAula.fuentes.some(
+      (fuente) =>
+        fuente.tipo !== 'practica-libre' &&
+        !(
+          fuente.tipo === 'clase-programada' &&
+          fuente.estado === EstadoAsistencia.AUSENTE
+        ),
+    );
+    const hayPracticaCompartida = estadoAula.fuentes.some(
+      (fuente) => fuente.tipo === 'practica-libre',
+    );
+    if (
+      otraRestriccion ||
+      claseEnCurso ||
+      (estadoAula.estadoCalculado !== 'disponible' && !hayPracticaCompartida)
+    ) {
       throw new ConflictException(
         claseEnCurso
           ? 'El aula tiene una clase con asistencia registrada o pendiente durante el bloque.'
@@ -125,6 +140,9 @@ export class PracticasLibresService {
               correo: responsable.correo,
             },
           });
+          await this.validarResponsableSinPracticaActiva(tx, {
+            docenteId: docente.id,
+          });
           creadas.push(await tx.practicaLibre.create({
             data: {
               ...this.construirDatosPractica(dto, undefined, software?.nombre ?? dto.softwareSolicitado),
@@ -159,6 +177,9 @@ export class PracticasLibresService {
             'El estudiante tiene una multa activa y no puede registrar prácticas libres.',
           );
         }
+        await this.validarResponsableSinPracticaActiva(tx, {
+          estudianteId: estudiante.id,
+        });
         creadas.push(await tx.practicaLibre.create({
           data: {
             ...this.construirDatosPractica(dto, estudiante.id, software?.nombre ?? dto.softwareSolicitado),
@@ -182,6 +203,24 @@ export class PracticasLibresService {
       ),
     );
     return practicas;
+  }
+
+  private async validarResponsableSinPracticaActiva(
+    tx: Prisma.TransactionClient,
+    responsable: { estudianteId?: string; docenteId?: string },
+  ) {
+    const activa = await tx.practicaLibre.findFirst({
+      where: {
+        ...responsable,
+        estado: { in: [EstadoPrestamo.ACTIVO, EstadoPrestamo.VENCIDO] },
+      },
+      select: { id: true },
+    });
+    if (activa) {
+      throw new ConflictException(
+        'La persona ya tiene una práctica libre activa o pendiente de cierre.',
+      );
+    }
   }
 
   async findAll(filters: FindPracticasLibresDto) {
@@ -254,7 +293,11 @@ export class PracticasLibresService {
       where: { codigo },
       include: {
         multas: { where: { estado: EstadoMulta.ACTIVA } },
-        practicas: { orderBy: { inicio: 'desc' }, take: 10 },
+        practicas: {
+          where: { estado: { in: [EstadoPrestamo.ACTIVO, EstadoPrestamo.VENCIDO] } },
+          orderBy: { inicio: 'desc' },
+          take: 1,
+        },
       },
     });
     if (!estudiante) {
@@ -266,7 +309,17 @@ export class PracticasLibresService {
   async findTeacher(documento: string) {
     const docente = await this.prisma.docente.findUnique({
       where: { documento },
-      select: { id: true, documento: true, nombre: true, correo: true },
+      select: {
+        id: true,
+        documento: true,
+        nombre: true,
+        correo: true,
+        practicasLibres: {
+          where: { estado: { in: [EstadoPrestamo.ACTIVO, EstadoPrestamo.VENCIDO] } },
+          select: { id: true },
+          take: 1,
+        },
+      },
     });
     if (!docente) {
       throw new NotFoundException(`No existe docente con cédula ${documento}.`);

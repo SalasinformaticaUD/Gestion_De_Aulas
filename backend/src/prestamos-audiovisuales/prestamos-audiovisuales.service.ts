@@ -321,8 +321,8 @@ export class PrestamosAudiovisualesService {
     this.validarRangoFechas(salidaEn, devolucionEstimada);
 
     const prestamo = await this.prisma.$transaction(async (tx) => {
-      this.validarContenidoPrestamo(dto);
       await this.validarReferenciasPrestamo(tx, dto, usuarioId);
+      await this.validarDocenteSinPrestamoActivo(tx, dto);
       await this.reservarEquipos(
         tx,
         dto.equipos.map((equipo) => equipo.equipoId),
@@ -706,11 +706,23 @@ export class PrestamosAudiovisualesService {
     }
   }
 
-  private validarContenidoPrestamo(dto: CreatePrestamoAudiovisualDto) {
-    const adicionales = dto.elementosAdicionales?.filter((item) => item.trim()) ?? [];
-    if (!dto.equipos.length && !adicionales.length) {
-      throw new BadRequestException(
-        'Seleccione al menos un videobeam, cable, parlante u otro elemento.',
+  private async validarDocenteSinPrestamoActivo(
+    tx: Prisma.TransactionClient,
+    dto: CreatePrestamoAudiovisualDto,
+  ) {
+    const prestamoActivo = await tx.prestamoAudiovisual.findFirst({
+      where: {
+        estado: { in: [EstadoPrestamo.ACTIVO, EstadoPrestamo.VENCIDO] },
+        OR: [
+          ...(dto.docenteId ? [{ docenteId: dto.docenteId }] : []),
+          { docenteDocumento: { equals: dto.docenteDocumento.trim(), mode: 'insensitive' } },
+        ],
+      },
+      select: { id: true },
+    });
+    if (prestamoActivo) {
+      throw new ConflictException(
+        'El profesor ya tiene un préstamo audiovisual activo o pendiente de devolución.',
       );
     }
   }

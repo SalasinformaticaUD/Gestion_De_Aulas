@@ -23,7 +23,7 @@ describe('PracticasLibresService', () => {
     },
     docente: { upsert: jest.fn() },
     multa: { findFirst: jest.fn() },
-    practicaLibre: { create: jest.fn() },
+    practicaLibre: { create: jest.fn(), findFirst: jest.fn() },
   };
   const prisma = {
     $transaction: jest.fn(
@@ -50,6 +50,8 @@ describe('PracticasLibresService', () => {
       fuentes: [],
     });
     tx.estudiante.upsert.mockResolvedValue({ id: 'estudiante-id' });
+    tx.multa.findFirst.mockResolvedValue(null);
+    tx.practicaLibre.findFirst.mockResolvedValue(null);
     prisma.software.findUnique.mockResolvedValue({
       id: dto.softwareId,
       nombre: 'AutoCAD',
@@ -104,6 +106,24 @@ describe('PracticasLibresService', () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  it('permite compartir un aula que ya tiene otra práctica libre', async () => {
+    disponibilidad.findOne.mockResolvedValue({
+      estadoCalculado: 'reservada',
+      motivo: 'Existe una práctica libre activa.',
+      fuentes: [{ tipo: 'practica-libre', estado: EstadoPrestamo.ACTIVO }],
+    });
+    await expect(service.create(dto)).resolves.toBeDefined();
+    expect(tx.practicaLibre.create).toHaveBeenCalled();
+  });
+
+  it('impide otra práctica cuando la persona ya tiene una activa', async () => {
+    tx.practicaLibre.findFirst.mockResolvedValue({ id: 'practica-activa' });
+    await expect(service.create(dto)).rejects.toThrow(
+      'ya tiene una práctica libre activa',
+    );
+    expect(tx.practicaLibre.create).not.toHaveBeenCalled();
+  });
+
   it('bloquea la práctica cuando el software no está licenciado ni activo', async () => {
     prisma.software.findUnique.mockResolvedValue({
       id: dto.softwareId,
@@ -150,7 +170,11 @@ describe('PracticasLibresService', () => {
       where: { codigo: dto.codigoEstudiante },
       include: {
         multas: { where: { estado: 'ACTIVA' } },
-        practicas: { orderBy: { inicio: 'desc' }, take: 10 },
+        practicas: {
+          where: { estado: { in: ['ACTIVO', 'VENCIDO'] } },
+          orderBy: { inicio: 'desc' },
+          take: 1,
+        },
       },
     });
   });

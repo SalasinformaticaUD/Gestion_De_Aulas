@@ -14,9 +14,12 @@ describe('CredencialesService', () => {
     credencialOperativa: {
       findMany: jest.fn<() => Promise<unknown[]>>(),
       findUnique: jest.fn<() => Promise<unknown>>(),
+      update: jest.fn<() => Promise<unknown>>(),
+      delete: jest.fn<() => Promise<unknown>>(),
     },
     secretoCredencial: {
       findUnique: jest.fn<() => Promise<unknown>>().mockResolvedValue(null),
+      update: jest.fn<() => Promise<unknown>>(),
     },
   };
   const auditoria = {
@@ -76,5 +79,42 @@ describe('CredencialesService', () => {
     await expect(
       service.revelar('00000000-0000-4000-8000-000000000003', usuarioId),
     ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('exige la contraseña del usuario y la contraseña antigua para cambiarla', async () => {
+    prisma.credencialOperativa.findUnique.mockResolvedValue(credencial());
+    prisma.credencialOperativa.update.mockResolvedValue({});
+
+    await service.cambiarSecreto(
+      '00000000-0000-4000-8000-000000000003',
+      {
+        contrasenaUsuario: 'clave-de-cuenta',
+        secretoActual: 'clave-real',
+        secretoNuevo: 'clave-nueva',
+      },
+      usuarioId,
+    );
+
+    expect(auth.verifyCurrentPassword).toHaveBeenCalledWith(
+      usuarioId,
+      'clave-de-cuenta',
+    );
+    const llamada = prisma.credencialOperativa.update.mock.calls[0]?.[0] as {
+      data: { secretoCifrado: string };
+    };
+    expect(secreto.descifrar(llamada.data.secretoCifrado)).toBe('clave-nueva');
+  });
+
+  it('no elimina una credencial si la contraseña del usuario es incorrecta', async () => {
+    auth.verifyCurrentPassword.mockResolvedValueOnce(false);
+
+    await expect(
+      service.remove(
+        '00000000-0000-4000-8000-000000000003',
+        'incorrecta',
+        usuarioId,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.credencialOperativa.delete).not.toHaveBeenCalled();
   });
 });

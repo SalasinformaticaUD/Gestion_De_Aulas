@@ -34,3 +34,20 @@
 .scheduleCard th,.status,.roomSummary article span,.operationalPanel>header span,.alertList article>header span,.alertList article>header b,.alertList article small,.alertList article a,.operationalPanel>footer { font-size:13px; }
 .scheduleCard td code,.scheduleCard td>span,.scheduleCard td strong,.alertList article p { font-size:14.3px; }
 .alertStats span { font-size:13px; }
+.error{margin:-8px 0 14px;padding:10px 12px;border:1px solid #fecaca;border-radius:7px;color:#b91c1c;background:#fef2f2;font-size:14px}
+.emptyAlerts{margin:8px;color:var(--muted);font-size:13px;line-height:1.45}
+.alertFilters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;padding:8px;border-bottom:1px solid var(--line)}
+.alertFilters button{min-width:0;padding:6px 4px;border:1px solid var(--line);border-radius:5px;color:var(--muted);background:var(--surface);font-size:10px;font-weight:750;cursor:pointer}
+.alertFilters button:hover,.alertFilters .activeAlertFilter{color:#fff;background:#343841;border-color:#343841}
+.project{display:block;margin-top:4px;color:var(--muted);font-size:12px;line-height:1.3}
+
+/* El Dashboard tiene seis columnas; no debe heredar la rejilla de ocho
+   columnas de la vista completa de Horarios. */
+.scheduleCard :global(table.schedule.schedule-list){min-width:740px}
+.scheduleCard :global(.schedule.schedule-list) th:nth-child(1),.scheduleCard :global(.schedule.schedule-list) td:nth-child(1){width:11%}
+.scheduleCard :global(.schedule.schedule-list) th:nth-child(2),.scheduleCard :global(.schedule.schedule-list) td:nth-child(2){width:18%;white-space:normal}
+.scheduleCard :global(.schedule.schedule-list) th:nth-child(3),.scheduleCard :global(.schedule.schedule-list) td:nth-child(3){width:25%}
+.scheduleCard :global(.schedule.schedule-list) th:nth-child(4),.scheduleCard :global(.schedule.schedule-list) td:nth-child(4){width:18%}
+.scheduleCard :global(.schedule.schedule-list) th:nth-child(5),.scheduleCard :global(.schedule.schedule-list) td:nth-child(5){width:10%}
+.scheduleCard :global(.schedule.schedule-list) th:nth-child(6),.scheduleCard :global(.schedule.schedule-list) td:nth-child(6){width:18%}
+.scheduleCard :global(.schedule.schedule-list) td:nth-child(2),.scheduleCard :global(.schedule.schedule-list) td:nth-child(3),.scheduleCard :global(.schedule.schedule-list) td:nth-child(4){overflow-wrap:break-word;word-break:normal}

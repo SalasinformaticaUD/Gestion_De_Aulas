@@ -43,4 +43,38 @@ describe('AuthService', () => {
       service.login({ identificador: 'prueba', password: 'incorrecta' }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
+
+  it('impide a los monitores acceder a Gestión de Aulas', async () => {
+    prisma.usuario.findFirst.mockResolvedValue({
+      ...usuario,
+      roles: [
+        {
+          rol: {
+            nombre: 'MONITOR',
+            permisos: [
+              {
+                permiso: {
+                  codigo: 'AULAS_LEER',
+                  modulo: { codigo: 'AULAS', activo: true },
+                },
+              },
+              {
+                permiso: {
+                  codigo: 'MONITORES_LEER',
+                  modulo: { codigo: 'MONITORES', activo: true },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const result = await service.login({ identificador: 'prueba', password });
+
+    expect(result.aplicaciones.puedeAccederAulas).toBe(false);
+    expect(result.aplicaciones.puedeAccederMonitores).toBe(true);
+    expect(result.usuario.modulos).toEqual(['MONITORES']);
+    expect(result.usuario.permisos).toEqual(['MONITORES_LEER']);
+  });
 });

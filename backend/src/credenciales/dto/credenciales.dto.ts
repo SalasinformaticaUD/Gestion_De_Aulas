@@ -14,7 +14,12 @@ export class FindCredencialesDto {
   @IsOptional() @IsEnum(EstadoCredencial) estado?: EstadoCredencial;
 }
 export class GuardarSecretoCredencialDto {
-  @IsString() @MaxLength(4000) secreto!: string;
+  @IsString() @MaxLength(200) contrasenaUsuario!: string;
+  @IsString() @MaxLength(4000) secretoActual!: string;
+  @IsString() @MaxLength(4000) secretoNuevo!: string;
+}
+export class EliminarCredencialDto {
+  @IsString() @MaxLength(200) contrasenaUsuario!: string;
 }
 export class ActualizarRolesCredencialDto {
   @IsArray() @IsUUID('4', { each: true }) rolIds!: string[];

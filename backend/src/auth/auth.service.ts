@@ -132,10 +132,14 @@ export class AuthService {
     }>;
   }): UsuarioAutenticado {
     const roles = usuario.roles.map(({ rol }) => rol.nombre);
+    const esMonitor = roles.some(
+      (rol) => rol.trim().toUpperCase() === 'MONITOR',
+    );
     const permisos = new Set<string>();
     const modulos = new Set<string>();
     for (const { rol } of usuario.roles) {
       for (const { permiso } of rol.permisos) {
+        if (esMonitor && permiso.modulo.codigo !== 'MONITORES') continue;
         permisos.add(permiso.codigo);
         if (permiso.modulo.activo) modulos.add(permiso.modulo.codigo);
       }

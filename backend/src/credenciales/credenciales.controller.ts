@@ -25,6 +25,7 @@ import {
   CrearAccesoCredencialDto,
   FindCredencialesDto,
   GuardarSecretoCredencialDto,
+  EliminarCredencialDto,
 } from './dto/credenciales.dto';
 import { UpdateCredencialeDto } from './dto/update-credenciale.dto';
 @RequireAuth()
@@ -56,12 +57,12 @@ export class CredencialesController {
   ) {
     return this.service.revelar(id, u.id);
   }
-  @Post(':id/secreto') @RequirePermissions('CREDENCIALES_VER_SECRETO') guardarSecreto(
+  @Post(':id/secreto') @RequirePermissions('CREDENCIALES_ACTUALIZAR') guardarSecreto(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: GuardarSecretoCredencialDto,
     @CurrentUser() u: UsuarioAutenticado,
   ) {
-    return this.service.guardarSecreto(id, dto, u.id);
+    return this.service.cambiarSecreto(id, dto, u.id);
   }
   @Post(':id/accesos') @RequirePermissions('CREDENCIALES_ACTUALIZAR') acceso(
     @Param('id', ParseUUIDPipe) id: string,
@@ -99,8 +100,9 @@ export class CredencialesController {
   }
   @Delete(':id') @RequirePermissions('CREDENCIALES_ELIMINAR') remove(
     @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: EliminarCredencialDto,
     @CurrentUser() u: UsuarioAutenticado,
   ) {
-    return this.service.remove(id, u.id);
+    return this.service.remove(id, dto.contrasenaUsuario, u.id);
   }
 }

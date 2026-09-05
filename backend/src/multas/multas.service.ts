@@ -58,6 +58,7 @@ export class MultasService {
         estudianteId: estudiante.id,
         motivoId: motivo.id,
         ...(dto.descripcion && { descripcion: dto.descripcion }),
+        ...(dto.multaSugerida && { multaSugerida: dto.multaSugerida }),
         ...(usuarioId && { impuestaPorId: usuarioId }),
       },
       include: includeMulta,
@@ -211,6 +212,7 @@ export class MultasService {
         const motivoNombre = valor(fila, 'MOTIVO');
         const fechaTexto = valor(fila, 'FECHA');
         const descripcion = valor(fila, 'DESCRIPCION');
+        const multaSugerida = valor(fila, 'MULTA SUGERIDA');
         const estadoTexto = normalizar(valor(fila, 'ESTADO'));
         if (!codigo) throw new BadRequestException('Estudiante debe iniciar con su código numérico, por ejemplo: 20261001 - NOMBRE.');
         if (!motivoNombre) throw new BadRequestException('Motivo es obligatorio.');
@@ -229,7 +231,7 @@ export class MultasService {
           }
           continue;
         }
-        const creada = await this.prisma.multa.create({ data: { estudianteId: estudiante.id, motivoId: motivo.id, fecha, descripcion: descripcion || null, estado, ...(usuarioId && { impuestaPorId: usuarioId }) } });
+        const creada = await this.prisma.multa.create({ data: { estudianteId: estudiante.id, motivoId: motivo.id, fecha, descripcion: descripcion || null, multaSugerida: multaSugerida || null, estado, ...(usuarioId && { impuestaPorId: usuarioId }) } });
         await this.registrar(usuarioId, creada.id, 'CREATE', undefined, creada);
         creadas += 1;
       } catch (error: unknown) {
@@ -304,6 +306,7 @@ export class MultasService {
       data: {
         ...(dto.motivoId && { motivoId: dto.motivoId }),
         ...(dto.descripcion !== undefined && { descripcion: dto.descripcion }),
+        ...(dto.multaSugerida !== undefined && { multaSugerida: dto.multaSugerida }),
       },
       include: includeMulta,
     });

@@ -519,6 +519,7 @@ model Multa {
   estado              EstadoMulta @default(ACTIVA)
   fecha               DateTime    @default(now())
   descripcion         String?
+  multaSugerida       String?
   impuestaPorId       String?     @db.Uuid
   cumplidaEn          DateTime?
   cumplidaPorId       String?     @db.Uuid

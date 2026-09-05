@@ -12,6 +12,7 @@ import {
   CambiarEstadoCredencialDto,
   CrearAccesoCredencialDto,
   FindCredencialesDto,
+  GuardarSecretoCredencialDto,
 } from './dto/credenciales.dto';
 import { AuthService } from '../auth/auth.service';
 import { UpdateCredencialeDto } from './dto/update-credenciale.dto';
@@ -91,7 +92,7 @@ export class CredencialesService {
         ...(dto.descripcion !== undefined && {
           descripcion: dto.descripcion.trim(),
         }),
-        ...(dto.secreto !== undefined && { secretoCifrado: this.cifrado.cifrar(dto.secreto) }),
+        ...(dto.estado !== undefined && { estado: dto.estado }),
       },
       include,
     });
@@ -163,21 +164,50 @@ export class CredencialesService {
     await this.audit(usuarioId, id, 'UPDATE', undefined, { rolesAutorizados: rolIds });
     return this.findOne(id, usuarioId);
   }
-  async remove(id: string, usuarioId: string) {
+  async remove(id: string, contrasenaUsuario: string, usuarioId: string) {
+    await this.verificarContrasenaUsuario(usuarioId, contrasenaUsuario);
     const previo = await this.access(id, usuarioId, true);
     const eliminado = await this.prisma.credencialOperativa.delete({ where: { id } });
     await this.audit(usuarioId, id, 'DELETE', previo, undefined);
     return { id: eliminado.id, eliminado: true };
   }
-  async guardarSecreto(id: string, dto: { secreto: string }, usuarioId: string) {
-    await this.access(id, usuarioId);
-    const secreto = await this.prisma.secretoCredencial.upsert({
+  async cambiarSecreto(
+    id: string,
+    dto: GuardarSecretoCredencialDto,
+    usuarioId: string,
+  ) {
+    await this.verificarContrasenaUsuario(usuarioId, dto.contrasenaUsuario);
+    const credencial = await this.access(id, usuarioId, true);
+    const propio = await this.prisma.secretoCredencial.findUnique({
       where: { credencialId_usuarioId: { credencialId: id, usuarioId } },
-      create: { credencialId: id, usuarioId, secretoCifrado: this.cifrado.cifrar(dto.secreto) },
-      update: { secretoCifrado: this.cifrado.cifrar(dto.secreto) },
     });
-    await this.audit(usuarioId, id, 'UPDATE', undefined, { secretoActualizado: true });
-    return { id: secreto.credencialId, actualizado: true };
+    const secretoCifrado = propio?.secretoCifrado ?? credencial.secretoCifrado;
+    if (!secretoCifrado) {
+      throw new NotFoundException(
+        'La credencial todavía no tiene una contraseña registrada.',
+      );
+    }
+    if (this.cifrado.descifrar(secretoCifrado) !== dto.secretoActual) {
+      throw new ForbiddenException(
+        'La contraseña antigua de la credencial no es correcta.',
+      );
+    }
+    const nuevoCifrado = this.cifrado.cifrar(dto.secretoNuevo);
+    if (propio) {
+      await this.prisma.secretoCredencial.update({
+        where: { credencialId_usuarioId: { credencialId: id, usuarioId } },
+        data: { secretoCifrado: nuevoCifrado },
+      });
+    } else {
+      await this.prisma.credencialOperativa.update({
+        where: { id },
+        data: { secretoCifrado: nuevoCifrado },
+      });
+    }
+    await this.audit(usuarioId, id, 'UPDATE', undefined, {
+      secretoActualizado: true,
+    });
+    return { id, actualizado: true };
   }
   async verificarAcceso(usuarioId: string, contrasena: string) {
     if (!(await this.auth.verifyCurrentPassword(usuarioId, contrasena)))
@@ -214,6 +244,14 @@ export class CredencialesService {
     if (!administrador && (!acceso?.puedeVer && !tieneRol || editar && !acceso?.puedeEditar))
       throw new ForbiddenException('No está autorizado para esta credencial.');
     return c;
+  }
+  private async verificarContrasenaUsuario(
+    usuarioId: string,
+    contrasena: string,
+  ) {
+    if (!(await this.auth.verifyCurrentPassword(usuarioId, contrasena))) {
+      throw new ForbiddenException('La contraseña de la sesión no es válida.');
+    }
   }
   private async esAdministrador(usuarioId: string) {
     const usuario = await this.prisma.usuario.findUnique({

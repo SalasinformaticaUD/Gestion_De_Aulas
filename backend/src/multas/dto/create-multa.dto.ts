@@ -42,4 +42,11 @@ export class CreateMultaDto {
   @IsNotEmpty()
   @MaxLength(2000)
   descripcion?: string;
+
+  @Transform(trim)
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(160)
+  multaSugerida?: string;
 }

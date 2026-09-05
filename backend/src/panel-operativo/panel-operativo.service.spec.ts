@@ -11,7 +11,13 @@ describe('PanelOperativoService', () => {
   };
   const asistencias = { findAll: jest.fn() };
   const prestamos = { findUpcomingForDate: jest.fn() };
-  const prisma = { practicaLibre: { count: jest.fn() } };
+  const prisma = {
+    practicaLibre: { findMany: jest.fn() },
+    prestamoAudiovisual: { findMany: jest.fn() },
+    claseProgramada: { findMany: jest.fn() },
+    observacion: { findMany: jest.fn() },
+    tarea: { findMany: jest.fn() },
+  };
   let service: PanelOperativoService;
 
   beforeEach(() => {
@@ -49,7 +55,17 @@ describe('PanelOperativoService', () => {
     prestamos.findUpcomingForDate.mockResolvedValue([
       { id: 'prestamo-1', aulaId: 'aula-2' },
     ]);
-    prisma.practicaLibre.count.mockResolvedValue(1);
+    prisma.practicaLibre.findMany.mockResolvedValue([{ id: 'practica-1', aula: { id: 'aula-2', codigo: 'LAB-02' } }]);
+    prisma.prestamoAudiovisual.findMany.mockResolvedValue([]);
+    prisma.claseProgramada.findMany.mockResolvedValue([
+      {
+        id: 'clase-1', horaInicio: new Date(Date.UTC(1970, 0, 1, 8)), horaFin: new Date(Date.UTC(1970, 0, 1, 10)), grupo: '01',
+        aula: { id: 'aula-1', codigo: 'LAB-01' }, docente: { nombre: 'Docente' }, asignatura: { nombre: 'Programación' }, proyectoCurricular: { nombre: 'Sistemas' },
+        asistencias: [{ estado: EstadoAsistencia.PENDIENTE }],
+      },
+    ]);
+    prisma.observacion.findMany.mockResolvedValue([]);
+    prisma.tarea.findMany.mockResolvedValue([]);
     service = new PanelOperativoService(
       disponibilidad as unknown as DisponibilidadAulasService,
       asistencias as unknown as AsistenciaDocenteService,
@@ -66,14 +82,17 @@ describe('PanelOperativoService', () => {
 
     expect(resultado.metricas).toMatchObject({
       totalAulas: 3,
-      ocupadas: 1,
+      ocupadas: 0,
       disponibles: 1,
       bloqueadas: 1,
       asistenciasPendientes: 1,
       practicasActivas: 1,
       prestamosDelDia: 1,
+      audiovisualesPrestados: 0,
       alertas: 3,
     });
+    expect(resultado.horarioActual).toHaveLength(1);
+    expect(resultado.horarioActual[0].proyecto).toBe('Sistemas');
     expect(resultado.persistido).toBe(false);
     expect(disponibilidad.findAll).toHaveBeenCalledWith({
       fecha: '2026-08-20',

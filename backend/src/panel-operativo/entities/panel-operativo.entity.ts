@@ -9,6 +9,23 @@ export class AlertaOperativa {
   declare mensaje: string;
   declare aulaId?: string;
   declare origenId?: string;
+  declare aulaCodigo?: string;
+  declare fechaHora?: Date;
+  declare enlace?: string;
+  declare accion?: string;
+}
+
+export class ActividadHorarioActual {
+  declare id: string;
+  declare horaInicio: string;
+  declare horaFin: string;
+  declare aulaId: string;
+  declare aulaCodigo: string;
+  declare asignatura: string;
+  declare proyecto: string | null;
+  declare docente: string;
+  declare grupo: string;
+  declare estado: 'EN_CLASE' | 'PENDIENTE' | 'AUSENTE';
 }
 
 export class PanelOperativoResumen {
@@ -25,8 +42,11 @@ export class PanelOperativoResumen {
     ausenciasDocentes: number;
     practicasActivas: number;
     prestamosDelDia: number;
+    audiovisualesPrestados: number;
     alertas: number;
   };
+  declare horarioActual: ActividadHorarioActual[];
+  declare aulas: DisponibilidadAula[];
   declare alertas: AlertaOperativa[];
   declare calculadoEn: Date;
   declare persistido: false;
