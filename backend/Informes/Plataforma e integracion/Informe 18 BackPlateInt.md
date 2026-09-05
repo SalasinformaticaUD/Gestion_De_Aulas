@@ -98,6 +98,9 @@ permisos ni auditoría.
 4. Ejecutar una revisión completa de navegación después de reiniciar el
    frontend y el backend, especialmente tras una compilación de producción,
    para confirmar que no se reproduzcan errores de chunks de Next.js.
+5. Validar el nuevo flujo de **Tareas Operativas para varias aulas**: creación
+   de grupos, tarjeta consolidada en el tablero, gestión individual de cada
+   sala, informes de seguimiento y avance parcial sin afectar las demás aulas.
 
 ### Pendientes funcionales heredados de informes anteriores
 

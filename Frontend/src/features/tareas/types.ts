@@ -15,6 +15,7 @@ export type OperationalTask = {
   status: TaskStatus;
   roomId?: string;
   roomCode?: string;
+  groupId?: string;
   responsibleId?: string;
   affectsAvailability: boolean;
   createdAt?: string;

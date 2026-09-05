@@ -557,6 +557,7 @@ model Observacion {
 model Tarea {
   id                     String                      @id @default(uuid()) @db.Uuid
   aulaId                 String?                     @db.Uuid
+  grupoId                String?                     @db.Uuid
   responsableId          String?                     @db.Uuid
   creadorId              String?                     @db.Uuid
   canceladaPorId         String?                     @db.Uuid
@@ -584,6 +585,7 @@ model Tarea {
   responsables           ResponsableTareaOperativa[]
 
   @@index([aulaId, inicio, fin])
+  @@index([grupoId, creadoEn])
   @@index([responsableId, estado])
   @@index([creadorId, estado])
   @@index([canceladaPorId])

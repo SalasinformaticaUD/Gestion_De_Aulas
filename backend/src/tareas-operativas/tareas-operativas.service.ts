@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { DecisionTarea, EstadoTarea } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import { CreateTareasOperativaDto } from './dto/create-tareas-operativa.dto';
@@ -11,15 +12,43 @@ export class TareasOperativasService {
   constructor(private prisma: PrismaService, private readonly auditoria: AuditoriaService) {}
 
   async create(d: CreateTareasOperativaDto, usuarioId?: string) {
-    this.validar(d);
-    await this.referencias(d);
-    await this.validarCruces(d);
-    const creada = await this.prisma.tarea.create({
-      data: { ...d, creadorId: usuarioId, inicio: d.inicio ? new Date(d.inicio) : undefined, fin: d.fin ? new Date(d.fin) : undefined },
-      include: this.detalle(),
+    const { aulaIds, aulaId, ...datos } = d;
+    const aulas = [...new Set(aulaIds?.length ? aulaIds : aulaId ? [aulaId] : [])];
+    if (d.afectaDisponibilidad && !aulas.length)
+      throw new BadRequestException('Una tarea que afecta disponibilidad requiere al menos un aula asociada.');
+
+    // Cada aula recibe una tarea hermana: comparten grupo, pero su estado,
+    // responsables e informes permanecen independientes.
+    const destinos: Array<string | undefined> = aulas.length ? aulas : [undefined];
+    for (const aulaDestino of destinos) {
+      const tarea = { ...datos, aulaId: aulaDestino };
+      this.validar(tarea);
+      await this.referencias(tarea);
+      await this.validarCruces(tarea);
+    }
+
+    const grupoId = destinos.length > 1 ? randomUUID() : undefined;
+    const creadas = await this.prisma.$transaction(async (tx) => {
+      const resultado: Array<{ id: string; [key: string]: unknown }> = [];
+      // Las consultas se ejecutan en serie dentro de la transacción. El
+      // adaptador de PostgreSQL no admite operaciones concurrentes en ella.
+      for (const aulaDestino of destinos) {
+        resultado.push(await tx.tarea.create({
+          data: {
+            ...datos,
+            aulaId: aulaDestino,
+            grupoId,
+            creadorId: usuarioId,
+            inicio: datos.inicio ? new Date(datos.inicio) : undefined,
+            fin: datos.fin ? new Date(datos.fin) : undefined,
+          },
+          include: this.detalle(),
+        }));
+      }
+      return resultado;
     });
-    await this.auditoria.registrar({ usuarioId, entidad: 'Tarea', entidadId: creada.id, accion: 'CREATE', datosNuevos: creada });
-    return creada;
+    await Promise.all(creadas.map((creada) => this.auditoria.registrar({ usuarioId, entidad: 'Tarea', entidadId: creada.id, accion: 'CREATE', datosNuevos: creada })));
+    return creadas.length === 1 ? creadas[0] : creadas;
   }
 
   findAll(f: FindTareasDto) {
