@@ -2,6 +2,8 @@ import { obtenerSesion } from "@/features/auth/lib/sesion";
 import { solicitarAulas } from "@/features/monitores/api/clienteMonitores";
 import type { InstalledSoftware, SoftwareAssignment, SoftwareStatus } from "@/features/software/types";
 
+type Pagina<T> = { data: T[]; meta: { page: number; limit: number; total: number; totalPages: number } };
+
 type SoftwareApi = {
   id: string;
   nombre: string;
@@ -49,6 +51,17 @@ export async function asignarSoftware(roomId: string, softwareId: string, instal
 
 export async function retirarSoftware(roomId: string, softwareId: string) {
   await solicitarAulas(`/software/aulas/${roomId}/${softwareId}`, token(), { method: "DELETE" });
+}
+
+export async function cargarSoftwarePaginado(page: number, query = "") {
+  const params = new URLSearchParams({ page: String(page), limit: "25" });
+  if (query.trim()) params.set("q", query.trim());
+  const data = await solicitarAulas<Pagina<SoftwareApi>>("/software?" + params.toString(), token());
+  return {
+    software: data.data.map(toSoftware),
+    assignments: data.data.flatMap((item) => (item.aulas ?? []).map((aula): SoftwareAssignment => ({ roomId: aula.aulaId, softwareId: item.id, installedAt: aula.instaladoEn.slice(0, 10) }))),
+    meta: data.meta,
+  };
 }
 
 export type ResultadoImportacionSoftwareExcel = {

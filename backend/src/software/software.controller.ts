@@ -11,6 +11,7 @@ import {
   ValidationPipe,
   UploadedFile,
   UseInterceptors,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SoftwareService } from './software.service';
@@ -37,8 +38,8 @@ export class SoftwareController {
   }
 
   @Get()
-  findAll() {
-    return this.softwareService.findAll();
+  findAll(@Query('q') q?: string, @Query('page') page?: string, @Query('limit') limit?: string) {
+    return this.softwareService.findAll(q, page ? Math.max(Number(page) || 1, 1) : undefined, limit ? Number(limit) : undefined);
   }
 
   @Post('aulas/buscar-por-software')

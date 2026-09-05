@@ -80,6 +80,10 @@ html[data-theme="dark"] .loadButton:hover { color:#fff; background:#a51022; }
 .resolution p { margin:5px 0; font-size:11.7px; line-height:1.4; }
 .resolution small { font-size:10.4px; }
 .emptyTable { height:122px; color:var(--muted); text-align:center; }
+.pagination { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 15px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; }
+.pagination div { display:flex; gap:8px; }
+.pagination button { min-height:32px; padding:0 10px; border:1px solid var(--line); border-radius:5px; color:var(--ink); background:var(--surface-muted); font-weight:700; }
+.pagination button:disabled { opacity:.45; cursor:not-allowed; }
 .reasonGrid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; padding:13px; }
 .reasonGrid article { min-height:145px; display:flex; flex-direction:column; padding:13px; border:1px solid var(--line); border-radius:8px; background:#fafbfc; }
 .reasonGrid article>header { display:flex; align-items:center; gap:9px; }

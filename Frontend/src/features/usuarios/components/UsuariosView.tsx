@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./UsuariosView.module.css";
+import permissionStyles from "./RolePermissions.module.css";
 import type { Usuario } from "../types";
 import { actualizarCargo, actualizarRol, actualizarUsuario, crearCargo, crearRol, crearUsuario, listarCargos, listarPermisos, listarRoles, listarUsuarios, type CargoCatalogo, type PermisoCatalogo, type RolCatalogo } from "@/features/usuarios/api/usuariosApi";
 import { obtenerSesion } from "@/features/auth/lib/sesion";
@@ -17,6 +18,7 @@ export function UsuariosView() {
   const [permisos, setPermisos] = useState<PermisoCatalogo[]>([]);
   const [rolesCargados, setRolesCargados] = useState(false);
   const [busqueda, setBusqueda] = useState("");
+  const [busquedaPermiso, setBusquedaPermiso] = useState("");
   const [edicion, setEdicion] = useState<string | null>(null);
   const [form, setForm] = useState(vacio);
   const [aviso, setAviso] = useState("");
@@ -51,6 +53,10 @@ export function UsuariosView() {
     void cargar();
   }, [router]);
   const visibles = useMemo(() => usuarios.filter((usuario) => `${usuario.nombreCompleto} ${usuario.nombreUsuario} ${usuario.correo}`.toLowerCase().includes(busqueda.toLowerCase())), [usuarios, busqueda]);
+  const permisosVisibles = useMemo(() => {
+    const termino = busquedaPermiso.trim().toLocaleLowerCase("es");
+    return permisos.filter((permiso) => !termino || permiso.codigo.toLocaleLowerCase("es").includes(termino));
+  }, [busquedaPermiso, permisos]);
   if (isAdministrator !== true) return <main className="access-guard-loading">{isAdministrator === false ? "Acceso exclusivo para el administrador." : "Verificando acceso..."}</main>;
   const alternarRol = (rolId: string) => setForm((actual) => ({ ...actual, rolIds: actual.rolIds.includes(rolId) ? actual.rolIds.filter((id) => id !== rolId) : [...actual.rolIds, rolId] }));
   const alternarPermiso = (permisoId: string) => setRolPermisoIds((actual) => actual.includes(permisoId) ? actual.filter((id) => id !== permisoId) : [...actual, permisoId]);
@@ -137,7 +143,7 @@ export function UsuariosView() {
           <label><span>Rol</span><select value={rolSeleccionadoId} onChange={(event) => seleccionarRol(event.target.value)}><option value="">Nuevo rol</option>{roles.map((rol) => <option key={rol.id} value={rol.id}>{rol.nombre}</option>)}</select></label>
           <label><span>Nombre</span><input value={rolNombre} onChange={(event) => setRolNombre(event.target.value)} placeholder="Ej. COORDINADOR" required /></label>
           <label><span>Descripción</span><input value={rolDescripcion} onChange={(event) => setRolDescripcion(event.target.value)} placeholder="Alcance del rol" /></label>
-          <fieldset><legend>Permisos asignados</legend><div className={styles.permissionGrid}>{permisos.map((permiso) => <label key={permiso.id}><input type="checkbox" checked={rolPermisoIds.includes(permiso.id)} onChange={() => alternarPermiso(permiso.id)} /><span>{permiso.codigo}</span></label>)}</div></fieldset>
+          <fieldset className={permissionStyles.permissionsFieldset}><legend>Permisos asignados</legend><div className={permissionStyles.permissionTools}><input type="search" value={busquedaPermiso} onChange={(event) => setBusquedaPermiso(event.target.value)} placeholder="Buscar permiso..." aria-label="Buscar permiso asignable" /><small>{permisosVisibles.length} de {permisos.length} permisos</small></div><div className={permissionStyles.permissionScroll}><div className={styles.permissionGrid}>{permisosVisibles.map((permiso) => <label key={permiso.id}><input type="checkbox" checked={rolPermisoIds.includes(permiso.id)} onChange={() => alternarPermiso(permiso.id)} /><span>{permiso.codigo}</span></label>)}{!permisosVisibles.length && <p className={permissionStyles.empty}>No hay permisos que coincidan.</p>}</div></div></fieldset>
           <footer><button type="button" className="button-secondary" onClick={() => seleccionarRol("")}>Nuevo</button><button className="button-primary">{rolSeleccionadoId ? "Guardar permisos" : "Crear rol"}</button></footer>
         </form>
         <div className={styles.managementForm}>

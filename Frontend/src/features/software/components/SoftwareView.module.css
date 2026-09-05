@@ -144,6 +144,11 @@
 .dialogForm>footer button { min-height:38px; padding:0 14px; }
 .dialogForm>footer button:disabled { cursor:not-allowed; opacity:.45; }
 .dialogCancel { border:1px solid var(--line); border-radius:7px; color:var(--ink); background:var(--surface-soft,#f8f9fb); font-size:14.3px; font-weight:750; }
+.pagination { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 15px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; }
+.pagination div { display:flex; gap:8px; }
+.pagination button { min-height:32px; padding:0 10px; border:1px solid var(--line); border-radius:5px; color:var(--ink); background:var(--surface-muted); font-weight:700; }
+.pagination button:disabled { opacity:.45; cursor:not-allowed; }
+
 @media (max-width:1050px) {
   .metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .roomsLayout { grid-template-columns:235px minmax(0,1fr); }

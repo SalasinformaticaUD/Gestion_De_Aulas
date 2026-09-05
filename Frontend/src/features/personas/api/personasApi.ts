@@ -13,6 +13,7 @@ export type Persona = {
 type TipoPersona = "estudiantes" | "docentes";
 type DatosPersona = { codigo?: string; documento?: string; nombre: string; correo?: string; proyecto?: string };
 type ResultadoImportacion = { total: number; procesados?: number; omitidasDuplicadas?: number; creados: number; actualizados: number; eliminados: number; conservadosPorHistorial: number };
+export type Pagina<T> = { data: T[]; meta: { page: number; limit: number; total: number; totalPages: number } };
 
 function token() {
   const value = obtenerSesion()?.tokenAcceso;
@@ -23,6 +24,12 @@ function token() {
 export function listarPersonas(tipo: TipoPersona, query = "") {
   const suffix = query ? "?q=" + encodeURIComponent(query) : "";
   return solicitarAulas<Persona[]>("/" + tipo + suffix, token());
+}
+
+export function listarPersonasPaginadas(tipo: TipoPersona, page: number, query = "") {
+  const params = new URLSearchParams({ page: String(page), limit: "25" });
+  if (query.trim()) params.set("q", query.trim());
+  return solicitarAulas<Pagina<Persona>>("/" + tipo + "?" + params.toString(), token());
 }
 
 export function crearPersona(tipo: TipoPersona, data: DatosPersona) {

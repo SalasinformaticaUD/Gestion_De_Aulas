@@ -5,6 +5,16 @@ type ApiFine = { id: string; estado: FineRecord["status"]; fecha: string; descri
 const token = () => { const value = obtenerSesion()?.tokenAcceso; if (!value) throw new Error("La sesión expiró. Inicie sesión nuevamente."); return value; };
 const map = (value: ApiFine): FineRecord => ({ id: value.id, folio: `MUL-${value.id.slice(0, 8).toUpperCase()}`, status: value.estado, date: value.fecha, description: value.descripcion ?? undefined, suggestedFine: value.multaSugerida ?? undefined, student: { id: value.estudiante.id, code: value.estudiante.codigo, name: value.estudiante.nombre }, reasonId: value.motivo.id, imposedBy: value.impuestaPor?.nombreCompleto, fulfilledAt: value.cumplidaEn ?? undefined, fulfilledBy: value.cumplidaPor?.nombreCompleto, deliveredItems: value.elementosEntregados ?? undefined, annulledAt: value.anuladaEn ?? undefined, annulledBy: value.anuladaPor?.nombreCompleto, annulmentReason: value.motivoAnulacion ?? undefined });
 export const cargarMultas = async () => { const [fines, reasons] = await Promise.all([solicitarAulas<ApiFine[]>("/multas", token()), solicitarAulas<Array<{ id: string; nombre: string; descripcion?: string | null }>>("/multas/motivos", token())]); return { fines: fines.map(map), reasons: reasons.map((reason) => ({ id: reason.id, name: reason.nombre, description: reason.descripcion ?? undefined })) }; };
+export type PaginaMultas = { fines: FineRecord[]; reasons: FineReason[]; meta: { page: number; limit: number; total: number; totalPages: number }; summary: { activa: number; cumplida: number; anulada: number } };
+export const cargarMultasPaginadas = async (page: number, options: { query?: string; scope?: "activas" | "historial"; status?: string } = {}): Promise<PaginaMultas> => {
+  const params = new URLSearchParams({ page: String(page), limit: "25" });
+  if (options.query?.trim()) params.set("q", options.query.trim());
+  if (options.scope === "activas") params.set("estado", "ACTIVA");
+  if (options.scope === "historial") params.set("scope", "historical");
+  if (options.status && options.status !== "todas") params.set("estado", options.status);
+  const [response, reasons] = await Promise.all([solicitarAulas<{ data: ApiFine[]; meta: PaginaMultas["meta"]; summary: PaginaMultas["summary"] }>("/multas?" + params.toString(), token()), solicitarAulas<Array<{ id: string; nombre: string; descripcion?: string | null }>>("/multas/motivos", token())]);
+  return { fines: response.data.map(map), reasons: reasons.map((reason) => ({ id: reason.id, name: reason.nombre, description: reason.descripcion ?? undefined })), meta: response.meta, summary: response.summary };
+};
 export const crearMulta = (data: { codigoEstudiante: string; motivoId: string; descripcion?: string; multaSugerida?: string; practicaId?: string }) => solicitarAulas<ApiFine>("/multas", token(), { method: "POST", body: JSON.stringify(data) });
 export const cumplirMulta = (id: string, elementosEntregados: string) => solicitarAulas<ApiFine>(`/multas/${id}/cumplir`, token(), { method: "PATCH", body: JSON.stringify({ elementosEntregados }) });
 export const anularMulta = (id: string, motivoAnulacion: string) => solicitarAulas<ApiFine>(`/multas/${id}/anular`, token(), { method: "PATCH", body: JSON.stringify({ motivoAnulacion }) });

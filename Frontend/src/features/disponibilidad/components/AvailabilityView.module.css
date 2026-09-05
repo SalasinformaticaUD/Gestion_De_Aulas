@@ -136,7 +136,8 @@
 .roomCard>footer button,.roomCard>footer a { min-height:29px; flex:1; display:flex; align-items:center; justify-content:center; gap:5px; border-radius:5px; font-size:11.7px; font-weight:750; text-decoration:none; }
 .roomCard>footer button { border:1px solid var(--line); color:#4c525c; background:#f8f9fb; }
 .roomCard>footer a { border:0; color:#fff; background:var(--primary); }
-.empty { display:grid; place-items:center; min-height:260px; padding:30px; border:1px dashed #cbd0d8; border-radius:var(--radius); color:var(--muted); background:#fff; text-align:center; }
+.empty { display:grid; place-items:center; min-height:260px; padding:30px; border:1px dashed #cbd0d8; border-radius:var(--radius); color:var(--muted); background:#eef0f2; text-align:center; }
+:global(html[data-theme="dark"]) .empty { border-color:#4b505a; color:#aab0ba; background:#1c1e23; }
 .empty>span { width:44px; height:44px; display:grid; place-items:center; border-radius:50%; color:#89909a; background:#f0f1f3; font-size:28.6px; }
 .empty h2 { margin:12px 0 0; color:var(--ink); font-size:18.2px; }
 .empty p { margin:5px 0 13px; font-size:13px; }

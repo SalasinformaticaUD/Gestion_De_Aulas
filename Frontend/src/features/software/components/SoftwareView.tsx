@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { listarAulas } from "@/features/aulas/api/aulasApi";
-import { actualizarSoftware, asignarSoftware as guardarAsignacion, cargarSoftware, crearSoftware, eliminarSoftware, importarSoftwareExcel, retirarSoftware, type ResultadoImportacionSoftwareExcel } from "@/features/software/api/softwareApi";
+import { actualizarSoftware, asignarSoftware as guardarAsignacion, cargarSoftwarePaginado, crearSoftware, eliminarSoftware, importarSoftwareExcel, retirarSoftware, type ResultadoImportacionSoftwareExcel } from "@/features/software/api/softwareApi";
 import type { InstalledSoftware, SoftwareAssignment } from "@/features/software/types";
 import type { Room } from "@/features/aulas/types";
 import styles from "./SoftwareView.module.css";
@@ -23,6 +23,8 @@ export function SoftwareView() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [view, setView] = useState<View>("catalogo");
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState({ page: 1, limit: 25, total: 0, totalPages: 1 });
   const [searchText, setSearchText] = useState("");
   const [roomFilter, setRoomFilter] = useState("todas");
   const [requiredSoftware, setRequiredSoftware] = useState<string[]>([]);
@@ -31,21 +33,20 @@ export function SoftwareView() {
   const [showImport, setShowImport] = useState(false);
   const [importResult, setImportResult] = useState<ResultadoImportacionSoftwareExcel | null>(null);
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  const catalogCache = useRef(new Map<string, Awaited<ReturnType<typeof cargarSoftwarePaginado>>>());
 
-  useEffect(() => {
-    void Promise.all([listarAulas(), cargarSoftware()])
-      .then(([loadedRooms, loadedSoftware]) => { setRooms(loadedRooms); setSoftware(loadedSoftware.software); setAssignments(loadedSoftware.assignments); })
-      .catch((cause) => setNotice({ tone: "error", text: cause instanceof Error ? cause.message : "No fue posible cargar aulas y software." }));
-  }, []);
+  const loadCatalog = useCallback(async (targetPage = page, force = false) => {
+    const key = `${targetPage}:${query.trim().toLocaleLowerCase("es")}`;
+    try {
+      const loaded = !force && catalogCache.current.get(key) || await cargarSoftwarePaginado(targetPage, query);
+      if (!catalogCache.current.has(key) || force) catalogCache.current.set(key, loaded);
+      setSoftware(loaded.software); setAssignments(loaded.assignments); setMeta(loaded.meta);
+    } catch (cause) { setNotice({ tone: "error", text: cause instanceof Error ? cause.message : "No fue posible cargar el catálogo de software." }); }
+  }, [page, query]);
+  useEffect(() => { void listarAulas().then(setRooms).catch((cause) => setNotice({ tone: "error", text: cause instanceof Error ? cause.message : "No fue posible cargar las aulas." })); }, []);
+  useEffect(() => { void loadCatalog(); }, [loadCatalog]);
 
-  const visibleSoftware = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase("es");
-    return software.filter((item) => {
-      const itemAssignments = assignments.filter((assignment) => assignment.softwareId === item.id);
-      return (!normalized || `${item.name} ${item.version} ${item.description ?? ""}`.toLocaleLowerCase("es").includes(normalized)) &&
-        (roomFilter === "todas" || itemAssignments.some((assignment) => assignment.roomId === roomFilter));
-    });
-  }, [assignments, query, roomFilter, software]);
+  const visibleSoftware = useMemo(() => roomFilter === "todas" ? software : software.filter((item) => assignments.some((assignment) => assignment.softwareId === item.id && assignment.roomId === roomFilter)), [assignments, roomFilter, software]);
 
   const matchingRooms = rooms.filter((room) => {
     const normalized = roomSearchText.trim().toLocaleLowerCase("es");
@@ -64,7 +65,7 @@ export function SoftwareView() {
     if (id) {
       try {
         const updated = await actualizarSoftware(id, payload);
-        setSoftware((current) => current.map((item) => item.id === id ? updated : item));
+        catalogCache.current.clear(); setSoftware((current) => current.map((item) => item.id === id ? updated : item));
         setNotice({ tone: "success", text: `${payload.name} ${payload.version} fue actualizado.` });
       } catch (cause) {
         setNotice({ tone: "error", text: cause instanceof Error ? cause.message : "No fue posible actualizar el software." });
@@ -77,7 +78,7 @@ export function SoftwareView() {
           await guardarAsignacion(aulaId, created.id, installedAt ?? "");
           setAssignments((current) => [{ roomId: aulaId, softwareId: created.id, installedAt: installedAt || new Date().toISOString().slice(0, 10) }, ...current]);
         }
-        setSoftware((current) => [...current, created].sort((a, b) => a.name.localeCompare(b.name, "es")));
+        catalogCache.current.clear(); setPage(1); await loadCatalog(1, true);
         const aula = rooms.find((room) => room.id === aulaId);
         setNotice({ tone: "success", text: aula ? `${payload.name} ${payload.version} fue creado y asociado con el Aula ${aula.code}.` : `${payload.name} ${payload.version} fue agregado al catálogo.` });
       } catch (cause) {
@@ -97,7 +98,7 @@ export function SoftwareView() {
     }
     try {
       await eliminarSoftware(item.id);
-      setSoftware((current) => current.filter((softwareItem) => softwareItem.id !== item.id));
+      catalogCache.current.clear(); await loadCatalog(page, true);
       setNotice({ tone: "success", text: `${item.name} ${item.version} fue eliminado del catálogo.` });
     } catch (cause) {
       setNotice({ tone: "error", text: cause instanceof Error ? cause.message : "No fue posible eliminar el software." });
@@ -107,6 +108,7 @@ export function SoftwareView() {
   const removeAssignment = async (assignment: SoftwareAssignment) => {
     try {
       await retirarSoftware(assignment.roomId, assignment.softwareId);
+      catalogCache.current.clear();
       setAssignments((current) => current.filter((item) => !(item.roomId === assignment.roomId && item.softwareId === assignment.softwareId)));
       const item = software.find((softwareItem) => softwareItem.id === assignment.softwareId);
       const room = rooms.find((roomItem) => roomItem.id === assignment.roomId);
@@ -119,9 +121,7 @@ export function SoftwareView() {
   const importExcel = async (archivo: File) => {
     try {
       const resultado = await importarSoftwareExcel(archivo);
-      const loadedSoftware = await cargarSoftware();
-      setSoftware(loadedSoftware.software);
-      setAssignments(loadedSoftware.assignments);
+      catalogCache.current.clear(); setPage(1); await loadCatalog(1, true);
       setShowImport(false);
       setImportResult(resultado);
       setNotice({ tone: resultado.resumen.resultado === "FALLIDA" ? "error" : "success", text: `Importación ${resultado.resumen.resultado.toLocaleLowerCase("es")}: ${resultado.resumen.registrosProcesados} de ${resultado.resumen.totalRegistros} filas asociadas.${resultado.resumen.registrosConError ? ` ${resultado.resumen.registrosConError} con error.` : ""}` });
@@ -137,7 +137,7 @@ export function SoftwareView() {
     </section>
 
     <section className={styles.metrics} aria-label="Resumen del software instalado">
-      <Metric label="Catálogo" value={software.length} detail="Nombre y versión únicos" tone="red" />
+      <Metric label="Catálogo" value={meta.total} detail="Nombre y versión únicos" tone="red" />
       <Metric label="Instalaciones" value={assignments.length} detail="Asociaciones activas" tone="blue" />
       <Metric label="Aulas cubiertas" value={coveredRooms} detail={`de ${rooms.length} aulas registradas`} tone="green" />
     </section>
@@ -145,11 +145,11 @@ export function SoftwareView() {
     {notice && <div className={`${styles.notice} ${notice.tone === "error" ? styles.noticeError : ""}`} role="status"><span>{notice.text}</span><button type="button" onClick={() => setNotice(null)} aria-label="Cerrar mensaje">×</button></div>}
 
     <div className={styles.viewTabs} role="tablist" aria-label="Vistas de software instalado">
-      <button type="button" role="tab" aria-selected={view === "catalogo"} className={view === "catalogo" ? styles.activeTab : ""} onClick={() => setView("catalogo")}>Catálogo <span>{software.length}</span></button>
+      <button type="button" role="tab" aria-selected={view === "catalogo"} className={view === "catalogo" ? styles.activeTab : ""} onClick={() => setView("catalogo")}>Catálogo <span>{meta.total}</span></button>
       <button type="button" role="tab" aria-selected={view === "aulas"} className={view === "aulas" ? styles.activeTab : ""} onClick={() => setView("aulas")}>Instalación por aulas <span>{coveredRooms}</span></button>
     </div>
 
-    {view === "catalogo" && <CatalogView rooms={rooms} software={visibleSoftware} assignments={assignments} searchText={searchText} roomFilter={roomFilter} onSearchText={setSearchText} onSearch={() => setQuery(searchText)} onRoomFilter={setRoomFilter} onEdit={setEditor} onDelete={deleteSoftware} />}
+    {view === "catalogo" && <CatalogView rooms={rooms} software={visibleSoftware} assignments={assignments} searchText={searchText} roomFilter={roomFilter} onSearchText={setSearchText} onSearch={() => { setQuery(searchText); setPage(1); }} onRoomFilter={setRoomFilter} onEdit={setEditor} onDelete={deleteSoftware} meta={meta} onPage={setPage} />}
     {view === "aulas" && <RoomsSoftwareView software={software} assignments={assignments} selected={requiredSoftware} matchingRooms={matchingRooms} roomSearchText={roomSearchText} onRoomSearchText={setRoomSearchText} onToggle={(id) => setRequiredSoftware((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])} onClear={() => setRequiredSoftware([])} onRemove={removeAssignment} />}
     {editor === "new" && <NewSoftwareDialog rooms={rooms} onClose={() => setEditor(null)} onSave={saveSoftware} />}
     {editor && editor !== "new" && <SoftwareDialog item={editor} onClose={() => setEditor(null)} onSave={saveSoftware} />}
@@ -162,12 +162,12 @@ function Metric({ label, value, detail, tone }: { label: string; value: number; 
   return <article className={`${styles.metric} ${styles[`metric_${tone}`]}`}><div><span>{label}</span><strong>{value}</strong><small>{detail}</small></div><i aria-hidden="true" /></article>;
 }
 
-function CatalogView({ rooms, software, assignments, searchText, roomFilter, onSearchText, onSearch, onRoomFilter, onEdit, onDelete }: { rooms: Room[]; software: InstalledSoftware[]; assignments: SoftwareAssignment[]; searchText: string; roomFilter: string; onSearchText: (value: string) => void; onSearch: () => void; onRoomFilter: (value: string) => void; onEdit: (item: InstalledSoftware) => void; onDelete: (item: InstalledSoftware) => Promise<void> }) {
+function CatalogView({ rooms, software, assignments, searchText, roomFilter, onSearchText, onSearch, onRoomFilter, onEdit, onDelete, meta, onPage }: { rooms: Room[]; software: InstalledSoftware[]; assignments: SoftwareAssignment[]; searchText: string; roomFilter: string; onSearchText: (value: string) => void; onSearch: () => void; onRoomFilter: (value: string) => void; onEdit: (item: InstalledSoftware) => void; onDelete: (item: InstalledSoftware) => Promise<void>; meta: { page: number; total: number; totalPages: number }; onPage: (page: number) => void }) {
   return <section className={styles.contentCard}><div className={styles.toolbar}><form className={styles.search} onSubmit={(event) => { event.preventDefault(); onSearch(); }}><span aria-hidden="true">⌕</span><input value={searchText} onChange={(event) => onSearchText(event.target.value)} placeholder="Buscar por nombre, versión o descripción..." aria-label="Buscar software" /><button type="submit">Buscar</button></form><label><span>Aula</span><select value={roomFilter} onChange={(event) => onRoomFilter(event.target.value)}><option value="todas">Todas las aulas</option>{rooms.map((room) => <option key={room.id} value={room.id}>Aula {room.code}</option>)}</select></label><span className={styles.resultCount}>{software.length} resultado(s)</span></div><div className="table-wrap"><table className={styles.softwareTable}><thead><tr><th>Software</th><th>Versión</th><th>Estado</th><th>Descripción</th><th>Aulas instaladas</th><th>Distribución</th><th>Acciones</th></tr></thead><tbody>{software.map((item) => {
     const itemAssignments = assignments.filter((assignment) => assignment.softwareId === item.id);
     const status = item.status ?? "ACTIVO";
     return <tr key={item.id}><td><strong>{item.name}</strong><small>{item.id.slice(0, 13)}…</small></td><td><code>{item.version}</code></td><td><span className={styles.softwareStatus}>{softwareStatusLabels[status]}</span></td><td><span className={styles.description}>{item.description || "Sin descripción"}</span></td><td><strong>{itemAssignments.length}</strong><small>asociación(es)</small></td><td><div className={styles.roomTags}>{itemAssignments.slice(0, 4).map((assignment) => <span key={assignment.roomId}>{rooms.find((room) => room.id === assignment.roomId)?.code}</span>)}{itemAssignments.length > 4 && <b>+{itemAssignments.length - 4}</b>}{itemAssignments.length === 0 && <em>Sin instalar</em>}</div></td><td><div className={styles.actions}><button type="button" onClick={() => onEdit(item)}>Editar</button><button type="button" className={styles.deleteButton} onClick={() => void onDelete(item)}>Eliminar</button></div></td></tr>;
-  })}{software.length === 0 && <tr><td colSpan={7} className={styles.emptyTable}>No hay software para los filtros seleccionados.</td></tr>}</tbody></table></div></section>;
+  })}{software.length === 0 && <tr><td colSpan={7} className={styles.emptyTable}>No hay software para los filtros seleccionados.</td></tr>}</tbody></table></div><footer className={styles.pagination}><span>Página {meta.page} de {meta.totalPages || 1}</span><div><button type="button" disabled={meta.page <= 1} onClick={() => onPage(meta.page - 1)}>Anterior</button><button type="button" disabled={meta.page >= meta.totalPages} onClick={() => onPage(meta.page + 1)}>Siguiente</button></div></footer></section>;
 }
 
 function RoomsSoftwareView({ software, assignments, selected, matchingRooms, roomSearchText, onRoomSearchText, onToggle, onClear, onRemove }: { software: InstalledSoftware[]; assignments: SoftwareAssignment[]; selected: string[]; matchingRooms: Room[]; roomSearchText: string; onRoomSearchText: (value: string) => void; onToggle: (id: string) => void; onClear: () => void; onRemove: (assignment: SoftwareAssignment) => Promise<void> }) {

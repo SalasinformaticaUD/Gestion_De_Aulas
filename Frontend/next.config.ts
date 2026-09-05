@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Evita que `next build` reemplace fragmentos que un `next dev` activo
+  // todavía tiene cargados desde .next.
+  distDir: process.env.NEXT_DIST_DIR ?? ".next",
   outputFileTracingRoot: process.cwd(),
   async rewrites() {
     const aulas = (process.env.NEXT_PUBLIC_AULAS_API_URL ?? "http://localhost:3000").replace(/\/$/, "");

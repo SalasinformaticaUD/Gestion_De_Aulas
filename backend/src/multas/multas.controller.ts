@@ -43,8 +43,12 @@ export class MultasController {
     @Query('estado') estado?: string,
     @Query('estudianteId') estudianteId?: string,
     @Query('codigo') codigo?: string,
+    @Query('q') q?: string,
+    @Query('scope') scope?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.multasService.findAll({ estado, estudianteId, codigo });
+    return this.multasService.findAll({ estado, estudianteId, codigo, q, scope, page: page ? Math.max(Number(page) || 1, 1) : undefined, limit: limit ? Number(limit) : undefined });
   }
 
   @Get('motivos')

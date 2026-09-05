@@ -50,16 +50,22 @@ export class SoftwareService {
     }
   }
 
-  findAll() {
-    return this.prisma.software.findMany({
-      orderBy: [{ nombre: 'asc' }, { version: 'asc' }],
-      include: {
-        aulas: {
-          include: { aula: true },
-          orderBy: { instaladoEn: 'desc' },
-        },
+  async findAll(query?: string, page?: number, limit?: number) {
+    const where = query ? { OR: [{ nombre: { contains: query, mode: 'insensitive' as const } }, { version: { contains: query, mode: 'insensitive' as const } }, { descripcion: { contains: query, mode: 'insensitive' as const } }] } : undefined;
+    const include = {
+      aulas: {
+        include: { aula: true },
+        orderBy: { instaladoEn: 'desc' as const },
       },
+    };
+    if (!page) return this.prisma.software.findMany({
+      where,
+      orderBy: [{ nombre: 'asc' }, { version: 'asc' }],
+      include,
     });
+    const take = Math.min(Math.max(limit ?? 25, 1), 100);
+    const [data, total] = await this.prisma.$transaction([this.prisma.software.findMany({ where, orderBy: [{ nombre: 'asc' }, { version: 'asc' }], include, skip: (page - 1) * take, take }), this.prisma.software.count({ where })]);
+    return { data, meta: { page, limit: take, total, totalPages: Math.ceil(total / take) } };
   }
 
   async findOne(id: string) {

@@ -73,6 +73,11 @@ html[data-theme="dark"] .headerActions .secondaryAction:hover { color:#ff9eaa; b
 .actions .delete:hover { color:#fff; background:#b41125; border-color:#b41125; }
 
 .empty { margin:0; padding:34px 20px; color:var(--muted); text-align:center; }
+.pagination { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 20px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; }
+.pagination div { display:flex; align-items:center; gap:9px; }
+.pagination button { min-height:32px; padding:0 10px; border:1px solid var(--line); border-radius:5px; color:var(--ink); background:var(--surface-muted); font-weight:700; }
+.pagination button:disabled { opacity:.45; cursor:not-allowed; }
+.pagination strong { color:var(--ink); font-size:12px; }
 .notice,
 .noticeError {
   margin:0 0 16px;
@@ -118,4 +123,5 @@ html[data-theme="dark"] .headerActions .secondaryAction:hover { color:#ff9eaa; b
   .card > header { align-items:stretch; flex-direction:column; }
   .search { width:100%; }
   .list article { align-items:flex-start; flex-direction:column; }
+  .pagination { align-items:flex-start; flex-direction:column; }
 }

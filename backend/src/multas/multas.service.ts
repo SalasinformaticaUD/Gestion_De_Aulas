@@ -68,7 +68,7 @@ export class MultasService {
   }
 
   findAll(
-    filters: { estado?: string; estudianteId?: string; codigo?: string } = {},
+    filters: { estado?: string; estudianteId?: string; codigo?: string; q?: string; scope?: string; page?: number; limit?: number } = {},
   ) {
     const estado = this.parseEstado(filters.estado);
     const where: Prisma.MultaWhereInput = {
@@ -79,7 +79,15 @@ export class MultasService {
           codigo: { equals: filters.codigo.trim(), mode: 'insensitive' },
         },
       }),
+      ...(filters.scope === 'historical' && !estado && { estado: { not: EstadoMulta.ACTIVA } }),
+      ...(filters.q?.trim() && { OR: [
+        { estudiante: { codigo: { contains: filters.q.trim(), mode: 'insensitive' } } },
+        { estudiante: { nombre: { contains: filters.q.trim(), mode: 'insensitive' } } },
+        { motivo: { nombre: { contains: filters.q.trim(), mode: 'insensitive' } } },
+        { descripcion: { contains: filters.q.trim(), mode: 'insensitive' } },
+      ] }),
     };
+    if (filters.page) return this.findPage(where, filters.page, filters.limit);
     return this.prisma.multa.findMany({
       where,
       include: includeMulta,
@@ -94,6 +102,17 @@ export class MultasService {
     });
     if (!multa) throw new NotFoundException('La multa no existe.');
     return multa;
+  }
+
+  private async findPage(where: Prisma.MultaWhereInput, page: number, limit?: number) {
+    const take = Math.min(Math.max(limit ?? 25, 1), 100);
+    const [data, total, grouped] = await this.prisma.$transaction([
+      this.prisma.multa.findMany({ where, include: includeMulta, orderBy: { fecha: 'desc' }, skip: (page - 1) * take, take }),
+      this.prisma.multa.count({ where }),
+      this.prisma.multa.groupBy({ by: ['estado'], orderBy: { estado: 'asc' }, _count: { _all: true } }),
+    ]);
+    const summary = Object.fromEntries(grouped.map((item) => [item.estado, (item._count as { _all?: number })._all ?? 0]));
+    return { data, meta: { page, limit: take, total, totalPages: Math.ceil(total / take) }, summary: { activa: summary.ACTIVA ?? 0, cumplida: summary.CUMPLIDA ?? 0, anulada: summary.ANULADA ?? 0 } };
   }
 
   async buscarEstudianteConPracticaActiva(codigo: string) {

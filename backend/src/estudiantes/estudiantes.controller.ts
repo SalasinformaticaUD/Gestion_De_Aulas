@@ -24,7 +24,7 @@ export class EstudiantesController {
   importarExcel(@UploadedFile() archivo: { buffer: Buffer; originalname: string } | undefined, @CurrentUser() user?: UsuarioAutenticado) { return this.service.importarExcel(archivo, user?.id); }
 
   @Get() @RequirePermissions('ESTUDIANTES_LEER')
-  findAll(@Query('q') q?: string) { return this.service.findAll(q); }
+  findAll(@Query('q') q?: string, @Query('page') page?: string, @Query('limit') limit?: string) { return this.service.findAll(q, page ? Math.max(Number(page) || 1, 1) : undefined, limit ? Number(limit) : undefined); }
 
   @Get(':id') @RequirePermissions('ESTUDIANTES_LEER')
   one(@Param('id') id: string) { return this.service.findOne(id); }

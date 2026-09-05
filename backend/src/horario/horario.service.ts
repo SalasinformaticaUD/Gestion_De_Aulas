@@ -263,13 +263,16 @@ export class HorarioService {
   }
 
   async findClases(filters: FindClasesDto = {}) {
-    await this.cerrarAsistenciasVencidas();
+    await this.cerrarAsistenciasVencidas(filters.fecha);
+    const fecha = filters.fecha ? new Date(`${filters.fecha}T00:00:00.000Z`) : undefined;
+    const diaSemana = fecha ? (fecha.getUTCDay() || 7) : filters.diaSemana;
     const where: Prisma.ClaseProgramadaWhereInput = {
       ...(filters.aulaId && { aulaId: filters.aulaId }),
       ...(filters.periodoId && { periodoId: filters.periodoId }),
-      ...(filters.diaSemana !== undefined && {
-        diaSemana: filters.diaSemana,
+      ...(diaSemana !== undefined && {
+        diaSemana,
       }),
+      ...(fecha && { periodo: { fechaInicio: { lte: fecha }, fechaFin: { gte: fecha } } }),
     };
 
     return this.prisma.claseProgramada.findMany({
@@ -281,6 +284,7 @@ export class HorarioService {
         asignatura: true,
         proyectoCurricular: true,
         asistencias: {
+          ...(fecha && { where: { fecha } }),
           orderBy: { fecha: 'desc' },
         },
       },
@@ -1394,64 +1398,23 @@ export class HorarioService {
     return [prefijo + '-' + valor.replace(/\W+/g, '-').toUpperCase(), valor];
   }
 
-  private async cerrarAsistenciasVencidas(): Promise<void> {
+  private async cerrarAsistenciasVencidas(fechaTexto?: string): Promise<void> {
+    if (!fechaTexto) return;
     const ahora = new Date();
-    const hoy = new Date(
-      ahora.getFullYear(),
-      ahora.getMonth(),
-      ahora.getDate(),
-    );
-    const ayer = new Date(hoy);
-    ayer.setDate(ayer.getDate() - 1);
-    const limite = new Date(
-      Date.UTC(ayer.getFullYear(), ayer.getMonth(), ayer.getDate()),
-    );
+    const hoy = new Date(Date.UTC(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()));
+    const fecha = new Date(`${fechaTexto}T00:00:00.000Z`);
+    if (Number.isNaN(fecha.getTime()) || fecha >= hoy) return;
+    const diaSemana = fecha.getUTCDay() || 7;
     const clases = await this.prisma.claseProgramada.findMany({
+      where: { diaSemana, periodo: { fechaInicio: { lte: fecha }, fechaFin: { gte: fecha } } },
       select: {
         id: true,
-        diaSemana: true,
-        periodo: { select: { fechaInicio: true, fechaFin: true } },
       },
     });
 
     for (const clase of clases) {
-      const inicio = new Date(clase.periodo.fechaInicio);
-      const fin = new Date(
-        Math.min(clase.periodo.fechaFin.getTime(), limite.getTime() - 1),
-      );
-      for (
-        const fecha = new Date(
-          Date.UTC(
-            inicio.getUTCFullYear(),
-            inicio.getUTCMonth(),
-            inicio.getUTCDate(),
-          ),
-        );
-        fecha <= fin;
-        fecha.setUTCDate(fecha.getUTCDate() + 1)
-      ) {
-        const dia = fecha.getUTCDay() === 0 ? 7 : fecha.getUTCDay();
-        if (dia !== clase.diaSemana) continue;
-        const fechaRegistro = new Date(fecha);
-        await this.prisma.asistenciaDocente.updateMany({
-          where: {
-            claseId: clase.id,
-            fecha: fechaRegistro,
-            estado: EstadoAsistencia.PENDIENTE,
-          },
-          data: { estado: EstadoAsistencia.AUSENTE, registradaEn: new Date() },
-        });
-        await this.prisma.asistenciaDocente.upsert({
-          where: { claseId_fecha: { claseId: clase.id, fecha: fechaRegistro } },
-          update: {},
-          create: {
-            claseId: clase.id,
-            fecha: fechaRegistro,
-            estado: EstadoAsistencia.AUSENTE,
-            registradaEn: new Date(),
-          },
-        });
-      }
+      await this.prisma.asistenciaDocente.updateMany({ where: { claseId: clase.id, fecha, estado: EstadoAsistencia.PENDIENTE }, data: { estado: EstadoAsistencia.AUSENTE, registradaEn: new Date() } });
+      await this.prisma.asistenciaDocente.upsert({ where: { claseId_fecha: { claseId: clase.id, fecha } }, update: {}, create: { claseId: clase.id, fecha, estado: EstadoAsistencia.AUSENTE, registradaEn: new Date() } });
     }
   }
 

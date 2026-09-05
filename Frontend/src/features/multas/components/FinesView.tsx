@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import * as XLSX from "xlsx";
-import { anularMulta, buscarEstudiante, cargarMultas, cargarMultasExcel, crearMotivoMulta, crearMulta, cumplirMulta, type ResultadoCargaMultas } from "@/features/multas/api/multasApi";
+import { anularMulta, buscarEstudiante, cargarMultasExcel, cargarMultasPaginadas, crearMotivoMulta, crearMulta, cumplirMulta, type PaginaMultas, type ResultadoCargaMultas } from "@/features/multas/api/multasApi";
 import type { FineReason, FineRecord, FineStatus, FineStudent } from "@/features/multas/types";
 import styles from "./FinesView.module.css";
 
@@ -14,6 +14,9 @@ export function FinesView() {
   const [reasons, setReasons] = useState<FineReason[]>([]);
   const [view, setView] = useState<View>("activas");
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [meta, setMeta] = useState<PaginaMultas["meta"]>({ page: 1, limit: 25, total: 0, totalPages: 1 });
+  const [summary, setSummary] = useState<PaginaMultas["summary"]>({ activa: 0, cumplida: 0, anulada: 0 });
   const [statusFilter, setStatusFilter] = useState("todas");
   const [showCreate, setShowCreate] = useState(false);
   const [showReason, setShowReason] = useState(false);
@@ -26,19 +29,16 @@ export function FinesView() {
   const [prefillSuggestedFine, setPrefillSuggestedFine] = useState("");
   const [showLoad, setShowLoad] = useState(false);
   const [loadResult, setLoadResult] = useState<ResultadoCargaMultas | null>(null);
+  const cache = useRef(new Map<string, PaginaMultas>());
 
-  const activeFines = fines.filter((fine) => fine.status === "ACTIVA");
-  const historicalFines = fines.filter((fine) => fine.status !== "ACTIVA");
-  const visibleFines = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase("es");
-    return (view === "activas" ? activeFines : historicalFines).filter((fine) =>
-      (statusFilter === "todas" || fine.status === statusFilter) &&
-      (!normalized || `${fine.folio} ${fine.student.code} ${fine.student.name} ${fine.description ?? ""} ${reasons.find((reason) => reason.id === fine.reasonId)?.name ?? ""}`.toLocaleLowerCase("es").includes(normalized)),
-    );
-  }, [activeFines, historicalFines, query, reasons, statusFilter, view]);
-
-  const reload = async () => { try { const data = await cargarMultas(); setFines(data.fines); setReasons(data.reasons); } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible cargar las multas." }); } };
-  useEffect(() => { void reload(); }, []);
+  const reload = useCallback(async (targetPage = page, force = false) => { try {
+    const scope = view === "historial" ? "historial" : "activas";
+    const key = `${scope}:${statusFilter}:${query.trim().toLocaleLowerCase("es")}:${targetPage}`;
+    const data = !force && cache.current.get(key) || await cargarMultasPaginadas(targetPage, { query, scope, status: statusFilter });
+    if (!cache.current.has(key) || force) cache.current.set(key, data);
+    setFines(data.fines); setReasons(data.reasons); setMeta(data.meta); setSummary(data.summary);
+  } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible cargar las multas." }); } }, [page, query, statusFilter, view]);
+  useEffect(() => { if (view !== "motivos") void reload(); }, [reload, view]);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("codigoEstudiante");
@@ -52,7 +52,7 @@ export function FinesView() {
     }
   }, []);
   const createFine = async (payload: { student: FineStudent; reasonId: string; description?: string; suggestedFine?: string; practiceId?: string }) => {
-    try { await crearMulta({ codigoEstudiante: payload.student.code, motivoId: payload.reasonId, descripcion: payload.description, multaSugerida: payload.suggestedFine, practicaId: payload.practiceId }); await reload(); setShowCreate(false); setView("activas"); setNotice({ tone: "success", text: `Multa impuesta a ${payload.student.name}.` }); } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible crear la multa." }); }
+    try { await crearMulta({ codigoEstudiante: payload.student.code, motivoId: payload.reasonId, descripcion: payload.description, multaSugerida: payload.suggestedFine, practicaId: payload.practiceId }); cache.current.clear(); setPage(1); setShowCreate(false); setView("activas"); setNotice({ tone: "success", text: `Multa impuesta a ${payload.student.name}.` }); } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible crear la multa." }); }
   };
 
   const completeTransition = async (item: FineRecord, action: "cumplir" | "anular", detail: string) => {
@@ -60,37 +60,37 @@ export function FinesView() {
       setNotice({ tone: "error", text: "Solo una multa activa puede cumplirse o anularse." });
       return;
     }
-    try { if (action === "cumplir") await cumplirMulta(item.id, detail); else await anularMulta(item.id, detail); await reload(); setTransition(null); setNotice({ tone: "success", text: `${item.folio} fue marcada como ${action === "cumplir" ? "cumplida" : "anulada"}.` }); } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible actualizar la multa." }); }
+    try { if (action === "cumplir") await cumplirMulta(item.id, detail); else await anularMulta(item.id, detail); cache.current.clear(); await reload(page, true); setTransition(null); setNotice({ tone: "success", text: `${item.folio} fue marcada como ${action === "cumplir" ? "cumplida" : "anulada"}.` }); } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible actualizar la multa." }); }
   };
 
   const createReason = async (payload: Omit<FineReason, "id">) => {
-    try { await crearMotivoMulta(payload); await reload(); setShowReason(false); setNotice({ tone: "success", text: `El motivo “${payload.name}” fue creado correctamente.` }); return true; } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible crear el motivo." }); return false; }
+    try { await crearMotivoMulta(payload); cache.current.clear(); await reload(page, true); setShowReason(false); setNotice({ tone: "success", text: `El motivo “${payload.name}” fue creado correctamente.` }); return true; } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible crear el motivo." }); return false; }
   };
 
-  const changeView = (next: View) => { setView(next); setStatusFilter("todas"); };
+  const changeView = (next: View) => { setView(next); setStatusFilter("todas"); setPage(1); };
 
   return <>
     <section className={`page-heading ${styles.heading}`}><div><h1>Multas</h1><p>Registro, cumplimiento y anulación de restricciones aplicadas a estudiantes.</p></div><div className={styles.actions}><button type="button" className={styles.saveButton} onClick={() => downloadFines(fines, reasons)}>Guardar multas</button><button type="button" className={styles.loadButton} onClick={() => { setLoadResult(null); setShowLoad(true); }}>Cargar multas</button><button type="button" className="button-primary" onClick={() => setShowCreate(true)}>+ Nueva multa</button></div></section>
 
     <section className={styles.metrics} aria-label="Resumen de multas">
-      <Metric label="Activas" value={activeFines.length} detail="Bloquean prácticas libres" tone="red" />
-      <Metric label="Cumplidas" value={fines.filter((fine) => fine.status === "CUMPLIDA").length} detail="Compromisos verificados" tone="green" />
-      <Metric label="Anuladas" value={fines.filter((fine) => fine.status === "ANULADA").length} detail="Cierres administrativos" tone="neutral" />
+      <Metric label="Activas" value={summary.activa} detail="Bloquean prácticas libres" tone="red" />
+      <Metric label="Cumplidas" value={summary.cumplida} detail="Compromisos verificados" tone="green" />
+      <Metric label="Anuladas" value={summary.anulada} detail="Cierres administrativos" tone="neutral" />
       <Metric label="Motivos" value={reasons.length} detail="Catálogo disponible" tone="blue" />
     </section>
 
     {notice && <div className={`${styles.notice} ${notice.tone === "error" ? styles.noticeError : ""}`} role="status"><span>{notice.text}</span><button type="button" onClick={() => setNotice(null)} aria-label="Cerrar mensaje">×</button></div>}
 
-    <div className={styles.viewTabs} role="tablist" aria-label="Vistas de multas"><button type="button" role="tab" aria-selected={view === "activas"} className={view === "activas" ? styles.activeTab : ""} onClick={() => changeView("activas")}>Multas activas <span>{activeFines.length}</span></button><button type="button" role="tab" aria-selected={view === "historial"} className={view === "historial" ? styles.activeTab : ""} onClick={() => changeView("historial")}>Historial <span>{historicalFines.length}</span></button><button type="button" role="tab" aria-selected={view === "motivos"} className={view === "motivos" ? styles.activeTab : ""} onClick={() => changeView("motivos")}>Motivos <span>{reasons.length}</span></button></div>
+    <div className={styles.viewTabs} role="tablist" aria-label="Vistas de multas"><button type="button" role="tab" aria-selected={view === "activas"} className={view === "activas" ? styles.activeTab : ""} onClick={() => changeView("activas")}>Multas activas <span>{summary.activa}</span></button><button type="button" role="tab" aria-selected={view === "historial"} className={view === "historial" ? styles.activeTab : ""} onClick={() => changeView("historial")}>Historial <span>{summary.cumplida + summary.anulada}</span></button><button type="button" role="tab" aria-selected={view === "motivos"} className={view === "motivos" ? styles.activeTab : ""} onClick={() => changeView("motivos")}>Motivos <span>{reasons.length}</span></button></div>
 
-    {view !== "motivos" ? <section className={styles.contentCard}><header className={styles.cardHeader}><div><h2>{view === "activas" ? "Restricciones vigentes" : "Trazabilidad de multas"}</h2><p>{view === "activas" ? "Estos estudiantes no pueden registrar prácticas libres." : "Registros cumplidos o anulados, conservados sin eliminación física."}</p></div><span>{visibleFines.length} registro(s)</span></header><div className={styles.toolbar}><label className={styles.search}><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar estudiante, código, motivo o folio..." aria-label="Buscar multas" /></label>{view === "historial" && <label><span>Estado</span><select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="todas">Todos</option><option value="CUMPLIDA">Cumplidas</option><option value="ANULADA">Anuladas</option></select></label>}<span className={styles.resultCount}>{visibleFines.length} resultado(s)</span></div><div className="table-wrap"><table className={styles.finesTable}><thead><tr><th>Multa</th><th>Estudiante</th><th>Motivo</th><th>Fecha</th><th>Descripción</th><th>Multa sugerida</th><th>Estado</th><th>{view === "activas" ? "Acciones" : "Resolución"}</th></tr></thead><tbody>{visibleFines.map((fine) => <FineRow key={fine.id} fine={fine} reason={reasons.find((reason) => reason.id === fine.reasonId)} onFulfill={() => setTransition({ item: fine, action: "cumplir" })} onAnnul={() => setTransition({ item: fine, action: "anular" })} />)}{visibleFines.length === 0 && <tr><td colSpan={8} className={styles.emptyTable}>No hay multas para los filtros seleccionados.</td></tr>}</tbody></table></div></section> : <ReasonsView reasons={reasons} fines={fines} onCreate={() => setShowReason(true)} />}
+    {view !== "motivos" ? <section className={styles.contentCard}><header className={styles.cardHeader}><div><h2>{view === "activas" ? "Restricciones vigentes" : "Trazabilidad de multas"}</h2><p>{view === "activas" ? "Estos estudiantes no pueden registrar prácticas libres." : "Registros cumplidos o anulados, conservados sin eliminación física."}</p></div><span>{meta.total} registro(s)</span></header><div className={styles.toolbar}><label className={styles.search}><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Buscar estudiante, código, motivo o folio..." aria-label="Buscar multas" /></label>{view === "historial" && <label><span>Estado</span><select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}><option value="todas">Todos</option><option value="CUMPLIDA">Cumplidas</option><option value="ANULADA">Anuladas</option></select></label>}<span className={styles.resultCount}>{meta.total} resultado(s)</span></div><div className="table-wrap"><table className={styles.finesTable}><thead><tr><th>Multa</th><th>Estudiante</th><th>Motivo</th><th>Fecha</th><th>Descripción</th><th>Multa sugerida</th><th>Estado</th><th>{view === "activas" ? "Acciones" : "Resolución"}</th></tr></thead><tbody>{fines.map((fine) => <FineRow key={fine.id} fine={fine} reason={reasons.find((reason) => reason.id === fine.reasonId)} onFulfill={() => setTransition({ item: fine, action: "cumplir" })} onAnnul={() => setTransition({ item: fine, action: "anular" })} />)}{fines.length === 0 && <tr><td colSpan={8} className={styles.emptyTable}>No hay multas para los filtros seleccionados.</td></tr>}</tbody></table></div><footer className={styles.pagination}><span>Página {meta.page} de {meta.totalPages || 1}</span><div><button type="button" disabled={meta.page <= 1} onClick={() => setPage(meta.page - 1)}>Anterior</button><button type="button" disabled={meta.page >= meta.totalPages} onClick={() => setPage(meta.page + 1)}>Siguiente</button></div></footer></section> : <ReasonsView reasons={reasons} fines={fines} onCreate={() => setShowReason(true)} />}
 
     
     {showCreate && <CreateFineDialog reasons={reasons} initialCode={prefillCode} initialReason={prefillReason} initialDescription={prefillDescription} initialPracticeId={prefillPracticeId} initialSuggestedFine={prefillSuggestedFine} onClose={() => setShowCreate(false)} onCreate={createFine} />}
     {transition && <TransitionDialog item={transition.item} action={transition.action} onClose={() => setTransition(null)} onConfirm={completeTransition} />}
     {showReason && <ReasonDialog onClose={() => setShowReason(false)} onCreate={createReason} />}
     {showLoad && !loadResult && <LoadFinesDialog onClose={() => setShowLoad(false)} onResult={setLoadResult} />}
-    {loadResult && <LoadFinesResultDialog result={loadResult} onClose={() => { setLoadResult(null); setShowLoad(false); void reload(); }} />}
+    {loadResult && <LoadFinesResultDialog result={loadResult} onClose={() => { cache.current.clear(); setPage(1); setLoadResult(null); setShowLoad(false); void reload(1, true); }} />}
   </>;
 }
 

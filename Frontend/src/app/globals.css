@@ -416,7 +416,7 @@ html[data-theme="dark"] .university-logo-dark,
 .attendance-date input { width:100%; min-width:112px; min-height:28px; padding:3px 5px; border:1px solid var(--line); border-radius:5px; color:var(--ink); background:var(--surface); font-size:12px; }
 .attendance-actions { display:flex; gap:6px; margin-top:6px; }
 .attendance-actions button { width:30px; height:30px; display:grid; place-items:center; border:1px solid var(--line); border-radius:50%; color:#fff; font-size:17px; font-weight:900; line-height:1; cursor:pointer; }
-.attendance-actions button:disabled { cursor:wait; opacity:.55; }
+.attendance-actions button:disabled { cursor:default; opacity:.55; }
 .attendance-state { display:block; color:var(--muted); font-size:12px; font-weight:800; }
 .attendance-asistio { color:#9b1325; }
 .attendance-ausente { color:#9b1325; }
@@ -994,6 +994,14 @@ html[data-theme="dark"] body main .schedule.schedule-list td:has(> .attendance-s
 html[data-theme="dark"] body main .schedule.schedule-list td:has(> .attendance-state.attendance-pendiente) .attendance-actions button.attendance-cross {
   color:#aab0ba!important; background:transparent!important; border-color:#50545e!important;
 }
+/* En pendiente, los controles conservan su color de acción al pasar el cursor
+   también en oscuro; el relleno oscuro evita un destello blanco. */
+html[data-theme="dark"] body main .schedule.schedule-list td:has(> .attendance-state.attendance-pendiente) .attendance-actions button.attendance-check:hover:not(:disabled) {
+  color:#8cf0b2!important; background:#123d28!important; border-color:#35b86b!important;
+}
+html[data-theme="dark"] body main .schedule.schedule-list td:has(> .attendance-state.attendance-pendiente) .attendance-actions button.attendance-cross:hover:not(:disabled) {
+  color:#ff9eaa!important; background:#461f27!important; border-color:#ff7180!important;
+}
 
 /* Fallback directo para el encabezado, independiente del contenedor raíz. */
 html[data-theme="dark"] .rooms-heading .button-primary,
@@ -1081,4 +1089,12 @@ html[data-theme="dark"] main :is(
   color:var(--ink)!important;
   background:#22252b!important;
   border-color:#71333c!important;
+}
+
+/* Préstamo audiovisual: controles auxiliares con la misma superficie del diálogo oscuro. */
+html[data-theme="dark"] .audiovisual-dialog .teacher-result,
+html[data-theme="dark"] .audiovisual-dialog .accessory-picker > div > label {
+  color:var(--ink);
+  background:var(--surface-soft);
+  border-color:var(--line);
 }

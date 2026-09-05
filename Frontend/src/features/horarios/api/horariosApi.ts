@@ -16,7 +16,11 @@ const token = () => { const value = obtenerSesion()?.tokenAcceso; if (!value) th
 export const listarPeriodos = () => solicitarAulas<Periodo[]>("/horario/periodos", token());
 export const iniciarSemestre = (input: { nombre: string; fechaInicio: string; fechaFin: string; passwordConfirmacion: string }) =>
   solicitarAulas<Periodo>("/horario/periodos/iniciar-semestre", token(), { method: "POST", body: JSON.stringify(input) });
-export const listarClases = (periodoId: string) => solicitarAulas<ClaseApi[]>(`/horario/clases?periodoId=${periodoId}`, token());
+export const listarClases = (periodoId: string, fecha?: string) => {
+  const params = new URLSearchParams({ periodoId });
+  if (fecha) params.set("fecha", fecha);
+  return solicitarAulas<ClaseApi[]>(`/horario/clases?${params.toString()}`, token());
+};
 export async function importarHorarioExcel(periodoId: string, archivo: File, reemplazarAnterior = true): Promise<ResultadoImportacionExcel> {
   const formulario = new FormData();
   formulario.append("archivo", archivo);
