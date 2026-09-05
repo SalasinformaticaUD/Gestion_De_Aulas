@@ -196,3 +196,14 @@
     width: 100%;
   }
 }
+
+/* Contraste del rango consultado en modo oscuro. */
+:global(html[data-theme="dark"]) .weekRange {
+  color: var(--ink);
+  border-color: var(--line);
+  background: var(--surface-soft);
+}
+
+:global(html[data-theme="dark"]) .weekRange strong {
+  color: var(--ink);
+}

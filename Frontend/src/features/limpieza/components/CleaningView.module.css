@@ -16,6 +16,17 @@ html[data-theme="dark"] .downloadButton:hover { color:#fff; background:#a51022; 
 .metric_blue>i { background:#2563eb; box-shadow:0 0 0 6px #dbeafe; }
 .metric_violet>i { background:#7c3aed; box-shadow:0 0 0 6px #ede9fe; }
 .metric_amber>i { background:#d97706; box-shadow:0 0 0 6px #fef3c7; }
+
+/* Fondos suaves por estado en modo claro. */
+.metric_green { border-color:#b6e4c6; background:linear-gradient(135deg,#fff 0%,#edfaf1 100%); }
+.metric_blue { border-color:#bdd5ff; background:linear-gradient(135deg,#fff 0%,#edf4ff 100%); }
+.metric_violet { border-color:#d8c7f6; background:linear-gradient(135deg,#fff 0%,#f5efff 100%); }
+.metric_amber { border-color:#efd59b; background:linear-gradient(135deg,#fff 0%,#fff8e8 100%); }
+
+:global(html[data-theme="dark"]) .metric_green,
+:global(html[data-theme="dark"]) .metric_blue,
+:global(html[data-theme="dark"]) .metric_violet,
+:global(html[data-theme="dark"]) .metric_amber { border-color:var(--line); background:var(--surface); }
 .notice { min-height:43px; display:flex; align-items:center; justify-content:space-between; gap:14px; padding:9px 13px; margin-bottom:14px; border:1px solid #b6e9d1; border-radius:7px; color:#07684f; background:#eafaf2; font-size:15.6px; font-weight:700; }
 .notice button { border:0; color:inherit; background:transparent; font-size:23.4px; }
 .viewTabs { display:flex; gap:4px; width:max-content; max-width:100%; margin-bottom:12px; padding:4px; border:1px solid var(--line); border-radius:8px; background:#eceef1; }
@@ -23,6 +34,10 @@ html[data-theme="dark"] .downloadButton:hover { color:#fff; background:#a51022; 
 .viewTabs button.activeTab { color:var(--ink); background:#fff; box-shadow:0 1px 3px rgba(18,24,40,.1); font-weight:750; }
 .viewTabs button span { display:inline-grid; place-items:center; min-width:20px; height:18px; margin-left:5px; padding:0 5px; border-radius:9px; color:#666c75; background:#e7e9ed; font-size:13px; }
 .contentCard,.coverageCard { overflow:hidden; border:1px solid var(--line); border-radius:var(--radius); background:#fff; }
+.cardHeader { padding:18px 17px 16px; border-bottom:1px solid var(--line); }
+.cardHeader h2,.cardHeader p { margin:0; }
+.cardHeader h2 { font-size:18.2px; }
+.cardHeader p { margin-top:6px; color:var(--muted); font-size:14.3px; }
 .matrixWorkspace { display:grid; grid-template-columns:minmax(0,1fr) 250px; align-items:start; gap:14px; }
 .recommendationPanel { overflow:hidden; display:grid; gap:11px; padding:0 12px 12px; border:1px solid var(--line); border-radius:var(--radius); background:#fff; }
 .recommendationPanel>header { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:0 -12px; padding:12px; color:#fff; background:#18191c; }
@@ -203,4 +218,32 @@ html[data-theme="dark"] .downloadButton:hover { color:#fff; background:#a51022; 
   .matrixTable tbody th { position:static; padding:4px; }
   .matrixTable td { padding:2px; }
   .matrixTable td button { width:20px; height:20px; border:0; font-size:11px; }
+}
+
+/* Superficies oscuras para la matriz y recomendaciones en modo oscuro. */
+:global(html[data-theme="dark"]) .matrixToolbar,
+:global(html[data-theme="dark"]) .recommendationPanel,
+:global(html[data-theme="dark"]) .matrixTable tbody th,
+:global(html[data-theme="dark"]) .matrixTable td {
+  color: var(--ink);
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+:global(html[data-theme="dark"]) .matrixToolbar input,
+:global(html[data-theme="dark"]) .matrixToolbar select,
+:global(html[data-theme="dark"]) .recommendationPanel > div > button {
+  color: var(--ink);
+  border-color: var(--line);
+  background: var(--surface-soft);
+}
+
+:global(html[data-theme="dark"]) .recommendationPanel > div > button:hover {
+  background: #292c33;
+}
+
+:global(html[data-theme="dark"]) .stateSinRegistro,
+:global(html[data-theme="dark"]) .cell_sin-registro {
+  color: #c2c6ce;
+  background: #30333a;
 }

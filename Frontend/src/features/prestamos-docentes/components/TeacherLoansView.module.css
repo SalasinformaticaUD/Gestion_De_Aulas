@@ -133,3 +133,24 @@
   .dialog form>footer { align-items:stretch; flex-direction:column-reverse; }
   .dialog form>footer button { width:100%; }
 }
+
+/* Contraste reforzado para el modo claro. */
+.metric_amber { border-color:#efd59b; background:linear-gradient(135deg,#fff 0%,#fff8e8 100%); }
+.metric_blue { border-color:#bdd5ff; background:linear-gradient(135deg,#fff 0%,#edf4ff 100%); }
+.metric_green { border-color:#b6e4c6; background:linear-gradient(135deg,#fff 0%,#edfaf1 100%); }
+.metric_neutral { border-color:#cfd3d9; background:linear-gradient(135deg,#fff 0%,#f4f5f7 100%); }
+.search { border-color:#cbd0d8; }
+.loanTable td { border-bottom-color:#d9dce2; }
+
+/* En oscuro se conservan las superficies originales del módulo. */
+:global(html[data-theme="dark"]) .metric_amber,
+:global(html[data-theme="dark"]) .metric_blue,
+:global(html[data-theme="dark"]) .metric_green,
+:global(html[data-theme="dark"]) .metric_neutral {
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+:global(html[data-theme="dark"]) .loanTable td {
+  border-bottom-color: var(--line);
+}

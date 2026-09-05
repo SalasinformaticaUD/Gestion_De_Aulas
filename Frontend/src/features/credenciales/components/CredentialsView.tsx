@@ -24,6 +24,7 @@ export function CredentialsView() {
   const [roles, setRoles] = useState<RolApi[]>([]);
   const [query, setQuery] = useState("");
   const [unlocked, setUnlocked] = useState(false);
+  const [unlockPromptOpen, setUnlockPromptOpen] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
   const [bad, setBad] = useState(false);
   const [modal, setModal] = useState<Modal>(null);
@@ -49,7 +50,9 @@ export function CredentialsView() {
     setRevealed((current) => { const next = { ...current }; delete next[id]; return next; });
   };
 
-  if (!unlocked) return <Unlock onUnlock={async (password) => { try { await verificarAccesoCredenciales(password); setUnlocked(true); show("Módulo desbloqueado por 15 minutos."); } catch (error) { show(errorMessage(error), true); } }} notice={notice} bad={bad} />;
+  if (!unlocked) return unlockPromptOpen
+    ? <Unlock onClose={() => setUnlockPromptOpen(false)} onUnlock={async (password) => { try { await verificarAccesoCredenciales(password); setUnlocked(true); show("Módulo desbloqueado por 15 minutos."); } catch (error) { show(errorMessage(error), true); } }} notice={notice} bad={bad} />
+    : <section className={styles.lockedState}><h1>Credenciales operativas</h1><p>El módulo está protegido. Puede continuar navegando por los demás módulos.</p><button type="button" className="button-primary" onClick={() => setUnlockPromptOpen(true)}>Ingresar al módulo</button></section>;
 
   return <>
     <section className={`page-heading ${styles.heading}`}><div><h1>Credenciales operativas</h1><p>Mantenga presionado el ojo para ver temporalmente una contraseña.</p></div><button className="button-primary" onClick={() => { setSelected(null); setModal("new"); }}>+ Nueva credencial</button></section>
@@ -63,11 +66,11 @@ export function CredentialsView() {
   </>;
 }
 
-function Dialog(props: { title: string; children: ReactNode; onClose?: () => void }) { return <div className={styles.backdrop}><section className={styles.dialog}><header><h2>{props.title}</h2>{props.onClose && <button type="button" onClick={props.onClose}>×</button>}</header>{props.children}</section></div>; }
+function Dialog(props: { title: string; children: ReactNode; onClose?: () => void }) { return <div className={styles.backdrop}><section className={styles.dialog}><header><h2>{props.title}</h2>{props.onClose && <button type="button" onClick={props.onClose} aria-label="Cerrar acceso protegido">×</button>}</header>{props.children}</section></div>; }
 
-function Unlock(props: { onUnlock: (value: string) => Promise<void>; notice: string | null; bad: boolean }) {
+function Unlock(props: { onClose: () => void; onUnlock: (value: string) => Promise<void>; notice: string | null; bad: boolean }) {
   const [value, setValue] = useState("");
-  return <Dialog title="Acceso protegido"><form onSubmit={(event) => { event.preventDefault(); void props.onUnlock(value); }}><p className={styles.revealPending}><strong>Confirma tu contraseña para entrar</strong><span>El módulo se desbloqueará durante 15 minutos.</span></p><label className={styles.singleField}><span>Contraseña de la sesión</span><input autoFocus type="password" value={value} onChange={(event) => setValue(event.target.value)} required /></label>{props.notice && <p className={props.bad ? styles.noticeError : styles.notice}>{props.notice}</p>}<footer><button className="button-primary">Entrar al módulo</button></footer></form></Dialog>;
+  return <Dialog title="Acceso protegido" onClose={props.onClose}><form onSubmit={(event) => { event.preventDefault(); void props.onUnlock(value); }}><p className={styles.revealPending}><strong>Confirma tu contraseña para entrar</strong><span>El módulo se desbloqueará durante 15 minutos.</span></p><label className={styles.singleField}><span>Contraseña de la sesión</span><input autoFocus type="password" value={value} onChange={(event) => setValue(event.target.value)} required /></label>{props.notice && <p className={props.bad ? styles.noticeError : styles.notice}>{props.notice}</p>}<footer><button className="button-primary">Entrar al módulo</button></footer></form></Dialog>;
 }
 
 type CredentialData = { nombre: string; usuario?: string; secreto?: string; descripcion?: string; estado?: "ACTIVA" | "INACTIVA" };

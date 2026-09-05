@@ -12,6 +12,21 @@
 .metric_red>i { background:#dc2626; box-shadow:0 0 0 6px #fee2e2; }
 .metric_amber>i { background:#d97706; box-shadow:0 0 0 6px #fef3c7; }
 .metric_green>i { background:#16a34a; box-shadow:0 0 0 6px #dcfce7; }
+
+/* Contraste por estado en modo claro. */
+.metric_blue { border-color:#bdd5ff; background:linear-gradient(135deg,#fff 0%,#edf4ff 100%); }
+.metric_red { border-color:#f1b5b0; background:linear-gradient(135deg,#fff 0%,#fff0f0 100%); }
+.metric_amber { border-color:#efd59b; background:linear-gradient(135deg,#fff 0%,#fff8e8 100%); }
+.metric_green { border-color:#b6e4c6; background:linear-gradient(135deg,#fff 0%,#edfaf1 100%); }
+
+/* El modo oscuro conserva las superficies oscuras originales. */
+:global(html[data-theme="dark"]) .metric_blue,
+:global(html[data-theme="dark"]) .metric_red,
+:global(html[data-theme="dark"]) .metric_amber,
+:global(html[data-theme="dark"]) .metric_green {
+  border-color: var(--line);
+  background: var(--surface);
+}
 .notice { min-height:43px; display:flex; align-items:center; justify-content:space-between; gap:14px; padding:9px 13px; margin-bottom:14px; border:1px solid #b6e9d1; border-radius:7px; color:#07684f; background:#eafaf2; font-size:15.6px; font-weight:700; }
 .notice button { border:0; color:inherit; background:transparent; font-size:23.4px; }
 .contentCard { overflow:hidden; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface,#fff); }
