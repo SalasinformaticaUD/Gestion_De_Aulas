@@ -38,6 +38,7 @@ describe('LimpiezaAulasController (e2e)', () => {
       ),
     },
     limpieza: {
+      findFirst: jest.fn().mockResolvedValue(null),
       create: jest.fn(({ data }: { data: Omit<Limpieza, 'id'> }) => {
         const registro: Limpieza = { id: limpiezaId, ...data };
         registros.push(registro);
@@ -104,7 +105,7 @@ describe('LimpiezaAulasController (e2e)', () => {
       .post('/limpieza-aulas')
       .send({
         aulaId,
-        realizadaEn: '2026-08-26T08:00:00.000Z',
+        realizadaEn: '2026-09-07T08:00:00.000Z',
         observacion: 'Limpieza de estaciones',
       })
       .expect(201)
@@ -114,7 +115,7 @@ describe('LimpiezaAulasController (e2e)', () => {
       });
 
     await request(app.getHttpServer())
-      .get(`/limpieza-aulas?aulaId=${aulaId}&desde=2026-08-26&hasta=2026-08-26`)
+      .get(`/limpieza-aulas?aulaId=${aulaId}&desde=2026-09-07&hasta=2026-09-07`)
       .expect(200)
       .expect(({ body }: { body: RespuestaLimpieza[] }) =>
         expect(body).toHaveLength(1),

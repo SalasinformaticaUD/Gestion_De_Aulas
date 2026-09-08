@@ -14,6 +14,7 @@ describe('TareasOperativasController (e2e)', () => {
   let app: INestApplication<App>;
   let tarea: any;
   const prisma = {
+    $transaction: jest.fn((callback) => callback(prisma)),
     aula: {
       findUnique: jest.fn(({ where }) =>
         Promise.resolve(

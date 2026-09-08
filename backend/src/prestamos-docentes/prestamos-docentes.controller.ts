@@ -11,6 +11,7 @@ import {
 import { PrestamosDocentesService } from './prestamos-docentes.service';
 import { MODULOS } from '../auth/auth.constants';
 import { RequireModule } from '../auth/decorators/require-module.decorator';
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 import { RequireAuth } from '../auth/decorators/require-auth.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { UsuarioAutenticado } from '../auth/auth.types';
@@ -26,6 +27,7 @@ export class PrestamosDocentesController {
   ) {}
 
   @Post()
+  @RequirePermissions('PRESTAMOS_DOCENTES_CREAR')
   create(
     @Body() createPrestamosDocenteDto: CreatePrestamosDocenteDto,
     @CurrentUser() usuario?: UsuarioAutenticado,
@@ -37,16 +39,19 @@ export class PrestamosDocentesController {
   }
 
   @Get()
+  @RequirePermissions('PRESTAMOS_DOCENTES_LEER')
   findAll(@Query() filters: FindPrestamosDocentesDto) {
     return this.prestamosDocentesService.findAll(filters);
   }
 
   @Get(':id')
+  @RequirePermissions('PRESTAMOS_DOCENTES_LEER')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.prestamosDocentesService.findOne(id);
   }
 
   @Patch(':id/aprobar')
+  @RequirePermissions('PRESTAMOS_DOCENTES_APROBAR')
   approve(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() usuario?: UsuarioAutenticado,
@@ -55,6 +60,7 @@ export class PrestamosDocentesController {
   }
 
   @Patch(':id/cancelar')
+  @RequirePermissions('PRESTAMOS_DOCENTES_ACTUALIZAR')
   cancel(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() usuario?: UsuarioAutenticado,
@@ -63,6 +69,7 @@ export class PrestamosDocentesController {
   }
 
   @Patch(':id/finalizar')
+  @RequirePermissions('PRESTAMOS_DOCENTES_ACTUALIZAR')
   finish(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() usuario?: UsuarioAutenticado,

@@ -52,6 +52,12 @@ describe('ReportesService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('rechaza la generación mensual para meses futuros', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-09-07T15:00:00.000Z'));
+    await expect(service.generarPracticasLibresMesPdf('2026-10')).rejects.toBeInstanceOf(BadRequestException);
+    jest.useRealTimers();
+  });
+
   it('convierte resultados a CSV escapando comillas', () => {
     expect(
       service.aCsv({ items: [{ aula: 'A-1', observacion: '"ok"' }] }),

@@ -40,6 +40,22 @@ const acciones = [
   'APROBAR',
   'EXPORTAR',
 ] as const;
+const accionesPorModulo: Record<string, readonly (typeof acciones)[number][]> = {
+  DASHBOARD: ['LEER'],
+  AULAS: ['LEER', 'CREAR', 'ACTUALIZAR', 'ELIMINAR'],
+  DISPONIBILIDAD: ['LEER'],
+  PRACTICAS_LIBRES: ['LEER', 'CREAR', 'ACTUALIZAR'],
+  PRESTAMOS_DOCENTES: ['LEER', 'CREAR', 'ACTUALIZAR', 'APROBAR'],
+  AUDIOVISUALES: ['LEER', 'CREAR', 'ACTUALIZAR', 'ELIMINAR', 'APROBAR'],
+  SOFTWARE: ['LEER', 'CREAR', 'ACTUALIZAR', 'ELIMINAR'],
+  OBSERVACIONES: ['LEER', 'CREAR', 'ACTUALIZAR', 'ELIMINAR'],
+  LIMPIEZA: ['LEER', 'CREAR', 'ACTUALIZAR', 'ELIMINAR'],
+  TAREAS: ['LEER', 'CREAR', 'ACTUALIZAR', 'ELIMINAR', 'APROBAR'],
+  MULTAS: ['LEER', 'CREAR', 'ACTUALIZAR'],
+  CREDENCIALES: ['LEER', 'CREAR', 'ACTUALIZAR', 'ELIMINAR'],
+  REPORTES: ['LEER'],
+  ADMINISTRACION: ['LEER', 'CREAR', 'ACTUALIZAR', 'ELIMINAR'],
+};
 const dependencias = ['Aulas de Software', 'Electrica y Electronica', 'Fisica'];
 const cargos = ['ADMINISTRADOR', 'COORDINADOR', 'DOCENTE', 'MONITOR', 'ESTUDIANTE', 'TÉCNICO', 'AUXILIAR ADMINISTRATIVO'];
 
@@ -67,7 +83,7 @@ async function main() {
       create: { codigo, nombre },
     });
     for (const accion of [
-      ...acciones,
+      ...(accionesPorModulo[codigo] ?? acciones),
       ...(codigo === 'CREDENCIALES' ? ['VER_SECRETO'] : []),
     ]) {
       const codigoPermiso = `${codigo}_${accion}`;

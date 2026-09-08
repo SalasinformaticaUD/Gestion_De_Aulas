@@ -45,6 +45,9 @@ export class CredencialesController {
   ) {
     return this.service.findAll(dto, u.id);
   }
+  @Get('roles-autorizables') @RequirePermissions('CREDENCIALES_LEER') rolesAutorizables() {
+    return this.service.listarRolesAutorizables();
+  }
   @Post('verificar-acceso') @RequirePermissions('CREDENCIALES_LEER') verificarAcceso(
     @Body() dto: ConsultarSecretoCredencialDto,
     @CurrentUser() u: UsuarioAutenticado,

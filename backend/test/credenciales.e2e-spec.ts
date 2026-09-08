@@ -22,7 +22,7 @@ type Usuario = {
   cargo: string | null;
   estado: EstadoCuenta;
   dependencia: null;
-  roles: Array<{ rol: { nombre: string; permisos: Permiso[] } }>;
+  roles: Array<{ rolId: string; rol: { nombre: string; permisos: Permiso[] } }>;
 };
 type Credencial = {
   id: string;
@@ -41,6 +41,7 @@ type Credencial = {
     puedeEditar: boolean;
     usuario: { id: string; nombreCompleto: string; nombreUsuario: string };
   }>;
+  rolesAutorizados: Array<{ rolId: string }>;
 };
 
 describe('CredencialesController (e2e)', () => {
@@ -64,6 +65,7 @@ describe('CredencialesController (e2e)', () => {
     dependencia: null,
     roles: [
       {
+        rolId: '00000000-0000-4000-8000-000000000099',
         rol: {
           nombre: 'OPERADOR',
           permisos: permisos.map((codigo) => ({
@@ -155,6 +157,7 @@ describe('CredencialesController (e2e)', () => {
                 },
               },
             ],
+            rolesAutorizados: [],
           };
           credenciales.push(c);
           return Promise.resolve(c);
@@ -178,6 +181,9 @@ describe('CredencialesController (e2e)', () => {
       findUnique: jest.fn(({ where }: { where: { id: string } }) =>
         Promise.resolve(credenciales.find((c) => c.id === where.id) ?? null),
       ),
+    },
+    secretoCredencial: {
+      findUnique: jest.fn().mockResolvedValue(null),
     },
   };
   let app: INestApplication<App>;
@@ -218,7 +224,6 @@ describe('CredencialesController (e2e)', () => {
       .set('Authorization', `Bearer ${creador}`)
       .send({
         nombre: 'Servidor principal',
-        categoria: 'SERVIDORES',
         usuario: 'root',
         secreto: 'Secreto-real-123',
       })
@@ -226,6 +231,16 @@ describe('CredencialesController (e2e)', () => {
     expect(creada.body).not.toHaveProperty('secreto');
     expect(creada.body).not.toHaveProperty('secretoCifrado');
     expect(credenciales[0]?.secretoCifrado).not.toContain('Secreto-real-123');
+    await request(app.getHttpServer())
+      .post('/credenciales/verificar-acceso')
+      .set('Authorization', `Bearer ${lector}`)
+      .send({ contrasena: password })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/credenciales/verificar-acceso')
+      .set('Authorization', `Bearer ${creador}`)
+      .send({ contrasena: password })
+      .expect(201);
     await request(app.getHttpServer())
       .get(`/credenciales/${credencialId}/secreto`)
       .set('Authorization', `Bearer ${lector}`)

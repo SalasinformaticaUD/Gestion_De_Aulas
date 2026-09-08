@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { DecisionTarea, EstadoTarea } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { DecisionTarea, EstadoTarea } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import { CreateTareasOperativaDto } from './dto/create-tareas-operativa.dto';
@@ -17,9 +17,11 @@ export class TareasOperativasService {
     if (d.afectaDisponibilidad && !aulas.length)
       throw new BadRequestException('Una tarea que afecta disponibilidad requiere al menos un aula asociada.');
 
-    // Cada aula recibe una tarea hermana: comparten grupo, pero su estado,
-    // responsables e informes permanecen independientes.
+    // Cada aula seleccionada recibe una tarea independiente, con su propio
+    // estado, responsables e informes. Las tareas creadas juntas conservan
+    // una referencia común para que el tablero pueda mostrarlas como grupo.
     const destinos: Array<string | undefined> = aulas.length ? aulas : [undefined];
+    const grupoId = destinos.length > 1 ? randomUUID() : undefined;
     for (const aulaDestino of destinos) {
       const tarea = { ...datos, aulaId: aulaDestino };
       this.validar(tarea);
@@ -27,7 +29,6 @@ export class TareasOperativasService {
       await this.validarCruces(tarea);
     }
 
-    const grupoId = destinos.length > 1 ? randomUUID() : undefined;
     const creadas = await this.prisma.$transaction(async (tx) => {
       const resultado: Array<{ id: string; [key: string]: unknown }> = [];
       // Las consultas se ejecutan en serie dentro de la transacción. El
@@ -37,7 +38,7 @@ export class TareasOperativasService {
           data: {
             ...datos,
             aulaId: aulaDestino,
-            grupoId,
+            ...(grupoId && { grupoId }),
             creadorId: usuarioId,
             inicio: datos.inicio ? new Date(datos.inicio) : undefined,
             fin: datos.fin ? new Date(datos.fin) : undefined,
@@ -63,6 +64,18 @@ export class TareasOperativasService {
       },
       include: this.detalle(),
       orderBy: { creadoEn: 'desc' },
+    });
+  }
+
+  /**
+   * Datos mínimos para asignar responsables desde el módulo de tareas.
+   * No expone la administración de usuarios ni requiere sus permisos.
+   */
+  listarResponsables() {
+    return this.prisma.usuario.findMany({
+      where: { estado: 'ACTIVA' },
+      select: { id: true, nombreCompleto: true },
+      orderBy: { nombreCompleto: 'asc' },
     });
   }
 

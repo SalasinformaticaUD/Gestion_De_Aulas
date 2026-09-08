@@ -5,7 +5,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { REQUIRED_MODULE_KEY } from '../auth.constants';
+import { MODULOS_CON_LECTURA_AUXILIAR, REQUIRED_MODULE_KEY } from '../auth.constants';
 import { RequestConUsuario } from '../request-with-user.type';
 
 @Injectable()
@@ -20,10 +20,14 @@ export class ModulePermissionsGuard implements CanActivate {
     if (!requiredModule) return true;
 
     const usuario = context.switchToHttp().getRequest<RequestConUsuario>().user;
-    const hasAccess = usuario?.modulos.some(
+    const hasDirectAccess = usuario?.modulos.some(
       (codigo) => codigo.toUpperCase() === requiredModule.toUpperCase(),
     );
-    if (hasAccess || this.isPermissiveMode()) return true;
+    const required = requiredModule.toUpperCase();
+    const hasAuxiliaryReadAccess = (MODULOS_CON_LECTURA_AUXILIAR[required] ?? []).some(
+      (module) => usuario?.modulos.some((codigo) => codigo.toUpperCase() === module),
+    );
+    if (hasDirectAccess || hasAuxiliaryReadAccess || this.isPermissiveMode()) return true;
     throw new ForbiddenException(
       `El usuario no tiene acceso al módulo ${requiredModule}.`,
     );

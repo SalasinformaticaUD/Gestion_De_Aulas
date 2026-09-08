@@ -318,6 +318,7 @@ model ClaseProgramada {
   asistencias          AsistenciaDocente[]
 
   @@index([periodoId, aulaId, diaSemana])
+  @@index([periodoId, diaSemana, horaInicio])
 }
 
 model AsistenciaDocente {

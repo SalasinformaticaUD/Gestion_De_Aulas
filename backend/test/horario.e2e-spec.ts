@@ -6,6 +6,8 @@ import { HorarioModule } from '../src/horario/horario.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { AuditoriaService } from '../src/auditoria/auditoria.service';
 import { configureApp } from '../src/configure-app';
+import { AuthService } from '../src/auth/auth.service';
+import { attachTestAdministrator } from './helpers/authenticated-user';
 
 type PeriodoRecord = {
   id: string;
@@ -154,11 +156,13 @@ describe('HorarioController (e2e)', () => {
             diaSemana: number;
             horaInicio: { lt: Date };
             horaFin: { gt: Date };
+            id?: { not: string };
           };
         }) =>
           Promise.resolve(
             clases.find(
               (clase) =>
+                clase.id !== where.id?.not &&
                 clase.periodoId === where.periodoId &&
                 clase.aulaId === where.aulaId &&
                 clase.diaSemana === where.diaSemana &&
@@ -181,8 +185,16 @@ describe('HorarioController (e2e)', () => {
       findUnique: jest.fn(({ where }: { where: { id: string } }) =>
         Promise.resolve(clases.find((clase) => clase.id === where.id)),
       ),
-      update: jest.fn(),
-      delete: jest.fn(),
+      update: jest.fn(({ where, data }: { where: { id: string }; data: Partial<ClaseRecord> }) => {
+        const clase = clases.find((item) => item.id === where.id)!;
+        Object.assign(clase, data);
+        return Promise.resolve(clase);
+      }),
+      delete: jest.fn(({ where }: { where: { id: string } }) => {
+        const indice = clases.findIndex((item) => item.id === where.id);
+        const [eliminada] = clases.splice(indice, 1);
+        return Promise.resolve(eliminada);
+      }),
     },
     $transaction: jest.fn(),
   };
@@ -208,9 +220,12 @@ describe('HorarioController (e2e)', () => {
       .useValue(prisma)
       .overrideProvider(AuditoriaService)
       .useValue({ registrar: jest.fn().mockResolvedValue(undefined) })
+      .overrideProvider(AuthService)
+      .useValue({ verifyCurrentPassword: jest.fn().mockResolvedValue(true) })
       .compile();
 
     app = moduleFixture.createNestApplication();
+    attachTestAdministrator(app);
     configureApp(app);
     await app.init();
   });
@@ -224,11 +239,12 @@ describe('HorarioController (e2e)', () => {
 
   it('completa el CRUD de un período académico', async () => {
     await request(app.getHttpServer())
-      .post('/horario/periodos')
+      .post('/horario/periodos/iniciar-semestre')
       .send({
         nombre: '2026-3',
         fechaInicio: '2026-08-01',
         fechaFin: '2026-12-01',
+        passwordConfirmacion: 'Clave-segura-2026',
       })
       .expect(201)
       .expect(({ body }: { body: PeriodoRecord }) =>
@@ -266,33 +282,7 @@ describe('HorarioController (e2e)', () => {
       .expect(404);
   });
 
-  it('crea y consulta una clase programada', async () => {
-    periodos.push({ id: periodoId, activo: true });
-
-    await request(app.getHttpServer())
-      .post('/horario/clases')
-      .send({
-        periodoId,
-        aulaId,
-        docenteId,
-        asignaturaId,
-        diaSemana: 1,
-        horaInicio: '08:00',
-        horaFin: '10:00',
-        grupo: '020-81',
-      })
-      .expect(201)
-      .expect(({ body }: { body: ClaseRecord }) =>
-        expect(body.id).toBe(claseId),
-      );
-
-    await request(app.getHttpServer())
-      .get(`/horario/clases?periodoId=${periodoId}&diaSemana=1`)
-      .expect(200)
-      .expect(({ body }) => expect(body).toHaveLength(1));
-  });
-
-  it('rechaza una clase solapada', async () => {
+  it('consulta, actualiza y elimina una clase programada', async () => {
     periodos.push({ id: periodoId, activo: true });
     clases.push({
       id: claseId,
@@ -304,136 +294,47 @@ describe('HorarioController (e2e)', () => {
       diaSemana: 1,
       horaInicio: new Date('1970-01-01T08:00:00.000Z'),
       horaFin: new Date('1970-01-01T10:00:00.000Z'),
+      grupo: '020-81',
     });
 
     await request(app.getHttpServer())
-      .post('/horario/clases')
-      .send({
-        periodoId,
-        aulaId,
-        docenteId,
-        asignaturaId,
-        diaSemana: 1,
-        horaInicio: '09:00',
-        horaFin: '11:00',
-        grupo: '020-82',
-      })
-      .expect(409);
-  });
-
-  it('importa por lote y revierte todas las filas si existe un conflicto', async () => {
-    periodos.push({ id: periodoId, activo: true });
-    const claseBase = {
-      aulaId,
-      docenteId,
-      asignaturaId,
-      diaSemana: 1,
-      horaInicio: '08:00',
-      horaFin: '10:00',
-      grupo: '020-81',
-    };
+      .get(`/horario/clases?periodoId=${periodoId}&diaSemana=1`)
+      .expect(200)
+      .expect(({ body }) => expect(body).toHaveLength(1));
 
     await request(app.getHttpServer())
-      .post('/horario/importar')
-      .send({
-        formato: 'JSON_V1',
-        periodoId,
-        nombreArchivo: 'horario-2026-3.json',
-        clases: [
-          claseBase,
-          {
-            ...claseBase,
-            diaSemana: 2,
-            horaInicio: '10:00',
-            horaFin: '12:00',
-            grupo: '020-82',
-          },
-        ],
-      })
-      .expect(201)
-      .expect(({ body }) => {
-        expect(body).toMatchObject({
-          formato: 'JSON_V1',
-          totalRecibidas: 2,
-          totalCreadas: 2,
-        });
-      });
-    expect(clases).toHaveLength(2);
-
-    clases = [];
-    siguienteClase = 0;
-    await request(app.getHttpServer())
-      .post('/horario/importar')
-      .send({
-        formato: 'JSON_V1',
-        periodoId,
-        clases: [
-          claseBase,
-          {
-            ...claseBase,
-            horaInicio: '09:00',
-            horaFin: '11:00',
-            grupo: '020-83',
-          },
-        ],
-      })
-      .expect(409)
-      .expect(({ body }: { body: { message: string } }) =>
-        expect(body.message).toContain('Fila 2:'),
+      .patch(`/horario/clases/${claseId}`)
+      .send({ grupo: '020-82' })
+      .expect(200)
+      .expect(({ body }: { body: ClaseRecord }) =>
+        expect(body.grupo).toBe('020-82'),
       );
+
+    await request(app.getHttpServer())
+      .delete(`/horario/clases/${claseId}`)
+      .expect(200);
     expect(clases).toHaveLength(0);
   });
 
-  it('importa clases con docente y asignatura sin catalogos previos', async () => {
-    periodos.push({ id: periodoId, activo: true });
+  it('rechaza la importacion oficial cuando no se adjunta el Excel', () =>
+    request(app.getHttpServer())
+      .post('/horario/importar/excel')
+      .field('periodoId', periodoId)
+      .expect(400));
 
-    await request(app.getHttpServer())
-      .post('/horario/importar')
-      .send({
-        formato: 'JSON_V2',
-        periodoId,
-        clases: [
-          {
-            aulaId,
-            docente: {
-              documento: '123456',
-              nombre: 'Docente Nuevo',
-              correo: 'docente@udistrital.edu.co',
-            },
-            asignatura: {
-              codigo: 'SIS-101',
-              nombre: 'Programación I',
-            },
-            diaSemana: 1,
-            horaInicio: '08:00',
-            horaFin: '10:00',
-            grupo: '020-81',
-          },
-        ],
-      })
-      .expect(201)
-      .expect(({ body }: { body: Record<string, unknown> }) =>
-        expect(body).toMatchObject({
-          formato: 'JSON_V2',
-          totalCreadas: 1,
-        }),
-      );
-
-    expect(prisma.docente.upsert).toHaveBeenCalledTimes(1);
-    expect(prisma.asignatura.upsert).toHaveBeenCalledTimes(1);
-    expect(clases[0]).toMatchObject({
-      docenteId: '00000000-0000-4000-8000-000000000010',
-      asignaturaId: '00000000-0000-4000-8000-000000000011',
-    });
+  it('no expone las rutas antiguas de creación e importación JSON', async () => {
+    await request(app.getHttpServer()).post('/horario/clases').send({}).expect(404);
+    await request(app.getHttpServer()).post('/horario/importar').send({}).expect(404);
   });
 
   it('rechaza campos no permitidos mediante la validacion global', async () => {
     await request(app.getHttpServer())
-      .post('/horario/periodos')
+      .post('/horario/periodos/iniciar-semestre')
       .send({
         nombre: '2026-3',
         fechaInicio: '2026-08-01',
         fechaFin: '2026-12-01',
+        passwordConfirmacion: 'Clave-segura-2026',
         desconocido: true,
       })
       .expect(400);

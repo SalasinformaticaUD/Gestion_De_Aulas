@@ -5,7 +5,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { REQUIRED_PERMISSIONS_KEY } from '../auth.constants';
+import { MODULOS_CON_LECTURA_AUXILIAR, REQUIRED_PERMISSIONS_KEY } from '../auth.constants';
 import { RequestConUsuario } from '../request-with-user.type';
 
 @Injectable()
@@ -32,9 +32,17 @@ export class PermissionsGuard implements CanActivate {
     const permissions = new Set(
       usuario?.permisos.map((code) => code.toUpperCase()),
     );
-    if (
-      required.every((permission) => permissions.has(permission.toUpperCase()))
-    ) {
+    const hasPermission = (permission: string) => {
+      const normalized = permission.toUpperCase();
+      if (permissions.has(normalized)) return true;
+      const separator = normalized.lastIndexOf('_');
+      if (separator <= 0 || normalized.slice(separator + 1) !== 'LEER') return false;
+      const module = normalized.slice(0, separator);
+      return (MODULOS_CON_LECTURA_AUXILIAR[module] ?? []).some((dependentModule) =>
+        usuario?.modulos.some((code) => code.toUpperCase() === dependentModule),
+      );
+    };
+    if (required.every(hasPermission)) {
       return true;
     }
     throw new ForbiddenException(

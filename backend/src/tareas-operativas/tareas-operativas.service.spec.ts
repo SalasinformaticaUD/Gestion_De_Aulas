@@ -21,6 +21,7 @@ describe('TareasOperativasService', () => {
     prestamoDocente: { findFirst: jest.fn() },
     practicaLibre: { findFirst: jest.fn() },
     claseProgramada: { findFirst: jest.fn() },
+    usuario: { findMany: jest.fn() },
     $transaction: jest.fn(),
   } as unknown as ConstructorParameters<typeof TareasOperativasService>[0];
   const registrar = jest.fn();
@@ -32,6 +33,17 @@ describe('TareasOperativasService', () => {
   it('no permite completar una tarea pendiente', async () => {
     (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValue(tarea);
     await expect(service.cambiarEstado(tarea.id, EstadoTarea.COMPLETADA)).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('expone responsables activos con datos mínimos para el módulo', async () => {
+    (prisma.usuario.findMany as jest.Mock<any>).mockResolvedValue([{ id: 'usuario-1', nombreCompleto: 'Persona activa' }]);
+
+    await expect(service.listarResponsables()).resolves.toEqual([{ id: 'usuario-1', nombreCompleto: 'Persona activa' }]);
+    expect(prisma.usuario.findMany).toHaveBeenCalledWith({
+      where: { estado: 'ACTIVA' },
+      select: { id: true, nombreCompleto: true },
+      orderBy: { nombreCompleto: 'asc' },
+    });
   });
 
   it('no permite devolver una tarea en proceso a pendiente', async () => {
@@ -77,7 +89,7 @@ describe('TareasOperativasService', () => {
     expect(registrar).toHaveBeenCalledWith(expect.objectContaining({ entidadId: salaA.id, accion: 'UPDATE' }));
   });
 
-  it('crea una tarea independiente por aula y las vincula en un mismo grupo', async () => {
+  it('crea una tarea independiente por cada aula seleccionada', async () => {
     const aulaIds = [
       '11111111-1111-4111-8111-111111111111',
       '22222222-2222-4222-8222-222222222222',
@@ -98,8 +110,8 @@ describe('TareasOperativasService', () => {
     const segunda = (prisma.tarea.create as jest.Mock<any>).mock.calls[1][0].data;
     expect(primera.aulaId).toBe(aulaIds[0]);
     expect(segunda.aulaId).toBe(aulaIds[1]);
-    expect(primera.grupoId).toBeDefined();
-    expect(primera.grupoId).toBe(segunda.grupoId);
+      expect(primera.grupoId).toEqual(expect.any(String));
+      expect(segunda.grupoId).toBe(primera.grupoId);
     expect(primera).not.toHaveProperty('aulaIds');
     expect(registrar).toHaveBeenCalledTimes(2);
   });

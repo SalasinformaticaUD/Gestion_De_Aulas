@@ -138,7 +138,7 @@ export class ReportesService {
         F6: fecha.anio,
         C8: equipos.map((equipo) => equipo.codigoInventario).join(', '),
         F8: [...new Set(equipos.map((equipo) => equipo.tipo))].join(', '),
-        C9: equipos.map((equipo) => equipo.nombre).join(', '),
+        C9: prestamo.docente?.nombre ?? 'No disponible',
         C10: 'No aplica',
         C11: prestamo.aula?.proyectoCurricular?.nombre ?? 'No aplica',
         C13: prestamo.aula?.codigo ?? prestamo.salonTexto,
@@ -227,6 +227,64 @@ export class ReportesService {
       valores,
       `Asistencia_SIGUD_${fechaTexto.replaceAll('-', '_')}`,
     );
+  }
+
+  async generarPracticasLibresMesPdf(mes: string, usuario?: Pick<UsuarioAutenticado, 'nombreUsuario'>): Promise<Buffer> {
+    const rango = this.rangoMesCompleto(mes);
+    const practicas = await this.prisma.practicaLibre.findMany({
+      where: {
+        inicio: { gte: rango.desde, lte: rango.hasta },
+        estado: { in: ['DEVUELTO', 'CANCELADO'] },
+      },
+      select: { id: true },
+      orderBy: { inicio: 'asc' },
+    });
+    if (!practicas.length) throw new BadRequestException('No hay prácticas libres para el mes seleccionado.');
+    const archivos = await this.generarEnParalelo(practicas, async (practica) => ({
+      nombre: `Ficha_PracticaLibre_${practica.id}.pdf`,
+      contenido: await this.generarPracticaLibrePdf(practica.id, usuario),
+    }));
+    return this.comprimirPdfs(archivos);
+  }
+
+  async generarPrestamosAudiovisualesMesPdf(mes: string): Promise<Buffer> {
+    const rango = this.rangoMes(mes);
+    const prestamos = await this.prisma.prestamoAudiovisual.findMany({
+      where: { salidaEn: { gte: rango.desde, lte: rango.hasta } },
+      select: { id: true },
+      orderBy: { salidaEn: 'asc' },
+    });
+    if (!prestamos.length) throw new BadRequestException('No hay préstamos audiovisuales para el mes seleccionado.');
+    const archivos = [] as Array<{ nombre: string; contenido: Buffer }>;
+    for (const prestamo of prestamos) {
+      archivos.push({ nombre: `Prestamo_Audiovisual_${prestamo.id}.pdf`, contenido: await this.generarPrestamoAudiovisualPdf(prestamo.id) });
+    }
+    return this.comprimirPdfs(archivos);
+  }
+
+  async generarAsistenciasMesPdf(mes: string): Promise<Buffer> {
+    const rango = this.rangoMes(mes);
+    const asistencias = await this.prisma.asistenciaDocente.findMany({
+      where: { fecha: { gte: rango.desde, lte: rango.hasta } },
+      select: { fecha: true },
+      distinct: ['fecha'],
+      orderBy: { fecha: 'asc' },
+    });
+    if (!asistencias.length) throw new BadRequestException('No hay asistencias registradas para el mes seleccionado.');
+    const fechas = asistencias.flatMap((asistencia) => {
+      // La fecha de asistencia se persiste a medianoche UTC; no convertirla
+      // a Bogotá para evitar que retroceda un día al formar el nombre y PDF.
+      const fecha = asistencia.fecha.toISOString().slice(0, 10);
+      // La consulta solo contiene días con registros; se conserva la regla
+      // institucional de no generar formato SIGUD en domingos o festivos.
+      return new Date(`${fecha}T12:00:00.000Z`).getUTCDay() === 0 || this.esFestivo(fecha) ? [] : [fecha];
+    });
+    const archivos = await this.generarEnParalelo(fechas, async (fecha) => ({
+      nombre: `Asistencia_SIGUD_${fecha}.pdf`,
+      contenido: await this.generarAsistenciaSigudPdf(fecha),
+    }));
+    if (!archivos.length) throw new BadRequestException('No hay días hábiles con asistencia para generar en el mes seleccionado.');
+    return this.comprimirPdfs(archivos);
   }
 
   async consultar(reporte: CodigoReporte, query: ConsultarReporteDto) {
@@ -505,6 +563,97 @@ export class ReportesService {
       );
     }
     return this.plantillasPdf;
+  }
+
+  private rangoMes(mes: string): { desde: Date; hasta: Date } {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes)) throw new BadRequestException('mes debe tener formato YYYY-MM.');
+    const [anio, numeroMes] = mes.split('-').map(Number);
+    const inicio = new Date(Date.UTC(anio, numeroMes - 1, 1));
+    const ultimoDia = new Date(Date.UTC(anio, numeroMes, 0));
+    const hoy = this.partesBogota(new Date()).fecha;
+    const mesActual = hoy.slice(0, 7);
+    if (mes > mesActual) throw new BadRequestException('No se pueden generar fichas para un mes futuro.');
+    const hastaTexto = mes === mesActual ? hoy : ultimoDia.toISOString().slice(0, 10);
+    return { desde: inicio, hasta: new Date(`${hastaTexto}T23:59:59.999Z`) };
+  }
+
+  private rangoMesCompleto(mes: string): { desde: Date; hasta: Date } {
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes)) throw new BadRequestException('mes debe tener formato YYYY-MM.');
+    const [anio, numeroMes] = mes.split('-').map(Number);
+    const hoy = this.partesBogota(new Date()).fecha;
+    if (mes > hoy.slice(0, 7)) throw new BadRequestException('No se pueden generar fichas para un mes futuro.');
+    return {
+      desde: new Date(Date.UTC(anio, numeroMes - 1, 1)),
+      hasta: new Date(Date.UTC(anio, numeroMes, 0, 23, 59, 59, 999)),
+    };
+  }
+
+  private comprimirPdfs(archivos: Array<{ nombre: string; contenido: Buffer }>): Buffer {
+    const locales: Buffer[] = [];
+    const centrales: Buffer[] = [];
+    let desplazamiento = 0;
+    for (const archivo of archivos) {
+      const nombre = Buffer.from(archivo.nombre, 'utf8');
+      const crc = this.crc32(archivo.contenido);
+      const local = Buffer.alloc(30);
+      local.writeUInt32LE(0x04034b50, 0);
+      local.writeUInt16LE(20, 4);
+      local.writeUInt16LE(0x0800, 6);
+      local.writeUInt16LE(0, 8);
+      local.writeUInt32LE(crc, 14);
+      local.writeUInt32LE(archivo.contenido.length, 18);
+      local.writeUInt32LE(archivo.contenido.length, 22);
+      local.writeUInt16LE(nombre.length, 26);
+      locales.push(local, nombre, archivo.contenido);
+      const central = Buffer.alloc(46);
+      central.writeUInt32LE(0x02014b50, 0);
+      central.writeUInt16LE(20, 4);
+      central.writeUInt16LE(20, 6);
+      central.writeUInt16LE(0x0800, 8);
+      central.writeUInt16LE(0, 10);
+      central.writeUInt32LE(crc, 16);
+      central.writeUInt32LE(archivo.contenido.length, 20);
+      central.writeUInt32LE(archivo.contenido.length, 24);
+      central.writeUInt16LE(nombre.length, 28);
+      central.writeUInt32LE(desplazamiento, 42);
+      centrales.push(central, nombre);
+      desplazamiento += local.length + nombre.length + archivo.contenido.length;
+    }
+    const directorio = Buffer.concat(centrales);
+    const final = Buffer.alloc(22);
+    final.writeUInt32LE(0x06054b50, 0);
+    final.writeUInt16LE(archivos.length, 8);
+    final.writeUInt16LE(archivos.length, 10);
+    final.writeUInt32LE(directorio.length, 12);
+    final.writeUInt32LE(desplazamiento, 16);
+    return Buffer.concat([...locales, directorio, final]);
+  }
+
+  /**
+   * El renderizador usa LibreOffice, por lo que generar un mes completo de
+   * forma estrictamente secuencial puede agotar el tiempo de espera del proxy.
+   * Cuatro conversiones simultáneas reducen el tiempo de forma suficiente para
+   * los meses con muchas fichas, sin lanzar todas las conversiones a la vez.
+   */
+  private async generarEnParalelo<T, R>(
+    elementos: T[],
+    generar: (elemento: T) => Promise<R>,
+    concurrencia = 4,
+  ): Promise<R[]> {
+    const resultados: R[] = [];
+    for (let indice = 0; indice < elementos.length; indice += concurrencia) {
+      resultados.push(...await Promise.all(elementos.slice(indice, indice + concurrencia).map(generar)));
+    }
+    return resultados;
+  }
+
+  private crc32(contenido: Buffer): number {
+    let crc = 0xffffffff;
+    for (const byte of contenido) {
+      crc ^= byte;
+      for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+    }
+    return (crc ^ 0xffffffff) >>> 0;
   }
 
   private validarFechaDiaria(fechaTexto: string): void {

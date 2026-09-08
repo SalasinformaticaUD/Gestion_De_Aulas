@@ -48,7 +48,7 @@ describe('ObservacionesController (e2e)', () => {
             (item) =>
               (!where.aulaId || item.aulaId === where.aulaId) &&
               (!where.tipo || item.tipo === where.tipo) &&
-              (!where.OR ||
+              (!where.AND ||
                 item.vigenteHasta === null ||
                 item.vigenteHasta > ahora),
           ),
@@ -102,6 +102,7 @@ describe('ObservacionesController (e2e)', () => {
         aulaId,
         tipo: TipoObservacion.RESTRICCION,
         contenido: 'Mantenimiento de red',
+        vigenteDesde: '2099-08-22T13:00:00.000Z',
         vigenteHasta: '2099-08-22T15:00:00.000Z',
       })
       .expect(201)

@@ -32,12 +32,13 @@ export class PracticasLibresController {
   ) {}
 
   @Post()
+  @RequirePermissions('PRACTICAS_LIBRES_CREAR')
   create(@Body() createPracticasLibreDto: CreatePracticasLibreDto) {
     return this.practicasLibresService.create(createPracticasLibreDto);
   }
 
   @Post('estudiantes')
-  @RequirePermissions('ESTUDIANTES_CREAR')
+  @RequirePermissions('PRACTICAS_LIBRES_CREAR')
   createStudent(
     @Body() dto: CreateEstudianteDto,
     @CurrentUser() user?: UsuarioAutenticado,
@@ -46,21 +47,25 @@ export class PracticasLibresController {
   }
 
   @Get()
+  @RequirePermissions('PRACTICAS_LIBRES_LEER')
   findAll(@Query() filters: FindPracticasLibresDto) {
     return this.practicasLibresService.findAll(filters);
   }
 
   @Get('estudiantes/:codigo')
+  @RequirePermissions('PRACTICAS_LIBRES_LEER')
   findStudent(@Param() params: FindEstudianteParamDto) {
     return this.practicasLibresService.findStudent(params.codigo);
   }
 
   @Get('docentes/:documento')
+  @RequirePermissions('PRACTICAS_LIBRES_LEER')
   findTeacher(@Param('documento') documento: string) {
     return this.practicasLibresService.findTeacher(documento);
   }
 
   @Patch(':id/finalizar')
+  @RequirePermissions('PRACTICAS_LIBRES_ACTUALIZAR')
   finish(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: FinalizarPracticaLibreDto,
@@ -69,6 +74,7 @@ export class PracticasLibresController {
   }
 
   @Patch(':id/cancelar')
+  @RequirePermissions('PRACTICAS_LIBRES_ACTUALIZAR')
   cancel(@Param('id', ParseUUIDPipe) id: string) {
     return this.practicasLibresService.cancel(id);
   }

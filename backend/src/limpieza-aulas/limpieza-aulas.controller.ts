@@ -79,7 +79,7 @@ export class LimpiezaAulasController {
   }
 
   @Delete(':id')
-  @RequirePermissions('LIMPIEZA_ACTUALIZAR')
+  @RequirePermissions('LIMPIEZA_ELIMINAR')
   remove(
     @Param('id', ParseUUIDPipe) id: string,
     @CurrentUser() usuario?: UsuarioAutenticado,

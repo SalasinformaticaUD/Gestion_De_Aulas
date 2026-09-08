@@ -14,7 +14,7 @@ describe('AppModule (e2e)', () => {
       imports: [AppModule],
     })
       .overrideProvider(PrismaService)
-      .useValue({})
+      .useValue({ $queryRaw: jest.fn().mockResolvedValue([{ result: 1 }]) })
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -26,11 +26,15 @@ describe('AppModule (e2e)', () => {
     return request(app.getHttpServer()).get('/').expect(404);
   });
 
-  it('reports API health', () => {
-    return request(app.getHttpServer())
+  it('reports API health even when authentication is strict', async () => {
+    const previousAuthRequired = process.env.AUTH_REQUIRED;
+    process.env.AUTH_REQUIRED = 'true';
+    await request(app.getHttpServer())
       .get('/health')
       .expect(200)
       .expect({ status: 'ok' });
+    if (previousAuthRequired === undefined) delete process.env.AUTH_REQUIRED;
+    else process.env.AUTH_REQUIRED = previousAuthRequired;
   });
 
   afterEach(async () => {

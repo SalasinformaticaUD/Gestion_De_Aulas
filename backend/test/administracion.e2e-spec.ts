@@ -13,6 +13,7 @@ import { RolesService } from '../src/roles/roles.service';
 import { UsuariosController } from '../src/usuarios/usuarios.controller';
 import { UsuariosService } from '../src/usuarios/usuarios.service';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { attachTestAdministrator, testAdministrator } from './helpers/authenticated-user';
 
 describe('Administración (e2e)', () => {
   const id = '00000000-0000-4000-8000-000000000001';
@@ -44,6 +45,7 @@ describe('Administración (e2e)', () => {
       .useValue({})
       .compile();
     app = module.createNestApplication();
+    attachTestAdministrator(app);
     configureApp(app);
     await app.init();
   });
@@ -87,7 +89,7 @@ describe('Administración (e2e)', () => {
 
   it('desactiva el usuario mediante DELETE', async () => {
     await request(app.getHttpServer()).delete(`/usuarios/${id}`).expect(200);
-    expect(userService.remove).toHaveBeenCalledWith(id, undefined);
+    expect(userService.remove).toHaveBeenCalledWith(id, testAdministrator.id);
   });
 
   afterAll(async () => {

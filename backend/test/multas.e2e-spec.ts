@@ -27,6 +27,11 @@ describe('MultasController (e2e)', () => {
   });
   const prisma = {
     estudiante: { findFirst: jest.fn().mockResolvedValue(estudiante) },
+    practicaLibre: {
+      findFirst: jest.fn().mockResolvedValue({
+        id: '00000000-0000-4000-8000-000000000004',
+      }),
+    },
     motivoMulta: { findUnique: jest.fn().mockResolvedValue(motivo) },
     multa: {
       create: jest.fn(({ data }) => {

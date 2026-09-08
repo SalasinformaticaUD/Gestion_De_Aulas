@@ -277,15 +277,24 @@ export class HorarioService {
 
     return this.prisma.claseProgramada.findMany({
       where,
-      include: {
-        periodo: true,
-        aula: true,
-        docente: true,
-        asignatura: true,
-        proyectoCurricular: true,
+      // La vista diaria solo consume estos campos. Evitar incluir las filas
+      // completas reduce el tamaño de la respuesta y el trabajo de Prisma al
+      // serializar cada clase.
+      select: {
+        id: true,
+        aulaId: true,
+        diaSemana: true,
+        horaInicio: true,
+        horaFin: true,
+        grupo: true,
+        aula: { select: { id: true, codigo: true } },
+        docente: { select: { nombre: true } },
+        asignatura: { select: { nombre: true } },
+        proyectoCurricular: { select: { nombre: true } },
         asistencias: {
           ...(fecha && { where: { fecha } }),
           orderBy: { fecha: 'desc' },
+          select: { id: true, fecha: true, estado: true },
         },
       },
       orderBy: [{ diaSemana: 'asc' }, { horaInicio: 'asc' }],
@@ -1400,22 +1409,52 @@ export class HorarioService {
 
   private async cerrarAsistenciasVencidas(fechaTexto?: string): Promise<void> {
     if (!fechaTexto) return;
-    const ahora = new Date();
-    const hoy = new Date(Date.UTC(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()));
+    const ahora = this.partesBogota();
+    const hoyTexto = `${ahora.anio}-${String(ahora.mes).padStart(2, '0')}-${String(ahora.dia).padStart(2, '0')}`;
     const fecha = new Date(`${fechaTexto}T00:00:00.000Z`);
-    if (Number.isNaN(fecha.getTime()) || fecha >= hoy) return;
+    if (Number.isNaN(fecha.getTime()) || fechaTexto > hoyTexto) return;
     const diaSemana = fecha.getUTCDay() || 7;
-    const clases = await this.prisma.claseProgramada.findMany({
-      where: { diaSemana, periodo: { fechaInicio: { lte: fecha }, fechaFin: { gte: fecha } } },
-      select: {
-        id: true,
-      },
+    const minutosLimite = ahora.hora * 60 + ahora.minuto - 20;
+    // Para la jornada actual solo se cierran las clases cuyo inicio ocurrió
+    // hace al menos 20 minutos. Los días anteriores se cierran completos.
+    if (fechaTexto === hoyTexto && minutosLimite < 0) return;
+    const whereClase: Prisma.ClaseProgramadaWhereInput = {
+      diaSemana,
+      periodo: { fechaInicio: { lte: fecha }, fechaFin: { gte: fecha } },
+      ...(fechaTexto === hoyTexto && {
+        horaInicio: {
+          lte: new Date(Date.UTC(1970, 0, 1, Math.floor(minutosLimite / 60), minutosLimite % 60)),
+        },
+      }),
+    };
+    const registradaEn = new Date();
+    // Antes se hacían dos consultas por clase. En una jornada con muchas aulas
+    // eso podía sumar decenas de viajes a la base cada vez que se abría un día
+    // pasado. Se resuelve en tres operaciones por fecha, sin sobrescribir una
+    // asistencia ya registrada.
+    await this.prisma.asistenciaDocente.updateMany({
+      where: { fecha, estado: EstadoAsistencia.PENDIENTE, clase: whereClase },
+      data: { estado: EstadoAsistencia.AUSENTE, registradaEn },
     });
-
-    for (const clase of clases) {
-      await this.prisma.asistenciaDocente.updateMany({ where: { claseId: clase.id, fecha, estado: EstadoAsistencia.PENDIENTE }, data: { estado: EstadoAsistencia.AUSENTE, registradaEn: new Date() } });
-      await this.prisma.asistenciaDocente.upsert({ where: { claseId_fecha: { claseId: clase.id, fecha } }, update: {}, create: { claseId: clase.id, fecha, estado: EstadoAsistencia.AUSENTE, registradaEn: new Date() } });
+    const clases = await this.prisma.claseProgramada.findMany({
+      where: whereClase,
+      select: { id: true },
+    });
+    if (clases.length) {
+      await this.prisma.asistenciaDocente.createMany({
+        data: clases.map((clase) => ({ claseId: clase.id, fecha, estado: EstadoAsistencia.AUSENTE, registradaEn })),
+        skipDuplicates: true,
+      });
     }
+  }
+
+  private partesBogota(referencia = new Date()): { anio: number; mes: number; dia: number; hora: number; minuto: number } {
+    const partes = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(referencia);
+    const valor = (tipo: Intl.DateTimeFormatPartTypes) => Number(partes.find((parte) => parte.type === tipo)?.value ?? 0);
+    return { anio: valor('year'), mes: valor('month'), dia: valor('day'), hora: valor('hour'), minuto: valor('minute') };
   }
 
   private calcularSemanaSemestre(

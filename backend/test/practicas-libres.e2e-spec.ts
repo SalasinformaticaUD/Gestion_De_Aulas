@@ -64,6 +64,20 @@ describe('PracticasLibresController (e2e)', () => {
       estudiantes.push(estudiante);
       return Promise.resolve(estudiante);
     }),
+    upsert: jest.fn(({ where, create, update }: {
+      where: { codigo: string };
+      create: Omit<EstudianteRecord, 'id'>;
+      update: Partial<EstudianteRecord>;
+    }) => {
+      const existente = estudiantes.find((item) => item.codigo === where.codigo);
+      if (existente) {
+        Object.assign(existente, update);
+        return Promise.resolve(existente);
+      }
+      const estudiante = { id: estudianteId, ...create };
+      estudiantes.push(estudiante);
+      return Promise.resolve(estudiante);
+    }),
   };
 
   const practicaRepository = {
@@ -104,6 +118,7 @@ describe('PracticasLibresController (e2e)', () => {
         practicas.find((practica) => practica.id === where.id) ?? null,
       ),
     ),
+    findFirst: jest.fn().mockResolvedValue(null),
     update: jest.fn(
       ({
         where,
@@ -148,6 +163,7 @@ describe('PracticasLibresController (e2e)', () => {
 
   const tx = {
     estudiante: estudianteRepository,
+    docente: { upsert: jest.fn() },
     multa: { findFirst: jest.fn().mockResolvedValue(null) },
     practicaLibre: practicaRepository,
   };
@@ -157,6 +173,8 @@ describe('PracticasLibresController (e2e)', () => {
       callback(tx),
     ),
     estudiante: estudianteRepository,
+    software: { findUnique: jest.fn().mockResolvedValue(null) },
+    aulaSoftware: { findUnique: jest.fn().mockResolvedValue(null) },
     practicaLibre: practicaRepository,
   };
 
@@ -164,6 +182,7 @@ describe('PracticasLibresController (e2e)', () => {
     findOne: jest.fn().mockResolvedValue({
       estadoCalculado: 'disponible',
       motivo: 'No existen actividades ni restricciones para el bloque.',
+      fuentes: [],
     }),
   };
 
@@ -190,6 +209,7 @@ describe('PracticasLibresController (e2e)', () => {
     disponibilidad.findOne.mockResolvedValue({
       estadoCalculado: 'disponible',
       motivo: 'No existen actividades ni restricciones para el bloque.',
+      fuentes: [],
     });
   });
 
@@ -201,6 +221,8 @@ describe('PracticasLibresController (e2e)', () => {
       codigoEstudiante: '20261001',
       nombreEstudiante: 'Estudiante Uno',
       aulaId,
+      softwareSolicitado: 'Ninguno',
+      responsableTipo: 'MONITOR',
       inicio,
       finEstimada,
     });
@@ -208,9 +230,10 @@ describe('PracticasLibresController (e2e)', () => {
   it('completa el flujo crear, consultar y finalizar una práctica', async () => {
     await crearPractica()
       .expect(201)
-      .expect(({ body }: { body: PracticaRecord }) => {
-        expect(body.id).toBe(practicaId);
-        expect(body.estado).toBe(EstadoPrestamo.ACTIVO);
+      .expect(({ body }: { body: PracticaRecord[] }) => {
+        expect(body).toHaveLength(1);
+        expect(body[0].id).toBe(practicaId);
+        expect(body[0].estado).toBe(EstadoPrestamo.ACTIVO);
       });
 
     await request(app.getHttpServer())
@@ -284,10 +307,20 @@ describe('PracticasLibresController (e2e)', () => {
   });
 
   it('persiste y permite consultar el estado VENCIDO', async () => {
-    await crearPractica(
-      '2026-08-19T08:00:00-05:00',
-      '2026-08-19T10:00:00-05:00',
-    ).expect(201);
+    estudiantes.push({
+      id: estudianteId,
+      codigo: '20261001',
+      nombre: 'Estudiante Uno',
+    });
+    practicas.push({
+      id: practicaId,
+      estudianteId,
+      aulaId,
+      inicio: new Date('2026-08-19T08:00:00-05:00'),
+      finEstimada: new Date('2026-08-19T10:00:00-05:00'),
+      finReal: null,
+      estado: EstadoPrestamo.ACTIVO,
+    });
 
     await request(app.getHttpServer())
       .get('/practicas-libres?estado=VENCIDO&fecha=2026-08-19')

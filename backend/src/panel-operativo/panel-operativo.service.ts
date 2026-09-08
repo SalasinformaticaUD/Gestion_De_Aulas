@@ -4,11 +4,11 @@ import {
   EstadoPrestamo,
   EstadoTarea,
 } from '../../generated/prisma/enums.js';
-import { AsistenciaDocenteService } from '../asistencia-docente/asistencia-docente.service';
 import { DisponibilidadAulasService } from '../disponibilidad-aulas/disponibilidad-aulas.service';
 import { DisponibilidadAula } from '../disponibilidad-aulas/entities/disponibilidad-aula.entity';
 import { PrestamosDocentesService } from '../prestamos-docentes/prestamos-docentes.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { HorarioService } from '../horario/horario.service';
 import {
   ConsultarAulasPanelOperativoDto,
   ConsultarPanelOperativoDto,
@@ -23,9 +23,9 @@ import {
 export class PanelOperativoService {
   constructor(
     private readonly disponibilidad: DisponibilidadAulasService,
-    private readonly asistencias: AsistenciaDocenteService,
     private readonly prestamos: PrestamosDocentesService,
     private readonly prisma: PrismaService,
+    private readonly horario: HorarioService,
   ) {}
 
   async resumen(
@@ -105,15 +105,12 @@ export class PanelOperativoService {
     const finDia = new Date(`${query.fecha}T23:59:59.999-05:00`);
     const inicioBloque = new Date(`${query.fecha}T${bloque.horaInicio}:00.000-05:00`);
     const finBloque = new Date(`${query.fecha}T${bloque.horaFin}:00.000-05:00`);
-    const fechaPrisma = new Date(`${query.fecha}T00:00:00.000Z`);
-    const diaSemana = fechaPrisma.getUTCDay();
     const horaInicioPrisma = new Date(Date.UTC(1970, 0, 1, Number(bloque.horaInicio.slice(0, 2))));
     const horaFinPrisma = new Date(Date.UTC(1970, 0, 1, Number(bloque.horaFin.slice(0, 2))));
     const desdeObservaciones = new Date(Math.max(inicioDia.getTime(), Date.now() - 24 * 60 * 60 * 1000));
-    const [aulas, asistencias, prestamos, practicas, audiovisualesActivos, clases, observaciones, tareas] = await Promise.all(
+    const [aulas, prestamos, practicas, audiovisualesActivos, clasesDelDia, observaciones, tareas] = await Promise.all(
       [
         this.disponibilidad.findAll({ fecha: query.fecha, ...bloque }),
-        this.asistencias.findAll({ fecha: query.fecha }),
         this.prestamos.findUpcomingForDate(query.fecha),
         this.prisma.practicaLibre.findMany({
           where: {
@@ -131,16 +128,7 @@ export class PanelOperativoService {
           include: { detalles: { include: { equipo: true } } },
           orderBy: { devolucionEstimada: 'asc' },
         }),
-        this.prisma.claseProgramada.findMany({
-          where: {
-            diaSemana,
-            horaInicio: { lt: horaFinPrisma },
-            horaFin: { gt: horaInicioPrisma },
-            periodo: { activo: true, fechaInicio: { lte: fechaPrisma }, fechaFin: { gte: fechaPrisma } },
-          },
-          include: { aula: true, docente: true, asignatura: true, proyectoCurricular: true, asistencias: { where: { fecha: fechaPrisma }, take: 1 } },
-          orderBy: [{ horaInicio: 'asc' }, { aula: { codigo: 'asc' } }],
-        }),
+        this.horario.findClases({ fecha: query.fecha }),
         this.prisma.observacion.findMany({
           where: { creadoEn: { gte: desdeObservaciones, lte: finDia } },
           include: { autor: { select: { nombreCompleto: true } }, aula: { select: { id: true, codigo: true } } },
@@ -155,8 +143,22 @@ export class PanelOperativoService {
         }),
       ],
     );
+    const clases = clasesDelDia.filter((clase) =>
+      clase.horaInicio < horaFinPrisma && clase.horaFin > horaInicioPrisma,
+    );
+    const asistencias = clases.map((clase) => {
+      const registro = clase.asistencias[0];
+      return {
+        id: registro?.id ?? `automatica-${clase.id}-${query.fecha}`,
+        estado: registro?.estado ?? EstadoAsistencia.PENDIENTE,
+        clase: { aulaId: clase.aula.id },
+      };
+    });
+    const estadoPorClase = new Map(
+      clases.map((clase, index) => [clase.id, asistencias[index].estado]),
+    );
     const horarioActual = clases.map((clase) => {
-      const asistencia = clase.asistencias[0]?.estado ?? EstadoAsistencia.PENDIENTE;
+      const asistencia = estadoPorClase.get(clase.id) ?? EstadoAsistencia.PENDIENTE;
       return {
         id: clase.id,
         horaInicio: this.horaPrisma(clase.horaInicio),
@@ -281,26 +283,41 @@ export class PanelOperativoService {
     prestamos: Array<{ id: string; aulaId: string }>,
   ): AlertaOperativa[] {
     const alertas: AlertaOperativa[] = [];
-    for (const asistencia of asistencias) {
-      if (asistencia.estado === EstadoAsistencia.AUSENTE) {
-        alertas.push({
-          id: `asistencia-${asistencia.id}`,
-          severidad: 'critica',
-          tipo: 'ausencia-docente',
-          mensaje: 'Hay una ausencia docente registrada.',
-          aulaId: asistencia.clase.aulaId,
-          origenId: asistencia.id,
-        });
-      } else if (asistencia.estado === EstadoAsistencia.PENDIENTE) {
-        alertas.push({
-          id: `asistencia-${asistencia.id}`,
-          severidad: 'advertencia',
-          tipo: 'asistencia-pendiente',
-          mensaje: 'La asistencia docente está pendiente de registro.',
-          aulaId: asistencia.clase.aulaId,
-          origenId: asistencia.id,
-        });
-      }
+    const pendientes = asistencias.filter(
+      (asistencia) => asistencia.estado === EstadoAsistencia.PENDIENTE,
+    );
+    const ausencias = asistencias.filter(
+      (asistencia) => asistencia.estado === EstadoAsistencia.AUSENTE,
+    );
+    if (ausencias.length) {
+      alertas.push({
+        id: 'ausencias-docentes',
+        severidad: 'critica',
+        tipo: 'ausencia-docente',
+        mensaje:
+          ausencias.length === 1
+            ? 'Hay una ausencia docente registrada.'
+            : `Hay ${ausencias.length} ausencias docentes registradas.`,
+        origenId: ausencias[0].id,
+        aulaId: ausencias[0].clase.aulaId,
+        enlace: '/horarios',
+        accion: 'Revisar asistencias',
+      });
+    }
+    if (pendientes.length) {
+      alertas.push({
+        id: 'asistencias-pendientes',
+        severidad: 'advertencia',
+        tipo: 'asistencia-pendiente',
+        mensaje:
+          pendientes.length === 1
+            ? 'Hay una asistencia docente pendiente de registro.'
+            : `Hay ${pendientes.length} asistencias docentes pendientes de registro.`,
+        origenId: pendientes[0].id,
+        aulaId: pendientes[0].clase.aulaId,
+        enlace: '/horarios',
+        accion: 'Registrar asistencia',
+      });
     }
     for (const aula of aulas) {
       if (

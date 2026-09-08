@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { HorarioService } from './horario.service';
 import * as XLSX from 'xlsx';
+import { EstadoAsistencia } from '../../generated/prisma/enums.js';
 
 type PrismaMock = {
   periodoAcademico: {
@@ -29,6 +30,7 @@ type PrismaMock = {
     delete: jest.Mock;
     deleteMany: jest.Mock;
   };
+  asistenciaDocente: { updateMany: jest.Mock; createMany: jest.Mock; deleteMany: jest.Mock };
   $transaction: jest.Mock;
 };
 
@@ -74,12 +76,65 @@ describe('HorarioService', () => {
         delete: jest.fn(),
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
+      asistenciaDocente: { updateMany: jest.fn(), createMany: jest.fn(), deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
       $transaction: jest.fn(),
     };
     prisma.$transaction.mockImplementation(
       (callback: (tx: PrismaMock) => unknown) => callback(prisma),
     );
     service = new HorarioService(prisma as unknown as PrismaService);
+  });
+
+  it('cierra asistencias de una fecha pasada por lotes, no por cada clase', async () => {
+    prisma.claseProgramada.findMany
+      .mockResolvedValueOnce([{ id: 'clase-1' }, { id: 'clase-2' }])
+      .mockResolvedValueOnce([]);
+
+    await service.findClases({ periodoId, fecha: '2020-01-06' });
+
+    expect(prisma.asistenciaDocente.updateMany).toHaveBeenCalledTimes(1);
+    expect(prisma.asistenciaDocente.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ estado: EstadoAsistencia.PENDIENTE }),
+        data: expect.objectContaining({ estado: EstadoAsistencia.AUSENTE }),
+      }),
+    );
+    expect(prisma.asistenciaDocente.createMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.arrayContaining([
+          expect.objectContaining({ claseId: 'clase-1', estado: EstadoAsistencia.AUSENTE }),
+          expect.objectContaining({ claseId: 'clase-2', estado: EstadoAsistencia.AUSENTE }),
+        ]),
+        skipDuplicates: true,
+      }),
+    );
+  });
+
+  it('marca como ausente una clase actual al superar veinte minutos de su inicio', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-09-07T15:30:00.000Z'));
+    prisma.claseProgramada.findMany
+      .mockResolvedValueOnce([{ id: 'clase-1' }])
+      .mockResolvedValueOnce([]);
+
+    await service.findClases({ periodoId, fecha: '2026-09-07' });
+
+    expect(prisma.asistenciaDocente.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          estado: EstadoAsistencia.PENDIENTE,
+          clase: expect.objectContaining({
+            horaInicio: { lte: new Date('1970-01-01T10:10:00.000Z') },
+          }),
+        }),
+        data: expect.objectContaining({ estado: EstadoAsistencia.AUSENTE }),
+      }),
+    );
+    expect(prisma.asistenciaDocente.createMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [expect.objectContaining({ claseId: 'clase-1', estado: EstadoAsistencia.AUSENTE })],
+      }),
+    );
+    jest.useRealTimers();
   });
 
   it('importa Excel oficial solo para el período activo y filtra aulas externas', async () => {

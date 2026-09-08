@@ -36,6 +36,7 @@ describe('PrestamosAudiovisualesController (e2e)', () => {
       }),
     },
     prestamoAudiovisual: {
+      findFirst: jest.fn(() => Promise.resolve(null)),
       create: jest.fn(({ data }) => {
         prestamo = {
           id: ids.prestamo,

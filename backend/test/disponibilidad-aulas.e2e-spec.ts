@@ -8,7 +8,7 @@ import { DisponibilidadAulasModule } from '../src/disponibilidad-aulas/disponibi
 import { PrismaService } from '../src/prisma/prisma.service';
 
 type PrismaMock = {
-  aula: { findMany: jest.Mock; findUnique: jest.Mock };
+  aula: { findMany: jest.Mock; findUnique: jest.Mock; findFirst: jest.Mock };
   observacion: { findFirst: jest.Mock; findMany: jest.Mock };
   claseProgramada: { findFirst: jest.Mock };
   prestamoDocente: { findFirst: jest.Mock };
@@ -27,7 +27,7 @@ describe('DisponibilidadAulasController (e2e)', () => {
     estado: EstadoAula.OPERATIVA,
   };
   const prisma: PrismaMock = {
-    aula: { findMany: jest.fn(), findUnique: jest.fn() },
+    aula: { findMany: jest.fn(), findUnique: jest.fn(), findFirst: jest.fn() },
     observacion: { findFirst: jest.fn(), findMany: jest.fn() },
     claseProgramada: { findFirst: jest.fn() },
     prestamoDocente: { findFirst: jest.fn() },
@@ -54,6 +54,7 @@ describe('DisponibilidadAulasController (e2e)', () => {
     jest.clearAllMocks();
     prisma.aula.findMany.mockResolvedValue([aula]);
     prisma.aula.findUnique.mockResolvedValue(aula);
+    prisma.aula.findFirst.mockResolvedValue(aula);
     prisma.observacion.findFirst.mockResolvedValue(null);
     prisma.observacion.findMany.mockResolvedValue([]);
     prisma.claseProgramada.findFirst.mockResolvedValue(null);

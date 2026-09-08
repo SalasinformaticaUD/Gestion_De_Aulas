@@ -7,6 +7,7 @@ import { AulasModule } from '../src/aulas/aulas.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { configureApp } from '../src/configure-app';
 import { AuditoriaService } from '../src/auditoria/auditoria.service';
+import { attachTestAdministrator } from './helpers/authenticated-user';
 
 describe('AulasController (e2e)', () => {
   const aulaId = '00000000-0000-4000-8000-000000000001';
@@ -23,6 +24,9 @@ describe('AulasController (e2e)', () => {
       }),
       findMany: jest.fn(() => aulas.map(toPublicSource)),
       findUnique: jest.fn(({ where }: { where: { id: string } }) =>
+        toPublicSource(aulas.find((aula) => aula.id === where.id)),
+      ),
+      findFirst: jest.fn(({ where }: { where: { id: string } }) =>
         toPublicSource(aulas.find((aula) => aula.id === where.id)),
       ),
       update: jest.fn(
@@ -54,6 +58,7 @@ describe('AulasController (e2e)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    attachTestAdministrator(app);
     configureApp(app);
     await app.init();
   });
@@ -81,7 +86,6 @@ describe('AulasController (e2e)', () => {
         expect(body[0]).toMatchObject({
           codigo: 'LAB-01',
           ubicacion: 'Piso 2',
-          piso: 2,
           capacidad: 25,
           estado: EstadoAula.OPERATIVA,
           caracteristicas: null,

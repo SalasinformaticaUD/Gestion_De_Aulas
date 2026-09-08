@@ -79,6 +79,12 @@ export class CredencialesService {
       })) as CredencialConAccesos[]
     ).map((item) => this.publica(item));
   }
+  listarRolesAutorizables() {
+    return this.prisma.rol.findMany({
+      select: { id: true, nombre: true },
+      orderBy: { nombre: 'asc' },
+    });
+  }
   async findOne(id: string, usuarioId: string) {
     return this.publica(await this.access(id, usuarioId));
   }

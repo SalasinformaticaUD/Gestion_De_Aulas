@@ -44,6 +44,12 @@ export class TareasOperativasController {
     return this.tareasOperativasService.findAll(dto);
   }
 
+  @Get('responsables')
+  @RequirePermissions('TAREAS_LEER')
+  responsables() {
+    return this.tareasOperativasService.listarResponsables();
+  }
+
   @Get('indicadores/resumen')
   @RequirePermissions('TAREAS_LEER')
   indicadores(@Query() dto: FindTareasDto) { return this.tareasOperativasService.indicadores(dto); }
@@ -98,7 +104,7 @@ export class TareasOperativasController {
   }
 
   @Post(':id/decision')
-  @RequirePermissions('TAREAS_ACTUALIZAR')
+  @RequirePermissions('TAREAS_APROBAR')
   decidir(@Param('id', ParseUUIDPipe) id: string, @Body() dto: DecidirTareaDto, @CurrentUser() usuario?: UsuarioAutenticado) {
     return this.tareasOperativasService.decidir(id, dto.decision, usuario?.id, usuario?.roles.includes('ADMINISTRADOR') ?? false, dto.responsableIds);
   }

@@ -140,42 +140,42 @@ El endpoint interno `POST /integraciones/monitores/usuarios` solo acepta el head
 `X-Monitores-Service-Token`. Lo consume el backend de Monitores para aprovisionar una
 identidad central; no debe llamarse desde el frontend.
 
-## Deployment
+## Despliegue con Docker Compose
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+La orquestación de `docker-compose.yml` incluye PostgreSQL, la API NestJS, el
+renderizador PDF y el frontend Next.js. Las APIs de Aulas y PDF se comunican por la
+red interna; únicamente el frontend, la API de Aulas y el puerto local opcional de
+PostgreSQL se publican en el host.
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+cp .env.docker.example .env.docker
+# Reemplace todos los valores CHANGE_ME y configure la URL pública.
+npm run deploy:preflight -- --env-file .env.docker
+docker compose --env-file .env.docker config
+docker compose --env-file .env.docker build
+docker compose --env-file .env.docker up -d
+docker compose --env-file .env.docker ps
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+En la primera instalación configure `RUN_DATABASE_SEED=true`. Una vez creado el
+administrador inicial, cámbielo a `false` antes del siguiente reinicio para impedir
+que el seed vuelva a establecer su contraseña. Las migraciones sí se ejecutan de
+forma segura mediante el contenedor de inicialización `migration`, antes de iniciar
+la API. El backend rechaza el arranque si se conservan secretos `CHANGE_ME` o de
+menos de 32 caracteres.
 
-## Resources
+El backend independiente de Gestión de Monitores no forma parte de este repositorio.
+`MONITORES_API_URL` debe apuntar a una instancia accesible desde los contenedores;
+para ejecutarlo en el mismo equipo se admite `http://host.docker.internal:8000`.
 
-Check out a few resources that may come in handy when working with NestJS:
+Comprobaciones posteriores al inicio:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```bash
+curl http://localhost:3000/health
+curl -I http://localhost:3001/
+docker compose --env-file .env.docker logs --tail=100 backend frontend pdf-renderer
+```
 
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Para actualizar, construya las imágenes con una etiqueta nueva mediante `IMAGE_TAG`,
+aplique `docker compose up -d` y verifique que todos los servicios queden `healthy`.
+El volumen `reportes_postgres_data` conserva la base de datos entre recreaciones.

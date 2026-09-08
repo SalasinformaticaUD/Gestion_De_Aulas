@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import zipfile
 import xml.etree.ElementTree as ET
+from copy import deepcopy
 from pathlib import Path
 from typing import Literal
 
@@ -113,6 +114,20 @@ def configure_landscape(sheet_xml: ET.Element) -> None:
     page_setup_properties.set("fitToPage", "1")
 
 
+def black_date_style(styles_xml: ET.Element, sheet_cells: dict[str, ET.Element]) -> str:
+    """Duplica el estilo de fecha conservando su alineación y lo vuelve negro."""
+    cell_xfs = styles_xml.find(qname(MAIN_NS, "cellXfs"))
+    if cell_xfs is None:
+        raise RuntimeError("La plantilla Excel no contiene estilos de celda.")
+    source_id = int(sheet_cells["D6"].attrib.get("s", "0"))
+    source = list(cell_xfs)[source_id]
+    style = deepcopy(source)
+    style.set("fontId", "0")
+    cell_xfs.append(style)
+    cell_xfs.set("count", str(len(cell_xfs)))
+    return str(len(cell_xfs) - 1)
+
+
 def rotate_pdf_landscape(content: bytes) -> bytes:
     source = fitz.open(stream=content, filetype="pdf")
     result = fitz.open()
@@ -148,6 +163,14 @@ def set_cells_in_xlsx(source: Path, destination: Path, template_name: str, value
             cell.attrib.get("r"): cell
             for cell in sheet_xml.iter(qname(MAIN_NS, "c"))
         }
+        styles_path = "xl/styles.xml"
+        rendered_styles = None
+        if template_name == "Ficha SIGUD audiovisuales.xlsx":
+            styles_xml = ET.fromstring(reader.read(styles_path))
+            date_style_id = black_date_style(styles_xml, cells)
+            for reference in ("D6", "E6", "F6"):
+                cells[reference].set("s", date_style_id)
+            rendered_styles = ET.tostring(styles_xml, encoding="utf-8", xml_declaration=True)
         for reference, value in targets.items():
             cell = cells.get(reference)
             if cell is None:
@@ -163,7 +186,11 @@ def set_cells_in_xlsx(source: Path, destination: Path, template_name: str, value
         rendered_sheet = ET.tostring(sheet_xml, encoding="utf-8", xml_declaration=True)
         with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED) as writer:
             for item in reader.infolist():
-                data = rendered_sheet if item.filename == sheet_path else reader.read(item.filename)
+                data = (
+                    rendered_sheet if item.filename == sheet_path
+                    else rendered_styles if item.filename == styles_path and rendered_styles is not None
+                    else reader.read(item.filename)
+                )
                 writer.writestr(item, data)
 
 def soffice_path() -> str:

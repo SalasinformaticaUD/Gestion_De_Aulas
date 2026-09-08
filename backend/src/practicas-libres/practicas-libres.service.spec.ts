@@ -155,6 +155,20 @@ describe('PracticasLibresService', () => {
     ).resolves.toMatchObject({ estado: EstadoPrestamo.DEVUELTO });
   });
 
+  it('impide finalizar una práctica antes de que inicie su bloque', async () => {
+    prisma.practicaLibre.findUnique.mockResolvedValue({
+      estado: EstadoPrestamo.ACTIVO,
+      inicio: new Date(Date.now() + 60 * 60 * 1000),
+      finEstimada: new Date(Date.now() + 3 * 60 * 60 * 1000),
+      finReal: null,
+    });
+
+    await expect(service.finish('practica-futura', {})).rejects.toMatchObject({
+      message: 'No se puede finalizar una práctica antes de que inicie su bloque programado. Puede cancelarla si ya no se realizará.',
+    });
+    expect(prisma.practicaLibre.update).not.toHaveBeenCalled();
+  });
+
   it('consulta un estudiante con multas y prácticas recientes', async () => {
     prisma.estudiante.findUnique.mockResolvedValue({
       id: 'estudiante-id',

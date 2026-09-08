@@ -22,6 +22,25 @@ import { CodigoReporte, REPORTES, ReportesService } from './reportes.service';
 export class ReportesController {
   constructor(private readonly reportes: ReportesService) {}
 
+  @Get('practicas-libres/pdf/mes')
+  @RequireModule(MODULOS.PRACTICAS_LIBRES)
+  @RequirePermissions('PRACTICAS_LIBRES_LEER')
+  async practicasLibresMesPdf(@Query('mes') mes: string, @Res() response: Response, @CurrentUser() usuario?: UsuarioAutenticado): Promise<void> {
+    this.enviarZip(response, await this.reportes.generarPracticasLibresMesPdf(mes, usuario), `Fichas_PracticasLibres_${mes}.zip`);
+  }
+
+  @Get('prestamos-audiovisuales/pdf/mes')
+  @RequireModule(MODULOS.AUDIOVISUALES)
+  @RequirePermissions('AUDIOVISUALES_LEER')
+  async prestamosAudiovisualesMesPdf(@Query('mes') mes: string, @Res() response: Response): Promise<void> {
+    this.enviarZip(response, await this.reportes.generarPrestamosAudiovisualesMesPdf(mes), `Fichas_PrestamosAudiovisuales_${mes}.zip`);
+  }
+
+  @Get('asistencia-docente/pdf/mes')
+  async asistenciasMesPdf(@Query('mes') mes: string, @Res() response: Response): Promise<void> {
+    this.enviarZip(response, await this.reportes.generarAsistenciasMesPdf(mes), `Fichas_Asistencia_SIGUD_${mes}.zip`);
+  }
+
   @Get('practicas-libres/:id/pdf')
   async practicaLibrePdf(
     @Param('id', ParseUUIDPipe) id: string,
@@ -84,5 +103,14 @@ export class ReportesController {
       'Content-Length': pdf.length.toString(),
     });
     response.status(200).send(pdf);
+  }
+
+  private enviarZip(response: Response, zip: Buffer, nombre: string): void {
+    response.set({
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename="${nombre.replaceAll('"', '')}"`,
+      'Content-Length': zip.length.toString(),
+    });
+    response.status(200).send(zip);
   }
 }

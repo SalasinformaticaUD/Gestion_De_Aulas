@@ -378,10 +378,16 @@ export class PracticasLibresService {
   ): Promise<void> {
     const practica = await this.prisma.practicaLibre.findUnique({
       where: { id },
-      select: { estado: true, finEstimada: true, finReal: true },
+      select: { estado: true, inicio: true, finEstimada: true, finReal: true },
     });
     if (!practica) {
       throw new NotFoundException(`No existe práctica libre con id ${id}.`);
+    }
+
+    if (permiteVencida && practica.inicio > new Date()) {
+      throw new BadRequestException(
+        'No se puede finalizar una práctica antes de que inicie su bloque programado. Puede cancelarla si ya no se realizará.',
+      );
     }
 
     let estado = practica.estado;
