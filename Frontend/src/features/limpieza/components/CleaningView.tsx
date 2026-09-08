@@ -10,6 +10,7 @@ import type { OperationalObservation } from "@/features/observaciones/types";
 import styles from "./CleaningView.module.css";
 
 const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(new Date());
+const sevenDaysAgo = Date.now() - 7 * 86400000;
 type PendingMatrixChange = { roomId: string; date: string; roomCode: string; status: "realizado" | "novedad"; observation?: string; record?: CleaningRecord };
 
 export function CleaningView() {
@@ -58,9 +59,9 @@ export function CleaningView() {
     <section className={`page-heading ${styles.heading}`}><div><h1>Seguimiento de Aseo de Aulas</h1><p>Facultad de Ingeniería · Control mensual de limpieza de las aulas de software.</p></div><button type="button" className={styles.downloadButton} onClick={downloadMatrixPdf}>Descargar PDF</button></section>
 
     <section className={styles.metrics} aria-label="Resumen de limpieza">
-      <Metric label="Registros de hoy" value={todayRecords.length} detail="Limpiezas realizadas" tone="green" />
-      <Metric label="Aulas atendidas" value={new Set(todayRecords.map((record) => record.roomId)).size} detail={`de ${rooms.length} aulas registradas`} tone="blue" />
-      <Metric label="Últimos 7 días" value={records.filter((record) => new Date(record.performedAt).getTime() >= Date.now() - 7 * 86400000).length} detail="Registros en el periodo" tone="violet" />
+      <Metric label="Registros de hoy" value={todayRecords.length} detail="Limpiezas registradas" tone="green" />
+      <Metric label="Aulas atendidas" value={new Set(todayRecords.map((record) => record.roomId)).size} detail={`aulas únicas de ${rooms.length}`} tone="blue" />
+      <Metric label="Últimos 7 días" value={records.filter((record) => new Date(record.performedAt).getTime() >= sevenDaysAgo).length} detail="Registros en el periodo" tone="violet" />
       <Metric label="Con observación" value={records.filter((record) => record.observation?.trim()).length} detail="Novedades documentadas" tone="amber" />
     </section>
 

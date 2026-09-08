@@ -60,6 +60,23 @@ export async function solicitarAulas<T>(ruta: string, token?: string, opciones: 
   return interpretarRespuesta<T>(respuesta, Boolean(token));
 }
 
+/** Descarga un archivo binario desde la API de Aulas conservando la sesión actual. */
+export async function descargarAulas(ruta: string, token?: string, opciones: RequestInit = {}) {
+  const cabeceras = new Headers(opciones.headers);
+  if (token) cabeceras.set("Authorization", `Bearer ${token}`);
+  const respuesta = await fetch(`${baseAulas}${ruta}`, { ...opciones, headers: cabeceras });
+  if (!respuesta.ok) {
+    notificarErrorAutorizacion(respuesta.status);
+    const tipo = respuesta.headers.get("content-type") ?? "";
+    const cuerpo = tipo.includes("application/json") ? await respuesta.json().catch(() => null) : await respuesta.text().catch(() => "");
+    const mensaje = typeof cuerpo === "object" && cuerpo !== null
+      ? String((cuerpo as { message?: unknown; detail?: unknown }).message ?? (cuerpo as { detail?: unknown }).detail ?? "No fue posible generar el PDF.")
+      : String(cuerpo || "No fue posible generar el PDF.");
+    throw new ErrorApi(mensaje, respuesta.status, cuerpo);
+  }
+  return respuesta.blob();
+}
+
 export async function solicitarMonitores<T>(ruta: string, opciones: RequestInit = {}) {
   const metodo = (opciones.method ?? "GET").toUpperCase();
   const cabeceras = new Headers(opciones.headers);

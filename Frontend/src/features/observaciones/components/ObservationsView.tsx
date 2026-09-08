@@ -95,21 +95,40 @@ function ObservationDialog({ rooms, item, onClose, onSave }: { rooms: Room[]; it
   const [roomId, setRoomId] = useState(item?.roomId ?? rooms[0]?.id ?? "");
   const [type, setType] = useState<ObservationType>(item?.type ?? "GENERAL");
   const [content, setContent] = useState(item?.content ?? "");
-  const [validFrom, setValidFrom] = useState(item?.validFrom ? toLocalInput(item.validFrom) : "");
-  const [validUntil, setValidUntil] = useState(item?.validUntil ? toLocalInput(item.validUntil) : "");
+  const [validFromDate, setValidFromDate] = useState(() => splitLocalDateTime(item?.validFrom).date);
+  const [validFromTime, setValidFromTime] = useState(() => splitLocalDateTime(item?.validFrom).time);
+  const [validUntilDate, setValidUntilDate] = useState(() => splitLocalDateTime(item?.validUntil).date);
+  const [validUntilTime, setValidUntilTime] = useState(() => splitLocalDateTime(item?.validUntil).time);
   const selectedRoom = rooms.find((room) => room.id === roomId);
   if (!selectedRoom) return <div className={styles.backdrop} role="presentation"><section className={styles.dialog} role="dialog" aria-modal="true"><header><div><span>Registro operativo</span><h2>No hay aulas disponibles</h2><p>Primero cree un aula para registrar una observación.</p></div><button type="button" onClick={onClose} aria-label="Cerrar">×</button></header><footer><button type="button" className={styles.dialogCancel} onClick={onClose}>Cerrar</button></footer></section></div>;
+  const validFrom = buildLocalDateTime(validFromDate, validFromTime);
+  const validUntil = buildLocalDateTime(validUntilDate, validUntilTime);
+  const invalidTime = (Boolean(validFromTime) && !isValidTime(validFromTime)) || (Boolean(validUntilTime) && !isValidTime(validUntilTime));
   const missingRestrictionRange = type === "RESTRICCION" && (!validFrom || !validUntil);
   const invalidDate = Boolean(validFrom && validUntil) && new Date(validUntil) <= new Date(validFrom);
-  const submit = (event: React.FormEvent) => { event.preventDefault(); if (missingRestrictionRange || invalidDate) return; onSave({ roomId, roomCode: selectedRoom.code, type, content: content.trim(), validFrom: type === "RESTRICCION" && validFrom ? new Date(validFrom).toISOString() : null, validUntil: type === "RESTRICCION" && validUntil ? new Date(validUntil).toISOString() : null }, item); };
-  return <div className={styles.backdrop} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="observation-dialog-title"><header><div><span>Registro operativo</span><h2 id="observation-dialog-title">{item ? "Editar observación" : "Nueva observación"}</h2><p>Clasifique la novedad y defina su vigencia sobre el aula.</p></div><button type="button" onClick={onClose} aria-label="Cerrar">×</button></header><form onSubmit={submit}><div className={styles.formGrid}><label><span>Aula</span><select value={roomId} onChange={(event) => setRoomId(event.target.value)}>{rooms.map((room) => <option key={room.id} value={room.id}>{room.code}</option>)}</select></label><label><span>Tipo</span><select value={type} onChange={(event) => setType(event.target.value as ObservationType)}>{Object.entries(typeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label className={styles.wideField}><span>Contenido <small>{content.length}/2000</small></span><textarea value={content} onChange={(event) => setContent(event.target.value)} minLength={1} maxLength={2000} rows={5} required autoFocus placeholder="Describa claramente la situación observada..." /></label>{type === "RESTRICCION" && <><label><span>Desde <small>Obligatorio</small></span><input type="datetime-local" value={validFrom} onChange={(event) => setValidFrom(event.target.value)} required /></label><label><span>Hasta <small>Obligatorio</small></span><input type="datetime-local" value={validUntil} onChange={(event) => setValidUntil(event.target.value)} required /></label></>}</div><div className={`${styles.typeHint} ${type === "RESTRICCION" ? styles.restrictionHint : ""}`}><strong>{typeLabels[type]}</strong><span>{typeDescriptions[type]}</span></div>{(missingRestrictionRange || invalidDate) && <div className={styles.inlineError}>{missingRestrictionRange ? "Una restricción debe definir las fechas desde y hasta." : "La fecha hasta debe ser posterior a la fecha desde."}</div>}<footer><button type="button" className={styles.dialogCancel} onClick={onClose}>Cancelar</button><button type="submit" className="button-primary" disabled={!content.trim() || missingRestrictionRange || invalidDate}>{item ? "Guardar cambios" : "Registrar observación"}</button></footer></form></section></div>;
+  const submit = (event: React.FormEvent) => { event.preventDefault(); if (missingRestrictionRange || invalidDate || invalidTime) return; onSave({ roomId, roomCode: selectedRoom.code, type, content: content.trim(), validFrom: type === "RESTRICCION" && validFrom ? new Date(validFrom).toISOString() : null, validUntil: type === "RESTRICCION" && validUntil ? new Date(validUntil).toISOString() : null }, item); };
+  return <div className={styles.backdrop} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="observation-dialog-title"><header><div><span>Registro operativo</span><h2 id="observation-dialog-title">{item ? "Editar observación" : "Nueva observación"}</h2><p>Clasifique la novedad y defina su vigencia sobre el aula.</p></div><button type="button" onClick={onClose} aria-label="Cerrar">×</button></header><form onSubmit={submit}><div className={styles.formGrid}><label><span>Aula</span><select value={roomId} onChange={(event) => setRoomId(event.target.value)}>{rooms.map((room) => <option key={room.id} value={room.id}>{room.code}</option>)}</select></label><label><span>Tipo</span><select value={type} onChange={(event) => setType(event.target.value as ObservationType)}>{Object.entries(typeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label className={styles.wideField}><span>Contenido <small>{content.length}/2000</small></span><textarea value={content} onChange={(event) => setContent(event.target.value)} minLength={1} maxLength={2000} rows={5} required autoFocus placeholder="Describa claramente la situación observada..." /></label>{type === "RESTRICCION" && <><DateTimeField label="Desde" date={validFromDate} time={validFromTime} onDateChange={setValidFromDate} onTimeChange={setValidFromTime} /><DateTimeField label="Hasta" date={validUntilDate} time={validUntilTime} onDateChange={setValidUntilDate} onTimeChange={setValidUntilTime} /></>}</div><div className={`${styles.typeHint} ${type === "RESTRICCION" ? styles.restrictionHint : ""}`}><strong>{typeLabels[type]}</strong><span>{typeDescriptions[type]}</span></div>{(missingRestrictionRange || invalidDate || invalidTime) && <div className={styles.inlineError}>{invalidTime ? "Escriba la hora en formato HH:mm, por ejemplo 14:30." : missingRestrictionRange ? "Una restricción debe definir las fechas desde y hasta." : "La fecha hasta debe ser posterior a la fecha desde."}</div>}<footer><button type="button" className={styles.dialogCancel} onClick={onClose}>Cancelar</button><button type="submit" className="button-primary" disabled={!content.trim() || missingRestrictionRange || invalidDate || invalidTime}>{item ? "Guardar cambios" : "Registrar observación"}</button></footer></form></section></div>;
+}
+
+function DateTimeField({ label, date, time, onDateChange, onTimeChange }: { label: string; date: string; time: string; onDateChange: (value: string) => void; onTimeChange: (value: string) => void }) {
+  return <label><span>{label} <small>Obligatorio</small></span><div className={styles.dateTimeFields}><input type="date" value={date} onChange={(event) => onDateChange(event.target.value)} required /><input type="text" value={time} onChange={(event) => onTimeChange(event.target.value.replace(/[^0-9:]/g, "").slice(0, 5))} inputMode="numeric" autoComplete="off" placeholder="HH:mm" aria-label={`Hora ${label.toLocaleLowerCase("es")}`} required /></div></label>;
 }
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("es-CO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Bogota" }).format(new Date(value));
 }
 
-function toLocalInput(value: string) {
+function splitLocalDateTime(value?: string | null) {
+  if (!value) return { date: "", time: "" };
   const formatter = new Intl.DateTimeFormat("sv-SE", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Bogota" });
-  return formatter.format(new Date(value)).replace(" ", "T");
+  const [date, time] = formatter.format(new Date(value)).split(" ");
+  return { date, time };
+}
+
+function isValidTime(value: string) {
+  return /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
+function buildLocalDateTime(date: string, time: string) {
+  return date && isValidTime(time) ? `${date}T${time}` : "";
 }

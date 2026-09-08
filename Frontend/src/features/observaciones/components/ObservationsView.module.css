@@ -84,6 +84,8 @@
 .formGrid label>span small { float:right; color:var(--muted); font-size:11.7px; font-weight:600; letter-spacing:0; text-transform:none; }
 .formGrid input,.formGrid select,.formGrid textarea { width:100%; min-height:38px; padding:8px 10px; border:1px solid var(--line); border-radius:6px; outline:0; color:var(--ink); background:var(--surface-soft,#f8f9fb); font:inherit; font-size:15.6px; text-transform:none; resize:vertical; }
 .formGrid input:focus,.formGrid select:focus,.formGrid textarea:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(165,16,34,.09); }
+.dateTimeFields { display:grid; grid-template-columns:minmax(0,1fr) 86px; gap:8px; }
+.dateTimeFields input[type="text"] { letter-spacing:.03em; text-align:center; }
 .wideField { grid-column:1/-1; }
 .typeHint { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; border:1px solid var(--line); border-radius:6px; color:var(--muted); background:var(--surface-soft,#f5f7f9); font-size:13px; }
 .typeHint strong { font-size:14.3px; }

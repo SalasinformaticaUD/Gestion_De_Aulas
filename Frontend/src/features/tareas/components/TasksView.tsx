@@ -4,10 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { listarAulas } from "@/features/aulas/api/aulasApi";
 import { obtenerSesion } from "@/features/auth/lib/sesion";
-import { listarUsuarios } from "@/features/usuarios/api/usuariosApi";
-import { cambiarEstadoTarea, crearInformeTarea, crearTarea, decidirTarea, listarTareas } from "@/features/tareas/api/tareasApi";
+import { cambiarEstadoTarea, crearInformeTarea, crearTarea, decidirTarea, listarResponsablesTarea, listarTareas, type ResponsableTarea } from "@/features/tareas/api/tareasApi";
 import type { Room } from "@/features/aulas/types";
-import type { Usuario } from "@/features/usuarios/types";
 import type { OperationalTask, TaskStatus } from "@/features/tareas/types";
 import { notify } from "@/lib/notifications";
 import styles from "./TasksView.module.css";
@@ -26,7 +24,7 @@ type BoardItem = { id: string; status: TaskStatus; task?: OperationalTask; group
 export function TasksView() {
   const [tasks, setTasks] = useState<OperationalTask[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
-  const [users, setUsers] = useState<Usuario[]>([]);
+  const [users, setUsers] = useState<ResponsableTarea[]>([]);
   const [view, setView] = useState<TaskView>("actual");
   const [historyStatus, setHistoryStatus] = useState<HistoryStatus>("COMPLETADA");
   const [now, setNow] = useState(() => Date.now());
@@ -64,11 +62,11 @@ export function TasksView() {
 
   const reload = async () => {
     try {
-      const [nextTasks, nextRooms, nextUsers] = await Promise.all([listarTareas(), listarAulas(), listarUsuarios()]);
+      const [nextTasks, nextRooms, nextUsers] = await Promise.all([listarTareas(), listarAulas(), listarResponsablesTarea()]);
       announceCancellations(nextTasks);
       setTasks(nextTasks);
       setRooms(nextRooms);
-      setUsers(nextUsers.filter((user) => user.estado === "ACTIVA"));
+      setUsers(nextUsers);
     } catch (error) {
       showError(error, "No fue posible cargar las tareas.");
     }
@@ -95,9 +93,16 @@ export function TasksView() {
         (!normalized || `${task.code} ${task.title} ${task.description ?? ""} ${task.roomCode ?? ""} ${responsibleNames(task)}`.toLocaleLowerCase("es").includes(normalized));
     });
   }, [tasks, now, view, historyStatus, responsibleFilter, roomFilter, impactFilter, dateFrom, dateTo, query]);
-  const boardItems = useMemo(() => createBoardItems(visibleTasks, tasks), [visibleTasks, tasks]);
+  // Las tareas creadas para varias aulas se muestran juntas, pero cada estado
+  // conserva su propio grupo para no mezclar salas pendientes, completadas o canceladas.
+  const boardItems = useMemo(() => createBoardItems(visibleTasks), [visibleTasks]);
 
   const showError = (error: unknown, fallback: string) => setNotice({ tone: "error", text: error instanceof Error ? error.message : fallback });
+  useEffect(() => {
+    if (notice?.tone !== "success") return;
+    const timer = window.setTimeout(() => setNotice((current) => current?.text === notice.text ? null : current), 10_000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
   const accept = async (responsibleIds: string[]) => {
     if (!acceptTask) return;
     try {
@@ -161,9 +166,9 @@ export function TasksView() {
 
 function GroupTaskCard({ tasks, onManage }: { tasks: OperationalTask[]; onManage: () => void }) {
   const first = tasks[0];
-  const count = (status: TaskStatus) => tasks.filter((task) => task.status === status).length;
   const rooms = tasks.map((task) => task.roomCode).filter(Boolean).join(", ");
-  return <article className={styles.groupCard}><header><span>GRUPO DE SALAS</span><b>{tasks.length} aulas</b></header><h3>{first.title}</h3>{first.description && <p>{first.description}</p>}<div className={styles.groupProgress}><span>{count("PENDIENTE")} pendientes</span><span>{count("EN_PROCESO")} en proceso</span><span>{count("COMPLETADA")} completadas</span>{count("CANCELADA") > 0 && <span>{count("CANCELADA")} canceladas</span>}</div><small className={styles.groupRooms}>Aulas: {rooms}</small><button type="button" onClick={onManage}>Gestionar salas</button></article>;
+  const statusLabel: Partial<Record<TaskStatus, string>> = { PENDIENTE: "Pendientes", EN_PROCESO: "En proceso", COMPLETADA: "Completadas", CANCELADA: "Canceladas" };
+  return <article className={styles.groupCard}><header><span>GRUPO DE SALAS · {statusLabel[first.status] ?? first.status}</span><b>{tasks.length} aulas</b></header><h3>{first.title}</h3>{first.description && <p>{first.description}</p>}<div className={styles.groupProgress}><span>{tasks.length} sala(s) en este estado</span></div><small className={styles.groupRooms}>Aulas: {rooms}</small><button type="button" onClick={onManage}>Gestionar salas</button></article>;
 }
 
 function GroupDialog({ tasks, currentUserId, onClose, onAccept, onCancel, onComplete, onReport, onView }: { tasks: OperationalTask[]; currentUserId?: string; onClose: () => void; onAccept: (task: OperationalTask) => void; onCancel: (task: OperationalTask) => void; onComplete: (task: OperationalTask) => void; onReport: (task: OperationalTask) => void; onView: (task: OperationalTask) => void }) {
@@ -171,7 +176,7 @@ function GroupDialog({ tasks, currentUserId, onClose, onAccept, onCancel, onComp
   return <Modal title={`Salas de la tarea · ${title}`} subtitle="Cada sala tiene su propio responsable, informe y estado. Gestione solo la sala que corresponda." onClose={onClose} wide><div className={styles.groupDialogList}>{tasks.map((task) => { const canReport = Boolean(currentUserId && (task.responsibleId === currentUserId || task.responsibles?.some((item) => item.usuarioId === currentUserId))); const pending = task.reports?.[0]?.accionesPendientes?.trim(); return <article key={task.id} className={styles.groupRoomRow}><div><strong>Aula {task.roomCode ?? "sin aula"}</strong><span className={styles[`status_${task.status.toLocaleLowerCase()}`]}>{task.status.replace("_", " ")}</span><small>{responsibleNames(task)}</small></div><div>{task.status === "PENDIENTE" && <><button type="button" onClick={() => onAccept(task)}>Aceptar</button><button type="button" onClick={() => onCancel(task)}>Cancelar</button></>}{task.status === "EN_PROCESO" && <>{canReport && <button type="button" onClick={() => onReport(task)}>Informe</button>}{pending && <button type="button" onClick={() => onAccept(task)}>Retomar</button>}<button type="button" onClick={() => onComplete(task)}>Completar</button><button type="button" onClick={() => onCancel(task)}>Cancelar</button></>}{["COMPLETADA", "CANCELADA"].includes(task.status) && <button type="button" onClick={() => onView(task)}>Ver detalle</button>}</div></article>; })}</div><footer className={styles.detailsFooter}><button type="button" className={styles.dialogCancel} onClick={onClose}>Cerrar</button></footer></Modal>;
 }
 
-function TaskCard({ task, groupTasks, users, currentUserId, dragging, onDragStart, onDragEnd, onAccept, onCancel, onComplete, onReport, onView }: { task: OperationalTask; groupTasks: OperationalTask[]; users: Usuario[]; currentUserId?: string; dragging: boolean; onDragStart: () => void; onDragEnd: () => void; onAccept: () => void; onCancel: () => void; onComplete: () => void; onReport: () => void; onView: () => void }) {
+function TaskCard({ task, groupTasks, users, currentUserId, dragging, onDragStart, onDragEnd, onAccept, onCancel, onComplete, onReport, onView }: { task: OperationalTask; groupTasks: OperationalTask[]; users: ResponsableTarea[]; currentUserId?: string; dragging: boolean; onDragStart: () => void; onDragEnd: () => void; onAccept: () => void; onCancel: () => void; onComplete: () => void; onReport: () => void; onView: () => void }) {
   const canMove = task.status === "PENDIENTE" || task.status === "EN_PROCESO";
   const pending = task.reports?.[0]?.accionesPendientes?.trim();
   const canReport = Boolean(currentUserId && (task.responsibleId === currentUserId || task.responsibles?.some((item) => item.usuarioId === currentUserId)));
@@ -183,10 +188,10 @@ function TaskDialog({ rooms, onClose, onSave }: { rooms: Room[]; onClose: () => 
   const [title, setTitle] = useState(""); const [description, setDescription] = useState(""); const [roomIds, setRoomIds] = useState<string[]>([]); const [affects, setAffects] = useState(false); const [saving, setSaving] = useState(false);
   const toggleRoom = (id: string) => setRoomIds((current) => current.includes(id) ? current.filter((roomId) => roomId !== id) : [...current, id]);
   const toggleAllRooms = () => setRoomIds((current) => current.length === rooms.length ? [] : rooms.map((room) => room.id));
-  return <Modal title="Nueva tarea" subtitle="Seleccione una o varias aulas. Cada una tendrá seguimiento, responsables y estado propios." onClose={onClose}><form onSubmit={async (event) => { event.preventDefault(); if (affects && !roomIds.length) return; setSaving(true); try { await onSave({ titulo: title.trim(), descripcion: description.trim() || undefined, aulaIds: roomIds.length ? roomIds : undefined, afectaDisponibilidad: affects }); } finally { setSaving(false); } }}><div className={styles.formGrid}><label className={styles.wideField}><span>Título</span><input autoFocus required value={title} onChange={(event) => setTitle(event.target.value)} /></label><label className={styles.wideField}><span>Descripción <small>Opcional</small></span><textarea rows={4} value={description} onChange={(event) => setDescription(event.target.value)} /></label><fieldset className={`${styles.roomPicker} ${styles.wideField}`}><legend>Aulas <small>{affects ? "Obligatoria" : "Opcional"}</small></legend><div className={styles.roomPickerHeader}><span>{roomIds.length ? `${roomIds.length} aula(s) seleccionada(s)` : "Sin aula asociada"}</span><button type="button" onClick={toggleAllRooms}>{roomIds.length === rooms.length ? "Limpiar selección" : "Seleccionar todas"}</button></div><div className={styles.roomChecklist}>{rooms.map((room) => <label key={room.id}><input type="checkbox" checked={roomIds.includes(room.id)} onChange={() => toggleRoom(room.id)} /><span>Aula {room.code}</span></label>)}</div></fieldset></div><label className={styles.impactSwitch}><input type="checkbox" checked={affects} onChange={(event) => setAffects(event.target.checked)} /><span><strong>Afecta la disponibilidad de las aulas seleccionadas</strong><small>Cada tarea bloqueará solamente su aula mientras esté en proceso.</small></span></label><DialogFooter onClose={onClose} label={saving ? "Guardando…" : roomIds.length > 1 ? "Crear grupo de tareas" : "Crear tarea"} disabled={saving || !title.trim() || (affects && !roomIds.length)} /></form></Modal>;
+  return <Modal title="Nueva tarea" subtitle="Seleccione una o varias aulas. Se creará una tarea independiente por aula y, si son varias, quedarán vinculadas como un grupo con seguimiento y estado propios." onClose={onClose}><form onSubmit={async (event) => { event.preventDefault(); if (affects && !roomIds.length) return; setSaving(true); try { await onSave({ titulo: title.trim(), descripcion: description.trim() || undefined, aulaIds: roomIds.length ? roomIds : undefined, afectaDisponibilidad: affects }); } finally { setSaving(false); } }}><div className={styles.formGrid}><label className={styles.wideField}><span>Título</span><input autoFocus required value={title} onChange={(event) => setTitle(event.target.value)} /></label><label className={styles.wideField}><span>Descripción <small>Opcional</small></span><textarea rows={4} value={description} onChange={(event) => setDescription(event.target.value)} /></label><fieldset className={`${styles.roomPicker} ${styles.wideField}`}><legend>Aulas <small>{affects ? "Obligatoria" : "Opcional"}</small></legend><div className={styles.roomPickerHeader}><span>{roomIds.length ? `${roomIds.length} aula(s) seleccionada(s)` : "Sin aula asociada"}</span><button type="button" onClick={toggleAllRooms}>{roomIds.length === rooms.length ? "Limpiar selección" : "Seleccionar todas"}</button></div><div className={styles.roomChecklist}>{rooms.map((room) => <label key={room.id}><input type="checkbox" checked={roomIds.includes(room.id)} onChange={() => toggleRoom(room.id)} /><span>Aula {room.code}</span></label>)}</div></fieldset></div><label className={styles.impactSwitch}><input type="checkbox" checked={affects} onChange={(event) => setAffects(event.target.checked)} /><span><strong>Afecta la disponibilidad de las aulas seleccionadas</strong><small>Cada tarea bloqueará solamente su aula mientras esté en proceso.</small></span></label><DialogFooter onClose={onClose} label={saving ? "Guardando…" : roomIds.length > 1 ? `Crear ${roomIds.length} tareas` : "Crear tarea"} disabled={saving || !title.trim() || (affects && !roomIds.length)} /></form></Modal>;
 }
 
-function AcceptDialog({ task, users, currentUserId, currentUserName, onClose, onConfirm }: { task: OperationalTask; users: Usuario[]; currentUserId: string; currentUserName: string; onClose: () => void; onConfirm: (ids: string[]) => Promise<void> }) {
+function AcceptDialog({ task, users, currentUserId, currentUserName, onClose, onConfirm }: { task: OperationalTask; users: ResponsableTarea[]; currentUserId: string; currentUserName: string; onClose: () => void; onConfirm: (ids: string[]) => Promise<void> }) {
   const [addMore, setAddMore] = useState(false); const [selected, setSelected] = useState<string[]>([]); const [saving, setSaving] = useState(false);
   const available = users.filter((user) => user.id !== currentUserId);
   return <Modal title="Aceptar tarea" subtitle={`Confirme que va a hacerse cargo de ${task.code}.`} onClose={onClose}><form onSubmit={async (event) => { event.preventDefault(); setSaving(true); try { await onConfirm(selected); } finally { setSaving(false); } }}><div className={styles.confirmBox}><strong>{currentUserName}</strong><span>quedará registrado como responsable de esta tarea.</span></div><label className={styles.addMore}><input type="checkbox" checked={addMore} onChange={(event) => { setAddMore(event.target.checked); if (!event.target.checked) setSelected([]); }} /><span><strong>¿Hay más responsables que harán la tarea al mismo tiempo?</strong><small>Puede seleccionar uno o varios usuarios.</small></span></label>{addMore && <div className={styles.userChecklist}>{available.map((user) => <label key={user.id}><input type="checkbox" checked={selected.includes(user.id)} onChange={(event) => setSelected((current) => event.target.checked ? [...current, user.id] : current.filter((id) => id !== user.id))} /><span>{user.nombreCompleto}</span></label>)}{!available.length && <p>No hay otros usuarios activos disponibles.</p>}</div>}<DialogFooter onClose={onClose} label={saving ? "Aceptando…" : "Confirmar y aceptar"} disabled={saving} /></form></Modal>;
@@ -216,16 +221,18 @@ function TaskReportDetails({ task, onClose }: { task: OperationalTask; onClose: 
 function Modal({ title, subtitle, onClose, wide, children }: { title: string; subtitle: string; onClose: () => void; wide?: boolean; children: React.ReactNode }) { return <div className={styles.backdrop} onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className={`${styles.dialog} ${wide ? styles.dialogWide : ""}`} role="dialog" aria-modal="true"><header><div><span>Tareas operativas</span><h2>{title}</h2><p>{subtitle}</p></div><button type="button" onClick={onClose}>×</button></header>{children}</section></div>; }
 function DialogFooter({ onClose, label, disabled }: { onClose: () => void; label: string; disabled?: boolean }) { return <footer><button type="button" className={styles.dialogCancel} onClick={onClose}>Volver</button><button type="submit" className="button-primary" disabled={disabled}>{label}</button></footer>; }
 function Metric({ label, value, detail, tone }: { label: string; value: number; detail: string; tone: string }) { return <article className={`${styles.metric} ${styles[`metric_${tone}`]}`}><div><span>{label}</span><strong>{value}</strong><small>{detail}</small></div><i /></article>; }
-function responsibleNames(task: OperationalTask, users: Usuario[] = []) { const names = task.responsibles?.map((item) => item.usuario.nombreCompleto) ?? []; if (names.length) return names.join(", "); const legacy = users.find((user) => user.id === task.responsibleId)?.nombreCompleto; return legacy ?? "Sin responsables"; }
-function createBoardItems(visible: OperationalTask[], allTasks: OperationalTask[]): BoardItem[] {
-  const individual = visible.filter((task) => !task.groupId).map((task) => ({ id: task.id, status: task.status, task }));
-  const groupIds = [...new Set(visible.map((task) => task.groupId).filter((id): id is string => Boolean(id)))];
-  const groups = groupIds.map((groupId) => {
-    const tasks = allTasks.filter((task) => task.groupId === groupId);
-    const status: TaskStatus = tasks.some((task) => task.status === "EN_PROCESO") ? "EN_PROCESO" : tasks.some((task) => task.status === "PENDIENTE") ? "PENDIENTE" : tasks.some((task) => task.status === "COMPLETADA") ? "COMPLETADA" : "CANCELADA";
-    return { id: `group-${groupId}`, status, group: tasks };
-  });
-  return [...individual, ...groups];
+function responsibleNames(task: OperationalTask, users: ResponsableTarea[] = []) { const names = task.responsibles?.map((item) => item.usuario.nombreCompleto) ?? []; if (names.length) return names.join(", "); const legacy = users.find((user) => user.id === task.responsibleId)?.nombreCompleto; return legacy ?? "Sin responsables"; }
+function createBoardItems(visible: OperationalTask[]): BoardItem[] {
+  const individuales = visible.filter((task) => !task.groupId).map((task) => ({ id: task.id, status: task.status, task }));
+  const agrupadas = new Map<string, OperationalTask[]>();
+  for (const task of visible) {
+    if (!task.groupId) continue;
+    const key = `${task.groupId}:${task.status}`;
+    const grupo = agrupadas.get(key) ?? [];
+    grupo.push(task);
+    agrupadas.set(key, grupo);
+  }
+  return [...individuales, ...[...agrupadas.entries()].map(([key, group]) => ({ id: `grupo-${key}`, status: group[0].status, group }))];
 }
 function finalDate(task: OperationalTask) { return task.status === "COMPLETADA" ? task.completedAt ?? task.end : task.status === "CANCELADA" ? task.canceledAt : undefined; }
 function isHistorical(task: OperationalTask, now: number) { const value = finalDate(task); return Boolean(value && now - new Date(value).getTime() >= WEEK_MS); }

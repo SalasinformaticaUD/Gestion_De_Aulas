@@ -5,8 +5,7 @@ export type CredencialApi = { id: string; nombre: string; usuario: string | null
 export type UsuarioApi = { id: string; nombreCompleto: string; nombreUsuario: string; correo: string; estado: string };
 export type RolApi = { id: string; nombre: string };
 export const listarCredenciales = () => solicitarAulas<CredencialApi[]>("/credenciales", token());
-export const listarUsuariosParaCredenciales = () => solicitarAulas<UsuarioApi[]>("/usuarios", token());
-export const listarRolesParaCredenciales = async () => (await solicitarAulas<Array<{ id: string; nombre: string }>>("/roles", token())).map(({ id, nombre }) => ({ id, nombre }));
+export const listarRolesParaCredenciales = async () => (await solicitarAulas<Array<{ id: string; nombre: string }>>("/credenciales/roles-autorizables", token())).map(({ id, nombre }) => ({ id, nombre }));
 export const crearCredencial = (data: { nombre: string; usuario?: string; secreto?: string; descripcion?: string; estado?: "ACTIVA" | "INACTIVA" }) => solicitarAulas<CredencialApi>("/credenciales", token(), { method: "POST", body: JSON.stringify(data) });
 export const actualizarCredencial = (id: string, data: { nombre?: string; usuario?: string; descripcion?: string; estado?: "ACTIVA" | "INACTIVA" }) => solicitarAulas<CredencialApi>(`/credenciales/${id}`, token(), { method: "PATCH", body: JSON.stringify({ ...data, motivoCambio: "Actualizado desde Credenciales" }) });
 export const actualizarAccesoCredencial = (id: string, usuarioId: string, puedeVer: boolean, puedeEditar: boolean) => solicitarAulas(`/credenciales/${id}/accesos`, token(), { method: "POST", body: JSON.stringify({ usuarioId, puedeVer, puedeEditar }) });

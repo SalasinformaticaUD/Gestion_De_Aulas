@@ -31,8 +31,8 @@ export function FinesView() {
   const [loadResult, setLoadResult] = useState<ResultadoCargaMultas | null>(null);
   const cache = useRef(new Map<string, PaginaMultas>());
 
-  const reload = useCallback(async (targetPage = page, force = false) => { try {
-    const scope = view === "historial" ? "historial" : "activas";
+  const reload = useCallback(async (targetPage = page, force = false, targetView: View = view) => { try {
+    const scope = targetView === "historial" ? "historial" : "activas";
     const key = `${scope}:${statusFilter}:${query.trim().toLocaleLowerCase("es")}:${targetPage}`;
     const data = !force && cache.current.get(key) || await cargarMultasPaginadas(targetPage, { query, scope, status: statusFilter });
     if (!cache.current.has(key) || force) cache.current.set(key, data);
@@ -49,10 +49,11 @@ export function FinesView() {
       setPrefillPracticeId(params.get("practicaId") ?? "");
       setPrefillSuggestedFine(params.get("multaSugerida") ?? "");
       setShowCreate(true);
+      window.history.replaceState(window.history.state, "", `${window.location.pathname}${window.location.hash}`);
     }
   }, []);
   const createFine = async (payload: { student: FineStudent; reasonId: string; description?: string; suggestedFine?: string; practiceId?: string }) => {
-    try { await crearMulta({ codigoEstudiante: payload.student.code, motivoId: payload.reasonId, descripcion: payload.description, multaSugerida: payload.suggestedFine, practicaId: payload.practiceId }); cache.current.clear(); setPage(1); setShowCreate(false); setView("activas"); setNotice({ tone: "success", text: `Multa impuesta a ${payload.student.name}.` }); } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible crear la multa." }); }
+    try { await crearMulta({ codigoEstudiante: payload.student.code, motivoId: payload.reasonId, descripcion: payload.description, multaSugerida: payload.suggestedFine, practicaId: payload.practiceId }); cache.current.clear(); await reload(1, true, "activas"); setPage(1); setShowCreate(false); setPrefillCode(""); setPrefillReason(""); setPrefillDescription(""); setPrefillPracticeId(""); setPrefillSuggestedFine(""); setView("activas"); setNotice({ tone: "success", text: `Multa impuesta a ${payload.student.name}.` }); } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible crear la multa." }); }
   };
 
   const completeTransition = async (item: FineRecord, action: "cumplir" | "anular", detail: string) => {
@@ -70,7 +71,7 @@ export function FinesView() {
   const changeView = (next: View) => { setView(next); setStatusFilter("todas"); setPage(1); };
 
   return <>
-    <section className={`page-heading ${styles.heading}`}><div><h1>Multas</h1><p>Registro, cumplimiento y anulación de restricciones aplicadas a estudiantes.</p></div><div className={styles.actions}><button type="button" className={styles.saveButton} onClick={() => downloadFines(fines, reasons)}>Guardar multas</button><button type="button" className={styles.loadButton} onClick={() => { setLoadResult(null); setShowLoad(true); }}>Cargar multas</button><button type="button" className="button-primary" onClick={() => setShowCreate(true)}>+ Nueva multa</button></div></section>
+    <section className={`page-heading ${styles.heading}`}><div><h1>Multas</h1><p>Registro, cumplimiento y anulación de restricciones aplicadas a estudiantes.</p></div><div className={styles.actions}><button type="button" className={styles.saveButton} onClick={() => downloadFines(fines, reasons)}>Guardar multas</button><button type="button" className={styles.loadButton} onClick={() => { setLoadResult(null); setShowLoad(true); }}>Cargar multas</button><button type="button" className="button-primary" onClick={() => { setPrefillCode(""); setPrefillReason(""); setPrefillDescription(""); setPrefillPracticeId(""); setPrefillSuggestedFine(""); setShowCreate(true); }}>+ Nueva multa</button></div></section>
 
     <section className={styles.metrics} aria-label="Resumen de multas">
       <Metric label="Activas" value={summary.activa} detail="Bloquean prácticas libres" tone="red" />
@@ -86,7 +87,7 @@ export function FinesView() {
     {view !== "motivos" ? <section className={styles.contentCard}><header className={styles.cardHeader}><div><h2>{view === "activas" ? "Restricciones vigentes" : "Trazabilidad de multas"}</h2><p>{view === "activas" ? "Estos estudiantes no pueden registrar prácticas libres." : "Registros cumplidos o anulados, conservados sin eliminación física."}</p></div><span>{meta.total} registro(s)</span></header><div className={styles.toolbar}><label className={styles.search}><span aria-hidden="true">⌕</span><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Buscar estudiante, código, motivo o folio..." aria-label="Buscar multas" /></label>{view === "historial" && <label><span>Estado</span><select value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1); }}><option value="todas">Todos</option><option value="CUMPLIDA">Cumplidas</option><option value="ANULADA">Anuladas</option></select></label>}<span className={styles.resultCount}>{meta.total} resultado(s)</span></div><div className="table-wrap"><table className={styles.finesTable}><thead><tr><th>Multa</th><th>Estudiante</th><th>Motivo</th><th>Fecha</th><th>Descripción</th><th>Multa sugerida</th><th>Estado</th><th>{view === "activas" ? "Acciones" : "Resolución"}</th></tr></thead><tbody>{fines.map((fine) => <FineRow key={fine.id} fine={fine} reason={reasons.find((reason) => reason.id === fine.reasonId)} onFulfill={() => setTransition({ item: fine, action: "cumplir" })} onAnnul={() => setTransition({ item: fine, action: "anular" })} />)}{fines.length === 0 && <tr><td colSpan={8} className={styles.emptyTable}>No hay multas para los filtros seleccionados.</td></tr>}</tbody></table></div><footer className={styles.pagination}><span>Página {meta.page} de {meta.totalPages || 1}</span><div><button type="button" disabled={meta.page <= 1} onClick={() => setPage(meta.page - 1)}>Anterior</button><button type="button" disabled={meta.page >= meta.totalPages} onClick={() => setPage(meta.page + 1)}>Siguiente</button></div></footer></section> : <ReasonsView reasons={reasons} fines={fines} onCreate={() => setShowReason(true)} />}
 
     
-    {showCreate && <CreateFineDialog reasons={reasons} initialCode={prefillCode} initialReason={prefillReason} initialDescription={prefillDescription} initialPracticeId={prefillPracticeId} initialSuggestedFine={prefillSuggestedFine} onClose={() => setShowCreate(false)} onCreate={createFine} />}
+    {showCreate && <CreateFineDialog reasons={reasons} initialCode={prefillCode} initialReason={prefillReason} initialDescription={prefillDescription} initialPracticeId={prefillPracticeId} initialSuggestedFine={prefillSuggestedFine} onClose={() => { setShowCreate(false); setPrefillCode(""); setPrefillReason(""); setPrefillDescription(""); setPrefillPracticeId(""); setPrefillSuggestedFine(""); }} onCreate={createFine} />}
     {transition && <TransitionDialog item={transition.item} action={transition.action} onClose={() => setTransition(null)} onConfirm={completeTransition} />}
     {showReason && <ReasonDialog onClose={() => setShowReason(false)} onCreate={createReason} />}
     {showLoad && !loadResult && <LoadFinesDialog onClose={() => setShowLoad(false)} onResult={setLoadResult} />}

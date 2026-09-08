@@ -127,7 +127,7 @@ export function UsuariosView() {
           <label><span>{edicion ? "Nueva contraseña (opcional)" : "Contraseña"}</span><input type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required={!edicion} minLength={10} /></label>
           <label><span>Cargo</span><select value={form.cargo} onChange={(event) => setForm({ ...form, cargo: event.target.value })}><option value="">Seleccionar cargo</option>{cargos.filter((cargo) => cargo.activo || cargo.nombre === form.cargo).map((cargo) => <option key={cargo.id} value={cargo.nombre}>{cargo.nombre}</option>)}</select></label>
           <fieldset><legend>Roles de acceso</legend><div className={styles.permissionGrid}>{roles.map((rol) => <label key={rol.id}><input type="checkbox" checked={form.rolIds.includes(rol.id)} onChange={() => alternarRol(rol.id)} /><span>{rol.nombre}</span></label>)}{rolesCargados && roles.length === 0 && <p className={styles.empty}>No hay roles creados en el catálogo.</p>}{!rolesCargados && <p className={styles.empty}>Cargando roles disponibles…</p>}</div></fieldset>
-          <footer><button type="button" className="button-secondary" onClick={() => { setForm(vacio); setEdicion(null); }}>Limpiar</button><button className="button-primary">{edicion ? "Guardar cambios" : "Crear usuario"}</button></footer>
+          <footer><button type="button" className="button-secondary usuarios-actions-secondary" onClick={() => { setForm(vacio); setEdicion(null); }}>Limpiar</button><button className="button-primary">{edicion ? "Guardar cambios" : "Crear usuario"}</button></footer>
         </form>
       </section>
       <section className={styles.card}>
@@ -144,7 +144,7 @@ export function UsuariosView() {
           <label><span>Nombre</span><input value={rolNombre} onChange={(event) => setRolNombre(event.target.value)} placeholder="Ej. COORDINADOR" required /></label>
           <label><span>Descripción</span><input value={rolDescripcion} onChange={(event) => setRolDescripcion(event.target.value)} placeholder="Alcance del rol" /></label>
           <fieldset className={permissionStyles.permissionsFieldset}><legend>Permisos asignados</legend><div className={permissionStyles.permissionTools}><input type="search" value={busquedaPermiso} onChange={(event) => setBusquedaPermiso(event.target.value)} placeholder="Buscar permiso..." aria-label="Buscar permiso asignable" /><small>{permisosVisibles.length} de {permisos.length} permisos</small></div><div className={permissionStyles.permissionScroll}><div className={styles.permissionGrid}>{permisosVisibles.map((permiso) => <label key={permiso.id}><input type="checkbox" checked={rolPermisoIds.includes(permiso.id)} onChange={() => alternarPermiso(permiso.id)} /><span>{permiso.codigo}</span></label>)}{!permisosVisibles.length && <p className={permissionStyles.empty}>No hay permisos que coincidan.</p>}</div></div></fieldset>
-          <footer><button type="button" className="button-secondary" onClick={() => seleccionarRol("")}>Nuevo</button><button className="button-primary">{rolSeleccionadoId ? "Guardar permisos" : "Crear rol"}</button></footer>
+          <footer><button type="button" className="button-secondary usuarios-actions-secondary" onClick={() => seleccionarRol("")}>Nuevo</button><button className="button-primary">{rolSeleccionadoId ? "Guardar permisos" : "Crear rol"}</button></footer>
         </form>
         <div className={styles.managementForm}>
           <h3>Cargos disponibles</h3>

@@ -1,5 +1,5 @@
 import { obtenerSesion } from "@/features/auth/lib/sesion";
-import { solicitarAulas } from "@/features/monitores/api/clienteMonitores";
+import { descargarAulas, solicitarAulas } from "@/features/monitores/api/clienteMonitores";
 import type { AudiovisualEquipment, AudiovisualLoan, AudiovisualResponsible } from "@/features/audiovisuales/types";
 
 type ApiEquipment = { id: string; codigoInventario: string; nombre: string; tipo: string; marca: string | null; modelo: string | null; estado: AudiovisualEquipment["status"]; observacion: string | null; cantidadPrestamos?: number; minutosUsoAcumulado?: number; disponibleDesde?: string | null };
@@ -13,6 +13,7 @@ export const listarResponsablesAudiovisuales = async () => (await solicitarAulas
 export const crearPrestamoAudiovisual = (input: { responsableTipo?: "MONITOR" | "TECNICO" | "ASISTENCIAL"; entregadoPorId: string; docenteId?: string; docenteNombre: string; docenteDocumento: string; salonTexto: string; elementosAdicionales: string[]; observaciones?: string; devolucionEstimada: string; equipos: Array<{ equipoId: string }> }) => solicitarAulas<ApiLoan>("/prestamos-audiovisuales", token(), { method: "POST", body: JSON.stringify(input) });
 export const devolverPrestamoAudiovisual = (id: string, input: { recibidoPorId: string; devolucionCompleta: boolean; observaciones: string; equipos: Array<{ equipoId: string; estadoFisicoDevolucion: string; estadoFuncionalDevolucion: string }> }) => solicitarAulas<ApiLoan>(`/prestamos-audiovisuales/${id}/devolver`, token(), { method: "PATCH", body: JSON.stringify({ ...input, devolucionReal: new Date().toISOString() }) });
 export const cancelarPrestamoAudiovisual = (id: string) => solicitarAulas<ApiLoan>(`/prestamos-audiovisuales/${id}/cancelar`, token(), { method: "PATCH", body: JSON.stringify({ motivo: "Cancelado desde operación" }) });
+export const descargarFichasPrestamosAudiovisualesMes = (mes: string) => descargarAulas(`/reportes/prestamos-audiovisuales/pdf/mes?mes=${encodeURIComponent(mes)}`, token());
 export const crearEquipoAudiovisual = (input: { codigoInventario: string; nombre: string; tipo: string; marca?: string; modelo?: string; estado: AudiovisualEquipment["status"]; observacion?: string }) => solicitarAulas<ApiEquipment>("/prestamos-audiovisuales/equipos", token(), { method: "POST", body: JSON.stringify(input) });
 export const actualizarEquipoAudiovisual = (id: string, input: { codigoInventario?: string; nombre?: string; tipo?: string; marca?: string; modelo?: string; estado?: AudiovisualEquipment["status"]; observacion?: string }) => solicitarAulas<ApiEquipment>(`/prestamos-audiovisuales/equipos/${id}`, token(), { method: "PATCH", body: JSON.stringify(input) });
 export const eliminarEquipoAudiovisual = (id: string) => solicitarAulas<ApiEquipment>(`/prestamos-audiovisuales/equipos/${id}`, token(), { method: "DELETE" });

@@ -5,6 +5,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Sistema de Gestión Operativa",
   description: "Gestión de Aulas de Software",
+  icons: {
+    icon: "/brand/Logo_Cosmos_Base.png",
+    shortcut: "/brand/Logo_Cosmos_Base.png",
+  },
 };
 
 const themeBootScript = `try{document.documentElement.dataset.theme=localStorage.getItem("sgoas-theme")==="dark"?"dark":"light"}catch{}`;

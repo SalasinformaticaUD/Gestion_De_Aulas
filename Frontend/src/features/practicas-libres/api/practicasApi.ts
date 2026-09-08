@@ -1,5 +1,5 @@
 import { obtenerSesion } from "@/features/auth/lib/sesion";
-import { solicitarAulas } from "@/features/monitores/api/clienteMonitores";
+import { descargarAulas, solicitarAulas } from "@/features/monitores/api/clienteMonitores";
 import type { FreePractice, PracticeStudent } from "@/features/practicas-libres/types";
 type ApiPractice = { id: string; estado: FreePractice["status"]; inicio: string; finEstimada: string; finReal: string | null; aulaId: string; responsableTipo: FreePractice["responsibleType"]; softwareSolicitado: string | null; aula: { codigo: string }; estudiante: { id: string; codigo: string; nombre: string; correo: string | null } | null; docente?: { id: string; documento: string | null; nombre: string; correo: string | null } | null };
 const auth = () => { const token = obtenerSesion()?.tokenAcceso; if (!token) throw new Error("La sesión expiró. Inicie sesión nuevamente."); return token; };
@@ -8,6 +8,7 @@ export const listarPracticas = async () => (await solicitarAulas<ApiPractice[]>(
 export const crearPractica = async (input: { codigoEstudiante: string; nombreEstudiante: string; correoEstudiante?: string; aulaId: string; softwareId?: string; softwareSolicitado: string; responsableTipo: FreePractice["responsibleType"]; inicio: string; finEstimada: string; responsables?: Array<{ tipo: "ESTUDIANTE" | "DOCENTE"; documento: string; nombre: string; correo?: string }> }) => { const response = await solicitarAulas<ApiPractice[]>("/practicas-libres", auth(), { method: "POST", body: JSON.stringify(input) }); return map(response[0]); };
 export const finalizarPractica = async (id: string, cumplioReglas: boolean, observacionesIncumplimiento?: string) => map(await solicitarAulas<ApiPractice>(`/practicas-libres/${id}/finalizar`, auth(), { method: "PATCH", body: JSON.stringify({ cumplioReglas, observacionesIncumplimiento }) }));
 export const cancelarPractica = async (id: string) => map(await solicitarAulas<ApiPractice>(`/practicas-libres/${id}/cancelar`, auth(), { method: "PATCH", body: JSON.stringify({}) }));
+export const descargarFichasPracticasMes = (mes: string) => descargarAulas(`/reportes/practicas-libres/pdf/mes?mes=${encodeURIComponent(mes)}`, auth());
 export async function buscarEstudiantePractica(codigo: string) {
   try { const item = await solicitarAulas<{ id: string; codigo: string; nombre: string; correo: string | null; multas: unknown[]; practicas: unknown[] }>(`/practicas-libres/estudiantes/${encodeURIComponent(codigo)}`, auth()); return { id: item.id, code: item.codigo, name: item.nombre, email: item.correo ?? undefined, activeFine: item.multas.length > 0, activePractice: item.practicas.length > 0 }; }
   catch (error) { if (typeof error === "object" && error && "estado" in error && (error as { estado: number }).estado === 404) return null; throw error; }

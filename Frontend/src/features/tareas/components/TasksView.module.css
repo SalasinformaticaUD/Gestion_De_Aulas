@@ -41,6 +41,8 @@ html[data-theme="dark"] .historyExportButton:hover { color:#fff; background:#a51
 .search>span { color:#8a9099; font-size:20.8px; }
 .filters>label:not(.search) { display:grid; gap:5px; color:var(--muted); font-size:11.7px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
 .filters select { min-width:130px; height:37px; padding:0 8px; border:1px solid var(--line); border-radius:7px; color:var(--ink); background:#f8f9fb; font-size:13px; text-transform:none; }
+.filters input[type="date"] { min-width:142px; height:37px; padding:0 9px; border:1px solid #cdd3dc; border-radius:7px; color:#273142; background:#fff; font:inherit; font-size:13px; color-scheme:light; }
+.filters input[type="date"]:focus { border-color:var(--primary); outline:2px solid color-mix(in srgb,var(--primary) 18%,transparent); outline-offset:1px; }
 .filters>span { margin:0 0 10px auto; color:var(--muted); font-size:13px; white-space:nowrap; }
 .kanban { min-width:0; display:grid; grid-template-columns:repeat(4,minmax(240px,1fr)); gap:10px; align-items:start; overflow-x:auto; padding:1px 1px 8px; }
 .column { --column-color:#737984; min-height:450px; overflow:hidden; border:1px solid var(--line); border-radius:9px; background:#eef0f3; transition:border-color .16s ease,background .16s ease; }
@@ -134,6 +136,7 @@ html[data-theme="dark"] .historyExportButton:hover { color:#fff; background:#a51
   border-color: var(--line);
   background: var(--surface-soft);
 }
+:global(html[data-theme="dark"]) .filters input[type="date"] { border-color:var(--line); color:var(--ink); background:var(--surface-soft); color-scheme:dark; }
 
 :global(html[data-theme="dark"]) .taskTabs button {
   color: var(--muted);

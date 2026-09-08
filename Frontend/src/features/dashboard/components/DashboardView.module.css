@@ -51,3 +51,8 @@
 .scheduleCard :global(.schedule.schedule-list) th:nth-child(5),.scheduleCard :global(.schedule.schedule-list) td:nth-child(5){width:10%}
 .scheduleCard :global(.schedule.schedule-list) th:nth-child(6),.scheduleCard :global(.schedule.schedule-list) td:nth-child(6){width:18%}
 .scheduleCard :global(.schedule.schedule-list) td:nth-child(2),.scheduleCard :global(.schedule.schedule-list) td:nth-child(3),.scheduleCard :global(.schedule.schedule-list) td:nth-child(4){overflow-wrap:break-word;word-break:normal}
+
+/* Indicadores con el mismo lenguaje visual de estados de disponibilidad. */
+.metric{--metric-soft:#f4f5f7;border-color:var(--accent);background:linear-gradient(135deg,var(--surface) 0%,var(--metric-soft) 100%)}
+.metric_green{--metric-soft:#edfaf1}.metric_blue{--metric-soft:#edf4ff}.metric_violet{--metric-soft:#f5f0ff}.metric_amber{--metric-soft:#fff8e8}
+:global(html[data-theme="dark"]) .metric{background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 15%,var(--surface)) 0%,var(--surface) 72%)}

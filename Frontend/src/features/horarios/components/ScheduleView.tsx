@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import { obtenerSesion } from "@/features/auth/lib/sesion";
 import { listarAulas } from "@/features/aulas/api/aulasApi";
-import { importarHorarioExcel, iniciarSemestre, listarClases, listarPeriodos, registrarAsistencia, type ClaseApi, type Periodo, type ResultadoImportacionExcel } from "@/features/horarios/api/horariosApi";
+import { descargarFichasAsistenciaMes, importarHorarioExcel, iniciarSemestre, listarClases, listarPeriodos, registrarAsistencia, type ClaseApi, type Periodo, type ResultadoImportacionExcel } from "@/features/horarios/api/horariosApi";
+import { MonthlyPdfDialog } from "@/components/documents/MonthlyPdfDialog";
 import styles from "./ScheduleView.module.css";
 
 const days = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -69,17 +70,19 @@ export function ScheduleView() {
   const [roomFilter, setRoomFilter] = useState("");
   const [blockFilter, setBlockFilter] = useState("");
   const [savingAttendance, setSavingAttendance] = useState<string | null>(null);
+  const [showMonthlyPdf, setShowMonthlyPdf] = useState(false);
   const [isPeriodModalOpen, setIsPeriodModalOpen] = useState(false);
   const [importSummary, setImportSummary] = useState<ResultadoImportacionExcel | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const classesCache = useRef(new Map<string, ClaseApi[]>());
 
   useEffect(() => { void Promise.all([listarAulas(), listarPeriodos()]).then(([aulas, loadedPeriods]) => { const codes = aulas.map((aula) => aula.code); setRooms(codes); setRoomIds(Object.fromEntries(aulas.map((aula) => [aula.code, aula.id]))); setPeriodos(loadedPeriods); setPeriodoId((loadedPeriods.find((periodo) => periodo.activo) ?? loadedPeriods[0])?.id ?? ""); }).catch((cause) => setError(cause instanceof Error ? cause.message : "No fue posible cargar las aulas o períodos.")); }, []);
   const periodo = periodos.find((item) => item.id === periodoId);
-  const loadClasses = async () => { if (!periodoId) return; try { const data = await listarClases(periodoId, selectedDate); setRows(data); const mapped: ClassMap = {}; data.forEach((item) => { const day = days[item.diaSemana - 1]; const start = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" }).format(new Date(item.horaInicio)); const end = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" }).format(new Date(item.horaFin)); const code = item.aula?.codigo ?? Object.entries(roomIds).find(([, id]) => id === item.aulaId)?.[0]; if (day && code) mapped[slotKey(`${start} - ${end}`, day, code)] = { subject: item.asignatura.nombre, teacher: item.docente.nombre, tone: "info", room: code }; }); setClasses(mapped); } catch (cause) { setError(cause instanceof Error ? cause.message : "No fue posible cargar clases."); } };
+  const loadClasses = async (force = false) => { if (!periodoId) return; try { const cacheKey = `${periodoId}:${selectedDate}`; const cached = !force ? classesCache.current.get(cacheKey) : undefined; const data = cached ?? await listarClases(periodoId, selectedDate); if (!cached) classesCache.current.set(cacheKey, data); setRows(data); const mapped: ClassMap = {}; data.forEach((item) => { const day = days[item.diaSemana - 1]; const start = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" }).format(new Date(item.horaInicio)); const end = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" }).format(new Date(item.horaFin)); const code = item.aula?.codigo ?? Object.entries(roomIds).find(([, id]) => id === item.aulaId)?.[0]; if (day && code) mapped[slotKey(`${start} - ${end}`, day, code)] = { subject: item.asignatura.nombre, teacher: item.docente.nombre, tone: "info", room: code }; }); setClasses(mapped); } catch (cause) { setError(cause instanceof Error ? cause.message : "No fue posible cargar clases."); } };
   // La recarga depende del período y del catálogo de aulas; loadClasses se recrea por render.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { void loadClasses(); }, [periodoId, roomIds, selectedDate]);
+  useEffect(() => { void loadClasses(); const timer = window.setInterval(() => { void loadClasses(true); }, 30_000); return () => window.clearInterval(timer); }, [periodoId, roomIds, selectedDate]);
   const blocksForView = Array.from(new Set(rows.map(blockLabel))).sort((a, b) => blockMinutes(a) - blockMinutes(b));
   // La importación puede no contener clases en alguno de los bloques. El
   // selector debe conservar la jornada completa, especialmente 12:00-14:00,
@@ -89,15 +92,16 @@ export function ScheduleView() {
     .filter((item) => (!blockFilter || blockLabel(item) === blockFilter) && (!roomFilter || item.aula?.codigo === roomFilter) && (allRooms || !roomFilter || item.aula?.codigo === roomFilter) && (!search || `${item.aula?.codigo} ${item.grupo} ${item.asignatura?.nombre} ${item.docente?.nombre} ${item.proyectoCurricular?.nombre ?? ""}`.toLowerCase().includes(search.toLowerCase())))
     .sort((a, b) => (a.aula?.codigo ?? "").localeCompare(b.aula?.codigo ?? "", "es"));
   const maxWeeks = semesterWeeks(periodo?.fechaInicio, periodo?.fechaFin);
-  const guardarAsistencia = async (claseId: string, fecha: string, estado: "ASISTIO" | "AUSENTE") => { setSavingAttendance(claseId); setError(null); try { await registrarAsistencia(claseId, fecha, estado); await loadClasses(); } catch (cause) { setError(cause instanceof Error ? cause.message : "No fue posible registrar la asistencia."); } finally { setSavingAttendance(null); } };
+  const guardarAsistencia = async (claseId: string, fecha: string, estado: "ASISTIO" | "AUSENTE") => { setSavingAttendance(claseId); setError(null); try { await registrarAsistencia(claseId, fecha, estado); classesCache.current.delete(`${periodoId}:${fecha}`); await loadClasses(); } catch (cause) { setError(cause instanceof Error ? cause.message : "No fue posible registrar la asistencia."); } finally { setSavingAttendance(null); } };
+  const generarSigud = async (mes: string) => { const blob = await descargarFichasAsistenciaMes(mes); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `Fichas_Asistencia_SIGUD_${mes}.zip`; link.click(); URL.revokeObjectURL(url); const message = "Las fichas de asistencia del mes se generaron en un archivo ZIP."; setSuccess(message); window.setTimeout(() => setSuccess((current) => current === message ? null : current), 10_000); };
 
   return (
     <>
-      <section className="page-heading"><div><h1>Horarios académicos</h1><p>Consulta diaria de la programación por aula · {periodo ? `Período ${periodo.nombre}` : "Seleccione un período académico"}.</p></div><span className="live-status">{periodo ? (periodo.activo ? "Período activo" : "Período seleccionado") : "Sin período"}</span></section>
+      <section className="page-heading"><div><h1>Horarios académicos</h1><p>Consulta diaria de la programación por aula · {periodo ? `Período ${periodo.nombre}` : "Seleccione un período académico"}.</p></div><div className={styles.headingActions}><button type="button" className="button-secondary" onClick={() => setShowMonthlyPdf(true)}>Generar fichas PDF</button><span className="live-status">{periodo ? (periodo.activo ? "Período activo" : "Período seleccionado") : "Sin período"}</span></div></section>
       <section className="filters" aria-label="Filtros de horario">
         <label className="field">Período<select value={periodoId} onChange={(event) => setPeriodoId(event.target.value)}><option value="">{periodos.length ? "Seleccionar período" : "No hay períodos creados"}</option>{periodos.map((item) => <option key={item.id} value={item.id}>{item.nombre}{item.activo ? " · Activo" : ""}</option>)}</select></label>
         <label className="field">Fecha<input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} /></label><div className={styles.dateControls}><button type="button" className="button-secondary" onClick={() => setSelectedDate(moveDate(selectedDate, -1))}>← Anterior</button><button type="button" className="button-secondary" onClick={() => setSelectedDate(formatDate(new Date()))}>Hoy</button><button type="button" className="button-secondary" onClick={() => setSelectedDate(moveDate(selectedDate, 1))}>Siguiente →</button></div>
-        {isAdmin() && <><button className="button-secondary" type="button" onClick={() => setIsPeriodModalOpen(true)}>+ Iniciar semestre</button><label className="button-secondary"><input type="file" accept=".xlsx,.xls" hidden onChange={async (event) => { const archivo = event.target.files?.[0]; if (!archivo || !periodoId) return; setUploading(true); setError(null); setSuccess(null); try { const resultado = await importarHorarioExcel(periodoId, archivo, true); setImportSummary(resultado); setSuccess(`Carga completa: ${resultado.creados + resultado.actualizados} filas registradas.`); window.setTimeout(() => setSuccess(null), 15000); await loadClasses(); } catch (cause) { setError(cause instanceof Error ? cause.message : "No fue posible cargar el Excel."); } finally { setUploading(false); event.target.value = ""; } }} />{uploading ? "Cargando…" : "Importar Excel"}</label><button className="button-secondary" type="button" onClick={downloadScheduleTemplate}>Descargar plantilla Excel</button></>}
+        {isAdmin() && <><button className="button-secondary" type="button" onClick={() => setIsPeriodModalOpen(true)}>+ Iniciar semestre</button><label className="button-secondary"><input type="file" accept=".xlsx,.xls" hidden onChange={async (event) => { const archivo = event.target.files?.[0]; if (!archivo || !periodoId) return; setUploading(true); setError(null); setSuccess(null); try { const resultado = await importarHorarioExcel(periodoId, archivo, true); classesCache.current.clear(); setImportSummary(resultado); setSuccess(`Carga completa: ${resultado.creados + resultado.actualizados} filas registradas.`); window.setTimeout(() => setSuccess(null), 15000); await loadClasses(); } catch (cause) { setError(cause instanceof Error ? cause.message : "No fue posible cargar el Excel."); } finally { setUploading(false); event.target.value = ""; } }} />{uploading ? "Cargando…" : "Importar Excel"}</label><button className="button-secondary" type="button" onClick={downloadScheduleTemplate}>Descargar plantilla Excel</button></>}
       </section>
       {periodo && <section className={styles.weekRange} aria-label="Fecha seleccionada"><span>{days[(new Date(`${selectedDate}T12:00:00`).getDay() + 6) % 7]}</span><strong>{formatRangeDate(new Date(`${selectedDate}T12:00:00`))}</strong></section>}
       {success && <p className="auth-feedback auth-feedback-success" role="status">{success}</p>}
@@ -125,6 +129,7 @@ export function ScheduleView() {
           }}
         />
       )}
+      {showMonthlyPdf && <MonthlyPdfDialog title="Fichas de asistencia SIGUD" description="Se descargará un ZIP con los formatos diarios que tengan asistencia registrada en el mes." onClose={() => setShowMonthlyPdf(false)} onGenerate={generarSigud} />}
     </>
   );
 }

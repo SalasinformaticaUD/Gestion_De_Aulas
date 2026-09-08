@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { getApplication } from "@/features/auth/config/applications";
 import { guardarSesion } from "@/features/auth/lib/sesion";
 import { solicitarAulas, type RespuestaLoginCentral } from "@/features/monitores/api/clienteMonitores";
 import { CosmosLogo } from "@/components/brand/CosmosLogo";
+import { UniversityLogo } from "@/components/brand/UniversityLogo";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 export function LoginView() {
@@ -73,7 +73,8 @@ export function LoginView() {
       <ThemeToggle />
       <section className="auth-layout" aria-labelledby="login-title">
         <header className="auth-brand">
-          <CosmosLogo className="auth-cosmos-logo" priority />
+          <CosmosLogo className="auth-cosmos-logo auth-cosmos-logo-light" priority />
+          <CosmosLogo className="auth-cosmos-logo auth-cosmos-logo-dark" variant="light" priority />
         </header>
 
         <form className="login-card" onSubmit={submitLogin}>
@@ -115,14 +116,7 @@ export function LoginView() {
             <Link className="login-back" href="/">←&nbsp; Atrás — Selector de Aplicativo</Link>
           )}
 
-          <div className="login-institutional-logo">
-            <Image
-              alt="Universidad Distrital Francisco José de Caldas"
-              height={291}
-              src="/brand/universidad-distrital-login.png"
-              width={832}
-            />
-          </div>
+          <div className="login-institutional-logo"><UniversityLogo priority /></div>
         </form>
 
         {feedback === "success" && (

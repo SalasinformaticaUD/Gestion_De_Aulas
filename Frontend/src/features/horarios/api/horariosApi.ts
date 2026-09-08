@@ -1,5 +1,5 @@
 import { obtenerSesion } from "@/features/auth/lib/sesion";
-import { solicitarAulas } from "@/features/monitores/api/clienteMonitores";
+import { descargarAulas, solicitarAulas } from "@/features/monitores/api/clienteMonitores";
 
 export type Periodo = { id: string; nombre: string; activo: boolean; fechaInicio: string; fechaFin: string };
 export type ClaseApi = { id: string; aulaId: string; semana?: number; diaSemana: number; horaInicio: string; horaFin: string; grupo: string; modeloPc?: string | null; software?: string | null; hardware?: string | null; aula: { codigo: string }; asignatura: { nombre: string }; docente: { nombre: string }; proyectoCurricular?: { nombre: string } | null; asistencias?: Array<{ id: string; fecha: string; estado: "PENDIENTE" | "ASISTIO" | "AUSENTE" }> };
@@ -35,3 +35,5 @@ export async function registrarAsistencia(claseId: string, fecha: string, estado
   if (existente) return solicitarAulas(`/asistencia-docente/${existente.id}`, token(), { method: "PATCH", body: JSON.stringify({ estado }) });
   return solicitarAulas(`/asistencia-docente`, token(), { method: "POST", body: JSON.stringify({ claseId, fecha, estado }) });
 }
+
+export const descargarFichasAsistenciaMes = (mes: string) => descargarAulas(`/reportes/asistencia-docente/pdf/mes?mes=${encodeURIComponent(mes)}`, token());

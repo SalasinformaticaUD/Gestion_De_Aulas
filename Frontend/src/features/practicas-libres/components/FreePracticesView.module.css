@@ -61,6 +61,9 @@
 .lookupAction button:disabled { cursor:not-allowed; opacity:.55; }
 .responsibleRow { display:flex; align-items:center; gap:6px; padding:7px 9px; margin:0; border:1px solid var(--line); border-radius:6px; color:var(--ink); background:var(--surface-muted,#f8f9fb); font-size:13px; }
 .responsibleRow button { margin-left:auto; border:0; color:#b51e30; background:transparent; font-weight:750; }
+:global(html[data-theme="dark"]) .responsibleRow { border-color:#4a4d56; color:#f4f6f8; background:#2a2c32; }
+:global(html[data-theme="dark"]) .responsibleRow b { color:#ffffff; }
+:global(html[data-theme="dark"]) .responsibleRow button { color:#ff8d9a; }
 .addResponsibleButton { width:max-content; min-height:32px; margin-top:9px; padding:0 12px; border:0; border-radius:6px; color:#fff; background:var(--primary); font-size:13px; font-weight:800; box-shadow:0 2px 5px rgba(121,12,28,.22); }.addResponsibleButton:hover { filter:brightness(.93); }
 .finishDialog { width:min(500px,100%); overflow:hidden; border-radius:11px; background:var(--surface,#fff); box-shadow:0 24px 70px rgba(0,0,0,.35); }
 .finishDialog>header { padding:18px 20px; color:#fff; background:#18191c; }
@@ -72,3 +75,8 @@
 .finishBody footer { display:flex; justify-content:flex-end; gap:8px; }
 .finishBody footer button { min-height:37px; padding:0 13px; border-radius:7px; font-weight:750; }
 .dialog form > .inlineError { order:-1; margin:0; padding:10px 12px; border:1px solid #fecaca; border-radius:7px; color:#b42318; background:#fff1f1; font-size:13px; font-weight:750; }
+.headingActions { display:flex; flex-wrap:wrap; gap:10px; }
+.headingActions :global(.button-secondary) { border-color:#c7cbd3!important; color:#343841!important; background:#eef0f3!important; }
+.headingActions :global(.button-secondary:hover) { border-color:var(--primary)!important; color:var(--primary)!important; background:#fff!important; }
+:global(html[data-theme="dark"]) .headingActions :global(.button-secondary) { border-color:#50545e!important; color:#f1f3f5!important; background:#343841!important; }
+:global(html[data-theme="dark"]) .headingActions :global(.button-secondary:hover) { border-color:#ff7180!important; color:#ffb5be!important; background:#351f24!important; }

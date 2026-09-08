@@ -222,3 +222,10 @@
 :global(html[data-theme="dark"]) .weekRange strong {
   color: var(--ink);
 }
+.reportActions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:10px; }
+.headingActions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:10px; }
+.headingActions :global(.button-secondary) { min-height:35px; padding:0 13px; border-color:#c7cbd3!important; color:#343841!important; background:#eef0f3!important; }
+.headingActions :global(.button-secondary:hover) { border-color:var(--primary)!important; color:var(--primary)!important; background:#fff!important; }
+:global(html[data-theme="dark"]) .headingActions :global(.button-secondary) { border-color:#50545e!important; color:#f1f3f5!important; background:#343841!important; }
+:global(html[data-theme="dark"]) .headingActions :global(.button-secondary:hover) { border-color:#ff7180!important; color:#ffb5be!important; background:#351f24!important; }
+@media (max-width:680px) { .reportActions { align-items:flex-start; justify-content:flex-start; flex-direction:column; } }

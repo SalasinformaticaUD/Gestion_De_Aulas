@@ -261,5 +261,29 @@
 :global(html[data-theme="dark"]) .statusMetric_mantenimiento { border-color:#97484a; background:linear-gradient(135deg,#311d20 0%,#29191b 100%); }
 :global(html[data-theme="dark"]) .statusMetric_bloqueada { border-color:#6950a5; background:linear-gradient(135deg,#28203b 0%,#211b31 100%); }
 
+/* En oscuro, cada estado conserva su identidad visual y no una superficie neutra. */
+:global(html[data-theme="dark"]) .statusMetric_disponible { border-color:#2f8a57!important; background:linear-gradient(135deg,#173126 0%,#10261b 100%)!important; }
+:global(html[data-theme="dark"]) .statusMetric_ocupada { border-color:#3e6fba!important; background:linear-gradient(135deg,#172b46 0%,#11243a 100%)!important; }
+:global(html[data-theme="dark"]) .statusMetric_reservada { border-color:#a77b2c!important; background:linear-gradient(135deg,#382b15 0%,#2c210f 100%)!important; }
+:global(html[data-theme="dark"]) .statusMetric_mantenimiento { border-color:#a84b54!important; background:linear-gradient(135deg,#391c22 0%,#2e161b 100%)!important; }
+:global(html[data-theme="dark"]) .statusMetric_bloqueada { border-color:#765ab8!important; background:linear-gradient(135deg,#2d2144 0%,#241a38 100%)!important; }
+:global(html[data-theme="dark"]) .statusMetric_disponible>i { background:#58d787!important; box-shadow:0 0 0 6px #204933!important; }
+:global(html[data-theme="dark"]) .statusMetric_ocupada>i { background:#76a8ff!important; box-shadow:0 0 0 6px #203d66!important; }
+:global(html[data-theme="dark"]) .statusMetric_reservada>i { background:#f4ba54!important; box-shadow:0 0 0 6px #58431e!important; }
+:global(html[data-theme="dark"]) .statusMetric_mantenimiento>i { background:#fb8792!important; box-shadow:0 0 0 6px #5d2931!important; }
+:global(html[data-theme="dark"]) .statusMetric_bloqueada>i { background:#b69aff!important; box-shadow:0 0 0 6px #443467!important; }
+:global(html[data-theme="dark"]) .statusMetric_disponible span,:global(html[data-theme="dark"]) .statusMetric_disponible small { color:#a8e7bd!important; }
+:global(html[data-theme="dark"]) .statusMetric_ocupada span,:global(html[data-theme="dark"]) .statusMetric_ocupada small { color:#b4ceff!important; }
+:global(html[data-theme="dark"]) .statusMetric_reservada span,:global(html[data-theme="dark"]) .statusMetric_reservada small { color:#f0cc88!important; }
+:global(html[data-theme="dark"]) .statusMetric_mantenimiento span,:global(html[data-theme="dark"]) .statusMetric_mantenimiento small { color:#f4adb5!important; }
+:global(html[data-theme="dark"]) .statusMetric_bloqueada span,:global(html[data-theme="dark"]) .statusMetric_bloqueada small { color:#d0c0ff!important; }
+
+/* La barra de estado conserva el color aun si reglas globales normalizan el borde. */
+:global(html[data-theme="dark"]) .roomCard.border_disponible { border-top:4px solid #58d787!important; }
+:global(html[data-theme="dark"]) .roomCard.border_ocupada { border-top:4px solid #76a8ff!important; }
+:global(html[data-theme="dark"]) .roomCard.border_reservada { border-top:4px solid #f4ba54!important; }
+:global(html[data-theme="dark"]) .roomCard.border_mantenimiento { border-top:4px solid #fb8792!important; }
+:global(html[data-theme="dark"]) .roomCard.border_bloqueada { border-top:4px solid #b69aff!important; }
+
 /* Escala tipográfica alineada con Aulas y Audiovisuales */
 .viewTabs button { font-size:15.6px; }.control,.blockControl { font-size:13px; }.control input,.control select { font-size:15.6px; }.blockScroller button { font-size:14.3px; }.blockScroller button small { font-size:11.7px; }.readOnlyNote p { font-size:13px; }.readOnlyNote strong { font-size:14.3px; }.characteristics { font-size:13px; }.characteristics button { font-size:13px; }.suggestionToggle b { font-size:13px; }.suggestionToggle small { font-size:11.7px; }.resultsMeta { font-size:13px; }.resultsMeta strong { font-size:15.6px; }.floorGroup h2 { font-size:15.6px; }.floorGroup p { font-size:13px; }.roomIdentity h3 { font-size:18.2px; }.roomIdentity p { font-size:13px; }.stateBadge { font-size:13px; }.activity>span,.nextActivity>span,.software>span { font-size:11.7px; }.activity strong { font-size:15.6px; }.activity p,.nextActivity p { font-size:13px; }.nextActivity p b { font-size:13px; }.software i { font-size:11.7px; }.roomCard>footer button,.roomCard>footer a { font-size:14.3px; }.dailyCard h2,.timelineCard h2 { font-size:16.9px; }.dailyCard p,.dailyCard>header>span,.timelineCard p,.timelineCard>header>span { font-size:13px; }.dailyTable thead th { font-size:13px; }.dailyTable thead small { font-size:11.7px; }.dailyTable tbody th strong { font-size:14.3px; }.dailyTable tbody th small { font-size:11.7px; }.compactBadge { font-size:11.7px; }.historyFilters h2 { font-size:18.2px; }.historyFilters>p { font-size:14.3px; }.derivedNote p { font-size:13px; }.derivedNote strong { font-size:14.3px; }.timeline time { font-size:13px; }.timeline time small { font-size:11.7px; }.timeline article>div>span { font-size:11.7px; }.timeline article>div>strong { font-size:14.3px; }.timeline article>div>small { font-size:11.7px; }.timelineCard>footer { font-size:11.7px; }.dialog>header span { font-size:13px; }.dialogStatus p { font-size:14.3px; }.dialog dt { font-size:11.7px; }.dialog dd { font-size:14.3px; }.dialogBody section h3 { font-size:14.3px; }.sourceList span { font-size:11.7px; }.sourceList p { font-size:14.3px; }.noSources { font-size:13px; }.dialogNext time,.dialogNext strong { font-size:13px; }.dialogNext span { font-size:11.7px; }.calculationMeta { font-size:11.7px; }.dialog>footer button,.dialog>footer a { font-size:14.3px; }

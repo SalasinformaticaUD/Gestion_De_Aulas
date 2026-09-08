@@ -13,7 +13,8 @@ export default function ApplicationSelectorPage() {
       <section className="selector-panel" aria-labelledby="selector-title">
         <header className="selector-header">
           <UniversityLogo className="selector-logo" priority />
-          <CosmosLogo className="cosmos-logo" priority />
+          <CosmosLogo className="cosmos-logo selector-cosmos-logo-light" priority />
+          <CosmosLogo className="cosmos-logo selector-cosmos-logo-dark" variant="light" priority />
         </header>
 
 

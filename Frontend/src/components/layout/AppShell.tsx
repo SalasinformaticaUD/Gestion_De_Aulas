@@ -1,17 +1,36 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { followUpNavigation, operationNavigation } from "@/config/navigation";
 import { UniversityLogo } from "@/components/brand/UniversityLogo";
 import { applyTheme, defaultProfile, getInitials, loadProfile, loadTheme, profileEvent, type UserProfile } from "@/features/perfil/lib/profile";
-import { CosmosLogo } from "@/components/brand/CosmosLogo";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { ModuleSwitcher } from "@/components/layout/ModuleSwitcher";
 import { cerrarSesion, eventoSesion, obtenerSesion } from "@/features/auth/lib/sesion";
 
 type AppShellProps = { children: React.ReactNode };
+
+const moduleByRoute: Record<string, string> = {
+  "/gestion-aulas": "DASHBOARD",
+  "/horarios": "HORARIOS",
+  "/aulas": "AULAS",
+  "/disponibilidad": "DISPONIBILIDAD",
+  "/practicas-libres": "PRACTICAS_LIBRES",
+  "/prestamos-docentes": "PRESTAMOS_DOCENTES",
+  "/audiovisuales": "AUDIOVISUALES",
+  "/software": "SOFTWARE",
+  "/credenciales": "CREDENCIALES",
+  "/usuarios": "ADMINISTRACION",
+  "/estudiantes": "ESTUDIANTES",
+  "/docentes": "DOCENTES",
+  "/observaciones": "OBSERVACIONES",
+  "/limpieza": "LIMPIEZA",
+  "/tareas": "TAREAS",
+  "/multas": "MULTAS",
+};
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
@@ -20,6 +39,7 @@ export function AppShell({ children }: AppShellProps) {
   const [profileData, setProfileData] = useState<UserProfile>(defaultProfile);
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [isAdministrator, setIsAdministrator] = useState(false);
+  const [allowedModules, setAllowedModules] = useState<string[]>([]);
   const closeMenu = () => setIsMenuOpen(false);
   const toggleSidebar = () => {
     if (window.matchMedia("(max-width: 820px)").matches) {
@@ -43,12 +63,14 @@ export function AppShell({ children }: AppShellProps) {
   }, []);
 
   useEffect(() => {
-    const refreshAdministrator = () => setIsAdministrator(
-      obtenerSesion()?.usuario.roles.some((rol) => rol.trim().toUpperCase() === "ADMINISTRADOR") ?? false,
-    );
-    refreshAdministrator();
-    window.addEventListener(eventoSesion, refreshAdministrator);
-    return () => window.removeEventListener(eventoSesion, refreshAdministrator);
+    const refreshAccess = () => {
+      const session = obtenerSesion();
+      setIsAdministrator(session?.usuario.roles.some((rol) => rol.trim().toUpperCase() === "ADMINISTRADOR") ?? false);
+      setAllowedModules(session?.usuario.modulos.map((module) => module.toUpperCase()) ?? []);
+    };
+    refreshAccess();
+    window.addEventListener(eventoSesion, refreshAccess);
+    return () => window.removeEventListener(eventoSesion, refreshAccess);
   }, []);
 
   useEffect(() => {
@@ -70,17 +92,21 @@ export function AppShell({ children }: AppShellProps) {
       <span className="nav-icon" aria-hidden="true">•</span>{label}
     </Link>
   );
+  const canAccessRoute = (href: string) => {
+    const module = moduleByRoute[href];
+    return !module || allowedModules.includes(module);
+  };
 
   return (
     <div className={`app-shell ${isSidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       {isMenuOpen && <button className="menu-overlay" aria-label="Cerrar menú" onClick={closeMenu} />}
       <aside className={`sidebar ${isMenuOpen ? "is-open" : ""} ${isSidebarCollapsed ? "is-collapsed" : ""}`} aria-label="Navegación principal">
-        <div className="brand"><CosmosLogo className="sidebar-cosmos-logo" variant="light" priority /><span><small>Aulas de Software</small></span></div>
+        <Link href="/gestion-aulas" className="brand" aria-label="Ir al dashboard" onClick={closeMenu}><Image className="sidebar-aulas-logo" src="/brand/Logo_Cosmos_Aulas_de_Software.png" alt="COSMOS · Aulas de Software" width={1920} height={1080} priority /></Link>
         <nav className="nav">
           <p className="nav-label">Operación</p>
-          {operationNavigation.filter(({ href }) => href !== "/usuarios" || isAdministrator).map(({ href, label }) => navLink(href, label))}
+          {operationNavigation.filter(({ href }) => canAccessRoute(href) && (href !== "/usuarios" || isAdministrator)).map(({ href, label }) => navLink(href, label))}
           <p className="nav-label">Seguimiento</p>
-          {followUpNavigation.map(({ href, label }) => navLink(href, label))}
+          {followUpNavigation.filter(({ href }) => canAccessRoute(href)).map(({ href, label }) => navLink(href, label))}
         </nav>
         <footer className="sidebar-footer">
           <ModuleSwitcher current="aulas" onNavigate={closeMenu} />
