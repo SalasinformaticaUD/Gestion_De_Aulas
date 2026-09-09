@@ -87,6 +87,13 @@ describe('PanelOperativoService', () => {
     expect(resultado.horarioActual[0].proyecto).toBe('Sistemas');
     expect(resultado.horarioActual[0].estado).toBe('AUSENTE');
     expect(resultado.persistido).toBe(false);
+    expect(resultado.alertas).toContainEqual(
+      expect.objectContaining({
+        tipo: 'bloqueada',
+        aulaCodigo: 'LAB-03',
+        mensaje: 'Restricción vigente.',
+      }),
+    );
     expect(disponibilidad.findAll).toHaveBeenCalledWith({
       fecha: '2026-08-20',
       horaInicio: '08:00',

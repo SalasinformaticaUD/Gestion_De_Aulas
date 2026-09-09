@@ -9,6 +9,16 @@ export type UserProfile = {
   photo?: string;
 };
 
+export type AuthenticatedProfileUser = {
+  id: string;
+  nombreCompleto: string;
+  nombreUsuario: string;
+  correo: string;
+  cargo: string | null;
+  dependencia: { id: string; nombre: string } | null;
+  roles: string[];
+};
+
 export const defaultProfile: UserProfile = {
   fullName: "Usuario",
   email: "",
@@ -17,21 +27,43 @@ export const defaultProfile: UserProfile = {
   department: "",
 };
 
-// Se versiona la clave para no reutilizar el perfil de prueba guardado por versiones anteriores.
-const profileKey = "sgoas-user-profile-v2";
+// Las preferencias se guardan por usuario. La identidad siempre procede de
+// la sesión autenticada, nunca de localStorage.
+const profileKeyPrefix = "sgoas-user-profile-v3";
 const themeKey = "sgoas-theme";
 export const profileEvent = "sgoas-profile-updated";
 export const themeEvent = "sgoas-theme-updated";
 
-export function loadProfile(): UserProfile {
-  const value = window.localStorage.getItem(profileKey);
-  if (!value) return defaultProfile;
-  try { return { ...defaultProfile, ...JSON.parse(value) as Partial<UserProfile> }; }
-  catch { return defaultProfile; }
+function profileKey(userId: string) {
+  return `${profileKeyPrefix}:${userId}`;
 }
 
-export function saveProfile(profile: UserProfile) {
-  window.localStorage.setItem(profileKey, JSON.stringify(profile));
+export function loadProfile(userId?: string): UserProfile {
+  if (!userId) return defaultProfile;
+  const value = window.localStorage.getItem(profileKey(userId));
+  if (!value) return defaultProfile;
+  try {
+    const stored = JSON.parse(value) as Pick<UserProfile, "photo">;
+    return { ...defaultProfile, photo: typeof stored.photo === "string" ? stored.photo : undefined };
+  } catch {
+    return defaultProfile;
+  }
+}
+
+export function profileFromSession(user: AuthenticatedProfileUser, preferences = loadProfile(user.id)): UserProfile {
+  const role = user.cargo?.trim() || user.roles.filter(Boolean).join(", ") || "Sin cargo asignado";
+  return {
+    fullName: user.nombreCompleto,
+    email: user.correo,
+    username: user.nombreUsuario,
+    role,
+    department: user.dependencia?.nombre ?? "Sin dependencia",
+    photo: preferences.photo,
+  };
+}
+
+export function saveProfile(userId: string, profile: UserProfile) {
+  window.localStorage.setItem(profileKey(userId), JSON.stringify({ photo: profile.photo }));
   window.dispatchEvent(new CustomEvent(profileEvent));
 }
 

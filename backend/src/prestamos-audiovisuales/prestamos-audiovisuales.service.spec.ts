@@ -12,7 +12,7 @@ describe('PrestamosAudiovisualesService', () => {
     usuario: '00000000-0000-4000-8000-000000000005',
   };
   const tx = {
-    docente: { findUnique: jest.fn() },
+    docente: { findUnique: jest.fn(), findMany: jest.fn() },
     aula: { findUnique: jest.fn() },
     usuario: { findUnique: jest.fn() },
     equipoAudiovisual: {
@@ -110,6 +110,30 @@ describe('PrestamosAudiovisualesService', () => {
       ConflictException,
     );
     expect(tx.prestamoAudiovisual.create).not.toHaveBeenCalled();
+  });
+
+  it('busca docentes por nombre y limita el autocompletado', async () => {
+    tx.docente.findMany.mockResolvedValue([
+      { id: ids.docente, nombre: 'Laura Gómez', documento: '10203040' },
+    ]);
+
+    const resultado = await service.findDocentes('  lau  ');
+
+    expect(resultado).toHaveLength(1);
+    expect(tx.docente.findMany).toHaveBeenCalledWith({
+      where: {
+        nombre: { contains: 'lau', mode: 'insensitive' },
+        documento: { not: null },
+      },
+      select: { id: true, nombre: true, documento: true, correo: true },
+      orderBy: { nombre: 'asc' },
+      take: 8,
+    });
+  });
+
+  it('no consulta la base de datos si el nombre está vacío', async () => {
+    await expect(service.findDocentes('   ')).resolves.toEqual([]);
+    expect(tx.docente.findMany).not.toHaveBeenCalled();
   });
 
   it('bloquea un segundo préstamo activo para el mismo profesor', async () => {

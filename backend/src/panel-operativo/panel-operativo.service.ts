@@ -331,6 +331,7 @@ export class PanelOperativoService {
           tipo: aula.estadoCalculado,
           mensaje: aula.motivo,
           aulaId: aula.aula.id,
+          aulaCodigo: aula.aula.codigo,
           origenId: aula.bloqueActual?.id,
         });
       }

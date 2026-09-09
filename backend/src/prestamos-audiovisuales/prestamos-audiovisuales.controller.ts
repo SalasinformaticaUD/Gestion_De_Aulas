@@ -74,6 +74,12 @@ export class PrestamosAudiovisualesController {
     return this.prestamosAudiovisualesService.findResponsables();
   }
 
+  @Get('docentes')
+  @RequirePermissions('AUDIOVISUALES_CREAR')
+  findDocentes(@Query('nombre') nombre?: string) {
+    return this.prestamosAudiovisualesService.findDocentes(nombre);
+  }
+
   @Post('equipos/importar-excel')
   @RequirePermissions('AUDIOVISUALES_CREAR')
   @UseInterceptors(

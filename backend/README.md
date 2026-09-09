@@ -148,13 +148,12 @@ red interna; únicamente el frontend, la API de Aulas y el puerto local opcional
 PostgreSQL se publican en el host.
 
 ```bash
-cp .env.docker.example .env.docker
-# Reemplace todos los valores CHANGE_ME y configure la URL pública.
-npm run deploy:preflight -- --env-file .env.docker
-docker compose --env-file .env.docker config
-docker compose --env-file .env.docker build
-docker compose --env-file .env.docker up -d
-docker compose --env-file .env.docker ps
+# Complete las variables Docker del mismo .env y configure la URL pública.
+npm run deploy:preflight
+docker compose config
+docker compose build
+docker compose up -d
+docker compose ps
 ```
 
 En la primera instalación configure `RUN_DATABASE_SEED=true`. Una vez creado el
@@ -164,8 +163,14 @@ forma segura mediante el contenedor de inicialización `migration`, antes de ini
 la API. El backend rechaza el arranque si se conservan secretos `CHANGE_ME` o de
 menos de 32 caracteres.
 
+Los servicios usan una red Docker interna: el frontend alcanza a Aulas mediante
+`http://backend:3000` y el backend al renderizador mediante `http://pdf-renderer:8001`.
+No configure esas rutas con `localhost`, ya que dentro de un contenedor esa dirección
+no apunta a otro servicio. Por defecto PostgreSQL y la API se limitan a `127.0.0.1`;
+el frontend se publica en `FRONTEND_HOST_PORT` y es el punto de entrada de staging.
+
 El backend independiente de Gestión de Monitores no forma parte de este repositorio.
-`MONITORES_API_URL` debe apuntar a una instancia accesible desde los contenedores;
+`MONITORES_DOCKER_API_URL` debe apuntar a una instancia accesible desde los contenedores;
 para ejecutarlo en el mismo equipo se admite `http://host.docker.internal:8000`.
 
 Comprobaciones posteriores al inicio:
@@ -173,7 +178,7 @@ Comprobaciones posteriores al inicio:
 ```bash
 curl http://localhost:3000/health
 curl -I http://localhost:3001/
-docker compose --env-file .env.docker logs --tail=100 backend frontend pdf-renderer
+docker compose logs --tail=100 backend frontend pdf-renderer
 ```
 
 Para actualizar, construya las imágenes con una etiqueta nueva mediante `IMAGE_TAG`,

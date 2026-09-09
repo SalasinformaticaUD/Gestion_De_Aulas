@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { defaultProfile, getInitials, loadProfile, saveProfile, type UserProfile } from "@/features/perfil/lib/profile";
+import { defaultProfile, getInitials, loadProfile, profileFromSession, saveProfile, type UserProfile } from "@/features/perfil/lib/profile";
 import { obtenerSesion } from "@/features/auth/lib/sesion";
 import styles from "./ProfileView.module.css";
 
@@ -12,7 +12,12 @@ export function ProfileView() {
   const [session, setSession] = useState<ReturnType<typeof obtenerSesion>>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { const sesion=obtenerSesion(); setSession(sesion); const local=loadProfile();const usuario=sesion?.usuario;setProfile(usuario?{...local,fullName:usuario.nombreCompleto,email:usuario.correo,username:usuario.nombreUsuario,role:usuario.cargo??usuario.roles.join(", "),department:usuario.dependencia?.nombre??"Sin dependencia"}:local); }, []);
+  useEffect(() => {
+    const sesion = obtenerSesion();
+    setSession(sesion);
+    const usuario = sesion?.usuario;
+    setProfile(usuario ? profileFromSession(usuario, loadProfile(usuario.id)) : defaultProfile);
+  }, []);
   const updatePhoto = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -22,7 +27,7 @@ export function ProfileView() {
     reader.onload = () => {
       const next = { ...profile, photo: String(reader.result) };
       setProfile(next);
-      saveProfile(next);
+      if (session?.usuario.id) saveProfile(session.usuario.id, next);
       setPhotoError(null);
     };
     reader.readAsDataURL(file);
@@ -31,7 +36,7 @@ export function ProfileView() {
   const removePhoto = () => {
     const { photo: _photo, ...withoutPhoto } = profile;
     setProfile(withoutPhoto);
-    saveProfile(withoutPhoto);
+    if (session?.usuario.id) saveProfile(session.usuario.id, withoutPhoto);
     setPhotoError(null);
   };
 

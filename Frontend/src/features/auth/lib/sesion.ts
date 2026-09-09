@@ -31,8 +31,6 @@ export function obtenerSesion(): SesionAplicacion | null {
     let aplicacionesAutorizadas = Array.isArray(sesion.aplicacionesAutorizadas)
       ? sesion.aplicacionesAutorizadas.filter((app): app is ApplicationKey => app === "aulas" || app === "monitores")
       : [sesion.aplicacion];
-    const esMonitor = sesion.usuario.roles.some((rol) => rol.trim().toUpperCase() === "MONITOR");
-    if (esMonitor) aplicacionesAutorizadas = aplicacionesAutorizadas.filter((app) => app !== "aulas");
     return { ...sesion, aplicacionesAutorizadas };
   } catch {
     window.sessionStorage.removeItem(claveAlmacenamiento);

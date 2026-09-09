@@ -147,6 +147,15 @@ html[data-theme="dark"] { --ink:#f1f3f5; --muted:#aab0ba; --line:#383b43; --surf
 .teacher-result { align-self:end; min-height:62px; display:grid; align-content:center; gap:3px; padding:8px 11px; border:1px solid var(--line); border-radius:7px; background:#f8f9fb; }
 .teacher-result small { color:var(--muted); font-size:11.7px; font-weight:750; text-transform:uppercase; }
 .teacher-result.is-found { border-color:#86d7a7; color:#087936; background:#effcf4; }
+.teacher-result span { color:var(--muted); font-size:12px; }
+.teacher-search { position:relative; }
+.teacher-options { position:absolute; z-index:8; top:calc(100% + 4px); left:0; right:0; max-height:230px; overflow-y:auto; padding:5px; border:1px solid var(--line); border-radius:7px; background:var(--surface,#fff); box-shadow:0 12px 30px rgba(0,0,0,.18); }
+.teacher-options button { width:100%; display:grid; gap:3px; padding:9px 10px; border:0; border-radius:5px; color:var(--ink); background:transparent; cursor:pointer; text-align:left; }
+.teacher-options button:hover,.teacher-options button:focus-visible { outline:0; background:#fff1f3; }
+.teacher-options button strong { font-size:13.5px; }
+.teacher-options button small { overflow:hidden; color:var(--muted); font-size:11.5px; text-overflow:ellipsis; white-space:nowrap; }
+.teacher-options p { margin:0; padding:10px; color:var(--muted); font-size:12.5px; }
+.teacher-options p.is-error { color:#b42318; }
 .option-toggle { display:flex; align-items:flex-start; gap:9px; padding:11px; border:1px solid var(--line); border-radius:7px; cursor:pointer; }
 .option-toggle input,.accessory-picker input,.return-complete input { margin-top:3px; accent-color:var(--primary); }
 .option-toggle span { display:grid; gap:3px; }
@@ -1202,6 +1211,9 @@ html[data-theme="dark"] .audiovisual-dialog .accessory-picker > div > label {
   background:var(--surface-soft);
   border-color:var(--line);
 }
+html[data-theme="dark"] .audiovisual-dialog .teacher-options { background:#202329; border-color:var(--line); }
+html[data-theme="dark"] .audiovisual-dialog .teacher-options button:hover,
+html[data-theme="dark"] .audiovisual-dialog .teacher-options button:focus-visible { background:#35252a; }
 
 /* El CTA del préstamo no debe heredar la superficie neutra del diálogo oscuro. */
 html[data-theme="dark"] .audiovisual-dialog footer .button-primary {
@@ -1263,3 +1275,20 @@ html[data-theme="dark"] .usuarios-actions-secondary:hover {
     height: 58px;
   }
 }
+
+/* Aviso y redirección temporal hacia el aplicativo anterior de Monitores. */
+.application-card-maintenance { border-color:#e8c982; }
+.application-card-maintenance:hover { border-color:#bd8513; }
+.application-action-maintenance { color:#9a6500; }
+.maintenance-page { position:relative; }
+.maintenance-card { width:min(470px,100%); padding:40px 36px; border:1px solid #e3e6eb; border-radius:14px; color:#273142; background:#fff; box-shadow:0 10px 26px rgba(18,24,40,.07); text-align:center; }
+.maintenance-icon { display:grid; width:58px; height:58px; place-items:center; margin:0 auto 18px; border-radius:50%; color:#9a6500; background:#fff5dc; font-size:32px; }
+.maintenance-label { margin:0; color:#9a6500; font-size:13px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.maintenance-card h1 { margin:10px 0 12px; font-size:27px; line-height:1.18; }
+.maintenance-card>p:not(.maintenance-label) { margin:0; color:#667085; font-size:16px; line-height:1.5; }
+.maintenance-action { display:flex; align-items:center; justify-content:center; margin-top:26px; text-decoration:none; }
+.maintenance-card small { display:block; margin-top:14px; color:#697386; font-size:13px; }
+html[data-theme="dark"] .maintenance-card { color:var(--ink); background:var(--surface); border-color:var(--line); }
+html[data-theme="dark"] .maintenance-card>p:not(.maintenance-label),html[data-theme="dark"] .maintenance-card small { color:var(--muted); }
+html[data-theme="dark"] .maintenance-icon { color:#edc16d; background:#352a18; }
+html[data-theme="dark"] .maintenance-label,html[data-theme="dark"] .application-action-maintenance { color:#edc16d; }

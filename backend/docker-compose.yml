@@ -16,6 +16,8 @@ services:
       timeout: 5s
       retries: 20
       start_period: 10s
+    networks:
+      - aulas-internal
 
   pdf-renderer:
     image: ${COMPOSE_PROJECT_NAME:-aulas}-pdf-renderer:${IMAGE_TAG:-latest}
@@ -34,6 +36,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+    networks:
+      - aulas-internal
 
   migrate:
     image: ${COMPOSE_PROJECT_NAME:-aulas}-migration:${IMAGE_TAG:-latest}
@@ -50,6 +54,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - aulas-internal
 
   backend:
     image: ${COMPOSE_PROJECT_NAME:-aulas}-backend:${IMAGE_TAG:-latest}
@@ -58,7 +64,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "${BACKEND_HOST_PORT:-3000}:3000"
+      - "${BACKEND_BIND_ADDRESS:-127.0.0.1}:${BACKEND_HOST_PORT:-3000}:3000"
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -68,7 +74,7 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
       AUTH_REQUIRED: ${AUTH_REQUIRED:-true}
       PERMISSIONS_MODE: ${PERMISSIONS_MODE:-strict}
-      MONITORES_API_URL: ${MONITORES_API_URL:-http://host.docker.internal:8000}
+      MONITORES_API_URL: ${MONITORES_DOCKER_API_URL:-http://host.docker.internal:8000}
       MONITORES_API_TIMEOUT_MS: ${MONITORES_API_TIMEOUT_MS:-5000}
       MONITORES_SERVICE_TOKEN: ${MONITORES_SERVICE_TOKEN:?Defina MONITORES_SERVICE_TOKEN en el archivo de entorno}
       CREDENTIALS_ENCRYPTION_KEY: ${CREDENTIALS_ENCRYPTION_KEY:?Defina CREDENTIALS_ENCRYPTION_KEY en el archivo de entorno}
@@ -89,6 +95,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 40s
+    networks:
+      - aulas-internal
 
   frontend:
     image: ${COMPOSE_PROJECT_NAME:-aulas}-frontend:${IMAGE_TAG:-latest}
@@ -96,11 +104,13 @@ services:
       context: ../Frontend
       dockerfile: Dockerfile
       args:
-        AULAS_API_URL: http://backend:3000
-        MONITORES_API_URL: ${MONITORES_API_URL:-http://host.docker.internal:8000}
+        # Los rewrites de Next se ejecutan dentro de este contenedor, por lo
+        # que deben usar el nombre DNS interno del servicio y no localhost.
+        AULAS_API_URL: ${AULAS_API_INTERNAL_URL:-http://backend:3000}
+        MONITORES_API_URL: ${MONITORES_DOCKER_API_URL:-http://host.docker.internal:8000}
     restart: unless-stopped
     ports:
-      - "${FRONTEND_HOST_PORT:-3001}:3000"
+      - "${FRONTEND_BIND_ADDRESS:-0.0.0.0}:${FRONTEND_HOST_PORT:-3001}:3000"
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -116,6 +126,13 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    networks:
+      - aulas-internal
 
 volumes:
   reportes_postgres_data:
+
+networks:
+  aulas-internal:
+    name: ${COMPOSE_PROJECT_NAME:-aulas}_internal
+    driver: bridge

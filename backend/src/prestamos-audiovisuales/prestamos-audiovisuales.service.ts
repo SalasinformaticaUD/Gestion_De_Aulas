@@ -148,6 +148,20 @@ export class PrestamosAudiovisualesService {
     };
   }
 
+  findDocentes(nombre?: string) {
+    const query = nombre?.trim();
+    if (!query) return Promise.resolve([]);
+    return this.prisma.docente.findMany({
+      where: {
+        nombre: { contains: query, mode: 'insensitive' },
+        documento: { not: null },
+      },
+      select: { id: true, nombre: true, documento: true, correo: true },
+      orderBy: { nombre: 'asc' },
+      take: 8,
+    });
+  }
+
   findResponsables() {
     return this.prisma.usuario.findMany({
       where: { estado: 'ACTIVA' },

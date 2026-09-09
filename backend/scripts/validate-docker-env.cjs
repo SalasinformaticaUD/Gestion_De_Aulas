@@ -3,7 +3,7 @@ const path = require('node:path');
 const dotenv = require('dotenv');
 
 const argumentIndex = process.argv.indexOf('--env-file');
-const envFile = argumentIndex >= 0 ? process.argv[argumentIndex + 1] : '.env.docker';
+const envFile = argumentIndex >= 0 ? process.argv[argumentIndex + 1] : '.env';
 const resolvedFile = path.resolve(process.cwd(), envFile);
 
 if (!envFile || !fs.existsSync(resolvedFile)) {
@@ -18,7 +18,7 @@ const required = [
   'MONITORES_SERVICE_TOKEN',
   'CREDENTIALS_ENCRYPTION_KEY',
   'FRONTEND_PUBLIC_URL',
-  'MONITORES_API_URL',
+  'MONITORES_DOCKER_API_URL',
 ];
 const secureSecrets = [
   'JWT_SECRET',
@@ -48,7 +48,7 @@ if (values.RUN_DATABASE_SEED === 'true') {
   }
 }
 
-for (const name of ['FRONTEND_PUBLIC_URL', 'MONITORES_API_URL']) {
+for (const name of ['FRONTEND_PUBLIC_URL', 'MONITORES_DOCKER_API_URL']) {
   const value = values[name]?.trim();
   if (!value || value.toUpperCase().includes('CHANGE_ME')) continue;
   try {

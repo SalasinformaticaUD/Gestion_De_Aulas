@@ -28,27 +28,36 @@ Ejecute `npm test -- --runInBand`, `npm run test:e2e` y
 
 ## Instalación completa con contenedores
 
-Desde la carpeta `backend`, copie `.env.docker.example` como `.env.docker`, cambie
-todos los secretos y ejecute:
+Desde la carpeta `backend`, complete en el mismo archivo `.env` las variables de
+Docker Compose (`POSTGRES_PASSWORD`, `FRONTEND_PUBLIC_URL`,
+`MONITORES_DOCKER_API_URL` y los secretos) y ejecute:
 
 ```bash
-npm run deploy:preflight -- --env-file .env.docker
-docker compose --env-file .env.docker config
-docker compose --env-file .env.docker build
-docker compose --env-file .env.docker up -d
-docker compose --env-file .env.docker ps
+npm run deploy:preflight
+docker compose config
+docker compose build
+docker compose up -d
+docker compose ps
 ```
 
 El Compose construye imágenes independientes para `backend`, `frontend` y
 `pdf-renderer`, además de la imagen de inicialización `migration`; PostgreSQL utiliza
-la imagen oficial 16 Alpine. Los servicios tienen healthchecks y dependencias
-condicionadas por salud, por lo que el frontend espera a la API, y la API espera a
-PostgreSQL, las migraciones y el renderizador.
+la imagen oficial 16 Alpine. Los servicios comparten la red interna
+`aulas_internal`, donde el frontend resuelve la API como `backend` y la API resuelve
+el renderizador como `pdf-renderer`. Los healthchecks y dependencias condicionadas
+por salud hacen que el frontend espere a la API, y la API a PostgreSQL, las
+migraciones y el renderizador.
+
+Por defecto, la API y PostgreSQL se publican solo en `127.0.0.1`; el frontend se
+publica en todas las interfaces por el puerto `FRONTEND_HOST_PORT`. Para exponerlos
+en una red de staging, ajuste explícitamente `BACKEND_BIND_ADDRESS` o
+`FRONTEND_BIND_ADDRESS` en `.env`. `AULAS_API_INTERNAL_URL` debe conservar
+`http://backend:3000`, porque es la URL que emplea el proxy interno de Next.js.
 
 Use `RUN_DATABASE_SEED=true` únicamente durante la primera instalación. Luego
 cámbielo a `false`: el seed actualiza la contraseña de `admin`, mientras que las
 migraciones (`prisma migrate deploy`) deben continuar en cada arranque.
 
 La API de Gestión de Monitores pertenece a otro repositorio y no puede construirse
-desde este Compose. Configure `MONITORES_API_URL` con una dirección alcanzable desde
-Docker. `host.docker.internal` sirve para una instancia que corre en el mismo host.
+desde este Compose. Configure `MONITORES_DOCKER_API_URL` con una dirección alcanzable
+desde Docker. `host.docker.internal` sirve para una instancia que corre en el mismo host.
