@@ -37,6 +37,10 @@ const motivosPredeterminados = [
   'Otro (Observaciones)',
 ] as const;
 
+const etiquetaInactivo = '(INACTIVO)';
+const sinEtiquetaInactivo = (nombre: string) =>
+  nombre.replace(/^\s*\(INACTIVO\)\s*/i, '').trim();
+
 @Injectable()
 export class MultasService {
   constructor(
@@ -367,7 +371,6 @@ export class MultasService {
       );
     const encabezados = Object.keys(conDatos[0]).map(normalizar);
     const requeridos = [
-      'MULTA',
       'ESTUDIANTE',
       'MOTIVO',
       'FECHA',
@@ -388,9 +391,11 @@ export class MultasService {
     for (const [indice, fila] of conDatos.entries()) {
       try {
         const estudianteTexto = valor(fila, 'ESTUDIANTE');
-        const codigo = estudianteTexto.match(
-          /^\s*(\d{3,50})(?:\s*-|\s|$)/,
-        )?.[1];
+        const coincidenciaEstudiante = estudianteTexto.match(
+          /^\s*(\d{3,50})(?:\s*-\s*|\s+)(.+?)\s*$/,
+        );
+        const codigo = coincidenciaEstudiante?.[1];
+        const nombreEstudiante = coincidenciaEstudiante?.[2];
         const motivoNombre = valor(fila, 'MOTIVO');
         const fechaTexto = valor(fila, 'FECHA');
         const descripcion = valor(fila, 'DESCRIPCION');
@@ -398,7 +403,7 @@ export class MultasService {
         const estadoTexto = normalizar(valor(fila, 'ESTADO'));
         if (!codigo)
           throw new BadRequestException(
-            'Estudiante debe iniciar con su código numérico, por ejemplo: 20261001 - NOMBRE.',
+            'Estudiante debe tener código y nombre, por ejemplo: 20261001 - NOMBRE.',
           );
         if (!motivoNombre)
           throw new BadRequestException('Motivo es obligatorio.');
@@ -416,14 +421,19 @@ export class MultasService {
           throw new BadRequestException(
             'Estado debe ser ACTIVA, CUMPLIDA o ANULADA.',
           );
-        const estudiante = await this.prisma.estudiante.findUnique({
+        let estudiante = await this.prisma.estudiante.findUnique({
           where: { codigo },
           select: { id: true },
         });
-        if (!estudiante)
-          throw new NotFoundException(
-            `No existe un estudiante con código ${codigo}.`,
-          );
+        if (!estudiante) {
+          estudiante = await this.prisma.estudiante.create({
+            data: {
+              codigo,
+              nombre: `${etiquetaInactivo} ${sinEtiquetaInactivo(nombreEstudiante!)}`,
+            },
+            select: { id: true },
+          });
+        }
         const motivo = await this.prisma.motivoMulta.upsert({
           where: { nombre: motivoNombre },
           create: { nombre: motivoNombre },

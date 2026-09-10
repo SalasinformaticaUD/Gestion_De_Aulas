@@ -74,4 +74,94 @@ describe('MultasService', () => {
       ],
     });
   });
+
+  it('carga multas sin exigir una columna Multa que no se procesa', async () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.json_to_sheet([
+        {
+          Estudiante: '20261001 - ESTUDIANTE DE PRUEBA',
+          Motivo: 'No entregó el aula',
+          Fecha: '2026-09-09',
+          Descripción: 'No realizó la devolución en el horario acordado.',
+          'Multa sugerida': 'Devolver los elementos pendientes.',
+          Estado: 'ACTIVA',
+        },
+      ]),
+      'Multas',
+    );
+    const prisma = {
+      estudiante: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'estudiante-1' }),
+      },
+      motivoMulta: {
+        upsert: jest.fn().mockResolvedValue({ id: 'motivo-1' }),
+      },
+      multa: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'multa-1' }),
+      },
+    };
+    const service = new MultasService(prisma as never);
+
+    await expect(
+      service.cargarExcel({
+        buffer: XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' }),
+        originalname: 'multas.xlsx',
+      }),
+    ).resolves.toEqual({
+      procesadas: 1,
+      creadas: 1,
+      actualizadas: 0,
+      errores: [],
+    });
+    expect(prisma.multa.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          multaSugerida: 'Devolver los elementos pendientes.',
+        }),
+      }),
+    );
+  });
+
+  it('conserva una multa histórica creando como inactivo al estudiante ausente', async () => {
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(
+      workbook,
+      XLSX.utils.json_to_sheet([
+        {
+          Estudiante: '2023999999 - ESTUDIANTE HISTÓRICO',
+          Motivo: 'No entregó el aula',
+          Fecha: '2026-09-10',
+          Descripción: 'Registro histórico importado.',
+          Estado: 'ANULADA',
+        },
+      ]),
+      'Multas',
+    );
+    const prisma = {
+      estudiante: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'estudiante-inactivo' }),
+      },
+      motivoMulta: { upsert: jest.fn().mockResolvedValue({ id: 'motivo-1' }) },
+      multa: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'multa-1' }),
+      },
+    };
+    const service = new MultasService(prisma as never);
+
+    await expect(
+      service.cargarExcel({
+        buffer: XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' }),
+        originalname: 'multas-historicas.xlsx',
+      }),
+    ).resolves.toEqual({ procesadas: 1, creadas: 1, actualizadas: 0, errores: [] });
+    expect(prisma.estudiante.create).toHaveBeenCalledWith({
+      data: { codigo: '2023999999', nombre: '(INACTIVO) ESTUDIANTE HISTÓRICO' },
+      select: { id: true },
+    });
+  });
 });
