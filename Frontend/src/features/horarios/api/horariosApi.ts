@@ -30,10 +30,10 @@ export async function importarHorarioExcel(periodoId: string, archivo: File, ree
 }
 
 export async function registrarAsistencia(claseId: string, fecha: string, estado: "ASISTIO" | "AUSENTE") {
-  const existentes = await solicitarAulas<Array<{ id: string; fecha: string }>>(`/asistencia-docente/clase/${claseId}`, token());
-  const existente = existentes.find((item) => item.fecha.slice(0, 10) === fecha);
-  if (existente) return solicitarAulas(`/asistencia-docente/${existente.id}`, token(), { method: "PATCH", body: JSON.stringify({ estado }) });
-  return solicitarAulas(`/asistencia-docente`, token(), { method: "POST", body: JSON.stringify({ claseId, fecha, estado }) });
+  return solicitarAulas(`/asistencia-docente/registrar`, token(), {
+    method: "PUT",
+    body: JSON.stringify({ claseId, fecha, estado }),
+  });
 }
 
 export const descargarFichasAsistenciaMes = (mes: string) => descargarAulas(`/reportes/asistencia-docente/pdf/mes?mes=${encodeURIComponent(mes)}`, token());

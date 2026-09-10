@@ -49,7 +49,16 @@ export function DashboardView() {
     .filter((alerta) => !filtroNotificaciones || alerta.severidad === filtroNotificaciones), [filtroNotificaciones, resumen]);
   const guardarAsistencia = async (claseId: string, estado: "ASISTIO" | "AUSENTE") => {
     setGuardandoAsistencia(claseId); setError("");
-    try { await registrarAsistencia(claseId, resumen?.fecha ?? fechaBogota(), estado); setVersion((actual) => actual + 1); }
+    try {
+      await registrarAsistencia(claseId, resumen?.fecha ?? fechaBogota(), estado);
+      setResumen((actual) => actual ? {
+        ...actual,
+        horarioActual: actual.horarioActual.map((item) => item.id === claseId
+          ? { ...item, estado: estado === "ASISTIO" ? "EN_CLASE" : "AUSENTE" }
+          : item),
+      } : actual);
+      setVersion((actual) => actual + 1);
+    }
     catch (reason) { setError(reason instanceof Error ? reason.message : "No fue posible registrar la asistencia."); }
     finally { setGuardandoAsistencia(null); }
   };
