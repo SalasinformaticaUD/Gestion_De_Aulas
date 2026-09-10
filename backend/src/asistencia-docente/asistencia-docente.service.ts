@@ -146,6 +146,39 @@ export class AsistenciaDocenteService {
     return clase;
   }
 
+  async registrar(dto: CreateAsistenciaDocenteDto, registradoPorId: string) {
+    const fecha = this.parseDate(dto.fecha);
+    const clase = await this.ensureClaseExists(dto.claseId);
+    await this.ensureUsuarioExists(registradoPorId);
+    this.ensureAttendanceWindow(clase, fecha);
+
+    const estado = dto.estado ?? EstadoAsistencia.PENDIENTE;
+    const registradaEn = estado === EstadoAsistencia.PENDIENTE ? null : new Date();
+
+    return this.prisma.asistenciaDocente.upsert({
+      where: { claseId_fecha: { claseId: dto.claseId, fecha } },
+      update: {
+        estado,
+        registradaEn,
+        registradoPorId,
+        ...(dto.observacion !== undefined && {
+          observacion: dto.observacion.trim(),
+        }),
+      },
+      create: {
+        claseId: dto.claseId,
+        fecha,
+        estado,
+        registradaEn,
+        registradoPorId,
+        ...(dto.observacion !== undefined && {
+          observacion: dto.observacion.trim(),
+        }),
+      },
+      select: { id: true, estado: true },
+    });
+  }
+
   private ensureAttendanceWindow(clase: { diaSemana: number; horaInicio: Date; periodo: { fechaInicio: Date; fechaFin: Date } }, fecha: Date): void {
     // La relación siempre está presente en producción; esta tolerancia conserva
     // compatibilidad con integraciones antiguas que solo devuelven el id.

@@ -3,7 +3,7 @@
 **FECHA:** 10/09/2026  
 AUTORES: 
 Ivan Felipe Prado Blanco 
-TURNO: 8:00 pa. m. - 10:00 a. m.
+TURNO: 8:00 pa. m. - 10:00 a   . m.
 
 ## OBJETIVO
 

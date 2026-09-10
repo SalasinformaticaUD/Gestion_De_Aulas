@@ -90,3 +90,4 @@ Continuar el endurecimiento funcional de la plataforma después de las pruebas D
 ## ESTADO ACTUAL
 
 La plataforma continúa integrada y operativa en sus flujos administrativos, de préstamos, tareas y multas. Se mejoró la coherencia entre permisos del frontend y backend, la consulta de docentes y el manejo de plantillas de importación. El principal riesgo pendiente para la migración es la correspondencia de códigos históricos de multas contra la base vigente de estudiantes; debe resolverse mediante conciliación controlada, no mediante eliminación de datos.
+<>

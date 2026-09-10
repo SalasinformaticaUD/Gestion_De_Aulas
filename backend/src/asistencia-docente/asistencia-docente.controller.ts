@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  Put,
 } from '@nestjs/common';
 import { AsistenciaDocenteService } from './asistencia-docente.service';
 import { MODULOS } from '../auth/auth.constants';
@@ -18,7 +19,9 @@ import { CreateAsistenciaDocenteDto } from './dto/create-asistencia-docente.dto'
 import { UpdateAsistenciaDocenteDto } from './dto/update-asistencia-docente.dto';
 import { FindAsistenciasDto } from './dto/find-asistencias.dto';
 
-@RequireModule(MODULOS.ASISTENCIA_DOCENTE)
+// La asistencia docente se gestiona desde Horarios y no es un módulo
+// independiente asignable a los usuarios.
+@RequireModule(MODULOS.HORARIOS)
 @Controller('asistencia-docente')
 export class AsistenciaDocenteController {
   constructor(
@@ -55,5 +58,17 @@ export class AsistenciaDocenteController {
     @CurrentUser() usuario: UsuarioAutenticado,
   ) {
     return this.asistenciaDocenteService.update(id, updateAsistenciaDocenteDto, usuario.id);
+  }
+
+  @Put('registrar')
+  @RequireAuth()
+  registrar(
+    @Body() createAsistenciaDocenteDto: CreateAsistenciaDocenteDto,
+    @CurrentUser() usuario: UsuarioAutenticado,
+  ) {
+    return this.asistenciaDocenteService.registrar(
+      createAsistenciaDocenteDto,
+      usuario.id,
+    );
   }
 }

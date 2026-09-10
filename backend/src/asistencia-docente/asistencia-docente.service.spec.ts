@@ -7,6 +7,7 @@ type PrismaMock = {
   asistenciaDocente: {
     findUnique: jest.Mock;
     create: jest.Mock;
+    upsert: jest.Mock;
     findMany: jest.Mock;
     update: jest.Mock;
   };
@@ -26,6 +27,7 @@ describe('AsistenciaDocenteService', () => {
       asistenciaDocente: {
         findUnique: jest.fn().mockResolvedValue(null),
         create: jest.fn(),
+        upsert: jest.fn(),
         findMany: jest.fn(),
         update: jest.fn(),
       },
@@ -53,6 +55,26 @@ describe('AsistenciaDocenteService', () => {
           registradaEn: null,
           registradoPorId: usuarioId,
         },
+      }),
+    );
+  });
+
+  it('registra o actualiza la asistencia en una sola operación', async () => {
+    prisma.asistenciaDocente.upsert.mockResolvedValue({
+      id: asistenciaId,
+      estado: EstadoAsistencia.ASISTIO,
+    });
+
+    await service.registrar(
+      { claseId, fecha: '2026-08-20', estado: EstadoAsistencia.ASISTIO },
+      usuarioId,
+    );
+
+    expect(prisma.asistenciaDocente.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { claseId_fecha: { claseId, fecha: new Date('2026-08-20T00:00:00.000Z') } },
+        update: expect.objectContaining({ estado: EstadoAsistencia.ASISTIO, registradoPorId: usuarioId }),
+        create: expect.objectContaining({ estado: EstadoAsistencia.ASISTIO, registradoPorId: usuarioId }),
       }),
     );
   });
