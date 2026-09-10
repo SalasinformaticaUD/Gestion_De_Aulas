@@ -48,9 +48,9 @@ se comunican mediante controladores REST.
   texto plano.
 - Los registros históricos o auditables no deben eliminarse físicamente cuando la
   operación comprometa la trazabilidad.
-- Los controladores del Core declaran su módulo mediante `RequireModule`. El guard
-  permite operar inicialmente con `PERMISSIONS_MODE=permissive`; para aplicar los
-  permisos almacenados en Prisma debe configurarse `PERMISSIONS_MODE=strict`.
+- Los controladores del Core declaran su módulo mediante `RequireModule`. Por
+  defecto, `PERMISSIONS_MODE=strict` aplica los permisos almacenados en Prisma.
+  `permissive` solo debe usarse temporalmente durante una integración controlada.
 - `AUTH_REQUIRED=false` mantiene compatibilidad durante la integración. En producción,
   la autenticación es obligatoria por defecto y `AUTH_TOKEN_SECRET` es requerido.
 

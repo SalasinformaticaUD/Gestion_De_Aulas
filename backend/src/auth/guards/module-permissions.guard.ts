@@ -35,7 +35,7 @@ export class ModulePermissionsGuard implements CanActivate {
 
   private isPermissiveMode(): boolean {
     return (
-      (process.env.PERMISSIONS_MODE ?? 'permissive').toLowerCase() !== 'strict'
+      (process.env.PERMISSIONS_MODE ?? 'strict').toLowerCase() === 'permissive'
     );
   }
 }

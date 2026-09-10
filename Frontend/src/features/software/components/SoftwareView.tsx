@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { listarAulas } from "@/features/aulas/api/aulasApi";
-import { actualizarSoftware, asignarSoftware as guardarAsignacion, cargarSoftwarePaginado, crearSoftware, eliminarSoftware, importarSoftwareExcel, retirarSoftware, type ResultadoImportacionSoftwareExcel } from "@/features/software/api/softwareApi";
+import { actualizarSoftware, asignarSoftware as guardarAsignacion, cargarSoftware, cargarSoftwarePaginado, crearSoftware, eliminarSoftware, importarSoftwareExcel, retirarSoftware, type ResultadoImportacionSoftwareExcel } from "@/features/software/api/softwareApi";
 import type { InstalledSoftware, SoftwareAssignment } from "@/features/software/types";
 import type { Room } from "@/features/aulas/types";
 import styles from "./SoftwareView.module.css";
@@ -20,6 +20,8 @@ const softwareStatusLabels = {
 export function SoftwareView() {
   const [software, setSoftware] = useState<InstalledSoftware[]>([]);
   const [assignments, setAssignments] = useState<SoftwareAssignment[]>([]);
+  const [roomSoftware, setRoomSoftware] = useState<InstalledSoftware[]>([]);
+  const [roomAssignments, setRoomAssignments] = useState<SoftwareAssignment[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [view, setView] = useState<View>("catalogo");
   const [query, setQuery] = useState("");
@@ -43,17 +45,21 @@ export function SoftwareView() {
       setSoftware(loaded.software); setAssignments(loaded.assignments); setMeta(loaded.meta);
     } catch (cause) { setNotice({ tone: "error", text: cause instanceof Error ? cause.message : "No fue posible cargar el catálogo de software." }); }
   }, [page, query]);
+  const loadRoomInventory = useCallback(async () => {
+    try {
+      const loaded = await cargarSoftware();
+      setRoomSoftware(loaded.software);
+      setRoomAssignments(loaded.assignments);
+    } catch (cause) {
+      setNotice({ tone: "error", text: cause instanceof Error ? cause.message : "No fue posible cargar el inventario de software por aula." });
+    }
+  }, []);
   useEffect(() => { void listarAulas().then(setRooms).catch((cause) => setNotice({ tone: "error", text: cause instanceof Error ? cause.message : "No fue posible cargar las aulas." })); }, []);
   useEffect(() => { void loadCatalog(); }, [loadCatalog]);
+  useEffect(() => { if (view === "aulas") void loadRoomInventory(); }, [loadRoomInventory, view]);
 
   const visibleSoftware = useMemo(() => roomFilter === "todas" ? software : software.filter((item) => assignments.some((assignment) => assignment.softwareId === item.id && assignment.roomId === roomFilter)), [assignments, roomFilter, software]);
 
-  const matchingRooms = rooms.filter((room) => {
-    const normalized = roomSearchText.trim().toLocaleLowerCase("es");
-    const matchesSearch = !normalized || (room.code + " " + (room.location ?? "")).toLocaleLowerCase("es").includes(normalized);
-    const matchesSoftware = requiredSoftware.every((softwareId) => assignments.some((assignment) => assignment.roomId === room.id && assignment.softwareId === softwareId));
-    return matchesSearch && matchesSoftware;
-  });
   const coveredRooms = new Set(assignments.map((assignment) => assignment.roomId)).size;
 
   const saveSoftware = async (payload: Omit<InstalledSoftware, "id">, id?: string, aulaId?: string, installedAt?: string) => {
@@ -65,7 +71,7 @@ export function SoftwareView() {
     if (id) {
       try {
         const updated = await actualizarSoftware(id, payload);
-        catalogCache.current.clear(); setSoftware((current) => current.map((item) => item.id === id ? updated : item));
+        catalogCache.current.clear(); setSoftware((current) => current.map((item) => item.id === id ? updated : item)); void loadRoomInventory();
         setNotice({ tone: "success", text: `${payload.name} ${payload.version} fue actualizado.` });
       } catch (cause) {
         setNotice({ tone: "error", text: cause instanceof Error ? cause.message : "No fue posible actualizar el software." });
@@ -78,7 +84,7 @@ export function SoftwareView() {
           await guardarAsignacion(aulaId, created.id, installedAt ?? "");
           setAssignments((current) => [{ roomId: aulaId, softwareId: created.id, installedAt: installedAt || new Date().toISOString().slice(0, 10) }, ...current]);
         }
-        catalogCache.current.clear(); setPage(1); await loadCatalog(1, true);
+        catalogCache.current.clear(); setPage(1); await loadCatalog(1, true); void loadRoomInventory();
         const aula = rooms.find((room) => room.id === aulaId);
         setNotice({ tone: "success", text: aula ? `${payload.name} ${payload.version} fue creado y asociado con el Aula ${aula.code}.` : `${payload.name} ${payload.version} fue agregado al catálogo.` });
       } catch (cause) {
@@ -98,7 +104,7 @@ export function SoftwareView() {
     }
     try {
       await eliminarSoftware(item.id);
-      catalogCache.current.clear(); await loadCatalog(page, true);
+      catalogCache.current.clear(); await loadCatalog(page, true); void loadRoomInventory();
       setNotice({ tone: "success", text: `${item.name} ${item.version} fue eliminado del catálogo.` });
     } catch (cause) {
       setNotice({ tone: "error", text: cause instanceof Error ? cause.message : "No fue posible eliminar el software." });
@@ -112,6 +118,7 @@ export function SoftwareView() {
       setAssignments((current) => current.filter((item) => !(item.roomId === assignment.roomId && item.softwareId === assignment.softwareId)));
       const item = software.find((softwareItem) => softwareItem.id === assignment.softwareId);
       const room = rooms.find((roomItem) => roomItem.id === assignment.roomId);
+      void loadRoomInventory();
       setNotice({ tone: "success", text: `${item?.name} fue retirado del Aula ${room?.code}.` });
     } catch (cause) {
       setNotice({ tone: "error", text: cause instanceof Error ? cause.message : "No fue posible retirar el software del aula." });
@@ -121,7 +128,7 @@ export function SoftwareView() {
   const importExcel = async (archivo: File) => {
     try {
       const resultado = await importarSoftwareExcel(archivo);
-      catalogCache.current.clear(); setPage(1); await loadCatalog(1, true);
+      catalogCache.current.clear(); setPage(1); await loadCatalog(1, true); void loadRoomInventory();
       setShowImport(false);
       setImportResult(resultado);
       setNotice({ tone: resultado.resumen.resultado === "FALLIDA" ? "error" : "success", text: `Importación ${resultado.resumen.resultado.toLocaleLowerCase("es")}: ${resultado.resumen.registrosProcesados} de ${resultado.resumen.totalRegistros} filas asociadas.${resultado.resumen.registrosConError ? ` ${resultado.resumen.registrosConError} con error.` : ""}` });
@@ -150,7 +157,7 @@ export function SoftwareView() {
     </div>
 
     {view === "catalogo" && <CatalogView rooms={rooms} software={visibleSoftware} assignments={assignments} searchText={searchText} roomFilter={roomFilter} onSearchText={setSearchText} onSearch={() => { setQuery(searchText); setPage(1); }} onRoomFilter={setRoomFilter} onEdit={setEditor} onDelete={deleteSoftware} meta={meta} onPage={setPage} />}
-    {view === "aulas" && <RoomsSoftwareView software={software} assignments={assignments} selected={requiredSoftware} matchingRooms={matchingRooms} roomSearchText={roomSearchText} onRoomSearchText={setRoomSearchText} onToggle={(id) => setRequiredSoftware((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])} onClear={() => setRequiredSoftware([])} onRemove={removeAssignment} />}
+    {view === "aulas" && <RoomsSoftwareView software={roomSoftware} assignments={roomAssignments} selected={requiredSoftware} matchingRooms={rooms.filter((room) => { const normalized = roomSearchText.trim().toLocaleLowerCase("es"); const matchesSearch = !normalized || (room.code + " " + (room.location ?? "")).toLocaleLowerCase("es").includes(normalized); const matchesSoftware = requiredSoftware.every((softwareId) => roomAssignments.some((assignment) => assignment.roomId === room.id && assignment.softwareId === softwareId)); return matchesSearch && matchesSoftware; })} roomSearchText={roomSearchText} onRoomSearchText={setRoomSearchText} onToggle={(id) => setRequiredSoftware((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])} onClear={() => setRequiredSoftware([])} onRemove={removeAssignment} />}
     {editor === "new" && <NewSoftwareDialog rooms={rooms} onClose={() => setEditor(null)} onSave={saveSoftware} />}
     {editor && editor !== "new" && <SoftwareDialog item={editor} onClose={() => setEditor(null)} onSave={saveSoftware} />}
     {showImport && <ImportDialog onClose={() => setShowImport(false)} onImport={importExcel} />}

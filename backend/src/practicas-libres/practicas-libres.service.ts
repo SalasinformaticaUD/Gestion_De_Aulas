@@ -6,7 +6,11 @@ import {
   Optional,
 } from '@nestjs/common';
 import { EstadoSoftware, type Prisma } from '@prisma/client';
-import { EstadoAsistencia, EstadoMulta, EstadoPrestamo } from '../../generated/prisma/enums.js';
+import {
+  EstadoAsistencia,
+  EstadoMulta,
+  EstadoPrestamo,
+} from '../../generated/prisma/enums.js';
 import { DisponibilidadAulasService } from '../disponibilidad-aulas/disponibilidad-aulas.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePracticasLibreDto } from './dto/create-practicas-libre.dto';
@@ -34,6 +38,7 @@ type DatosPracticaLibre = {
   docenteId?: string;
   grupoId?: string;
   aulaId: string;
+  atendidoPorId?: string;
   responsableTipo: ResponsablePracticaLibre;
   softwareSolicitado: string;
   inicio: Date;
@@ -49,7 +54,37 @@ export class PracticasLibresService {
     @Optional() private readonly email?: PracticasLibresEmailService,
   ) {}
 
-  async create(dto: CreatePracticasLibreDto) {
+  async create(dto: CreatePracticasLibreDto, atendidoPorId?: string) {
+    const responsableAtencionId = dto.atendidoPorId ?? atendidoPorId;
+    if (responsableAtencionId) {
+      const responsableAtencion = await this.prisma.usuario.findFirst({
+        where: {
+          id: responsableAtencionId,
+          estado: 'ACTIVA',
+          OR: [
+            { cargo: null },
+            {
+              cargo: {
+                not: 'ADMINISTRADOR',
+              },
+            },
+          ],
+          roles: {
+            none: {
+              rol: {
+                nombre: { equals: 'ADMINISTRADOR', mode: 'insensitive' },
+              },
+            },
+          },
+        },
+        select: { id: true },
+      });
+      if (!responsableAtencion) {
+        throw new NotFoundException(
+          'El responsable no existe, está inactivo o es administrador.',
+        );
+      }
+    }
     const bloque = this.normalizarBloque(dto.inicio, dto.finEstimada);
     this.validarTiempoMinimoParaPrestamo(dto.inicio, dto.finEstimada);
     const software = dto.softwareId
@@ -65,7 +100,10 @@ export class PracticasLibresService {
       this.validarSoftwareParaPrestamo(software);
       const asociacion = await this.prisma.aulaSoftware.findUnique({
         where: {
-          aulaId_softwareId: { aulaId: dto.aulaId, softwareId: dto.softwareId! },
+          aulaId_softwareId: {
+            aulaId: dto.aulaId,
+            softwareId: dto.softwareId!,
+          },
         },
         select: { aulaId: true },
       });
@@ -78,7 +116,8 @@ export class PracticasLibresService {
     const estadoAula = await this.disponibilidad.findOne(dto.aulaId, bloque);
     const claseEnCurso = estadoAula.fuentes.some(
       (fuente) =>
-        fuente.tipo === 'clase-programada' && fuente.estado !== EstadoAsistencia.AUSENTE,
+        fuente.tipo === 'clase-programada' &&
+        fuente.estado !== EstadoAsistencia.AUSENTE,
     );
     const otraRestriccion = estadoAula.fuentes.some(
       (fuente) =>
@@ -122,79 +161,99 @@ export class PracticasLibresService {
       responsablesUnicos.add(clave);
     }
     const grupoId = responsables.length > 1 ? randomUUID() : undefined;
-    const practicas = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const creadas: Prisma.PracticaLibreGetPayload<{
-        include: { estudiante: true; docente: true; aula: true };
-      }>[] = [];
-      for (const responsable of responsables) {
-        if (responsable.tipo === 'DOCENTE') {
-          const docente = await tx.docente.upsert({
-            where: { documento: responsable.documento },
+    const practicas = await this.prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const creadas: Prisma.PracticaLibreGetPayload<{
+          include: { estudiante: true; docente: true; aula: true };
+        }>[] = [];
+        for (const responsable of responsables) {
+          if (responsable.tipo === 'DOCENTE') {
+            const docente = await tx.docente.upsert({
+              where: { documento: responsable.documento },
+              update: {
+                nombre: responsable.nombre,
+                ...(responsable.correo && { correo: responsable.correo }),
+              },
+              create: {
+                documento: responsable.documento,
+                nombre: responsable.nombre,
+                correo: responsable.correo,
+              },
+            });
+            await this.validarResponsableSinPracticaActiva(tx, {
+              docenteId: docente.id,
+            });
+            creadas.push(
+              await tx.practicaLibre.create({
+                data: {
+                  ...this.construirDatosPractica(
+                    dto,
+                    undefined,
+                    software?.nombre ?? dto.softwareSolicitado,
+                    responsableAtencionId,
+                  ),
+                  docenteId: docente.id,
+                  grupoId,
+                },
+                include: { estudiante: true, docente: true, aula: true },
+              }),
+            );
+            continue;
+          }
+          const estudiante = await tx.estudiante.upsert({
+            where: { codigo: responsable.documento },
             update: {
               nombre: responsable.nombre,
               ...(responsable.correo && { correo: responsable.correo }),
             },
             create: {
-              documento: responsable.documento,
+              codigo: responsable.documento,
               nombre: responsable.nombre,
               correo: responsable.correo,
             },
           });
-          await this.validarResponsableSinPracticaActiva(tx, {
-            docenteId: docente.id,
-          });
-          creadas.push(await tx.practicaLibre.create({
-            data: {
-              ...this.construirDatosPractica(dto, undefined, software?.nombre ?? dto.softwareSolicitado),
-              docenteId: docente.id,
-              grupoId,
+          const multa = await tx.multa.findFirst({
+            where: {
+              estudianteId: estudiante.id,
+              estado: EstadoMulta.ACTIVA,
             },
-            include: { estudiante: true, docente: true, aula: true },
-          }));
-          continue;
-        }
-        const estudiante = await tx.estudiante.upsert({
-          where: { codigo: responsable.documento },
-          update: {
-            nombre: responsable.nombre,
-            ...(responsable.correo && { correo: responsable.correo }),
-          },
-          create: {
-            codigo: responsable.documento,
-            nombre: responsable.nombre,
-            correo: responsable.correo,
-          },
-        });
-        const multa = await tx.multa.findFirst({
-          where: {
+            select: { id: true },
+          });
+          if (multa) {
+            throw new ConflictException(
+              'El estudiante tiene una multa activa y no puede registrar prácticas libres.',
+            );
+          }
+          await this.validarResponsableSinPracticaActiva(tx, {
             estudianteId: estudiante.id,
-            estado: EstadoMulta.ACTIVA,
-          },
-          select: { id: true },
-        });
-        if (multa) {
-          throw new ConflictException(
-            'El estudiante tiene una multa activa y no puede registrar prácticas libres.',
+          });
+          creadas.push(
+            await tx.practicaLibre.create({
+              data: {
+                ...this.construirDatosPractica(
+                  dto,
+                  estudiante.id,
+                  software?.nombre ?? dto.softwareSolicitado,
+                  responsableAtencionId,
+                ),
+                grupoId,
+              },
+              include: { estudiante: true, docente: true, aula: true },
+            }),
           );
         }
-        await this.validarResponsableSinPracticaActiva(tx, {
-          estudianteId: estudiante.id,
-        });
-        creadas.push(await tx.practicaLibre.create({
-          data: {
-            ...this.construirDatosPractica(dto, estudiante.id, software?.nombre ?? dto.softwareSolicitado),
-            grupoId,
-          },
-          include: { estudiante: true, docente: true, aula: true },
-        }));
-      }
-      return creadas;
-    });
+        return creadas;
+      },
+    );
     await Promise.all(
       practicas.map((practica) =>
         this.email?.enviarConfirmacion({
-          correo: practica.estudiante?.correo ?? practica.docente?.correo ?? null,
-          estudiante: practica.estudiante?.nombre ?? practica.docente?.nombre ?? 'Responsable',
+          correo:
+            practica.estudiante?.correo ?? practica.docente?.correo ?? null,
+          estudiante:
+            practica.estudiante?.nombre ??
+            practica.docente?.nombre ??
+            'Responsable',
           aula: practica.aula.codigo,
           software: practica.softwareSolicitado ?? 'Ninguno',
           inicio: practica.inicio,
@@ -241,8 +300,43 @@ export class PracticasLibresService {
             inicio: { gte: inicioDia, lte: finDia },
           }),
       },
-      include: { estudiante: true, docente: true, aula: true },
+      include: {
+        estudiante: true,
+        docente: true,
+        aula: true,
+        atendidoPor: true,
+      },
       orderBy: { inicio: 'desc' },
+    });
+  }
+
+  findResponsables() {
+    return this.prisma.usuario.findMany({
+      where: {
+        estado: 'ACTIVA',
+        OR: [
+          { cargo: null },
+          {
+            cargo: {
+              not: 'ADMINISTRADOR',
+            },
+          },
+        ],
+        roles: {
+          none: {
+            rol: {
+              nombre: { equals: 'ADMINISTRADOR', mode: 'insensitive' },
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+        nombreCompleto: true,
+        nombreUsuario: true,
+        cargo: true,
+      },
+      orderBy: { nombreCompleto: 'asc' },
     });
   }
 
@@ -294,7 +388,9 @@ export class PracticasLibresService {
       include: {
         multas: { where: { estado: EstadoMulta.ACTIVA } },
         practicas: {
-          where: { estado: { in: [EstadoPrestamo.ACTIVO, EstadoPrestamo.VENCIDO] } },
+          where: {
+            estado: { in: [EstadoPrestamo.ACTIVO, EstadoPrestamo.VENCIDO] },
+          },
           orderBy: { inicio: 'desc' },
           take: 1,
         },
@@ -315,7 +411,9 @@ export class PracticasLibresService {
         nombre: true,
         correo: true,
         practicasLibres: {
-          where: { estado: { in: [EstadoPrestamo.ACTIVO, EstadoPrestamo.VENCIDO] } },
+          where: {
+            estado: { in: [EstadoPrestamo.ACTIVO, EstadoPrestamo.VENCIDO] },
+          },
           select: { id: true },
           take: 1,
         },
@@ -429,9 +527,11 @@ export class PracticasLibresService {
     dto: CreatePracticasLibreDto,
     estudianteId: string | undefined,
     softwareNombre: string,
+    atendidoPorId?: string,
   ): DatosPracticaLibre {
     return {
       ...(estudianteId && { estudianteId }),
+      ...(atendidoPorId && { atendidoPorId }),
       aulaId: dto.aulaId,
       responsableTipo: dto.responsableTipo,
       softwareSolicitado: softwareNombre,

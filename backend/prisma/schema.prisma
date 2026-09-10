@@ -137,6 +137,7 @@ model Usuario {
   multasCumplidas                  Multa[]                     @relation("MultaCumplidaPor")
   multasAnuladas                   Multa[]                     @relation("MultaAnuladaPor")
   prestamosDocentesCreados         PrestamoDocente[]           @relation("PrestamoDocenteEncargado")
+  practicasLibresAtendidas         PracticaLibre[]             @relation("AtencionPracticaLibre")
   limpiezasRegistradas             Limpieza[]                  @relation("RegistroLimpieza")
   creadoEn                         DateTime                    @default(now())
   actualizadoEn                    DateTime                    @updatedAt
@@ -390,6 +391,7 @@ model PracticaLibre {
   docenteId          String?        @db.Uuid
   grupoId            String?        @db.Uuid
   aulaId             String         @db.Uuid
+  atendidoPorId      String?        @db.Uuid
   responsableTipo    String         @default("ASISTENCIAL")
   softwareSolicitado String?
   inicio             DateTime
@@ -399,8 +401,10 @@ model PracticaLibre {
   estudiante         Estudiante?    @relation(fields: [estudianteId], references: [id])
   docente            Docente?       @relation(fields: [docenteId], references: [id])
   aula               Aula           @relation(fields: [aulaId], references: [id])
+  atendidoPor        Usuario?       @relation("AtencionPracticaLibre", fields: [atendidoPorId], references: [id], onDelete: SetNull)
 
   @@index([aulaId, inicio])
+  @@index([atendidoPorId, inicio])
   @@index([grupoId])
 }
 

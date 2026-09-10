@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { defaultProfile, getInitials, loadProfile, profileFromSession, saveProfile, type UserProfile } from "@/features/perfil/lib/profile";
 import { obtenerSesion } from "@/features/auth/lib/sesion";
+import { cambiarContrasenaActual } from "@/features/auth/api/authApi";
 import styles from "./ProfileView.module.css";
 
 export function ProfileView() {
@@ -67,12 +68,20 @@ function PasswordSection({ notice, onNotice }: { notice: string | null; onNotice
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const mismatch = Boolean(confirmPassword) && newPassword !== confirmPassword;
-  const submit = (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!currentPassword || newPassword.length < 10 || mismatch) return;
-    setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
-    onNotice("El backend actual todavía no expone un endpoint para cambiar la contraseña. No se envió ni almacenó ningún valor.");
+    setSubmitting(true);
+    try {
+      await cambiarContrasenaActual(currentPassword, newPassword);
+      setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
+      onNotice("La contraseña fue actualizada correctamente.");
+    } catch (cause) {
+      onNotice(cause instanceof Error ? cause.message : "No fue posible actualizar la contraseña.");
+    } finally { setSubmitting(false); }
   };
-  return <section className={styles.profileSection}><header><div><span>02</span><div><h2>Cambiar contraseña</h2><p>Utilice una clave institucional segura y diferente a la actual.</p></div></div><b>Operación protegida</b></header><form className={styles.passwordForm} onSubmit={submit}><label><span>Contraseña actual</span><input type="password" value={currentPassword} onChange={(event) => { setCurrentPassword(event.target.value); onNotice(null); }} autoComplete="current-password" required /></label><div><label><span>Nueva contraseña</span><input type="password" value={newPassword} onChange={(event) => { setNewPassword(event.target.value); onNotice(null); }} minLength={10} maxLength={128} autoComplete="new-password" required /><small>Mínimo 10 caracteres.</small></label><label><span>Confirmar contraseña</span><input type="password" value={confirmPassword} onChange={(event) => { setConfirmPassword(event.target.value); onNotice(null); }} minLength={10} maxLength={128} autoComplete="new-password" required />{mismatch && <small className={styles.fieldError}>Las contraseñas no coinciden.</small>}</label></div>{notice && <p className={styles.passwordSuccess} role="status">✓ {notice}</p>}<footer><button type="submit" className="button-primary" disabled={!currentPassword || newPassword.length < 10 || mismatch}>Actualizar contraseña</button></footer></form></section>;
+  const isPasswordError = notice?.startsWith("La contraseña actual") || notice?.startsWith("No fue posible");
+  return <section className={styles.profileSection}><header><div><span>02</span><div><h2>Cambiar contraseña</h2><p>Utilice una clave institucional segura y diferente a la actual.</p></div></div><b>Operación protegida</b></header><form className={styles.passwordForm} onSubmit={submit}><label><span>Contraseña actual</span><input type="password" value={currentPassword} onChange={(event) => { setCurrentPassword(event.target.value); onNotice(null); }} autoComplete="current-password" required /></label><div><label><span>Nueva contraseña</span><input type="password" value={newPassword} onChange={(event) => { setNewPassword(event.target.value); onNotice(null); }} minLength={10} maxLength={128} autoComplete="new-password" required /><small>Mínimo 10 caracteres.</small></label><label><span>Confirmar contraseña</span><input type="password" value={confirmPassword} onChange={(event) => { setConfirmPassword(event.target.value); onNotice(null); }} minLength={10} maxLength={128} autoComplete="new-password" required />{mismatch && <small className={styles.fieldError}>Las contraseñas no coinciden.</small>}</label></div>{notice && <p className={`${styles.passwordSuccess} ${isPasswordError ? styles.passwordError : ""}`} role={isPasswordError ? "alert" : "status"}>{notice}</p>}<footer><button type="submit" className="button-primary" disabled={submitting || !currentPassword || newPassword.length < 10 || mismatch}>{submitting ? "Actualizando…" : "Actualizar contraseña"}</button></footer></form></section>;
 }

@@ -6,6 +6,7 @@ import { Public } from './decorators/public.decorator';
 import { RequireAuth } from './decorators/require-auth.decorator';
 import { LoginDto } from './dto/login.dto';
 import { VerifyPasswordDto } from './dto/verify-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -32,6 +33,19 @@ export class AuthController {
     return this.authService.autorizarEstadosRestringidosTarea(
       usuario.id,
       dto.password,
+    );
+  }
+
+  @RequireAuth()
+  @Post('cambiar-contrasena')
+  cambiarContrasena(
+    @Body() dto: ChangePasswordDto,
+    @CurrentUser() usuario: UsuarioAutenticado,
+  ) {
+    return this.authService.cambiarContrasena(
+      usuario.id,
+      dto.contrasenaActual,
+      dto.nuevaContrasena,
     );
   }
 }

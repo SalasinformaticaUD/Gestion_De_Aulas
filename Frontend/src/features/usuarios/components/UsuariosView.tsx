@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import styles from "./UsuariosView.module.css";
 import permissionStyles from "./RolePermissions.module.css";
 import type { Usuario } from "../types";
-import { actualizarCargo, actualizarRol, actualizarUsuario, crearCargo, crearRol, crearUsuario, listarCargos, listarPermisos, listarRoles, listarUsuarios, type CargoCatalogo, type PermisoCatalogo, type RolCatalogo } from "@/features/usuarios/api/usuariosApi";
+import { actualizarRol, actualizarUsuario, crearRol, crearUsuario, listarPermisos, listarRoles, listarUsuarios, type PermisoCatalogo, type RolCatalogo } from "@/features/usuarios/api/usuariosApi";
 import { obtenerSesion } from "@/features/auth/lib/sesion";
 
 const vacio = { nombreCompleto: "", nombreUsuario: "", correo: "", cargo: "", dependencia: "Aulas de Software", permisos: [] as string[], password: "", rolIds: [] as string[] };
@@ -14,7 +14,6 @@ export function UsuariosView() {
   const router = useRouter();
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [roles, setRoles] = useState<RolCatalogo[]>([]);
-  const [cargos, setCargos] = useState<CargoCatalogo[]>([]);
   const [permisos, setPermisos] = useState<PermisoCatalogo[]>([]);
   const [rolesCargados, setRolesCargados] = useState(false);
   const [busqueda, setBusqueda] = useState("");
@@ -26,16 +25,13 @@ export function UsuariosView() {
   const [rolNombre, setRolNombre] = useState("");
   const [rolDescripcion, setRolDescripcion] = useState("");
   const [rolPermisoIds, setRolPermisoIds] = useState<string[]>([]);
-  const [cargoNombre, setCargoNombre] = useState("");
-  const [cargoDescripcion, setCargoDescripcion] = useState("");
   const [isAdministrator, setIsAdministrator] = useState<boolean | null>(null);
 
   const cargar = async () => {
     try {
-      const [nextUsuarios, nextRoles, nextCargos, nextPermisos] = await Promise.all([listarUsuarios(), listarRoles(), listarCargos(), listarPermisos()]);
+      const [nextUsuarios, nextRoles, nextPermisos] = await Promise.all([listarUsuarios(), listarRoles(), listarPermisos()]);
       setUsuarios(nextUsuarios);
       setRoles(nextRoles);
-      setCargos(nextCargos);
       setPermisos(nextPermisos);
       setRolesCargados(true);
     } catch (error) {
@@ -57,8 +53,17 @@ export function UsuariosView() {
     const termino = busquedaPermiso.trim().toLocaleLowerCase("es");
     return permisos.filter((permiso) => !termino || permiso.codigo.toLocaleLowerCase("es").includes(termino));
   }, [busquedaPermiso, permisos]);
+  const permisosPorModulo = useMemo(() => {
+    const grupos = new Map<string, { nombre: string; permisos: PermisoCatalogo[] }>();
+    for (const permiso of permisosVisibles) {
+      const codigo = permiso.modulo.codigo;
+      const grupo = grupos.get(codigo) ?? { nombre: permiso.modulo.nombre, permisos: [] };
+      grupo.permisos.push(permiso);
+      grupos.set(codigo, grupo);
+    }
+    return [...grupos.entries()].sort(([a], [b]) => a.localeCompare(b, "es"));
+  }, [permisosVisibles]);
   if (isAdministrator !== true) return <main className="access-guard-loading">{isAdministrator === false ? "Acceso exclusivo para el administrador." : "Verificando acceso..."}</main>;
-  const alternarRol = (rolId: string) => setForm((actual) => ({ ...actual, rolIds: actual.rolIds.includes(rolId) ? actual.rolIds.filter((id) => id !== rolId) : [...actual.rolIds, rolId] }));
   const alternarPermiso = (permisoId: string) => setRolPermisoIds((actual) => actual.includes(permisoId) ? actual.filter((id) => id !== permisoId) : [...actual, permisoId]);
   const seleccionarRol = (id: string) => {
     setRolSeleccionadoId(id);
@@ -75,29 +80,15 @@ export function UsuariosView() {
       else await crearRol({ nombre: rolNombre.trim(), descripcion: rolDescripcion.trim() || undefined, permisoIds: rolPermisoIds });
       await cargar();
       seleccionarRol("");
-      setAviso(rolSeleccionadoId ? "Rol y permisos actualizados." : "Rol creado correctamente.");
-    } catch (error) { setAviso(error instanceof Error ? error.message : "No fue posible guardar el rol."); }
+      setAviso(rolSeleccionadoId ? "Cargo y permisos actualizados." : "Cargo creado correctamente.");
+    } catch (error) { setAviso(error instanceof Error ? error.message : "No fue posible guardar el cargo."); }
   };
-  const guardarCargo = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!cargoNombre.trim()) return;
-    try {
-      await crearCargo({ nombre: cargoNombre.trim(), descripcion: cargoDescripcion.trim() || undefined });
-      await cargar();
-      setCargoNombre("");
-      setCargoDescripcion("");
-      setAviso("Cargo creado correctamente.");
-    } catch (error) { setAviso(error instanceof Error ? error.message : "No fue posible crear el cargo."); }
-  };
-  const cambiarEstadoCargo = async (cargo: CargoCatalogo) => {
-    try { await actualizarCargo(cargo.id, { activo: !cargo.activo }); await cargar(); setAviso(`Cargo ${cargo.activo ? "desactivado" : "activado"}.`); } catch (error) { setAviso(error instanceof Error ? error.message : "No fue posible actualizar el cargo."); }
-  };
-
   const guardar = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!form.nombreCompleto || !form.nombreUsuario || !form.correo || (!edicion && !form.password)) return;
+    if (!form.nombreCompleto || !form.nombreUsuario || !form.correo || !form.rolIds[0] || (!edicion && !form.password)) return;
     try {
-      const datos = { nombreCompleto: form.nombreCompleto, nombreUsuario: form.nombreUsuario, correo: form.correo, cargo: form.cargo || undefined, ...(rolesCargados ? { rolIds: form.rolIds } : {}) };
+      const cargo = roles.find((rol) => rol.id === form.rolIds[0])?.nombre;
+      const datos = { nombreCompleto: form.nombreCompleto, nombreUsuario: form.nombreUsuario, correo: form.correo, cargo, ...(rolesCargados ? { rolIds: form.rolIds } : {}) };
       if (edicion) await actualizarUsuario(edicion, { ...datos, password: form.password || undefined });
       else await crearUsuario({ ...datos, password: form.password });
       await cargar();
@@ -111,7 +102,8 @@ export function UsuariosView() {
 
   const editar = (usuario: Usuario) => {
     setEdicion(usuario.id);
-    setForm({ ...vacio, nombreCompleto: usuario.nombreCompleto, nombreUsuario: usuario.nombreUsuario, correo: usuario.correo, cargo: usuario.cargo, dependencia: usuario.dependencia, permisos: usuario.permisos, rolIds: roles.filter((rol) => usuario.permisos.includes(rol.nombre)).map((rol) => rol.id) });
+    const cargoId = roles.find((rol) => usuario.permisos.includes(rol.nombre))?.id ?? "";
+    setForm({ ...vacio, nombreCompleto: usuario.nombreCompleto, nombreUsuario: usuario.nombreUsuario, correo: usuario.correo, cargo: usuario.cargo, dependencia: usuario.dependencia, permisos: usuario.permisos, rolIds: cargoId ? [cargoId] : [] });
   };
 
   return <>
@@ -119,38 +111,32 @@ export function UsuariosView() {
     {aviso && <div className={`${styles.aviso} ${styles.exito}`} role="status">{aviso}</div>}
     <div className={styles.layout}>
       <section className={styles.card}>
-        <header><h2>{edicion ? "Modificar usuario" : "Crear usuario"}</h2><p>Cargo identifica a la persona; los roles determinan sus permisos de acceso.</p></header>
+        <header><h2>{edicion ? "Modificar usuario" : "Crear usuario"}</h2><p>El cargo seleccionado define todos los permisos de acceso del usuario.</p></header>
         <form onSubmit={(event) => void guardar(event)}>
           <label><span>Nombre completo</span><input value={form.nombreCompleto} onChange={(event) => setForm({ ...form, nombreCompleto: event.target.value })} required /></label>
           <label><span>Nombre de usuario</span><input value={form.nombreUsuario} onChange={(event) => setForm({ ...form, nombreUsuario: event.target.value })} required /></label>
           <label><span>Correo</span><input type="email" value={form.correo} onChange={(event) => setForm({ ...form, correo: event.target.value })} required /></label>
           <label><span>{edicion ? "Nueva contraseña (opcional)" : "Contraseña"}</span><input type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required={!edicion} minLength={10} /></label>
-          <label><span>Cargo</span><select value={form.cargo} onChange={(event) => setForm({ ...form, cargo: event.target.value })}><option value="">Seleccionar cargo</option>{cargos.filter((cargo) => cargo.activo || cargo.nombre === form.cargo).map((cargo) => <option key={cargo.id} value={cargo.nombre}>{cargo.nombre}</option>)}</select></label>
-          <fieldset><legend>Roles de acceso</legend><div className={styles.permissionGrid}>{roles.map((rol) => <label key={rol.id}><input type="checkbox" checked={form.rolIds.includes(rol.id)} onChange={() => alternarRol(rol.id)} /><span>{rol.nombre}</span></label>)}{rolesCargados && roles.length === 0 && <p className={styles.empty}>No hay roles creados en el catálogo.</p>}{!rolesCargados && <p className={styles.empty}>Cargando roles disponibles…</p>}</div></fieldset>
+          <label><span>Cargo</span><select value={form.rolIds[0] ?? ""} onChange={(event) => { const cargo = roles.find((rol) => rol.id === event.target.value); setForm({ ...form, cargo: cargo?.nombre ?? "", rolIds: event.target.value ? [event.target.value] : [] }); }} required><option value="">Seleccionar cargo</option>{roles.map((rol) => <option key={rol.id} value={rol.id}>{rol.nombre}</option>)}</select>{rolesCargados && roles.length === 0 && <small className={styles.empty}>No hay cargos configurados.</small>}{!rolesCargados && <small className={styles.empty}>Cargando cargos disponibles…</small>}</label>
           <footer><button type="button" className="button-secondary usuarios-actions-secondary" onClick={() => { setForm(vacio); setEdicion(null); }}>Limpiar</button><button className="button-primary">{edicion ? "Guardar cambios" : "Crear usuario"}</button></footer>
         </form>
       </section>
       <section className={styles.card}>
-        <header><div><h2>Usuarios registrados</h2><p>Datos y roles cargados desde la API central.</p></div><input className={styles.search} placeholder="Buscar usuario..." value={busqueda} onChange={(event) => setBusqueda(event.target.value)} /></header>
-        <div className={styles.list}>{visibles.map((usuario) => <article key={usuario.id}><div><strong>{usuario.nombreCompleto}</strong><small>{usuario.nombreUsuario} · {usuario.correo}</small><small>{usuario.cargo || "Sin cargo"} · {usuario.dependencia}</small></div><div className={styles.meta}><span className={`${styles.status} ${usuario.estado === "ACTIVA" ? styles.active : styles.inactive}`}>{usuario.estado}</span><span>{usuario.permisos.length} roles</span><button type="button" onClick={() => editar(usuario)}>Modificar</button></div></article>)}{!visibles.length && <p className={styles.empty}>No hay usuarios que coincidan con la búsqueda.</p>}</div>
+        <header><div><h2>Usuarios registrados</h2><p>Datos y cargos cargados desde la API central.</p></div><input className={styles.search} placeholder="Buscar usuario..." value={busqueda} onChange={(event) => setBusqueda(event.target.value)} /></header>
+        <div className={styles.list}>{visibles.map((usuario) => <article key={usuario.id}><div><strong>{usuario.nombreCompleto}</strong><small>{usuario.nombreUsuario} · {usuario.correo}</small><small>{usuario.cargo || usuario.permisos[0] || "Sin cargo"}</small></div><div className={styles.meta}><span className={`${styles.status} ${usuario.estado === "ACTIVA" ? styles.active : styles.inactive}`}>{usuario.estado}</span><span>{usuario.permisos.length ? "Cargo con permisos" : "Sin cargo"}</span><button type="button" onClick={() => editar(usuario)}>Modificar</button></div></article>)}{!visibles.length && <p className={styles.empty}>No hay usuarios que coincidan con la búsqueda.</p>}</div>
       </section>
     </div>
     <section className={styles.accessManagement}>
-      <header><div><h2>Roles, permisos y cargos</h2><p>Configuración disponible para administradores. Los cambios se aplican a través de la API central.</p></div></header>
-      <div className={styles.managementGrid}>
+      <header><div><h2>Cargos y permisos</h2><p>Configure los cargos y los permisos que cada uno concede.</p></div></header>
+      <div className={styles.managementGrid} style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
         <form className={styles.managementForm} onSubmit={(event) => void guardarRol(event)}>
-          <h3>{rolSeleccionadoId ? "Modificar rol" : "Crear rol"}</h3>
-          <label><span>Rol</span><select value={rolSeleccionadoId} onChange={(event) => seleccionarRol(event.target.value)}><option value="">Nuevo rol</option>{roles.map((rol) => <option key={rol.id} value={rol.id}>{rol.nombre}</option>)}</select></label>
-          <label><span>Nombre</span><input value={rolNombre} onChange={(event) => setRolNombre(event.target.value)} placeholder="Ej. COORDINADOR" required /></label>
-          <label><span>Descripción</span><input value={rolDescripcion} onChange={(event) => setRolDescripcion(event.target.value)} placeholder="Alcance del rol" /></label>
-          <fieldset className={permissionStyles.permissionsFieldset}><legend>Permisos asignados</legend><div className={permissionStyles.permissionTools}><input type="search" value={busquedaPermiso} onChange={(event) => setBusquedaPermiso(event.target.value)} placeholder="Buscar permiso..." aria-label="Buscar permiso asignable" /><small>{permisosVisibles.length} de {permisos.length} permisos</small></div><div className={permissionStyles.permissionScroll}><div className={styles.permissionGrid}>{permisosVisibles.map((permiso) => <label key={permiso.id}><input type="checkbox" checked={rolPermisoIds.includes(permiso.id)} onChange={() => alternarPermiso(permiso.id)} /><span>{permiso.codigo}</span></label>)}{!permisosVisibles.length && <p className={permissionStyles.empty}>No hay permisos que coincidan.</p>}</div></div></fieldset>
-          <footer><button type="button" className="button-secondary usuarios-actions-secondary" onClick={() => seleccionarRol("")}>Nuevo</button><button className="button-primary">{rolSeleccionadoId ? "Guardar permisos" : "Crear rol"}</button></footer>
+          <h3>{rolSeleccionadoId ? "Modificar cargo" : "Crear cargo"}</h3>
+          <label><span>Cargo</span><select value={rolSeleccionadoId} onChange={(event) => seleccionarRol(event.target.value)}><option value="">Nuevo cargo</option>{roles.map((rol) => <option key={rol.id} value={rol.id}>{rol.nombre}</option>)}</select></label>
+          <label><span>Nombre del cargo</span><input value={rolNombre} onChange={(event) => setRolNombre(event.target.value)} placeholder="Ej. COORDINADOR" required /></label>
+          <label><span>Descripción</span><input value={rolDescripcion} onChange={(event) => setRolDescripcion(event.target.value)} placeholder="Alcance del cargo" /></label>
+          <fieldset className={permissionStyles.permissionsFieldset}><legend>Permisos asignados</legend><div className={permissionStyles.permissionTools}><input type="search" value={busquedaPermiso} onChange={(event) => setBusquedaPermiso(event.target.value)} placeholder="Buscar permiso..." aria-label="Buscar permiso asignable" /><small>{permisosVisibles.length} de {permisos.length} permisos</small></div><div className={permissionStyles.permissionScroll}>{permisosPorModulo.map(([codigo, grupo]) => <section key={codigo} className={permissionStyles.moduleGroup}><header><strong>{grupo.nombre}</strong><span>{grupo.permisos.length} permiso(s)</span></header><div className={styles.permissionGrid}>{grupo.permisos.map((permiso) => <label key={permiso.id}><input type="checkbox" checked={rolPermisoIds.includes(permiso.id)} onChange={() => alternarPermiso(permiso.id)} /><span>{permiso.codigo}</span></label>)}</div></section>)}{!permisosVisibles.length && <p className={permissionStyles.empty}>No hay permisos que coincidan.</p>}</div></fieldset>
+          <footer><button className="button-primary">{rolSeleccionadoId ? "Guardar cargo" : "Crear cargo"}</button></footer>
         </form>
-        <div className={styles.managementForm}>
-          <h3>Cargos disponibles</h3>
-          <form onSubmit={(event) => void guardarCargo(event)}><label><span>Nuevo cargo</span><input value={cargoNombre} onChange={(event) => setCargoNombre(event.target.value)} placeholder="Ej. AUXILIAR" required /></label><label><span>Descripción</span><input value={cargoDescripcion} onChange={(event) => setCargoDescripcion(event.target.value)} placeholder="Opcional" /></label><button className="button-primary">Crear cargo</button></form>
-          <div className={styles.catalogList}>{cargos.map((cargo) => <article key={cargo.id}><div><strong>{cargo.nombre}</strong><small>{cargo.descripcion || "Sin descripción"}</small></div><button type="button" onClick={() => void cambiarEstadoCargo(cargo)}>{cargo.activo ? "Desactivar" : "Activar"}</button></article>)}</div>
-        </div>
       </div>
     </section>
   </>;

@@ -136,28 +136,6 @@
   padding-top: 2px;
 }
 
-.weekRange {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: fit-content;
-  margin: 0 0 14px;
-  padding: 9px 13px;
-  border: 1px solid #cad8ed;
-  border-radius: 8px;
-  color: #315e9d;
-  background: #eef5ff;
-  font-size: 13px;
-}
-
-.weekRange span {
-  font-weight: 800;
-}
-
-.weekRange strong {
-  color: var(--ink);
-}
-
 .dateControls {
   display: flex;
   align-items: end;
@@ -212,16 +190,6 @@
   }
 }
 
-/* Contraste del rango consultado en modo oscuro. */
-:global(html[data-theme="dark"]) .weekRange {
-  color: var(--ink);
-  border-color: var(--line);
-  background: var(--surface-soft);
-}
-
-:global(html[data-theme="dark"]) .weekRange strong {
-  color: var(--ink);
-}
 .reportActions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:10px; }
 .headingActions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:10px; }
 .headingActions :global(.button-secondary) { min-height:35px; padding:0 13px; border-color:#c7cbd3!important; color:#343841!important; background:#eef0f3!important; }

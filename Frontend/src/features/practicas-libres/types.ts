@@ -8,6 +8,13 @@ export type PracticeStudent = {
   activeFine: boolean;
 };
 
+export type PracticeResponsible = {
+  id: string;
+  name: string;
+  username: string;
+  role?: string;
+};
+
 export type FreePractice = {
   id: string;
   requesterType: "ESTUDIANTE" | "DOCENTE";
@@ -19,6 +26,7 @@ export type FreePractice = {
   actualEnd?: string;
   status: FreePracticeStatus;
   responsibleType: "MONITOR" | "TECNICO" | "ASISTENCIAL";
+  attendedBy?: string;
   requestedSoftware: string;
 };
 

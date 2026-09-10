@@ -66,6 +66,11 @@ describe('TareasOperativasService', () => {
     await expect(service.cambiarEstado(tarea.id, EstadoTarea.COMPLETADA)).rejects.toBeInstanceOf(ConflictException);
   });
 
+  it('no permite completar una tarea en proceso sin informe de seguimiento', async () => {
+    (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValue({ ...tarea, estado: EstadoTarea.EN_PROCESO, informes: [] });
+    await expect(service.cambiarEstado(tarea.id, EstadoTarea.COMPLETADA)).rejects.toThrow('Debe registrar un informe de seguimiento antes de completar la tarea.');
+  });
+
   it('completa una tarea en proceso sin acciones pendientes y registra auditoría', async () => {
     const enProceso = { ...tarea, estado: EstadoTarea.EN_PROCESO, informes: [{ accionesPendientes: null }] };
     (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValue(enProceso);

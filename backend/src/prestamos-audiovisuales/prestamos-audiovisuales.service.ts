@@ -118,12 +118,17 @@ export class PrestamosAudiovisualesService {
     ]);
     return {
       datos: datos.map((equipo) => {
-        const usoMinutos = equipo.detallesPrestamo.reduce((totalUso, detalle) => {
-          const inicio = detalle.prestamo.salidaEn;
-          const fin = detalle.prestamo.devolucionReal;
-          if (!inicio || !fin) return totalUso;
-          return totalUso + Math.max(0, fin.getTime() - inicio.getTime()) / 60_000;
-        }, 0);
+        const usoMinutos = equipo.detallesPrestamo.reduce(
+          (totalUso, detalle) => {
+            const inicio = detalle.prestamo.salidaEn;
+            const fin = detalle.prestamo.devolucionReal;
+            if (!inicio || !fin) return totalUso;
+            return (
+              totalUso + Math.max(0, fin.getTime() - inicio.getTime()) / 60_000
+            );
+          },
+          0,
+        );
         const { detallesPrestamo, ...base } = equipo;
         const ultimaDevolucion = detallesPrestamo
           .map((detalle) => detalle.prestamo.devolucionReal)
@@ -164,7 +169,24 @@ export class PrestamosAudiovisualesService {
 
   findResponsables() {
     return this.prisma.usuario.findMany({
-      where: { estado: 'ACTIVA' },
+      where: {
+        estado: 'ACTIVA',
+        OR: [
+          { cargo: null },
+          {
+            cargo: {
+              not: 'ADMINISTRADOR',
+            },
+          },
+        ],
+        roles: {
+          none: {
+            rol: {
+              nombre: { equals: 'ADMINISTRADOR', mode: 'insensitive' },
+            },
+          },
+        },
+      },
       select: {
         id: true,
         nombreCompleto: true,
@@ -179,8 +201,13 @@ export class PrestamosAudiovisualesService {
     archivo: { buffer: Buffer; originalname: string } | undefined,
     usuarioId?: string,
   ) {
-    if (!archivo?.buffer?.length || !/\.(xlsx|xls)$/i.test(archivo.originalname)) {
-      throw new BadRequestException('Debe adjuntar un archivo Excel .xlsx o .xls.');
+    if (
+      !archivo?.buffer?.length ||
+      !/\.(xlsx|xls)$/i.test(archivo.originalname)
+    ) {
+      throw new BadRequestException(
+        'Debe adjuntar un archivo Excel .xlsx o .xls.',
+      );
     }
     let filas: Array<Record<string, unknown>>;
     try {
@@ -194,12 +221,21 @@ export class PrestamosAudiovisualesService {
       throw new BadRequestException('No fue posible leer el archivo Excel.');
     }
     if (!filas.length || filas.length > 2_000) {
-      throw new BadRequestException('El Excel debe contener entre 1 y 2.000 videobeams.');
+      throw new BadRequestException(
+        'El Excel debe contener entre 1 y 2.000 videobeams.',
+      );
     }
     const normalizar = (valor: string) =>
-      valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toUpperCase();
+      valor
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toUpperCase();
     const leer = (fila: Record<string, unknown>, columna: string) => {
-      const clave = Object.keys(fila).find((item) => normalizar(item) === normalizar(columna));
+      const clave = Object.keys(fila).find(
+        (item) => normalizar(item) === normalizar(columna),
+      );
       return clave ? String(fila[clave] ?? '').trim() : '';
     };
     const registros = filas.map((fila, indice) => ({
@@ -208,15 +244,21 @@ export class PrestamosAudiovisualesService {
       codigoInventario: leer(fila, 'Numero Interno'),
       modelo: leer(fila, 'Modelo'),
     }));
-    const invalido = registros.find((item) => !item.marca || !item.codigoInventario || !item.modelo);
+    const invalido = registros.find(
+      (item) => !item.marca || !item.codigoInventario || !item.modelo,
+    );
     if (invalido) {
       throw new BadRequestException(
         `La fila ${invalido.fila} debe incluir Marca, Numero Interno y Modelo.`,
       );
     }
     const codigos = registros.map((item) => item.codigoInventario);
-    if (new Set(codigos.map((item) => item.toUpperCase())).size !== codigos.length) {
-      throw new BadRequestException('El Excel contiene números internos repetidos.');
+    if (
+      new Set(codigos.map((item) => item.toUpperCase())).size !== codigos.length
+    ) {
+      throw new BadRequestException(
+        'El Excel contiene números internos repetidos.',
+      );
     }
     const existentes = await this.prisma.equipoAudiovisual.findMany({
       where: { codigoInventario: { in: codigos } },
@@ -247,7 +289,11 @@ export class PrestamosAudiovisualesService {
       creados[0].id,
       'CREATE',
       undefined,
-      { cargaMasiva: true, archivo: archivo.originalname, cantidad: creados.length },
+      {
+        cargaMasiva: true,
+        archivo: archivo.originalname,
+        cantidad: creados.length,
+      },
     );
     return { creados: creados.length, archivo: archivo.originalname };
   }
@@ -317,7 +363,9 @@ export class PrestamosAudiovisualesService {
         'No se puede eliminar un equipo con historial de préstamos.',
       );
     }
-    const equipo = await this.prisma.equipoAudiovisual.delete({ where: { id } });
+    const equipo = await this.prisma.equipoAudiovisual.delete({
+      where: { id },
+    });
     await this.registrar(
       usuarioId,
       'EquipoAudiovisual',
@@ -587,7 +635,10 @@ export class PrestamosAudiovisualesService {
           })
         : Promise.resolve(null),
       dto.aulaId
-        ? tx.aula.findUnique({ where: { id: dto.aulaId }, select: { id: true } })
+        ? tx.aula.findUnique({
+            where: { id: dto.aulaId },
+            select: { id: true },
+          })
         : Promise.resolve(null),
       usuarioId
         ? tx.usuario.findUnique({
@@ -603,13 +654,35 @@ export class PrestamosAudiovisualesService {
     if (!usuario) {
       throw new NotFoundException('El usuario autenticado no existe.');
     }
-    const responsableIds = [dto.entregadoPorId].filter(Boolean) as string[];
+    const responsableIds = [dto.entregadoPorId ?? usuarioId].filter(
+      Boolean,
+    ) as string[];
     if (responsableIds.length) {
       const responsables = await tx.usuario.count({
-        where: { id: { in: responsableIds }, estado: 'ACTIVA' },
+        where: {
+          id: { in: responsableIds },
+          estado: 'ACTIVA',
+          OR: [
+            { cargo: null },
+            {
+              cargo: {
+                not: 'ADMINISTRADOR',
+              },
+            },
+          ],
+          roles: {
+            none: {
+              rol: {
+                nombre: { equals: 'ADMINISTRADOR', mode: 'insensitive' },
+              },
+            },
+          },
+        },
       });
       if (responsables !== responsableIds.length) {
-        throw new NotFoundException('El usuario que entrega no existe o está inactivo.');
+        throw new NotFoundException(
+          'El usuario que entrega no existe, está inactivo o es administrador.',
+        );
       }
     }
   }
@@ -624,9 +697,7 @@ export class PrestamosAudiovisualesService {
 
   private async reservarEquipos(tx: Prisma.TransactionClient, ids: string[]) {
     if (!ids.length) return;
-    const enfriamientoDesde = new Date(
-      Date.now() - ENFRIAMIENTO_VIDEOBEAM_MS,
-    );
+    const enfriamientoDesde = new Date(Date.now() - ENFRIAMIENTO_VIDEOBEAM_MS);
     const equipos = await tx.equipoAudiovisual.findMany({
       where: { id: { in: ids } },
       select: {
@@ -729,7 +800,12 @@ export class PrestamosAudiovisualesService {
         estado: { in: [EstadoPrestamo.ACTIVO, EstadoPrestamo.VENCIDO] },
         OR: [
           ...(dto.docenteId ? [{ docenteId: dto.docenteId }] : []),
-          { docenteDocumento: { equals: dto.docenteDocumento.trim(), mode: 'insensitive' } },
+          {
+            docenteDocumento: {
+              equals: dto.docenteDocumento.trim(),
+              mode: 'insensitive',
+            },
+          },
         ],
       },
       select: { id: true },
@@ -771,7 +847,9 @@ export class PrestamosAudiovisualesService {
         day: '2-digit',
       }).format(fecha);
     if (fechaLocal(salidaEn) !== fechaLocal(devolucionEstimada)) {
-      throw new BadRequestException('El préstamo y la devolución estimada deben ser del mismo día.');
+      throw new BadRequestException(
+        'El préstamo y la devolución estimada deben ser del mismo día.',
+      );
     }
   }
 

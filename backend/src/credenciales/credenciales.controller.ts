@@ -13,6 +13,7 @@ import {
 import { MODULOS } from '../auth/auth.constants';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequireAuth } from '../auth/decorators/require-auth.decorator';
+import { RequireAdministrator } from '../auth/decorators/require-administrator.decorator';
 import { RequireModule } from '../auth/decorators/require-module.decorator';
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 import type { UsuarioAutenticado } from '../auth/auth.types';
@@ -45,7 +46,7 @@ export class CredencialesController {
   ) {
     return this.service.findAll(dto, u.id);
   }
-  @Get('roles-autorizables') @RequirePermissions('CREDENCIALES_LEER') rolesAutorizables() {
+  @Get('roles-autorizables') @RequireAdministrator() @RequirePermissions('CREDENCIALES_LEER') rolesAutorizables() {
     return this.service.listarRolesAutorizables();
   }
   @Post('verificar-acceso') @RequirePermissions('CREDENCIALES_LEER') verificarAcceso(
@@ -67,7 +68,7 @@ export class CredencialesController {
   ) {
     return this.service.cambiarSecreto(id, dto, u.id);
   }
-  @Post(':id/accesos') @RequirePermissions('CREDENCIALES_ACTUALIZAR') acceso(
+  @Post(':id/accesos') @RequireAdministrator() @RequirePermissions('CREDENCIALES_ACTUALIZAR') acceso(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CrearAccesoCredencialDto,
     @CurrentUser() u: UsuarioAutenticado,
@@ -94,7 +95,7 @@ export class CredencialesController {
   ) {
     return this.service.update(id, dto, u.id);
   }
-  @Put(':id/roles') @RequirePermissions('CREDENCIALES_ACTUALIZAR') roles(
+  @Put(':id/roles') @RequireAdministrator() @RequirePermissions('CREDENCIALES_ACTUALIZAR') roles(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: ActualizarRolesCredencialDto,
     @CurrentUser() u: UsuarioAutenticado,

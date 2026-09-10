@@ -1,4 +1,8 @@
-import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { EstadoCuenta } from '../../generated/prisma/enums.js';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthTokenService } from './auth-token.service';
@@ -84,31 +88,55 @@ export class AuthService {
     return this.toAuthenticatedUser(usuario);
   }
 
-  async verifyCurrentPassword(usuarioId: string, password: string): Promise<boolean> {
+  async verifyCurrentPassword(
+    usuarioId: string,
+    password: string,
+  ): Promise<boolean> {
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: usuarioId },
       select: { estado: true, passwordHash: true },
     });
     return Boolean(
       usuario &&
-        usuario.estado === EstadoCuenta.ACTIVA &&
-        this.passwordHash.verify(password, usuario.passwordHash),
+      usuario.estado === EstadoCuenta.ACTIVA &&
+      this.passwordHash.verify(password, usuario.passwordHash),
     );
+  }
+
+  async cambiarContrasena(
+    usuarioId: string,
+    contrasenaActual: string,
+    nuevaContrasena: string,
+  ) {
+    if (!(await this.verifyCurrentPassword(usuarioId, contrasenaActual))) {
+      throw new UnauthorizedException('La contraseña actual no es correcta.');
+    }
+    await this.prisma.usuario.update({
+      where: { id: usuarioId },
+      data: { passwordHash: this.passwordHash.hash(nuevaContrasena) },
+    });
+    return { actualizado: true as const };
   }
 
   async autorizarEstadosRestringidosTarea(usuarioId: string, password: string) {
     if (!(await this.verifyCurrentPassword(usuarioId, password)))
-      throw new UnauthorizedException('La contraseña de la sesión no es válida.');
+      throw new UnauthorizedException(
+        'La contraseña de la sesión no es válida.',
+      );
     const expiraEn = Date.now() + 10 * 60 * 1000;
     this.autorizacionesEstadosTarea.set(usuarioId, expiraEn);
     return { autorizado: true, expiraEn };
   }
 
   exigirAutorizacionEstadosRestringidosTarea(usuarioId?: string) {
-    const expiraEn = usuarioId ? this.autorizacionesEstadosTarea.get(usuarioId) : undefined;
+    const expiraEn = usuarioId
+      ? this.autorizacionesEstadosTarea.get(usuarioId)
+      : undefined;
     if (!usuarioId || !expiraEn || expiraEn <= Date.now()) {
       if (usuarioId) this.autorizacionesEstadosTarea.delete(usuarioId);
-      throw new ForbiddenException('Confirme la contraseña de la sesión para cambiar una tarea a este estado.');
+      throw new ForbiddenException(
+        'Confirme la contraseña de la sesión para cambiar una tarea a este estado.',
+      );
     }
   }
 

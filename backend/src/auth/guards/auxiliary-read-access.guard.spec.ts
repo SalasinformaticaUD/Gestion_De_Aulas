@@ -32,4 +32,10 @@ describe('lectura auxiliar entre módulos operativos', () => {
     expect(readGuard.canActivate(contextFor(user))).toBe(true);
     expect(() => createGuard.canActivate(contextFor(user))).toThrow(ForbiddenException);
   });
+
+  it('exige permisos cuando no se configura explícitamente el modo permisivo', () => {
+    delete process.env.PERMISSIONS_MODE;
+    const guard = new PermissionsGuard({ getAllAndOverride: jest.fn().mockReturnValue(['CREDENCIALES_ACTUALIZAR']) } as any);
+    expect(() => guard.canActivate(contextFor({ modulos: ['CREDENCIALES'], permisos: ['CREDENCIALES_LEER'] }))).toThrow(ForbiddenException);
+  });
 });

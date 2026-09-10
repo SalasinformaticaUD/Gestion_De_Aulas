@@ -68,7 +68,15 @@ export class MultasService {
   }
 
   findAll(
-    filters: { estado?: string; estudianteId?: string; codigo?: string; q?: string; scope?: string; page?: number; limit?: number } = {},
+    filters: {
+      estado?: string;
+      estudianteId?: string;
+      codigo?: string;
+      q?: string;
+      scope?: string;
+      page?: number;
+      limit?: number;
+    } = {},
   ) {
     const estado = this.parseEstado(filters.estado);
     const where: Prisma.MultaWhereInput = {
@@ -79,13 +87,28 @@ export class MultasService {
           codigo: { equals: filters.codigo.trim(), mode: 'insensitive' },
         },
       }),
-      ...(filters.scope === 'historical' && !estado && { estado: { not: EstadoMulta.ACTIVA } }),
-      ...(filters.q?.trim() && { OR: [
-        { estudiante: { codigo: { contains: filters.q.trim(), mode: 'insensitive' } } },
-        { estudiante: { nombre: { contains: filters.q.trim(), mode: 'insensitive' } } },
-        { motivo: { nombre: { contains: filters.q.trim(), mode: 'insensitive' } } },
-        { descripcion: { contains: filters.q.trim(), mode: 'insensitive' } },
-      ] }),
+      ...(filters.scope === 'historical' &&
+        !estado && { estado: { not: EstadoMulta.ACTIVA } }),
+      ...(filters.q?.trim() && {
+        OR: [
+          {
+            estudiante: {
+              codigo: { contains: filters.q.trim(), mode: 'insensitive' },
+            },
+          },
+          {
+            estudiante: {
+              nombre: { contains: filters.q.trim(), mode: 'insensitive' },
+            },
+          },
+          {
+            motivo: {
+              nombre: { contains: filters.q.trim(), mode: 'insensitive' },
+            },
+          },
+          { descripcion: { contains: filters.q.trim(), mode: 'insensitive' } },
+        ],
+      }),
     };
     if (filters.page) return this.findPage(where, filters.page, filters.limit);
     return this.prisma.multa.findMany({
@@ -104,15 +127,42 @@ export class MultasService {
     return multa;
   }
 
-  private async findPage(where: Prisma.MultaWhereInput, page: number, limit?: number) {
+  private async findPage(
+    where: Prisma.MultaWhereInput,
+    page: number,
+    limit?: number,
+  ) {
     const take = Math.min(Math.max(limit ?? 25, 1), 100);
     const [data, total, grouped] = await this.prisma.$transaction([
-      this.prisma.multa.findMany({ where, include: includeMulta, orderBy: { fecha: 'desc' }, skip: (page - 1) * take, take }),
+      this.prisma.multa.findMany({
+        where,
+        include: includeMulta,
+        orderBy: { fecha: 'desc' },
+        skip: (page - 1) * take,
+        take,
+      }),
       this.prisma.multa.count({ where }),
-      this.prisma.multa.groupBy({ by: ['estado'], orderBy: { estado: 'asc' }, _count: { _all: true } }),
+      this.prisma.multa.groupBy({
+        by: ['estado'],
+        orderBy: { estado: 'asc' },
+        _count: { _all: true },
+      }),
     ]);
-    const summary = Object.fromEntries(grouped.map((item) => [item.estado, (item._count as { _all?: number })._all ?? 0]));
-    return { data, meta: { page, limit: take, total, totalPages: Math.ceil(total / take) }, summary: { activa: summary.ACTIVA ?? 0, cumplida: summary.CUMPLIDA ?? 0, anulada: summary.ANULADA ?? 0 } };
+    const summary = Object.fromEntries(
+      grouped.map((item) => [
+        item.estado,
+        (item._count as { _all?: number })._all ?? 0,
+      ]),
+    );
+    return {
+      data,
+      meta: { page, limit: take, total, totalPages: Math.ceil(total / take) },
+      summary: {
+        activa: summary.ACTIVA ?? 0,
+        cumplida: summary.CUMPLIDA ?? 0,
+        anulada: summary.ANULADA ?? 0,
+      },
+    };
   }
 
   async buscarEstudianteConPracticaActiva(codigo: string) {
@@ -123,10 +173,16 @@ export class MultasService {
         codigo: true,
         nombre: true,
         practicas: {
-          where: { estado: { in: [EstadoPrestamo.ACTIVO, EstadoPrestamo.VENCIDO] } },
+          where: {
+            estado: { in: [EstadoPrestamo.ACTIVO, EstadoPrestamo.VENCIDO] },
+          },
           orderBy: { inicio: 'desc' },
           take: 1,
-          select: { id: true, estado: true, aula: { select: { codigo: true } } },
+          select: {
+            id: true,
+            estado: true,
+            aula: { select: { codigo: true } },
+          },
         },
       },
     });
@@ -138,43 +194,76 @@ export class MultasService {
       nombre: estudiante.nombre,
       tienePracticaActiva: Boolean(practica),
       practicaActiva: practica
-        ? { id: practica.id, estado: practica.estado, aula: practica.aula.codigo }
+        ? {
+            id: practica.id,
+            estado: practica.estado,
+            aula: practica.aula.codigo,
+          }
         : null,
     };
   }
 
-  async buscarMasivo(archivo: { buffer: Buffer; originalname: string } | undefined) {
-    if (!archivo?.buffer?.length || !/\.(xlsx|xls)$/i.test(archivo.originalname)) {
-      throw new BadRequestException('Debe adjuntar un archivo Excel .xlsx o .xls.');
+  async buscarMasivo(
+    archivo: { buffer: Buffer; originalname: string } | undefined,
+  ) {
+    if (
+      !archivo?.buffer?.length ||
+      !/\.(xlsx|xls)$/i.test(archivo.originalname)
+    ) {
+      throw new BadRequestException(
+        'Debe adjuntar un archivo Excel .xlsx o .xls.',
+      );
     }
     let filas: Array<Record<string, unknown>>;
     try {
       const libro = XLSX.read(archivo.buffer, { type: 'buffer' });
       const hoja = libro.Sheets[libro.SheetNames[0]];
-      filas = XLSX.utils.sheet_to_json<Record<string, unknown>>(hoja, { defval: '', blankrows: true });
+      filas = XLSX.utils.sheet_to_json<Record<string, unknown>>(hoja, {
+        defval: '',
+        blankrows: true,
+      });
     } catch {
       throw new BadRequestException('No fue posible leer el archivo Excel.');
     }
-    const normalizar = (valor: string) => valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+    const normalizar = (valor: string) =>
+      valor
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toUpperCase();
     const valor = (fila: Record<string, unknown>, encabezado: string) => {
-      const clave = Object.keys(fila).find((item) => normalizar(item) === normalizar(encabezado));
-      return String(clave ? fila[clave] ?? '' : '').trim();
+      const clave = Object.keys(fila).find(
+        (item) => normalizar(item) === normalizar(encabezado),
+      );
+      return String(clave ? (fila[clave] ?? '') : '').trim();
     };
-    const filasConDatos = filas.filter((fila) => Object.values(fila).some((celda) => String(celda).trim() !== ''));
-    if (!filasConDatos.length) throw new BadRequestException('El Excel debe contener al menos una persona.');
+    const filasConDatos = filas.filter((fila) =>
+      Object.values(fila).some((celda) => String(celda).trim() !== ''),
+    );
+    if (!filasConDatos.length)
+      throw new BadRequestException(
+        'El Excel debe contener al menos una persona.',
+      );
     const encabezados = Object.keys(filasConDatos[0]).map(normalizar);
-    const faltantes = ['CODIGO', 'NOMBRE'].filter((item) => !encabezados.includes(item));
-    if (faltantes.length) throw new BadRequestException(`Faltan columnas requeridas: ${faltantes.join(', ')}.`);
+    const faltantes = ['CODIGO'].filter((item) => !encabezados.includes(item));
+    if (faltantes.length)
+      throw new BadRequestException(
+        `Faltan columnas requeridas: ${faltantes.join(', ')}.`,
+      );
     const codigos = new Set<string>();
     let duplicados = 0;
     const datos = filasConDatos.flatMap((fila, indice) => {
       const codigo = valor(fila, 'CODIGO');
-      const nombre = valor(fila, 'NOMBRE');
-      if (!/^\d{3,50}$/.test(codigo)) throw new BadRequestException(`Fila ${indice + 2}: el código debe contener solo números.`);
-      if (!nombre) throw new BadRequestException(`Fila ${indice + 2}: el nombre es obligatorio.`);
-      if (codigos.has(codigo)) { duplicados++; return []; }
+      if (!/^\d{3,50}$/.test(codigo))
+        throw new BadRequestException(
+          `Fila ${indice + 2}: el código debe contener solo números.`,
+        );
+      if (codigos.has(codigo)) {
+        duplicados++;
+        return [];
+      }
       codigos.add(codigo);
-      return [{ codigo, nombre }];
+      return [{ codigo }];
     });
     const estudiantes = await this.prisma.estudiante.findMany({
       where: { codigo: { in: datos.map((dato) => dato.codigo) } },
@@ -182,44 +271,116 @@ export class MultasService {
         id: true,
         codigo: true,
         nombre: true,
-        multas: { orderBy: { fecha: 'desc' }, select: { id: true, fecha: true, estado: true, descripcion: true, motivo: { select: { nombre: true } } } },
+        multas: {
+          orderBy: { fecha: 'desc' },
+          select: {
+            id: true,
+            fecha: true,
+            estado: true,
+            descripcion: true,
+            motivo: { select: { nombre: true } },
+          },
+        },
       },
     });
-    const porCodigo = new Map(estudiantes.map((estudiante) => [estudiante.codigo, estudiante]));
+    const porCodigo = new Map(
+      estudiantes.map((estudiante) => [estudiante.codigo, estudiante]),
+    );
     const resultados = datos.map((dato) => {
       const estudiante = porCodigo.get(dato.codigo);
-      if (!estudiante) return { codigo: dato.codigo, nombre: dato.nombre, estado: 'NO_ENCONTRADO', multas: [] };
-      return { codigo: dato.codigo, nombre: dato.nombre, nombreRegistrado: estudiante.nombre, nombreCoincide: normalizar(dato.nombre) === normalizar(estudiante.nombre), estado: estudiante.multas.length ? 'CON_MULTA' : 'SIN_MULTA', multas: estudiante.multas };
+      if (!estudiante)
+        return {
+          codigo: dato.codigo,
+          nombre: null,
+          estado: 'NO_ENCONTRADO',
+          multas: [],
+        };
+      return {
+        codigo: dato.codigo,
+        nombre: estudiante.nombre,
+        estado: estudiante.multas.length ? 'CON_MULTA' : 'SIN_MULTA',
+        multas: estudiante.multas,
+      };
     });
-    return { totalFilas: filasConDatos.length, procesadas: datos.length, duplicadas: duplicados, conMulta: resultados.filter((resultado) => resultado.estado === 'CON_MULTA').length, sinMulta: resultados.filter((resultado) => resultado.estado === 'SIN_MULTA').length, noEncontradas: resultados.filter((resultado) => resultado.estado === 'NO_ENCONTRADO').length, resultados };
+    return {
+      totalFilas: filasConDatos.length,
+      procesadas: datos.length,
+      duplicadas: duplicados,
+      conMulta: resultados.filter(
+        (resultado) => resultado.estado === 'CON_MULTA',
+      ).length,
+      sinMulta: resultados.filter(
+        (resultado) => resultado.estado === 'SIN_MULTA',
+      ).length,
+      noEncontradas: resultados.filter(
+        (resultado) => resultado.estado === 'NO_ENCONTRADO',
+      ).length,
+      resultados,
+    };
   }
 
   async cargarExcel(
     archivo: { buffer: Buffer; originalname: string } | undefined,
     usuarioId?: string,
   ) {
-    if (!archivo?.buffer?.length || !/\.(xlsx|xls)$/i.test(archivo.originalname))
-      throw new BadRequestException('Debe adjuntar un archivo Excel .xlsx o .xls.');
+    if (
+      !archivo?.buffer?.length ||
+      !/\.(xlsx|xls)$/i.test(archivo.originalname)
+    )
+      throw new BadRequestException(
+        'Debe adjuntar un archivo Excel .xlsx o .xls.',
+      );
     let filas: Array<Record<string, unknown>>;
     try {
-      const libro = XLSX.read(archivo.buffer, { type: 'buffer', cellDates: true });
+      const libro = XLSX.read(archivo.buffer, {
+        type: 'buffer',
+        cellDates: true,
+      });
       const hoja = libro.Sheets[libro.SheetNames[0]];
-      filas = XLSX.utils.sheet_to_json<Record<string, unknown>>(hoja, { defval: '', raw: false });
+      filas = XLSX.utils.sheet_to_json<Record<string, unknown>>(hoja, {
+        defval: '',
+        raw: false,
+      });
     } catch {
       throw new BadRequestException('No fue posible leer el archivo Excel.');
     }
-    const normalizar = (valor: string) => valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
+    const normalizar = (valor: string) =>
+      valor
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toUpperCase();
     const valor = (fila: Record<string, unknown>, encabezado: string) => {
-      const clave = Object.keys(fila).find((item) => normalizar(item) === normalizar(encabezado));
-      return String(clave ? fila[clave] ?? '' : '').trim();
+      const clave = Object.keys(fila).find(
+        (item) => normalizar(item) === normalizar(encabezado),
+      );
+      return String(clave ? (fila[clave] ?? '') : '').trim();
     };
-    const conDatos = filas.filter((fila) => Object.values(fila).some((celda) => String(celda).trim()));
-    if (!conDatos.length) throw new BadRequestException('El Excel no contiene multas para cargar.');
-    if (conDatos.length > 5_000) throw new BadRequestException('El Excel supera el máximo de 5.000 filas.');
+    const conDatos = filas.filter((fila) =>
+      Object.values(fila).some((celda) => String(celda).trim()),
+    );
+    if (!conDatos.length)
+      throw new BadRequestException('El Excel no contiene multas para cargar.');
+    if (conDatos.length > 5_000)
+      throw new BadRequestException(
+        'El Excel supera el máximo de 5.000 filas.',
+      );
     const encabezados = Object.keys(conDatos[0]).map(normalizar);
-    const requeridos = ['MULTA', 'ESTUDIANTE', 'MOTIVO', 'FECHA', 'DESCRIPCION', 'ESTADO'];
-    const faltantes = requeridos.filter((encabezado) => !encabezados.includes(encabezado));
-    if (faltantes.length) throw new BadRequestException(`Faltan columnas requeridas: ${faltantes.join(', ')}.`);
+    const requeridos = [
+      'MULTA',
+      'ESTUDIANTE',
+      'MOTIVO',
+      'FECHA',
+      'DESCRIPCION',
+      'ESTADO',
+    ];
+    const faltantes = requeridos.filter(
+      (encabezado) => !encabezados.includes(encabezado),
+    );
+    if (faltantes.length)
+      throw new BadRequestException(
+        `Faltan columnas requeridas: ${faltantes.join(', ')}.`,
+      );
 
     const errores: Array<{ fila: number; motivo: string }> = [];
     let creadas = 0;
@@ -227,30 +388,78 @@ export class MultasService {
     for (const [indice, fila] of conDatos.entries()) {
       try {
         const estudianteTexto = valor(fila, 'ESTUDIANTE');
-        const codigo = estudianteTexto.match(/^\s*(\d{3,50})(?:\s*-|\s|$)/)?.[1];
+        const codigo = estudianteTexto.match(
+          /^\s*(\d{3,50})(?:\s*-|\s|$)/,
+        )?.[1];
         const motivoNombre = valor(fila, 'MOTIVO');
         const fechaTexto = valor(fila, 'FECHA');
         const descripcion = valor(fila, 'DESCRIPCION');
         const multaSugerida = valor(fila, 'MULTA SUGERIDA');
         const estadoTexto = normalizar(valor(fila, 'ESTADO'));
-        if (!codigo) throw new BadRequestException('Estudiante debe iniciar con su código numérico, por ejemplo: 20261001 - NOMBRE.');
-        if (!motivoNombre) throw new BadRequestException('Motivo es obligatorio.');
+        if (!codigo)
+          throw new BadRequestException(
+            'Estudiante debe iniciar con su código numérico, por ejemplo: 20261001 - NOMBRE.',
+          );
+        if (!motivoNombre)
+          throw new BadRequestException('Motivo es obligatorio.');
         const fecha = new Date(fechaTexto);
-        if (Number.isNaN(fecha.getTime())) throw new BadRequestException('Fecha no es válida.');
-        const estado = ({ ACTIVA: EstadoMulta.ACTIVA, CUMPLIDA: EstadoMulta.CUMPLIDA, ANULADA: EstadoMulta.ANULADA } as const)[estadoTexto];
-        if (!estado) throw new BadRequestException('Estado debe ser ACTIVA, CUMPLIDA o ANULADA.');
-        const estudiante = await this.prisma.estudiante.findUnique({ where: { codigo }, select: { id: true } });
-        if (!estudiante) throw new NotFoundException(`No existe un estudiante con código ${codigo}.`);
-        const motivo = await this.prisma.motivoMulta.upsert({ where: { nombre: motivoNombre }, create: { nombre: motivoNombre }, update: {}, select: { id: true } });
-        const existente = await this.prisma.multa.findFirst({ where: { estudianteId: estudiante.id, motivoId: motivo.id, fecha, descripcion: descripcion || null }, select: { id: true, estado: true } });
+        if (Number.isNaN(fecha.getTime()))
+          throw new BadRequestException('Fecha no es válida.');
+        const estado = (
+          {
+            ACTIVA: EstadoMulta.ACTIVA,
+            CUMPLIDA: EstadoMulta.CUMPLIDA,
+            ANULADA: EstadoMulta.ANULADA,
+          } as const
+        )[estadoTexto];
+        if (!estado)
+          throw new BadRequestException(
+            'Estado debe ser ACTIVA, CUMPLIDA o ANULADA.',
+          );
+        const estudiante = await this.prisma.estudiante.findUnique({
+          where: { codigo },
+          select: { id: true },
+        });
+        if (!estudiante)
+          throw new NotFoundException(
+            `No existe un estudiante con código ${codigo}.`,
+          );
+        const motivo = await this.prisma.motivoMulta.upsert({
+          where: { nombre: motivoNombre },
+          create: { nombre: motivoNombre },
+          update: {},
+          select: { id: true },
+        });
+        const existente = await this.prisma.multa.findFirst({
+          where: {
+            estudianteId: estudiante.id,
+            motivoId: motivo.id,
+            fecha,
+            descripcion: descripcion || null,
+          },
+          select: { id: true, estado: true },
+        });
         if (existente) {
           if (existente.estado !== estado) {
-            await this.prisma.multa.update({ where: { id: existente.id }, data: { estado } });
+            await this.prisma.multa.update({
+              where: { id: existente.id },
+              data: { estado },
+            });
             actualizadas += 1;
           }
           continue;
         }
-        const creada = await this.prisma.multa.create({ data: { estudianteId: estudiante.id, motivoId: motivo.id, fecha, descripcion: descripcion || null, multaSugerida: multaSugerida || null, estado, ...(usuarioId && { impuestaPorId: usuarioId }) } });
+        const creada = await this.prisma.multa.create({
+          data: {
+            estudianteId: estudiante.id,
+            motivoId: motivo.id,
+            fecha,
+            descripcion: descripcion || null,
+            multaSugerida: multaSugerida || null,
+            estado,
+            ...(usuarioId && { impuestaPorId: usuarioId }),
+          },
+        });
         await this.registrar(usuarioId, creada.id, 'CREATE', undefined, creada);
         creadas += 1;
       } catch (error: unknown) {
@@ -325,7 +534,9 @@ export class MultasService {
       data: {
         ...(dto.motivoId && { motivoId: dto.motivoId }),
         ...(dto.descripcion !== undefined && { descripcion: dto.descripcion }),
-        ...(dto.multaSugerida !== undefined && { multaSugerida: dto.multaSugerida }),
+        ...(dto.multaSugerida !== undefined && {
+          multaSugerida: dto.multaSugerida,
+        }),
       },
       include: includeMulta,
     });
@@ -394,7 +605,9 @@ export class MultasService {
                 ],
               },
             }
-          : { estado: { in: [EstadoPrestamo.ACTIVO, EstadoPrestamo.VENCIDO] } }),
+          : {
+              estado: { in: [EstadoPrestamo.ACTIVO, EstadoPrestamo.VENCIDO] },
+            }),
       },
       select: { id: true },
     });
@@ -440,6 +653,8 @@ export class MultasService {
   }
 
   private mensajeError(error: unknown): string {
-    return error instanceof Error ? error.message : 'Error desconocido al procesar la fila.';
+    return error instanceof Error
+      ? error.message
+      : 'Error desconocido al procesar la fila.';
   }
 }

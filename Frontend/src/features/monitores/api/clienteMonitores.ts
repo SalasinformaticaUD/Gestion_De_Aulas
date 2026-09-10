@@ -52,12 +52,14 @@ async function interpretarRespuesta<T>(respuesta: Response, notificarAutorizacio
   return cuerpo as T;
 }
 
-export async function solicitarAulas<T>(ruta: string, token?: string, opciones: RequestInit = {}) {
+type OpcionesSolicitudAulas = RequestInit & { notificarAutorizacion?: boolean };
+
+export async function solicitarAulas<T>(ruta: string, token?: string, opciones: OpcionesSolicitudAulas = {}) {
   const cabeceras = new Headers(opciones.headers);
   if (!(opciones.body instanceof FormData)) cabeceras.set("Content-Type", "application/json");
   if (token) cabeceras.set("Authorization", `Bearer ${token}`);
   const respuesta = await fetch(`${baseAulas}${ruta}`, { ...opciones, headers: cabeceras });
-  return interpretarRespuesta<T>(respuesta, Boolean(token));
+  return interpretarRespuesta<T>(respuesta, Boolean(token) && opciones.notificarAutorizacion !== false);
 }
 
 /** Descarga un archivo binario desde la API de Aulas conservando la sesión actual. */

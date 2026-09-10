@@ -76,8 +76,9 @@ Variables de entorno:
 - `JWT_EXPIRES_IN`: duración del token; por defecto `8h`.
 - `AUTH_REQUIRED`: `true` obliga autenticación global; fuera de producción inicia en
   `false` para facilitar la integración progresiva.
-- `PERMISSIONS_MODE`: `permissive` durante integración o `strict` para exigir los
-  módulos asignados mediante roles y permisos.
+- `PERMISSIONS_MODE`: `strict` por defecto para exigir los módulos y permisos
+  asignados mediante cargos. Use `permissive` únicamente durante una integración
+  temporal y controlada.
 
 ## Configuración y base de datos
 

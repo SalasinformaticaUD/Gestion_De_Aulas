@@ -44,9 +44,8 @@ export class CreateMultaDto {
   descripcion?: string;
 
   @Transform(trim)
-  @IsOptional()
   @IsString()
   @IsNotEmpty()
   @MaxLength(160)
-  multaSugerida?: string;
+  multaSugerida!: string;
 }

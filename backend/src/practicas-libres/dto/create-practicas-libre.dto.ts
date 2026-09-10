@@ -19,7 +19,10 @@ export enum ResponsablePracticaLibre {
   ASISTENCIAL = 'ASISTENCIAL',
 }
 
-export enum TipoSolicitantePracticaLibre { ESTUDIANTE = 'ESTUDIANTE', DOCENTE = 'DOCENTE' }
+export enum TipoSolicitantePracticaLibre {
+  ESTUDIANTE = 'ESTUDIANTE',
+  DOCENTE = 'DOCENTE',
+}
 
 export class ResponsableSolicitudPracticaDto {
   @IsEnum(TipoSolicitantePracticaLibre) tipo!: TipoSolicitantePracticaLibre;
@@ -61,6 +64,10 @@ export class CreatePracticasLibreDto {
 
   @IsEnum(ResponsablePracticaLibre)
   responsableTipo!: ResponsablePracticaLibre;
+
+  @IsOptional()
+  @IsUUID()
+  atendidoPorId?: string;
 
   @IsISO8601({ strict: true })
   inicio!: string;

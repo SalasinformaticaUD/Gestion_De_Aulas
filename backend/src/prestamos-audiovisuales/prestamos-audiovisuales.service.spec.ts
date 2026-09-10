@@ -14,7 +14,7 @@ describe('PrestamosAudiovisualesService', () => {
   const tx = {
     docente: { findUnique: jest.fn(), findMany: jest.fn() },
     aula: { findUnique: jest.fn() },
-    usuario: { findUnique: jest.fn() },
+    usuario: { findUnique: jest.fn(), findMany: jest.fn(), count: jest.fn() },
     equipoAudiovisual: {
       create: jest.fn(),
       findMany: jest.fn(),
@@ -62,6 +62,7 @@ describe('PrestamosAudiovisualesService', () => {
     tx.docente.findUnique.mockResolvedValue({ id: ids.docente });
     tx.aula.findUnique.mockResolvedValue({ id: ids.aula });
     tx.usuario.findUnique.mockResolvedValue({ id: ids.usuario });
+    tx.usuario.count.mockResolvedValue(1);
     tx.prestamoAudiovisual.findFirst.mockResolvedValue(null);
     tx.equipoAudiovisual.findMany.mockResolvedValue([
       {
@@ -110,6 +111,21 @@ describe('PrestamosAudiovisualesService', () => {
       ConflictException,
     );
     expect(tx.prestamoAudiovisual.create).not.toHaveBeenCalled();
+  });
+
+  it('no incluye administradores entre los responsables disponibles', async () => {
+    prisma.usuario.findMany.mockResolvedValue([]);
+
+    await service.findResponsables();
+
+    expect(prisma.usuario.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          estado: 'ACTIVA',
+          roles: { none: { rol: { nombre: expect.any(Object) } } },
+        }),
+      }),
+    );
   });
 
   it('busca docentes por nombre y limita el autocompletado', async () => {

@@ -8,7 +8,6 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { ConsultarReporteDto } from './dto/consultar-reporte.dto';
 import { PlantillasPdfService } from './plantillas-pdf.service';
-import type { UsuarioAutenticado } from '../auth/auth.types';
 
 export const REPORTES = [
   'uso-aulas',
@@ -27,14 +26,15 @@ export class ReportesService {
     @Optional() private readonly plantillasPdf?: PlantillasPdfService,
   ) {}
 
-  async generarPracticaLibrePdf(
-    id: string,
-    usuario?: Pick<UsuarioAutenticado, 'nombreUsuario'>,
-  ): Promise<Buffer> {
+  async generarPracticaLibrePdf(id: string): Promise<Buffer> {
     const practica = await this.prisma.practicaLibre.findUnique({
       where: { id },
       include: {
         estudiante: true,
+        docente: true,
+        atendidoPor: {
+          select: { nombreCompleto: true, nombreUsuario: true },
+        },
         aula: { include: { proyectoCurricular: true } },
       },
     });
@@ -54,20 +54,31 @@ export class ReportesService {
         : `Fin estimado: ${this.horaBogota(practica.finEstimada)}`,
       'Registro generado desde el Sistema de Gestión Operativa de Aulas de Software.',
     ].join(' ');
-    const atendidoPor = usuario?.nombreUsuario || 'admin';
+    const atendidoPor =
+      practica.atendidoPor?.nombreCompleto ??
+      practica.atendidoPor?.nombreUsuario ??
+      'Sin responsable registrado';
+    const personaAtendida =
+      practica.estudiante?.nombre ??
+      practica.docente?.nombre ??
+      'Responsable no disponible';
+    const identificacion =
+      practica.estudiante?.codigo ??
+      practica.docente?.documento ??
+      'No disponible';
 
     return this.pdf().generar(
       'Ficha - Practicas libres',
       {
-        B10: `NOMBRE:\n${practica.estudiante?.nombre ?? 'Docente responsable'}`,
-        G10: `CÉDULA/CÓDIGO:\n${practica.estudiante?.codigo ?? 'No disponible'}`,
+        B10: `NOMBRE:\n${personaAtendida}`,
+        G10: `CÉDULA/CÓDIGO:\n${identificacion}`,
         B12: 'TÍTULO DE LA PRÁCTICA O ESPACIO ACADÉMICO: Práctica Libre',
         G12: 'CÓDIGO DE GRUPO: No Aplica',
         B16: fecha.dia,
         C16: fecha.mes,
         D16: fecha.anio,
         E16: this.horaBogota(practica.inicio),
-        F16: `${practica.aula.codigo} - ${practica.aula.ubicacion}`,
+        F16: this.extraerNumero(practica.aula.codigo),
         I16: consecutivo,
         // La fila 19 contiene los encabezados ENTREGA/DEVOL; los datos van
         // en la primera fila de registros, la fila 20.
@@ -78,7 +89,7 @@ export class ReportesService {
         J20: this.horaBogota(practica.finEstimada),
         B25: `OBSERVACIONES: ${observaciones}`,
         B26: `ATENDIDO POR: ${atendidoPor}`,
-        G26: `USUARIO:\n${practica.estudiante?.nombre ?? 'Docente responsable'}`,
+        G26: `USUARIO:\n${personaAtendida}`,
         G28: 'DOCENTE: No Aplica',
       },
       `Ficha_PracticaLibre_${consecutivo}`,
@@ -98,7 +109,9 @@ export class ReportesService {
       },
     });
     if (!prestamo) {
-      throw new NotFoundException('No existe el préstamo audiovisual indicado.');
+      throw new NotFoundException(
+        'No existe el préstamo audiovisual indicado.',
+      );
     }
 
     const salida = prestamo.salidaEn ?? prestamo.devolucionEstimada;
@@ -108,6 +121,9 @@ export class ReportesService {
       prestamo.entregadoPor?.nombreCompleto ??
       prestamo.entregadoPor?.nombreUsuario ??
       'Sistema';
+    const elementosAdicionales = this.listaDeElementos(
+      prestamo.elementosAdicionales,
+    );
     const observaciones = [
       ...equipos.map((equipo) =>
         [
@@ -120,6 +136,12 @@ export class ReportesService {
       ),
       prestamo.motivoCancelacion
         ? `Motivo de cancelación: ${prestamo.motivoCancelacion}`
+        : '',
+      elementosAdicionales.length
+        ? `Elementos adicionales prestados: ${elementosAdicionales.join(', ')}`
+        : '',
+      prestamo.observacionesPrestamo
+        ? `Observación del préstamo: ${prestamo.observacionesPrestamo}`
         : '',
       `Estado: ${prestamo.estado}`,
       `Atendido por: ${responsable}`,
@@ -187,11 +209,31 @@ export class ReportesService {
     // La plantilla conserva su catálogo de salas; se sobreescribe con los códigos
     // que realmente existen en cada bloque para que el mapeo no dependa del orden.
     const salasPlantilla = [
-      '306', '312', '311', '406', '412', '501', '502', '503', '504', '505',
-      '506', '507', '601', '701', '702', '703', '704', '706', '707', '403',
+      '306',
+      '312',
+      '311',
+      '406',
+      '412',
+      '501',
+      '502',
+      '503',
+      '504',
+      '505',
+      '506',
+      '507',
+      '601',
+      '701',
+      '702',
+      '703',
+      '704',
+      '706',
+      '707',
+      '403',
     ];
     filasPorSala.clear();
-    salasPlantilla.forEach((sala, index) => filasPorSala.set(sala, 11 + index * 3));
+    salasPlantilla.forEach((sala, index) =>
+      filasPorSala.set(sala, 11 + index * 3),
+    );
 
     const columnasPorHora: Record<number, string> = {
       6: 'G',
@@ -213,7 +255,8 @@ export class ReportesService {
       if (!fila || !columna) continue;
       const clave = `${fila}:${columna}`;
       const lista = nombres.get(clave) ?? [];
-      if (!lista.includes(clase.docente.nombre)) lista.push(clase.docente.nombre);
+      if (!lista.includes(clase.docente.nombre))
+        lista.push(clase.docente.nombre);
       nombres.set(clave, lista);
     }
     for (const [clave, lista] of nombres) {
@@ -229,21 +272,38 @@ export class ReportesService {
     );
   }
 
-  async generarPracticasLibresMesPdf(mes: string, usuario?: Pick<UsuarioAutenticado, 'nombreUsuario'>): Promise<Buffer> {
+  async generarPracticasLibresMesPdf(mes: string): Promise<Buffer> {
     const rango = this.rangoMesCompleto(mes);
     const practicas = await this.prisma.practicaLibre.findMany({
       where: {
         inicio: { gte: rango.desde, lte: rango.hasta },
         estado: { in: ['DEVUELTO', 'CANCELADO'] },
       },
-      select: { id: true },
+      select: {
+        id: true,
+        atendidoPor: {
+          select: { nombreCompleto: true, nombreUsuario: true },
+        },
+      },
       orderBy: { inicio: 'asc' },
     });
-    if (!practicas.length) throw new BadRequestException('No hay prácticas libres para el mes seleccionado.');
-    const archivos = await this.generarEnParalelo(practicas, async (practica) => ({
-      nombre: `Ficha_PracticaLibre_${practica.id}.pdf`,
-      contenido: await this.generarPracticaLibrePdf(practica.id, usuario),
-    }));
+    if (!practicas.length)
+      throw new BadRequestException(
+        'No hay prácticas libres para el mes seleccionado.',
+      );
+    const archivos = await this.generarEnParalelo(
+      practicas,
+      async (practica) => {
+        const responsable =
+          practica.atendidoPor?.nombreCompleto ??
+          practica.atendidoPor?.nombreUsuario ??
+          'Sin responsable registrado';
+        return {
+          nombre: `${this.nombreSeguroCarpeta(responsable)}/Ficha_PracticaLibre_${practica.id}.pdf`,
+          contenido: await this.generarPracticaLibrePdf(practica.id),
+        };
+      },
+    );
     return this.comprimirPdfs(archivos);
   }
 
@@ -251,14 +311,31 @@ export class ReportesService {
     const rango = this.rangoMes(mes);
     const prestamos = await this.prisma.prestamoAudiovisual.findMany({
       where: { salidaEn: { gte: rango.desde, lte: rango.hasta } },
-      select: { id: true },
+      select: {
+        id: true,
+        entregadoPor: {
+          select: { nombreCompleto: true, nombreUsuario: true },
+        },
+      },
       orderBy: { salidaEn: 'asc' },
     });
-    if (!prestamos.length) throw new BadRequestException('No hay préstamos audiovisuales para el mes seleccionado.');
-    const archivos = [] as Array<{ nombre: string; contenido: Buffer }>;
-    for (const prestamo of prestamos) {
-      archivos.push({ nombre: `Prestamo_Audiovisual_${prestamo.id}.pdf`, contenido: await this.generarPrestamoAudiovisualPdf(prestamo.id) });
-    }
+    if (!prestamos.length)
+      throw new BadRequestException(
+        'No hay préstamos audiovisuales para el mes seleccionado.',
+      );
+    const archivos = await this.generarEnParalelo(
+      prestamos,
+      async (prestamo) => {
+        const responsable =
+          prestamo.entregadoPor?.nombreCompleto ??
+          prestamo.entregadoPor?.nombreUsuario ??
+          'Sin responsable registrado';
+        return {
+          nombre: `${this.nombreSeguroCarpeta(responsable)}/Prestamo_Audiovisual_${prestamo.id}.pdf`,
+          contenido: await this.generarPrestamoAudiovisualPdf(prestamo.id),
+        };
+      },
+    );
     return this.comprimirPdfs(archivos);
   }
 
@@ -270,20 +347,29 @@ export class ReportesService {
       distinct: ['fecha'],
       orderBy: { fecha: 'asc' },
     });
-    if (!asistencias.length) throw new BadRequestException('No hay asistencias registradas para el mes seleccionado.');
+    if (!asistencias.length)
+      throw new BadRequestException(
+        'No hay asistencias registradas para el mes seleccionado.',
+      );
     const fechas = asistencias.flatMap((asistencia) => {
       // La fecha de asistencia se persiste a medianoche UTC; no convertirla
       // a Bogotá para evitar que retroceda un día al formar el nombre y PDF.
       const fecha = asistencia.fecha.toISOString().slice(0, 10);
       // La consulta solo contiene días con registros; se conserva la regla
       // institucional de no generar formato SIGUD en domingos o festivos.
-      return new Date(`${fecha}T12:00:00.000Z`).getUTCDay() === 0 || this.esFestivo(fecha) ? [] : [fecha];
+      return new Date(`${fecha}T12:00:00.000Z`).getUTCDay() === 0 ||
+        this.esFestivo(fecha)
+        ? []
+        : [fecha];
     });
     const archivos = await this.generarEnParalelo(fechas, async (fecha) => ({
       nombre: `Asistencia_SIGUD_${fecha}.pdf`,
       contenido: await this.generarAsistenciaSigudPdf(fecha),
     }));
-    if (!archivos.length) throw new BadRequestException('No hay días hábiles con asistencia para generar en el mes seleccionado.');
+    if (!archivos.length)
+      throw new BadRequestException(
+        'No hay días hábiles con asistencia para generar en el mes seleccionado.',
+      );
     return this.comprimirPdfs(archivos);
   }
 
@@ -566,29 +652,40 @@ export class ReportesService {
   }
 
   private rangoMes(mes: string): { desde: Date; hasta: Date } {
-    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes)) throw new BadRequestException('mes debe tener formato YYYY-MM.');
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes))
+      throw new BadRequestException('mes debe tener formato YYYY-MM.');
     const [anio, numeroMes] = mes.split('-').map(Number);
     const inicio = new Date(Date.UTC(anio, numeroMes - 1, 1));
     const ultimoDia = new Date(Date.UTC(anio, numeroMes, 0));
     const hoy = this.partesBogota(new Date()).fecha;
     const mesActual = hoy.slice(0, 7);
-    if (mes > mesActual) throw new BadRequestException('No se pueden generar fichas para un mes futuro.');
-    const hastaTexto = mes === mesActual ? hoy : ultimoDia.toISOString().slice(0, 10);
+    if (mes > mesActual)
+      throw new BadRequestException(
+        'No se pueden generar fichas para un mes futuro.',
+      );
+    const hastaTexto =
+      mes === mesActual ? hoy : ultimoDia.toISOString().slice(0, 10);
     return { desde: inicio, hasta: new Date(`${hastaTexto}T23:59:59.999Z`) };
   }
 
   private rangoMesCompleto(mes: string): { desde: Date; hasta: Date } {
-    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes)) throw new BadRequestException('mes debe tener formato YYYY-MM.');
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes))
+      throw new BadRequestException('mes debe tener formato YYYY-MM.');
     const [anio, numeroMes] = mes.split('-').map(Number);
     const hoy = this.partesBogota(new Date()).fecha;
-    if (mes > hoy.slice(0, 7)) throw new BadRequestException('No se pueden generar fichas para un mes futuro.');
+    if (mes > hoy.slice(0, 7))
+      throw new BadRequestException(
+        'No se pueden generar fichas para un mes futuro.',
+      );
     return {
       desde: new Date(Date.UTC(anio, numeroMes - 1, 1)),
       hasta: new Date(Date.UTC(anio, numeroMes, 0, 23, 59, 59, 999)),
     };
   }
 
-  private comprimirPdfs(archivos: Array<{ nombre: string; contenido: Buffer }>): Buffer {
+  private comprimirPdfs(
+    archivos: Array<{ nombre: string; contenido: Buffer }>,
+  ): Buffer {
     const locales: Buffer[] = [];
     const centrales: Buffer[] = [];
     let desplazamiento = 0;
@@ -642,7 +739,11 @@ export class ReportesService {
   ): Promise<R[]> {
     const resultados: R[] = [];
     for (let indice = 0; indice < elementos.length; indice += concurrencia) {
-      resultados.push(...await Promise.all(elementos.slice(indice, indice + concurrencia).map(generar)));
+      resultados.push(
+        ...(await Promise.all(
+          elementos.slice(indice, indice + concurrencia).map(generar),
+        )),
+      );
     }
     return resultados;
   }
@@ -651,7 +752,8 @@ export class ReportesService {
     let crc = 0xffffffff;
     for (const byte of contenido) {
       crc ^= byte;
-      for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+      for (let bit = 0; bit < 8; bit++)
+        crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
     }
     return (crc ^ 0xffffffff) >>> 0;
   }
@@ -673,14 +775,46 @@ export class ReportesService {
 
   private esFestivo(fecha: string): boolean {
     const festivos = new Set([
-      '01-01', '01-12', '03-23', '04-02', '04-03', '05-01', '05-18',
-      '06-08', '06-15', '06-29', '07-13', '07-20', '08-07', '08-17',
-      '10-12', '11-02', '11-16', '12-08', '12-25',
+      '01-01',
+      '01-12',
+      '03-23',
+      '04-02',
+      '04-03',
+      '05-01',
+      '05-18',
+      '06-08',
+      '06-15',
+      '06-29',
+      '07-13',
+      '07-20',
+      '08-07',
+      '08-17',
+      '10-12',
+      '11-02',
+      '11-16',
+      '12-08',
+      '12-25',
     ]);
     const festivos2027 = new Set([
-      '01-01', '01-11', '03-22', '03-25', '03-26', '05-01', '05-10',
-      '05-31', '06-07', '07-05', '07-12', '07-20', '08-07', '08-16',
-      '10-18', '11-01', '11-15', '12-08', '12-25',
+      '01-01',
+      '01-11',
+      '03-22',
+      '03-25',
+      '03-26',
+      '05-01',
+      '05-10',
+      '05-31',
+      '06-07',
+      '07-05',
+      '07-12',
+      '07-20',
+      '08-07',
+      '08-16',
+      '10-18',
+      '11-01',
+      '11-15',
+      '12-08',
+      '12-25',
     ]);
     const [anio, mesDia] = [fecha.slice(0, 4), fecha.slice(5)];
     return (anio === '2027' ? festivos2027 : festivos).has(mesDia);
@@ -705,12 +839,36 @@ export class ReportesService {
 
   private horaBogota(fecha: Date | null): string {
     if (!fecha) return '';
-    return new Intl.DateTimeFormat('es-CO', {
+    const partes = new Intl.DateTimeFormat('en-GB', {
       timeZone: 'America/Bogota',
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false,
-    }).format(fecha);
+      hourCycle: 'h23',
+    }).formatToParts(fecha);
+    const valor = (tipo: Intl.DateTimeFormatPartTypes) =>
+      partes.find((parte) => parte.type === tipo)?.value ?? '00';
+    return `${valor('hour')}:${valor('minute')}`;
+  }
+
+  private nombreSeguroCarpeta(nombre: string): string {
+    const seguro = nombre
+      .normalize('NFKC')
+      .replace(/[<>:"/\\|?*]/g, '_')
+      .split('')
+      .map((caracter) => (caracter.charCodeAt(0) < 32 ? '_' : caracter))
+      .join('')
+      .replace(/[. ]+$/g, '')
+      .trim()
+      .slice(0, 100);
+    return seguro || 'Sin responsable registrado';
+  }
+
+  private listaDeElementos(valor: unknown): string[] {
+    if (!Array.isArray(valor)) return [];
+    return valor
+      .filter((elemento): elemento is string => typeof elemento === 'string')
+      .map((elemento) => elemento.trim())
+      .filter(Boolean);
   }
 
   private extraerNumero(valor: string): string {

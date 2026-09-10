@@ -91,10 +91,18 @@ html[data-theme="dark"] .downloadButton:hover { color:#fff; background:#a51022; 
 .matrixTable thead th { position:sticky; z-index:2; top:0; padding:8px 5px; color:#fff; background:#18191c; font-size:12px; }
 .matrixTable thead th:first-child { left:0; z-index:3; min-width:100px; text-align:left; }
 .matrixTable thead small { display:block; margin-top:3px; color:#c5c8ce; font-size:10px; font-weight:500; text-transform:capitalize; }
+.matrixTable thead th.weekendHeader { color:#fff; background:#18191c; box-shadow:none; }
+.matrixTable thead th.weekendHeader small { color:#c5c8ce; }
 .matrixTable tbody th { position:sticky; z-index:1; left:0; min-width:100px; padding:9px; color:var(--ink); background:#fff; text-align:left; }
 .matrixTable td { padding:4px; background:#fff; }
+.matrixTable td.weekendCell { background:#b9bec6; }
 .matrixCell { position:relative; }
 .matrixTable td button { width:31px; height:31px; border:1px solid transparent; border-radius:6px; cursor:pointer; font-size:16px; font-weight:800; }
+.matrixTable td.weekendCell button {
+  color:#29313c;
+  background:#b9bec6;
+  border-color:#9da4ae;
+}
 .matrixTable td button:hover { border-color:var(--primary); box-shadow:0 0 0 2px rgba(165,16,34,.12); }
 .matrixTable td button:disabled { cursor:not-allowed; opacity:.72; }
 .pendingSave { outline:2px solid var(--primary); outline-offset:1px; }
@@ -218,6 +226,14 @@ html[data-theme="dark"] .downloadButton:hover { color:#fff; background:#a51022; 
   .matrixTable tbody th { position:static; padding:4px; }
   .matrixTable td { padding:2px; }
   .matrixTable td button { width:20px; height:20px; border:0; font-size:11px; }
+  .matrixTable td.weekendCell,
+  .matrixTable td.weekendCell button {
+    color:#29313c !important;
+    background:#b9bec6 !important;
+    border-color:#9da4ae !important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
 }
 
 /* Superficies oscuras para la matriz y recomendaciones en modo oscuro. */
@@ -228,6 +244,27 @@ html[data-theme="dark"] .downloadButton:hover { color:#fff; background:#a51022; 
   color: var(--ink);
   border-color: var(--line);
   background: var(--surface);
+}
+
+:global(html[data-theme="dark"]) .matrixTable td.weekendCell {
+  color:#29313c;
+  background:#b9bec6;
+}
+
+:global(html[data-theme="dark"]) .matrixTable td.weekendCell button {
+  color:#29313c;
+  background:#b9bec6;
+  border-color:#9da4ae;
+}
+
+:global(html[data-theme="dark"]) .matrixTable thead th.weekendHeader {
+  color:#fff;
+  background:#18191c;
+  box-shadow:none;
+}
+
+:global(html[data-theme="dark"]) .matrixTable thead th.weekendHeader small {
+  color:#c5c8ce;
 }
 
 :global(html[data-theme="dark"]) .matrixToolbar input,

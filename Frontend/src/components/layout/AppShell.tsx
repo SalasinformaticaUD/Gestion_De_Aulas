@@ -31,6 +31,7 @@ const moduleByRoute: Record<string, string> = {
   "/tareas": "TAREAS",
   "/multas": "MULTAS",
 };
+const SCREEN_SAVER_IDLE_MS = 5 * 60 * 1000;
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
@@ -40,6 +41,7 @@ export function AppShell({ children }: AppShellProps) {
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [isAdministrator, setIsAdministrator] = useState(false);
   const [allowedModules, setAllowedModules] = useState<string[]>([]);
+  const [isScreenSaverActive, setIsScreenSaverActive] = useState(false);
   const closeMenu = () => setIsMenuOpen(false);
   const toggleSidebar = () => {
     if (window.matchMedia("(max-width: 820px)").matches) {
@@ -87,6 +89,22 @@ export function AppShell({ children }: AppShellProps) {
     return () => window.clearInterval(clock);
   }, []);
 
+  useEffect(() => {
+    let timeout: number | undefined;
+    const resetIdleTimer = () => {
+      setIsScreenSaverActive(false);
+      window.clearTimeout(timeout);
+      timeout = window.setTimeout(() => setIsScreenSaverActive(true), SCREEN_SAVER_IDLE_MS);
+    };
+    const activityEvents: Array<keyof WindowEventMap> = ["pointerdown", "pointermove", "keydown", "touchstart", "scroll", "focus"];
+    activityEvents.forEach((eventName) => window.addEventListener(eventName, resetIdleTimer, { passive: true }));
+    resetIdleTimer();
+    return () => {
+      window.clearTimeout(timeout);
+      activityEvents.forEach((eventName) => window.removeEventListener(eventName, resetIdleTimer));
+    };
+  }, []);
+
   const formattedDate = currentDate?.toLocaleDateString("es-CO", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   }) ?? "Martes, 25 de agosto de 2026";
@@ -106,6 +124,7 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className={`app-shell ${isSidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+      {isScreenSaverActive && <section className="screen-saver" role="dialog" aria-modal="true" aria-label="Protector de pantalla"><div className="screen-saver-profile"><span className={`avatar ${profileData.photo ? "avatar-has-photo" : ""}`} style={profileData.photo ? { backgroundImage: `url("${profileData.photo}")` } : undefined}>{!profileData.photo && getInitials(profileData.fullName)}</span><strong>{profileData.fullName}</strong><small>Sesión activa</small><p>Mueva el mouse, toque la pantalla o presione una tecla para continuar.</p></div></section>}
       {isMenuOpen && <button className="menu-overlay" aria-label="Cerrar menú" onClick={closeMenu} />}
       <aside className={`sidebar ${isMenuOpen ? "is-open" : ""} ${isSidebarCollapsed ? "is-collapsed" : ""}`} aria-label="Navegación principal">
         <Link href="/gestion-aulas" className="brand" aria-label="Ir al dashboard" onClick={closeMenu}><Image className="sidebar-aulas-logo" src="/brand/Logo_Cosmos_Aulas_de_Software.png" alt="COSMOS · Aulas de Software" width={1920} height={1080} priority /></Link>

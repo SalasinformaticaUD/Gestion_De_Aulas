@@ -33,8 +33,14 @@ export class PracticasLibresController {
 
   @Post()
   @RequirePermissions('PRACTICAS_LIBRES_CREAR')
-  create(@Body() createPracticasLibreDto: CreatePracticasLibreDto) {
-    return this.practicasLibresService.create(createPracticasLibreDto);
+  create(
+    @Body() createPracticasLibreDto: CreatePracticasLibreDto,
+    @CurrentUser() user?: UsuarioAutenticado,
+  ) {
+    return this.practicasLibresService.create(
+      createPracticasLibreDto,
+      user?.id,
+    );
   }
 
   @Post('estudiantes')
@@ -50,6 +56,12 @@ export class PracticasLibresController {
   @RequirePermissions('PRACTICAS_LIBRES_LEER')
   findAll(@Query() filters: FindPracticasLibresDto) {
     return this.practicasLibresService.findAll(filters);
+  }
+
+  @Get('responsables')
+  @RequirePermissions('PRACTICAS_LIBRES_LEER')
+  findResponsables() {
+    return this.practicasLibresService.findResponsables();
   }
 
   @Get('estudiantes/:codigo')

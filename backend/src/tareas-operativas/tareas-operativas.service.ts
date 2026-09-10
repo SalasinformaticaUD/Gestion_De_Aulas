@@ -124,6 +124,8 @@ export class TareasOperativasService {
     this.validarTransicion(tarea.estado, estado);
     if (estado === EstadoTarea.EN_PROCESO) throw new ConflictException('Para iniciar o retomar la tarea debe usar la opción Aceptar.');
     if (estado === EstadoTarea.CANCELADA && !motivoCancelacion?.trim()) throw new BadRequestException('Debe indicar el motivo de cancelación.');
+    if (estado === EstadoTarea.COMPLETADA && !tarea.informes.length)
+      throw new ConflictException('Debe registrar un informe de seguimiento antes de completar la tarea.');
     if (estado === EstadoTarea.COMPLETADA && tarea.informes[0]?.accionesPendientes?.trim())
       throw new ConflictException('La tarea tiene acciones pendientes. Registre un nuevo informe sin acciones pendientes antes de completarla.');
     const ahora = new Date();

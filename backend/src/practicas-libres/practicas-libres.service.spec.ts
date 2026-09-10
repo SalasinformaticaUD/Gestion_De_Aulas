@@ -3,6 +3,7 @@ import { EstadoPrestamo } from '../../generated/prisma/enums.js';
 import { DisponibilidadAulasService } from '../disponibilidad-aulas/disponibilidad-aulas.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PracticasLibresService } from './practicas-libres.service';
+import { ResponsablePracticaLibre } from './dto/create-practicas-libre.dto';
 
 describe('PracticasLibresService', () => {
   const dto = {
@@ -11,7 +12,7 @@ describe('PracticasLibresService', () => {
     aulaId: '00000000-0000-4000-8000-000000000001',
     softwareId: '00000000-0000-4000-8000-000000000002',
     softwareSolicitado: 'AutoCAD',
-    responsableTipo: 'MONITOR' as const,
+    responsableTipo: ResponsablePracticaLibre.MONITOR,
     inicio: '2099-08-20T08:00:00-05:00',
     finEstimada: '2099-08-20T10:00:00-05:00',
   };
@@ -36,6 +37,7 @@ describe('PracticasLibresService', () => {
       updateMany: jest.fn(),
     },
     estudiante: { findUnique: jest.fn() },
+    usuario: { findFirst: jest.fn(), findMany: jest.fn() },
     software: { findUnique: jest.fn() },
     aulaSoftware: { findUnique: jest.fn() },
   };
@@ -58,6 +60,7 @@ describe('PracticasLibresService', () => {
       estado: 'ACTIVO',
     });
     prisma.aulaSoftware.findUnique.mockResolvedValue({ aulaId: dto.aulaId });
+    prisma.usuario.findFirst.mockResolvedValue({ id: 'usuario-atencion-id' });
     tx.practicaLibre.create.mockResolvedValue({
       id: 'practica-id',
       estudiante: { correo: null, nombre: dto.nombreEstudiante },
@@ -104,6 +107,49 @@ describe('PracticasLibresService', () => {
 
     await expect(service.create(dto)).rejects.toBeInstanceOf(ConflictException);
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('conserva el usuario que atendió al crear la práctica', async () => {
+    await service.create(dto, 'usuario-atencion-id');
+
+    // El mock sin implementación conserva sus argumentos como `any`.
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const llamada: unknown = tx.practicaLibre.create.mock.calls[0]?.[0];
+    expect(llamada).toMatchObject({
+      data: { atendidoPorId: 'usuario-atencion-id' },
+    });
+  });
+
+  it('solo lista responsables activos que no son administradores', async () => {
+    prisma.usuario.findMany.mockResolvedValue([]);
+
+    await service.findResponsables();
+
+    expect(prisma.usuario.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          estado: 'ACTIVA',
+          roles: {
+            none: {
+              rol: {
+                nombre: { equals: 'ADMINISTRADOR', mode: 'insensitive' },
+              },
+            },
+          },
+        }),
+      }),
+    );
+  });
+
+  it('rechaza asignar un administrador como persona que atiende', async () => {
+    prisma.usuario.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.create({
+        ...dto,
+        atendidoPorId: '00000000-0000-4000-8000-000000000003',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('permite compartir un aula que ya tiene otra práctica libre', async () => {
@@ -164,7 +210,8 @@ describe('PracticasLibresService', () => {
     });
 
     await expect(service.finish('practica-futura', {})).rejects.toMatchObject({
-      message: 'No se puede finalizar una práctica antes de que inicie su bloque programado. Puede cancelarla si ya no se realizará.',
+      message:
+        'No se puede finalizar una práctica antes de que inicie su bloque programado. Puede cancelarla si ya no se realizará.',
     });
     expect(prisma.practicaLibre.update).not.toHaveBeenCalled();
   });

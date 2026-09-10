@@ -79,6 +79,10 @@
 .documentSearch input { flex:1; }
 .documentSearch button { min-width:84px; border:1px solid #b9bec7; border-radius:6px; color:#3e4651; background:#f3f5f7; font-weight:750; }
 .documentSearch button:hover { border-color:var(--primary); color:var(--primary); background:#fff5f6; }
+.addTeacherButton { grid-column:1/-1; display:flex; align-items:center; justify-content:center; gap:7px; min-height:42px; border:1px dashed var(--primary); border-radius:7px; color:var(--primary); background:#fff5f6; font:inherit; font-size:14px; font-weight:750; cursor:pointer; transition:background .18s ease,color .18s ease,border-color .18s ease; }
+.addTeacherButton span { color:var(--muted); font-size:12px; font-weight:650; }
+.addTeacherButton:hover { border-style:solid; color:#fff; background:var(--primary); }
+.addTeacherButton:hover span { color:inherit; }
 .documentError { color:#b42318 !important; font-size:12px !important; font-weight:700 !important; letter-spacing:0 !important; text-transform:none !important; }
 .wideField { grid-column:1/-1; }
 .roomSuggestions { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:7px; }
