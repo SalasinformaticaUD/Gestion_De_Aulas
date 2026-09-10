@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { followUpNavigation, operationNavigation } from "@/config/navigation";
 import { UniversityLogo } from "@/components/brand/UniversityLogo";
-import { applyTheme, defaultProfile, getInitials, loadProfile, loadTheme, profileEvent, profileFromSession, type UserProfile } from "@/features/perfil/lib/profile";
+import { applyTheme, defaultProfile, getInitials, loadTheme, profileFromSession, type UserProfile } from "@/features/perfil/lib/profile";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { ModuleSwitcher } from "@/components/layout/ModuleSwitcher";
 import { cerrarSesion, eventoSesion, obtenerSesion } from "@/features/auth/lib/sesion";
@@ -59,14 +59,12 @@ export function AppShell({ children }: AppShellProps) {
   useEffect(() => {
     const refreshProfile = () => {
       const user = obtenerSesion()?.usuario;
-      setProfileData(user ? profileFromSession(user, loadProfile(user.id)) : defaultProfile);
+      setProfileData(user ? profileFromSession(user) : defaultProfile);
     };
     refreshProfile();
     applyTheme(loadTheme());
-    window.addEventListener(profileEvent, refreshProfile);
     window.addEventListener(eventoSesion, refreshProfile);
     return () => {
-      window.removeEventListener(profileEvent, refreshProfile);
       window.removeEventListener(eventoSesion, refreshProfile);
     };
   }, []);

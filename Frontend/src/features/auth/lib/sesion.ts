@@ -56,3 +56,9 @@ export function cambiarAplicacionActiva(aplicacion: ApplicationKey) {
   guardarSesion({ ...sesion, aplicacion });
   return true;
 }
+
+export function actualizarUsuarioSesion(usuario: Partial<UsuarioCentral>) {
+  const sesion = obtenerSesion();
+  if (!sesion) return;
+  guardarSesion({ ...sesion, usuario: { ...sesion.usuario, ...usuario } });
+}

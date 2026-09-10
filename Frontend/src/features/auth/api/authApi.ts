@@ -1,4 +1,4 @@
-import { obtenerSesion } from "@/features/auth/lib/sesion";
+import { actualizarUsuarioSesion, obtenerSesion } from "@/features/auth/lib/sesion";
 import { solicitarAulas } from "@/features/monitores/api/clienteMonitores";
 
 const token = () => {
@@ -26,3 +26,13 @@ export const cambiarContrasenaActual = (contrasenaActual: string, nuevaContrasen
       notificarAutorizacion: false,
     },
   );
+
+export async function actualizarFotoPerfil(fotoPerfil: string | null) {
+  const respuesta = await solicitarAulas<{ fotoPerfil: string | null }>(
+    "/auth/foto-perfil",
+    token(),
+    { method: "PATCH", body: JSON.stringify({ fotoPerfil }) },
+  );
+  actualizarUsuarioSesion(respuesta);
+  return respuesta;
+}

@@ -115,6 +115,7 @@ export type UsuarioCentral = {
   nombreCompleto: string;
   nombreUsuario: string;
   correo: string;
+  fotoPerfil: string | null;
   cargo: string | null;
   dependencia: { id: string; nombre: string } | null;
   roles: string[];

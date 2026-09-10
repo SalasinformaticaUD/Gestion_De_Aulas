@@ -1,11 +1,13 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { EstadoCuenta } from '../../generated/prisma/enums.js';
 import { AuthService } from './auth.service';
 import { PasswordHashService } from './password-hash.service';
 
 describe('AuthService', () => {
   const passwords = new PasswordHashService();
-  const prisma = { usuario: { findFirst: jest.fn(), findUnique: jest.fn() } };
+  const prisma = {
+    usuario: { findFirst: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
+  };
   const tokens = {
     sign: jest.fn(() => ({ accessToken: 'token', expiresIn: 3600 })),
   };
@@ -16,6 +18,7 @@ describe('AuthService', () => {
     nombreCompleto: 'Usuario Prueba',
     nombreUsuario: 'prueba',
     correo: 'prueba@example.test',
+    fotoPerfil: null,
     passwordHash: passwords.hash(password),
     cargo: null,
     estado: EstadoCuenta.ACTIVA,
@@ -76,5 +79,19 @@ describe('AuthService', () => {
     expect(result.aplicaciones.puedeAccederMonitores).toBe(true);
     expect(result.usuario.modulos).toEqual(expect.arrayContaining(['AULAS', 'MONITORES']));
     expect(result.usuario.permisos).toEqual(expect.arrayContaining(['AULAS_LEER', 'MONITORES_LEER']));
+  });
+
+  it('guarda una foto de perfil válida como data URL', async () => {
+    const foto = 'data:image/png;base64,aGVsbG8=';
+    prisma.usuario.update.mockResolvedValue({ fotoPerfil: foto });
+
+    await expect(service.actualizarFotoPerfil(usuario.id, foto)).resolves.toEqual({ fotoPerfil: foto });
+    expect(prisma.usuario.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { fotoPerfil: foto } }),
+    );
+  });
+
+  it('rechaza una foto que no sea una data URL de imagen', async () => {
+    await expect(service.actualizarFotoPerfil(usuario.id, 'https://ejemplo.test/foto.png')).rejects.toBeInstanceOf(BadRequestException);
   });
 });

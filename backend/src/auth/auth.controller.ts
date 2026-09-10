@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import type { UsuarioAutenticado } from './auth.types';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -7,6 +7,7 @@ import { RequireAuth } from './decorators/require-auth.decorator';
 import { LoginDto } from './dto/login.dto';
 import { VerifyPasswordDto } from './dto/verify-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateProfilePhotoDto } from './dto/update-profile-photo.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -47,5 +48,14 @@ export class AuthController {
       dto.contrasenaActual,
       dto.nuevaContrasena,
     );
+  }
+
+  @RequireAuth()
+  @Patch('foto-perfil')
+  actualizarFotoPerfil(
+    @Body() dto: UpdateProfilePhotoDto,
+    @CurrentUser() usuario: UsuarioAutenticado,
+  ) {
+    return this.authService.actualizarFotoPerfil(usuario.id, dto.fotoPerfil);
   }
 }

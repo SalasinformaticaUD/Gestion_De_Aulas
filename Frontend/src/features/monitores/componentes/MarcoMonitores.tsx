@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { applyTheme, defaultProfile, getInitials, loadProfile, loadTheme, profileEvent, profileFromSession, type UserProfile } from "@/features/perfil/lib/profile";
+import { applyTheme, defaultProfile, getInitials, loadTheme, profileFromSession, type UserProfile } from "@/features/perfil/lib/profile";
 import { cerrarSesion, eventoSesion, obtenerSesion } from "@/features/auth/lib/sesion";
 import { UniversityLogo } from "@/components/brand/UniversityLogo";
 import { CosmosLogo } from "@/components/brand/CosmosLogo";
@@ -33,13 +33,11 @@ export function MarcoMonitores({ children }: { children:React.ReactNode }) {
   useEffect(() => {
     const refrescar = () => {
       const usuario = obtenerSesion()?.usuario;
-      setPerfil(usuario ? profileFromSession(usuario, loadProfile(usuario.id)) : defaultProfile);
+      setPerfil(usuario ? profileFromSession(usuario) : defaultProfile);
     };
     refrescar(); applyTheme(loadTheme());
-    window.addEventListener(profileEvent, refrescar);
     window.addEventListener(eventoSesion, refrescar);
     return () => {
-      window.removeEventListener(profileEvent, refrescar);
       window.removeEventListener(eventoSesion, refrescar);
     };
   }, []);

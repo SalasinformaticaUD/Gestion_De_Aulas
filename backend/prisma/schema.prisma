@@ -112,6 +112,7 @@ model Usuario {
   nombreUsuario                    String                      @unique
   correo                           String                      @unique
   passwordHash                     String
+  fotoPerfil                       String?                     @db.Text
   cargo                            String?
   estado                           EstadoCuenta                @default(ACTIVA)
   dependenciaId                    String?                     @db.Uuid

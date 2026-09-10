@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { defaultProfile, getInitials, loadProfile, profileFromSession, saveProfile, type UserProfile } from "@/features/perfil/lib/profile";
+import { defaultProfile, getInitials, profileFromSession, type UserProfile } from "@/features/perfil/lib/profile";
 import { obtenerSesion } from "@/features/auth/lib/sesion";
-import { cambiarContrasenaActual } from "@/features/auth/api/authApi";
+import { actualizarFotoPerfil, cambiarContrasenaActual } from "@/features/auth/api/authApi";
 import styles from "./ProfileView.module.css";
 
 export function ProfileView() {
   const [profile, setProfile] = useState<UserProfile>(defaultProfile);
   const [photoError, setPhotoError] = useState<string | null>(null);
+  const [updatingPhoto, setUpdatingPhoto] = useState(false);
   const [passwordNotice, setPasswordNotice] = useState<string | null>(null);
   const [session, setSession] = useState<ReturnType<typeof obtenerSesion>>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -17,7 +18,7 @@ export function ProfileView() {
     const sesion = obtenerSesion();
     setSession(sesion);
     const usuario = sesion?.usuario;
-    setProfile(usuario ? profileFromSession(usuario, loadProfile(usuario.id)) : defaultProfile);
+    setProfile(usuario ? profileFromSession(usuario) : defaultProfile);
   }, []);
   const updatePhoto = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -25,27 +26,40 @@ export function ProfileView() {
     if (!file.type.startsWith("image/")) { setPhotoError("Seleccione un archivo de imagen válido."); return; }
     if (file.size > 2 * 1024 * 1024) { setPhotoError("La imagen no puede superar 2 MB."); return; }
     const reader = new FileReader();
-    reader.onload = () => {
-      const next = { ...profile, photo: String(reader.result) };
-      setProfile(next);
-      if (session?.usuario.id) saveProfile(session.usuario.id, next);
-      setPhotoError(null);
+    reader.onload = async () => {
+      const photo = String(reader.result);
+      setUpdatingPhoto(true);
+      try {
+        await actualizarFotoPerfil(photo);
+        setProfile((current) => ({ ...current, photo }));
+        setPhotoError(null);
+      } catch (cause) {
+        setPhotoError(cause instanceof Error ? cause.message : "No fue posible guardar la foto.");
+      } finally {
+        setUpdatingPhoto(false);
+      }
     };
     reader.readAsDataURL(file);
     event.target.value = "";
   };
-  const removePhoto = () => {
-    const { photo: _photo, ...withoutPhoto } = profile;
-    setProfile(withoutPhoto);
-    if (session?.usuario.id) saveProfile(session.usuario.id, withoutPhoto);
-    setPhotoError(null);
+  const removePhoto = async () => {
+    setUpdatingPhoto(true);
+    try {
+      await actualizarFotoPerfil(null);
+      setProfile((current) => ({ ...current, photo: undefined }));
+      setPhotoError(null);
+    } catch (cause) {
+      setPhotoError(cause instanceof Error ? cause.message : "No fue posible eliminar la foto.");
+    } finally {
+      setUpdatingPhoto(false);
+    }
   };
 
   return <>
     <section className={`page-heading ${styles.heading}`}><div><h1>Mi perfil</h1><p>Administre su imagen, seguridad y datos de cuenta.</p></div><span className={styles.accountStatus}><i />Cuenta activa</span></section>
     <div className={styles.layout}>
       <aside className={styles.identityCard}>
-        <div className={styles.photoArea}><div className={styles.photo} role="img" aria-label={`Foto de ${profile.fullName}`} style={profile.photo ? { backgroundImage: `url("${profile.photo}")` } : undefined}>{!profile.photo && <span>{getInitials(profile.fullName)}</span>}</div><button type="button" onClick={() => inputRef.current?.click()}>{profile.photo ? "Cambiar foto" : "Agregar foto"}</button>{profile.photo && <button type="button" className={styles.removePhoto} onClick={removePhoto}>Eliminar foto</button>}<input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={updatePhoto} hidden /><small>JPG, PNG o WebP · máximo 2 MB</small>{photoError && <p role="alert">{photoError}</p>}</div><div className={styles.identityCopy}><h2>{profile.fullName}</h2><span>{profile.role}</span><small>@{profile.username}</small></div><div className={styles.identityMeta}><span><b>Dependencia</b>{profile.department}</span><span><b>Estado</b><i>Activo</i></span></div>
+        <div className={styles.photoArea}><div className={styles.photo} role="img" aria-label={`Foto de ${profile.fullName}`} style={profile.photo ? { backgroundImage: `url("${profile.photo}")` } : undefined}>{!profile.photo && <span>{getInitials(profile.fullName)}</span>}</div><button type="button" disabled={updatingPhoto} onClick={() => inputRef.current?.click()}>{updatingPhoto ? "Guardando…" : profile.photo ? "Cambiar foto" : "Agregar foto"}</button>{profile.photo && <button type="button" disabled={updatingPhoto} className={styles.removePhoto} onClick={() => void removePhoto()}>Eliminar foto</button>}<input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={updatePhoto} hidden /><small>JPG, PNG o WebP · máximo 2 MB</small>{photoError && <p role="alert">{photoError}</p>}</div><div className={styles.identityCopy}><h2>{profile.fullName}</h2><span>{profile.role}</span><small>@{profile.username}</small></div><div className={styles.identityMeta}><span><b>Dependencia</b>{profile.department}</span><span><b>Estado</b><i>Activo</i></span></div>
       </aside>
       <div className={styles.sections}>
         <section className={styles.profileSection}><header><div><span>01</span><div><h2>Información personal</h2><p>Datos asociados a su cuenta institucional.</p></div></div><b>Solo lectura</b></header><div className={styles.dataGrid}><DataItem label="Nombre completo" value={profile.fullName} /><DataItem label="Correo institucional" value={profile.email} /><DataItem label="Nombre de usuario" value={profile.username} mono /><DataItem label="Cargo" value={profile.role} /></div><aside className={styles.backendNote}></aside></section>
