@@ -17,6 +17,7 @@ describe('TareasOperativasService', () => {
   };
   const prisma = {
     tarea: { findUnique: jest.fn(), findFirst: jest.fn(), update: jest.fn(), create: jest.fn() },
+    informeSeguimientoTarea: { create: jest.fn() },
     aula: { findUnique: jest.fn() },
     prestamoDocente: { findFirst: jest.fn() },
     practicaLibre: { findFirst: jest.fn() },
@@ -119,5 +120,39 @@ describe('TareasOperativasService', () => {
       expect(segunda.grupoId).toBe(primera.grupoId);
     expect(primera).not.toHaveProperty('aulaIds');
     expect(registrar).toHaveBeenCalledTimes(2);
+  });
+
+  it('permite registrar el informe solo a un responsable asignado', async () => {
+    const enProceso = {
+      ...tarea,
+      estado: EstadoTarea.EN_PROCESO,
+      responsable: { nombreCompleto: 'Responsable asignado' },
+      responsables: [{ usuarioId: 'usuario-responsable', usuario: { nombreCompleto: 'Responsable asignado' } }],
+      decisiones: [],
+    };
+    (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValue(enProceso);
+    (prisma.informeSeguimientoTarea.create as jest.Mock<any>).mockResolvedValue({
+      id: 'informe-1',
+      autor: { id: 'usuario-lector', nombreCompleto: 'Usuario lector' },
+    });
+
+    await expect(
+      service.crearInforme(tarea.id, { actividadesRealizadas: 'Se revisó el aula' }, 'usuario-responsable'),
+    ).resolves.toEqual(expect.objectContaining({ id: 'informe-1' }));
+    expect(prisma.informeSeguimientoTarea.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ autorId: 'usuario-responsable' }) }),
+    );
+  });
+
+  it('impide que un usuario no asignado registre el informe', async () => {
+    (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValue({
+      ...tarea,
+      estado: EstadoTarea.EN_PROCESO,
+      responsables: [{ usuarioId: 'usuario-responsable' }],
+    });
+
+    await expect(
+      service.crearInforme(tarea.id, { actividadesRealizadas: 'Se revisó el aula' }, 'usuario-ajeno'),
+    ).rejects.toThrow('Solo un responsable asignado a la tarea puede registrar el informe de seguimiento.');
   });
 });

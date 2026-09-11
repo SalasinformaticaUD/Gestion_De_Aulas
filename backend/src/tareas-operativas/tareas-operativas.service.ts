@@ -173,11 +173,11 @@ export class TareasOperativasService {
     return actualizada;
   }
 
-  async crearInforme(id: string, dto: CrearInformeSeguimientoDto, usuarioId?: string, puedeAdministrar = false) {
+  async crearInforme(id: string, dto: CrearInformeSeguimientoDto, usuarioId?: string) {
     if (!usuarioId) throw new BadRequestException('Se requiere un usuario autenticado para registrar el informe.');
     const tarea = await this.findOne(id);
     const esResponsable = tarea.responsableId === usuarioId || tarea.responsables.some((item) => item.usuarioId === usuarioId);
-    if (!esResponsable && !puedeAdministrar) throw new ConflictException('Solo un responsable de la tarea puede registrar el informe de seguimiento.');
+    if (!esResponsable) throw new ConflictException('Solo un responsable asignado a la tarea puede registrar el informe de seguimiento.');
     if (tarea.estado !== EstadoTarea.EN_PROCESO) throw new ConflictException('El informe de seguimiento solo se registra para tareas en proceso.');
     const informe = await this.prisma.informeSeguimientoTarea.create({
       data: { tareaId: id, autorId: usuarioId, responsables: tarea.decisiones[0]?.participantes ?? [{ id: usuarioId, nombreCompleto: tarea.responsables.find((item) => item.usuarioId === usuarioId)?.usuario.nombreCompleto ?? tarea.responsable?.nombreCompleto ?? 'Responsable' }], actividadesRealizadas: dto.actividadesRealizadas.trim(), accionesPendientes: dto.accionesPendientes?.trim() || null },

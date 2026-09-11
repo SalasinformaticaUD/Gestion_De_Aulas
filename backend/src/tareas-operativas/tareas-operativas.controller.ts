@@ -110,8 +110,7 @@ export class TareasOperativasController {
   }
 
   @Post(':id/informes-seguimiento')
-  @RequirePermissions('TAREAS_ACTUALIZAR')
   crearInforme(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CrearInformeSeguimientoDto, @CurrentUser() usuario?: UsuarioAutenticado) {
-    return this.tareasOperativasService.crearInforme(id, dto, usuario?.id, usuario?.roles.includes('ADMINISTRADOR') ?? false);
+    return this.tareasOperativasService.crearInforme(id, dto, usuario?.id);
   }
 }

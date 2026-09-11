@@ -57,6 +57,12 @@ export function cambiarAplicacionActiva(aplicacion: ApplicationKey) {
   return true;
 }
 
+export function tienePermiso(codigo: string, sesion = obtenerSesion()) {
+  return sesion?.usuario.permisos.some(
+    (permiso) => permiso.toUpperCase() === codigo.toUpperCase(),
+  ) ?? false;
+}
+
 export function actualizarUsuarioSesion(usuario: Partial<UsuarioCentral>) {
   const sesion = obtenerSesion();
   if (!sesion) return;

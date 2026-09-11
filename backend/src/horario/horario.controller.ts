@@ -111,9 +111,7 @@ export class HorarioController {
     archivo:
       { buffer: Buffer; originalname: string; mimetype: string } | undefined,
     @Body() dto: ImportarHorarioExcelDto,
-    @CurrentUser() usuario?: UsuarioAutenticado,
   ) {
-    this.ensureAdministrator(usuario);
     return this.horarioService.importarExcelOficial(archivo, dto);
   }
 
