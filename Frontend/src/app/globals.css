@@ -110,6 +110,8 @@ html[data-theme="dark"] { --ink:#f1f3f5; --muted:#aab0ba; --line:#383b43; --surf
 .audiovisual-dialog form { display:grid; gap:15px; padding:19px; }
 .dialog-error { margin:0; padding:10px 12px; border:1px solid #f0b6bd; border-radius:7px; color:#a20f25; background:#fff1f3; font-size:13px; font-weight:700; }
 .dialog-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.audiovisual-dialog.is-wide form > .dialog-grid > label:first-child { display:none; }
+.audiovisual-dialog.is-wide>header p{font-size:0}.audiovisual-dialog.is-wide>header p::before{content:"Busque al docente por su nombre y seleccione los elementos que se entregarán.";font-size:13px}
 .dialog-field { display:grid; gap:5px; }
 .dialog-field-wide { grid-column:1/-1; }
 .dialog-field>span,.equipment-picker legend,.return-equipment legend { color:var(--muted); font-size:11.7px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }

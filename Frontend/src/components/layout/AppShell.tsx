@@ -31,7 +31,7 @@ const moduleByRoute: Record<string, string> = {
   "/tareas": "TAREAS",
   "/multas": "MULTAS",
 };
-const SCREEN_SAVER_IDLE_MS = 5 * 60 * 1000;
+const SCREEN_SAVER_IDLE_MS = 2.5 * 60 * 1000;
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();

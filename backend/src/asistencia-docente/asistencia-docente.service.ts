@@ -195,13 +195,15 @@ export class AsistenciaDocenteService {
       throw new ConflictException('La fecha no corresponde al día de la semana de la clase.');
     }
     if (fecha.getTime() === hoy.getTime()) {
-      const ahora = new Date();
+      const partes = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+      }).formatToParts(new Date());
       // horaInicio representa la hora local del horario (aunque Prisma la
       // entregue como Date con fecha técnica 1970-01-01).
-      const minutosActuales = ahora.getHours() * 60 + ahora.getMinutes();
+      const minutosActuales = Number(partes.find((parte) => parte.type === 'hour')?.value ?? '0') * 60 + Number(partes.find((parte) => parte.type === 'minute')?.value ?? '0');
       const minutosInicio = clase.horaInicio.getUTCHours() * 60 + clase.horaInicio.getUTCMinutes();
-      if (minutosActuales < minutosInicio) {
-        throw new ConflictException('No se puede registrar asistencia para un bloque que aún no ha iniciado.');
+      if (minutosActuales < minutosInicio - 15) {
+        throw new ConflictException('La asistencia solo puede registrarse desde 15 minutos antes del inicio del bloque.');
       }
     }
   }

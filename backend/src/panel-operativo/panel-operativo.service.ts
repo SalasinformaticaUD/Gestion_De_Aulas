@@ -143,9 +143,13 @@ export class PanelOperativoService {
         }),
       ],
     );
-    const clases = clasesDelDia.filter((clase) =>
-      clase.horaInicio < horaFinPrisma && clase.horaFin > horaInicioPrisma,
-    );
+    const clases = clasesDelDia
+      .filter((clase) =>
+        clase.horaInicio < horaFinPrisma && clase.horaFin > horaInicioPrisma,
+      )
+      .sort((a, b) =>
+        a.aula.codigo.localeCompare(b.aula.codigo, 'es', { numeric: true }),
+      );
     const asistencias = clases.map((clase) => {
       const registro = clase.asistencias[0];
       return {
@@ -357,9 +361,12 @@ export class PanelOperativoService {
         horaFin: `${horaFin.toString().padStart(2, '0')}:00`,
       };
     }
-    const partes = new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Bogota', hour: '2-digit', hour12: false }).formatToParts(new Date());
+    const partes = new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
     const horaActual = Number(partes.find((parte) => parte.type === 'hour')?.value ?? '6');
-    const horaInicio = Math.min(20, Math.max(6, Math.floor(horaActual / 2) * 2));
+    const minutoActual = Number(partes.find((parte) => parte.type === 'minute')?.value ?? '0');
+    const bloqueActual = Math.min(20, Math.max(6, Math.floor(horaActual / 2) * 2));
+    const mostrarSiguiente = bloqueActual < 20 && horaActual * 60 + minutoActual >= bloqueActual * 60 + 105;
+    const horaInicio = mostrarSiguiente ? bloqueActual + 2 : bloqueActual;
     return { horaInicio: `${String(horaInicio).padStart(2, '0')}:00`, horaFin: `${String(horaInicio + 2).padStart(2, '0')}:00` };
   }
 
