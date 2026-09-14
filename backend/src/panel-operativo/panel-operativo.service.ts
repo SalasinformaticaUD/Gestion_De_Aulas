@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import {
+  EstadoAula,
   EstadoAsistencia,
   EstadoPrestamo,
   EstadoTarea,
+  TipoObservacion,
 } from '../../generated/prisma/enums.js';
 import { DisponibilidadAulasService } from '../disponibilidad-aulas/disponibilidad-aulas.service';
 import { DisponibilidadAula } from '../disponibilidad-aulas/entities/disponibilidad-aula.entity';
@@ -76,7 +78,12 @@ export class PanelOperativoService {
       contexto.prestamos,
     );
     const alertas = [
-      ...this.construirAlertasTareas(contexto.tareas),
+      ...(await this.construirAlertasTareas(
+        contexto.tareas,
+        contexto.aulas,
+        query.fecha,
+        contexto.bloque,
+      )),
       ...this.construirAlertasRecientes(contexto),
       ...alertasBase,
     ];
@@ -133,7 +140,12 @@ export class PanelOperativoService {
   async alertas(query: ConsultarPanelOperativoDto): Promise<AlertaOperativa[]> {
     const contexto = await this.construirContexto(query);
     return [
-      ...this.construirAlertasTareas(contexto.tareas),
+      ...(await this.construirAlertasTareas(
+        contexto.tareas,
+        contexto.aulas,
+        query.fecha,
+        contexto.bloque,
+      )),
       ...this.construirAlertasRecientes(contexto),
       ...this.construirAlertas(
         contexto.aulas,
@@ -335,20 +347,63 @@ export class PanelOperativoService {
     return alertas;
   }
 
-  private construirAlertasTareas(
+  private async construirAlertasTareas(
     tareas: Array<{
       id: string;
       titulo: string;
       aulaId: string | null;
       aula: { id: string; codigo: string } | null;
     }>,
-  ): AlertaOperativa[] {
+    aulasActuales: DisponibilidadAula[],
+    fecha: string,
+    bloqueActual: { horaInicio: string; horaFin: string },
+  ): Promise<AlertaOperativa[]> {
+    if (!tareas.length) return [];
+
+    const recomendaciones = new Map<
+      string,
+      { fecha: string; horaInicio: string; horaFin: string }
+    >();
+    const disponibilidadActual = new Map(
+      aulasActuales.map((aula) => [aula.aula.id, aula.estadoCalculado]),
+    );
+    const aulaIds = [
+      ...new Set(
+        tareas
+          .map((tarea) => tarea.aulaId)
+          .filter((aulaId): aulaId is string => Boolean(aulaId)),
+      ),
+    ];
+
+    for (const aulaId of aulaIds) {
+      if (disponibilidadActual.get(aulaId) === 'disponible') {
+        recomendaciones.set(aulaId, { fecha, ...bloqueActual });
+      }
+    }
+
+    const pendientes = aulaIds.filter((aulaId) => !recomendaciones.has(aulaId));
+    if (pendientes.length) {
+      const futuras = await this.buscarBloquesDisponiblesEnLote(
+        pendientes,
+        fecha,
+        bloqueActual,
+      );
+      for (const [aulaId, bloque] of futuras) {
+        recomendaciones.set(aulaId, bloque);
+      }
+    }
+
     return tareas.map((tarea) => {
+      const bloque = tarea.aulaId
+        ? recomendaciones.get(tarea.aulaId)
+        : undefined;
       return {
         id: `tarea-${tarea.id}`,
-        severidad: 'advertencia' as const,
+        severidad: bloque ? ('info' as const) : ('advertencia' as const),
         tipo: 'tarea-operativa',
-        mensaje: `“${tarea.titulo}” sigue pendiente para ${tarea.aula?.codigo ?? 'el aula'}.`,
+        mensaje: bloque
+          ? `“${tarea.titulo}” puede realizarse en ${tarea.aula?.codigo ?? 'el aula'} el ${this.fechaLegible(bloque.fecha)}, de ${bloque.horaInicio} a ${bloque.horaFin}.`
+          : `“${tarea.titulo}” sigue pendiente; no se encontró disponibilidad cercana para ${tarea.aula?.codigo ?? 'el aula'}.`,
         aulaId: tarea.aulaId ?? undefined,
         aulaCodigo: tarea.aula?.codigo,
         origenId: tarea.id,
@@ -356,6 +411,239 @@ export class PanelOperativoService {
         accion: 'Revisar tarea',
       };
     });
+  }
+
+  private async buscarBloquesDisponiblesEnLote(
+    aulaIds: string[],
+    fecha: string,
+    bloqueActual: { horaInicio: string; horaFin: string },
+  ) {
+    const bloques = this.construirBloquesFuturos(fecha, bloqueActual);
+    const recomendaciones = new Map<
+      string,
+      { fecha: string; horaInicio: string; horaFin: string }
+    >();
+    if (!bloques.length) return recomendaciones;
+
+    const rangoInicio = bloques[0].inicio;
+    const rangoFin = bloques[bloques.length - 1].fin;
+    const diasSemana = [
+      ...new Set(
+        bloques
+          .map((bloque) => bloque.diaSemana)
+          .filter((dia) => dia >= 1 && dia <= 6),
+      ),
+    ];
+    const [
+      aulas,
+      restricciones,
+      clases,
+      prestamos,
+      practicas,
+      tareas,
+      limpiezas,
+    ] = await Promise.all([
+      this.prisma.aula.findMany({
+        where: { id: { in: aulaIds }, eliminadoEn: null },
+        select: { id: true, estado: true },
+      }),
+      this.prisma.observacion.findMany({
+        where: {
+          aulaId: { in: aulaIds },
+          tipo: TipoObservacion.RESTRICCION,
+          OR: [{ vigenteDesde: null }, { vigenteDesde: { lt: rangoFin } }],
+          AND: [
+            {
+              OR: [
+                { vigenteHasta: null },
+                { vigenteHasta: { gt: rangoInicio } },
+              ],
+            },
+          ],
+        },
+        select: { aulaId: true, vigenteDesde: true, vigenteHasta: true },
+      }),
+      this.prisma.claseProgramada.findMany({
+        where: {
+          aulaId: { in: aulaIds },
+          diaSemana: { in: diasSemana },
+          periodo: {
+            activo: true,
+            fechaInicio: { lte: rangoFin },
+            fechaFin: { gte: rangoInicio },
+          },
+        },
+        select: {
+          aulaId: true,
+          diaSemana: true,
+          horaInicio: true,
+          horaFin: true,
+          periodo: {
+            select: { fechaInicio: true, fechaFin: true },
+          },
+        },
+      }),
+      this.prisma.prestamoDocente.findMany({
+        where: {
+          aulaId: { in: aulaIds },
+          estado: { in: [EstadoPrestamo.APROBADO, EstadoPrestamo.ACTIVO] },
+          inicio: { lt: rangoFin },
+          fin: { gt: rangoInicio },
+        },
+        select: { aulaId: true, inicio: true, fin: true },
+      }),
+      this.prisma.practicaLibre.findMany({
+        where: {
+          aulaId: { in: aulaIds },
+          estado: EstadoPrestamo.ACTIVO,
+          inicio: { lt: rangoFin },
+          OR: [
+            { finReal: { gt: rangoInicio } },
+            {
+              finReal: null,
+              OR: [{ finEstimada: null }, { finEstimada: { gt: rangoInicio } }],
+            },
+          ],
+        },
+        select: {
+          aulaId: true,
+          inicio: true,
+          finEstimada: true,
+          finReal: true,
+        },
+      }),
+      this.prisma.tarea.findMany({
+        where: {
+          aulaId: { in: aulaIds },
+          afectaDisponibilidad: true,
+          estado: EstadoTarea.EN_PROCESO,
+          AND: [
+            { OR: [{ inicio: null }, { inicio: { lt: rangoFin } }] },
+            { OR: [{ fin: null }, { fin: { gt: rangoInicio } }] },
+          ],
+        },
+        select: { aulaId: true, inicio: true, fin: true },
+      }),
+      this.prisma.limpieza.findMany({
+        where: {
+          aulaId: { in: aulaIds },
+          realizadaEn: { gte: rangoInicio, lt: rangoFin },
+        },
+        select: { aulaId: true, realizadaEn: true },
+      }),
+    ]);
+
+    const estadoPorAula = new Map(aulas.map((aula) => [aula.id, aula.estado]));
+    for (const aulaId of aulaIds) {
+      if (estadoPorAula.get(aulaId) !== EstadoAula.OPERATIVA) continue;
+      const bloque = bloques.find((candidato) => {
+        const seSuperpone = (inicio: Date, fin: Date | null) =>
+          inicio < candidato.fin && (!fin || fin > candidato.inicio);
+        const restringida = restricciones.some(
+          (item) =>
+            item.aulaId === aulaId &&
+            (!item.vigenteDesde || item.vigenteDesde < candidato.fin) &&
+            (!item.vigenteHasta || item.vigenteHasta > candidato.inicio),
+        );
+        const conClase = clases.some((item) => {
+          if (
+            item.aulaId !== aulaId ||
+            item.diaSemana !== candidato.diaSemana
+          ) {
+            return false;
+          }
+          if (
+            item.periodo.fechaInicio > candidato.fin ||
+            item.periodo.fechaFin < candidato.inicio
+          ) {
+            return false;
+          }
+          const inicio =
+            item.horaInicio.getUTCHours() * 60 +
+            item.horaInicio.getUTCMinutes();
+          const fin =
+            item.horaFin.getUTCHours() * 60 + item.horaFin.getUTCMinutes();
+          return inicio < candidato.minutoFin && fin > candidato.minutoInicio;
+        });
+        const conPrestamo = prestamos.some(
+          (item) =>
+            item.aulaId === aulaId && seSuperpone(item.inicio, item.fin),
+        );
+        const conPractica = practicas.some((item) => {
+          if (item.aulaId !== aulaId) return false;
+          const fin = item.finReal ?? item.finEstimada;
+          return seSuperpone(item.inicio, fin);
+        });
+        const conTarea = tareas.some((item) => {
+          if (item.aulaId !== aulaId) return false;
+          const inicio = item.inicio ?? rangoInicio;
+          return seSuperpone(inicio, item.fin);
+        });
+        const conLimpieza = limpiezas.some(
+          (item) =>
+            item.aulaId === aulaId &&
+            item.realizadaEn >= candidato.inicio &&
+            item.realizadaEn < candidato.fin,
+        );
+        return !(
+          restringida ||
+          conClase ||
+          conPrestamo ||
+          conPractica ||
+          conTarea ||
+          conLimpieza
+        );
+      });
+      if (bloque) {
+        recomendaciones.set(aulaId, {
+          fecha: bloque.fecha,
+          horaInicio: bloque.horaInicio,
+          horaFin: bloque.horaFin,
+        });
+      }
+    }
+    return recomendaciones;
+  }
+
+  private construirBloquesFuturos(
+    fecha: string,
+    bloqueActual: { horaInicio: string; horaFin: string },
+  ) {
+    const bloques: Array<{
+      fecha: string;
+      horaInicio: string;
+      horaFin: string;
+      inicio: Date;
+      fin: Date;
+      diaSemana: number;
+      minutoInicio: number;
+      minutoFin: number;
+    }> = [];
+    const base = new Date(`${fecha}T12:00:00.000-05:00`);
+    for (let dia = 0; dia < 4; dia += 1) {
+      const fechaCandidata = new Date(base.getTime() + dia * 86_400_000)
+        .toISOString()
+        .slice(0, 10);
+      const primeraHora =
+        dia === 0 ? Number(bloqueActual.horaFin.slice(0, 2)) : 6;
+      for (let hora = primeraHora; hora <= 20; hora += 2) {
+        const horaInicio = `${String(hora).padStart(2, '0')}:00`;
+        const horaFin = `${String(hora + 2).padStart(2, '0')}:00`;
+        bloques.push({
+          fecha: fechaCandidata,
+          horaInicio,
+          horaFin,
+          inicio: new Date(`${fechaCandidata}T${horaInicio}:00.000-05:00`),
+          fin: new Date(`${fechaCandidata}T${horaFin}:00.000-05:00`),
+          diaSemana: new Date(
+            `${fechaCandidata}T12:00:00.000-05:00`,
+          ).getUTCDay(),
+          minutoInicio: hora * 60,
+          minutoFin: (hora + 2) * 60,
+        });
+      }
+    }
+    return bloques;
   }
 
   private construirAlertas(
@@ -470,5 +758,14 @@ export class PanelOperativoService {
 
   private horaPrisma(fecha: Date) {
     return `${String(fecha.getUTCHours()).padStart(2, '0')}:${String(fecha.getUTCMinutes()).padStart(2, '0')}`;
+  }
+
+  private fechaLegible(fecha: string) {
+    return new Intl.DateTimeFormat('es-CO', {
+      timeZone: 'America/Bogota',
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    }).format(new Date(`${fecha}T12:00:00.000-05:00`));
   }
 }

@@ -12,10 +12,14 @@ describe('PanelOperativoService', () => {
   const prestamos = { findUpcomingForDate: jest.fn() };
   const horario = { findClases: jest.fn() };
   const prisma = {
+    aula: { findMany: jest.fn() },
+    claseProgramada: { findMany: jest.fn() },
+    prestamoDocente: { findMany: jest.fn() },
     practicaLibre: { findMany: jest.fn() },
     prestamoAudiovisual: { findMany: jest.fn() },
     observacion: { findMany: jest.fn() },
     tarea: { findMany: jest.fn() },
+    limpieza: { findMany: jest.fn() },
   };
   let service: PanelOperativoService;
 
@@ -66,6 +70,14 @@ describe('PanelOperativoService', () => {
     ]);
     prisma.observacion.findMany.mockResolvedValue([]);
     prisma.tarea.findMany.mockResolvedValue([]);
+    prisma.aula.findMany.mockResolvedValue([
+      { id: 'aula-1', estado: 'OPERATIVA' },
+      { id: 'aula-2', estado: 'OPERATIVA' },
+      { id: 'aula-3', estado: 'FUERA_DE_SERVICIO' },
+    ]);
+    prisma.claseProgramada.findMany.mockResolvedValue([]);
+    prisma.prestamoDocente.findMany.mockResolvedValue([]);
+    prisma.limpieza.findMany.mockResolvedValue([]);
     service = new PanelOperativoService(
       disponibilidad as unknown as DisponibilidadAulasService,
       prestamos as unknown as PrestamosDocentesService,
@@ -132,7 +144,7 @@ describe('PanelOperativoService', () => {
     expect(horario.findClases).toHaveBeenCalledTimes(2);
   });
 
-  it('notifica tareas pendientes sin explorar bloques futuros', async () => {
+  it('recomienda el siguiente bloque disponible con consultas en lote', async () => {
     prisma.tarea.findMany.mockResolvedValueOnce([
       {
         id: 'tarea-1',
@@ -148,10 +160,81 @@ describe('PanelOperativoService', () => {
     });
 
     expect(disponibilidad.findAll).toHaveBeenCalledTimes(1);
+    expect(prisma.claseProgramada.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.prestamoDocente.findMany).toHaveBeenCalledTimes(1);
+    const alerta = resultado.alertas.find(
+      (item) => item.tipo === 'tarea-operativa',
+    );
+    expect(alerta).toMatchObject({ severidad: 'info' });
+    expect(alerta?.mensaje).toContain(
+      '“Revisar equipos” puede realizarse en LAB-01',
+    );
+  });
+
+  it('omite un bloque futuro ocupado y recomienda el siguiente', async () => {
+    prisma.tarea.findMany
+      .mockResolvedValueOnce([
+        {
+          id: 'tarea-1',
+          titulo: 'Instalar actualizaciones',
+          aulaId: 'aula-1',
+          aula: { id: 'aula-1', codigo: 'LAB-01' },
+        },
+      ])
+      .mockResolvedValueOnce([]);
+    prisma.practicaLibre.findMany
+      .mockResolvedValueOnce([
+        { id: 'practica-1', aula: { id: 'aula-2', codigo: 'LAB-02' } },
+      ])
+      .mockResolvedValueOnce([]);
+    prisma.claseProgramada.findMany.mockResolvedValueOnce([
+      {
+        aulaId: 'aula-1',
+        diaSemana: 4,
+        horaInicio: new Date(Date.UTC(1970, 0, 1, 10)),
+        horaFin: new Date(Date.UTC(1970, 0, 1, 12)),
+        periodo: {
+          fechaInicio: new Date('2026-01-01T00:00:00.000Z'),
+          fechaFin: new Date('2026-12-31T23:59:59.999Z'),
+        },
+      },
+    ]);
+
+    const resultado = await service.resumen({
+      fecha: '2026-08-20',
+      horaInicio: '08:00',
+    });
+
+    const alerta = resultado.alertas.find(
+      (item) => item.tipo === 'tarea-operativa',
+    );
+    expect(alerta).toMatchObject({ severidad: 'info' });
+    expect(alerta?.mensaje).toContain('de 12:00 a 14:00');
+  });
+
+  it('mantiene como advertencia una tarea sin aula operativa disponible', async () => {
+    prisma.tarea.findMany
+      .mockResolvedValueOnce([
+        {
+          id: 'tarea-3',
+          titulo: 'Revisar cableado',
+          aulaId: 'aula-3',
+          aula: { id: 'aula-3', codigo: 'LAB-03' },
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    const resultado = await service.resumen({
+      fecha: '2026-08-20',
+      horaInicio: '08:00',
+    });
+
     expect(resultado.alertas).toContainEqual(
       expect.objectContaining({
         tipo: 'tarea-operativa',
-        mensaje: '“Revisar equipos” sigue pendiente para LAB-01.',
+        severidad: 'advertencia',
+        mensaje:
+          '“Revisar cableado” sigue pendiente; no se encontró disponibilidad cercana para LAB-03.',
       }),
     );
   });
