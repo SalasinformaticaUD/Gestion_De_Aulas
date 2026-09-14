@@ -66,6 +66,31 @@ type ClaseConDetalle = Prisma.ClaseProgramadaGetPayload<{
 type ClaseHistorica = Prisma.ClaseProgramadaGetPayload<{
   include: { docente: true; asignatura: true; periodo: true };
 }>;
+type ClaseSiguiente = Prisma.ClaseProgramadaGetPayload<{
+  include: { docente: true; asignatura: true };
+}>;
+
+type RestriccionDisponibilidad = Prisma.ObservacionGetPayload<
+  Record<string, never>
+>;
+type PrestamoDisponibilidad = Prisma.PrestamoDocenteGetPayload<{
+  include: { docente: true };
+}>;
+type PracticaDisponibilidad = Prisma.PracticaLibreGetPayload<{
+  include: { estudiante: true };
+}>;
+type TareaDisponibilidad = Prisma.TareaGetPayload<Record<string, never>>;
+type LimpiezaDisponibilidad = Prisma.LimpiezaGetPayload<Record<string, never>>;
+
+type DatosDisponibilidad = {
+  restriccion: RestriccionDisponibilidad | null;
+  clase: ClaseConDetalle | null;
+  prestamo: PrestamoDisponibilidad | null;
+  practica: PracticaDisponibilidad | null;
+  tarea: TareaDisponibilidad | null;
+  limpieza: LimpiezaDisponibilidad | null;
+  siguienteActividad: SiguienteActividadDisponibilidad | null;
+};
 
 @Injectable()
 export class DisponibilidadAulasService {
@@ -102,8 +127,14 @@ export class DisponibilidadAulasService {
     const aulasFiltradas = aulas.filter((aula) =>
       this.cumpleCaracteristicas(aula.caracteristicas, query.caracteristicas),
     );
-    return Promise.all(
-      aulasFiltradas.map((aula) => this.calcularDisponibilidad(aula, bloque)),
+    if (!aulasFiltradas.length) return [];
+
+    const datosPorAula = await this.cargarDisponibilidadEnLote(
+      aulasFiltradas.map((aula) => aula.id),
+      bloque,
+    );
+    return aulasFiltradas.map((aula) =>
+      this.construirDisponibilidad(aula, bloque, datosPorAula.get(aula.id)!),
     );
   }
 
@@ -289,6 +320,212 @@ export class DisponibilidadAulasService {
     };
   }
 
+  private async cargarDisponibilidadEnLote(
+    aulaIds: string[],
+    bloque: BloqueDosHoras,
+  ): Promise<Map<string, DatosDisponibilidad>> {
+    const clasesHabilitadas = bloque.diaSemana >= 1 && bloque.diaSemana <= 6;
+    const periodoActual = {
+      activo: true,
+      fechaInicio: { lte: bloque.finDia },
+      fechaFin: { gte: bloque.inicioDia },
+    };
+    const [
+      restricciones,
+      clases,
+      prestamos,
+      practicas,
+      tareas,
+      limpiezas,
+      restriccionesSiguientes,
+      clasesSiguientes,
+      prestamosSiguientes,
+      practicasSiguientes,
+      tareasSiguientes,
+    ] = await Promise.all([
+      this.prisma.observacion.findMany({
+        where: {
+          aulaId: { in: aulaIds },
+          tipo: TipoObservacion.RESTRICCION,
+          OR: [{ vigenteDesde: null }, { vigenteDesde: { lt: bloque.fin } }],
+          AND: [
+            {
+              OR: [
+                { vigenteHasta: null },
+                { vigenteHasta: { gt: bloque.inicio } },
+              ],
+            },
+          ],
+        },
+        orderBy: { creadoEn: 'desc' },
+      }),
+      clasesHabilitadas
+        ? this.prisma.claseProgramada.findMany({
+            where: {
+              aulaId: { in: aulaIds },
+              diaSemana: bloque.diaSemana,
+              horaInicio: { lt: bloque.horaFinPrisma },
+              horaFin: { gt: bloque.horaInicioPrisma },
+              periodo: periodoActual,
+            },
+            include: {
+              docente: true,
+              asignatura: true,
+              asistencias: {
+                where: { fecha: bloque.fechaPrisma },
+                take: 1,
+              },
+            },
+            orderBy: { horaInicio: 'asc' },
+          })
+        : Promise.resolve([] as ClaseConDetalle[]),
+      this.prisma.prestamoDocente.findMany({
+        where: {
+          aulaId: { in: aulaIds },
+          estado: { in: [EstadoPrestamo.APROBADO, EstadoPrestamo.ACTIVO] },
+          inicio: { lt: bloque.fin },
+          fin: { gt: bloque.inicio },
+        },
+        include: { docente: true },
+        orderBy: { inicio: 'asc' },
+      }),
+      this.prisma.practicaLibre.findMany({
+        where: {
+          aulaId: { in: aulaIds },
+          estado: EstadoPrestamo.ACTIVO,
+          inicio: { lt: bloque.fin },
+          OR: [
+            { finReal: { gt: bloque.inicio } },
+            {
+              finReal: null,
+              OR: [
+                { finEstimada: null },
+                { finEstimada: { gt: bloque.inicio } },
+              ],
+            },
+          ],
+        },
+        include: { estudiante: true },
+        orderBy: { inicio: 'asc' },
+      }),
+      this.prisma.tarea.findMany({
+        where: {
+          aulaId: { in: aulaIds },
+          afectaDisponibilidad: true,
+          estado: EstadoTarea.EN_PROCESO,
+          AND: [
+            { OR: [{ inicio: null }, { inicio: { lt: bloque.fin } }] },
+            { OR: [{ fin: null }, { fin: { gt: bloque.inicio } }] },
+          ],
+        },
+        orderBy: { inicio: 'asc' },
+      }),
+      this.prisma.limpieza.findMany({
+        where: {
+          aulaId: { in: aulaIds },
+          realizadaEn: { gte: bloque.inicio, lt: bloque.fin },
+        },
+        orderBy: { realizadaEn: 'asc' },
+      }),
+      this.prisma.observacion.findMany({
+        where: {
+          aulaId: { in: aulaIds },
+          tipo: TipoObservacion.RESTRICCION,
+          creadoEn: { gte: bloque.fin, lt: bloque.finDiaBogota },
+        },
+        orderBy: { creadoEn: 'asc' },
+      }),
+      clasesHabilitadas
+        ? this.prisma.claseProgramada.findMany({
+            where: {
+              aulaId: { in: aulaIds },
+              diaSemana: bloque.diaSemana,
+              horaInicio: { gte: bloque.horaFinPrisma },
+              periodo: periodoActual,
+            },
+            include: { docente: true, asignatura: true },
+            orderBy: { horaInicio: 'asc' },
+          })
+        : Promise.resolve([]),
+      this.prisma.prestamoDocente.findMany({
+        where: {
+          aulaId: { in: aulaIds },
+          estado: { in: [EstadoPrestamo.APROBADO, EstadoPrestamo.ACTIVO] },
+          inicio: { gte: bloque.fin, lt: bloque.finDiaBogota },
+        },
+        include: { docente: true },
+        orderBy: { inicio: 'asc' },
+      }),
+      this.prisma.practicaLibre.findMany({
+        where: {
+          aulaId: { in: aulaIds },
+          estado: EstadoPrestamo.ACTIVO,
+          inicio: { gte: bloque.fin, lt: bloque.finDiaBogota },
+        },
+        include: { estudiante: true },
+        orderBy: { inicio: 'asc' },
+      }),
+      this.prisma.tarea.findMany({
+        where: {
+          aulaId: { in: aulaIds },
+          afectaDisponibilidad: true,
+          estado: EstadoTarea.EN_PROCESO,
+          inicio: { gte: bloque.fin, lt: bloque.finDiaBogota },
+        },
+        orderBy: { inicio: 'asc' },
+      }),
+    ]);
+
+    const actuales = {
+      restricciones: this.primeroPorAula(restricciones),
+      clases: this.primeroPorAula(clases),
+      prestamos: this.primeroPorAula(prestamos),
+      practicas: this.primeroPorAula(practicas),
+      tareas: this.primeroPorAula(tareas),
+      limpiezas: this.primeroPorAula(limpiezas),
+    };
+    const siguientes = {
+      restricciones: this.primeroPorAula(restriccionesSiguientes),
+      clases: this.primeroPorAula(clasesSiguientes),
+      prestamos: this.primeroPorAula(prestamosSiguientes),
+      practicas: this.primeroPorAula(practicasSiguientes),
+      tareas: this.primeroPorAula(tareasSiguientes),
+    };
+
+    return new Map(
+      aulaIds.map((aulaId) => [
+        aulaId,
+        {
+          restriccion: actuales.restricciones.get(aulaId) ?? null,
+          clase: actuales.clases.get(aulaId) ?? null,
+          prestamo: actuales.prestamos.get(aulaId) ?? null,
+          practica: actuales.practicas.get(aulaId) ?? null,
+          tarea: actuales.tareas.get(aulaId) ?? null,
+          limpieza: actuales.limpiezas.get(aulaId) ?? null,
+          siguienteActividad: this.construirSiguienteActividad(bloque, {
+            restriccion: siguientes.restricciones.get(aulaId) ?? null,
+            clase: siguientes.clases.get(aulaId) ?? null,
+            prestamo: siguientes.prestamos.get(aulaId) ?? null,
+            practica: siguientes.practicas.get(aulaId) ?? null,
+            tarea: siguientes.tareas.get(aulaId) ?? null,
+          }),
+        },
+      ]),
+    );
+  }
+
+  private primeroPorAula<T extends { aulaId: string | null }>(
+    items: T[],
+  ): Map<string, T> {
+    const resultados = new Map<string, T>();
+    for (const item of items) {
+      if (item.aulaId && !resultados.has(item.aulaId)) {
+        resultados.set(item.aulaId, item);
+      }
+    }
+    return resultados;
+  }
+
   private async calcularDisponibilidad(
     aula: AulaResumenDisponibilidad,
     bloque: BloqueDosHoras,
@@ -310,6 +547,32 @@ export class DisponibilidadAulasService {
       this.buscarLimpiezaProgramada(aula.id, bloque),
       this.buscarSiguienteActividad(aula.id, bloque),
     ]);
+
+    return this.construirDisponibilidad(aula, bloque, {
+      restriccion,
+      clase,
+      prestamo,
+      practica,
+      tarea,
+      limpieza,
+      siguienteActividad,
+    });
+  }
+
+  private construirDisponibilidad(
+    aula: AulaResumenDisponibilidad,
+    bloque: BloqueDosHoras,
+    datos: DatosDisponibilidad,
+  ): DisponibilidadAula {
+    const {
+      restriccion,
+      clase,
+      prestamo,
+      practica,
+      tarea,
+      limpieza,
+      siguienteActividad,
+    } = datos;
 
     const fuentes: FuenteDisponibilidad[] = [];
 
@@ -675,6 +938,26 @@ export class DisponibilidadAulasService {
       }),
     ]);
 
+    return this.construirSiguienteActividad(bloque, {
+      restriccion,
+      clase,
+      prestamo,
+      practica,
+      tarea,
+    });
+  }
+
+  private construirSiguienteActividad(
+    bloque: BloqueDosHoras,
+    datos: {
+      restriccion: RestriccionDisponibilidad | null;
+      clase: ClaseSiguiente | null;
+      prestamo: PrestamoDisponibilidad | null;
+      practica: PracticaDisponibilidad | null;
+      tarea: TareaDisponibilidad | null;
+    },
+  ): SiguienteActividadDisponibilidad | null {
+    const { restriccion, clase, prestamo, practica, tarea } = datos;
     const candidatas: ActividadCandidata[] = [];
     if (restriccion) {
       candidatas.push({

@@ -407,6 +407,7 @@ model PracticaLibre {
   @@index([aulaId, inicio])
   @@index([atendidoPorId, inicio])
   @@index([grupoId])
+  @@index([estado, inicio])
 }
 
 model PrestamoDocente {
@@ -424,6 +425,7 @@ model PrestamoDocente {
 
   @@index([aulaId, inicio, fin])
   @@index([encargadoId])
+  @@index([estado, inicio, fin])
 }
 
 model EquipoAudiovisual {
@@ -558,6 +560,7 @@ model Observacion {
 
   @@index([autorId, creadoEn])
   @@index([aulaId, tipo, vigenteDesde, vigenteHasta])
+  @@index([creadoEn])
 }
 
 model Tarea {
@@ -595,6 +598,7 @@ model Tarea {
   @@index([responsableId, estado])
   @@index([creadorId, estado])
   @@index([canceladaPorId])
+  @@index([estado, prioridad, creadoEn])
 }
 
 model ResponsableTareaOperativa {

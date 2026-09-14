@@ -6,7 +6,7 @@ import { DisponibilidadAulasService } from './disponibilidad-aulas.service';
 
 type PrismaMock = {
   aula: { findMany: jest.Mock; findUnique: jest.Mock; findFirst: jest.Mock };
-  limpieza: { findFirst: jest.Mock };
+  limpieza: { findFirst: jest.Mock; findMany: jest.Mock };
   observacion: { findFirst: jest.Mock; findMany: jest.Mock };
   claseProgramada: { findFirst: jest.Mock; findMany: jest.Mock };
   prestamoDocente: { findFirst: jest.Mock; findMany: jest.Mock };
@@ -38,7 +38,10 @@ describe('DisponibilidadAulasService', () => {
         findUnique: jest.fn().mockResolvedValue(aula),
         findFirst: jest.fn().mockResolvedValue(aula),
       },
-      limpieza: { findFirst: jest.fn().mockResolvedValue(null) },
+      limpieza: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       observacion: {
         findFirst: jest.fn().mockResolvedValue(null),
         findMany: jest.fn().mockResolvedValue([]),
@@ -146,7 +149,10 @@ describe('DisponibilidadAulasService', () => {
       asistencias: [{ estado: EstadoAsistencia.PENDIENTE }],
     });
 
-    const result = await service.findOne(aula.id, { ...bloque, fecha: fechaFutura });
+    const result = await service.findOne(aula.id, {
+      ...bloque,
+      fecha: fechaFutura,
+    });
 
     expect(result.estadoCalculado).toBe('ocupada');
     expect(result.fuentes[0].estado).toBe(EstadoAsistencia.PENDIENTE);
@@ -234,6 +240,37 @@ describe('DisponibilidadAulasService', () => {
     expect(result).toHaveLength(1);
     expect(result[0].persistido).toBe(false);
     expect(prisma.aula.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.observacion.findMany).toHaveBeenCalledTimes(2);
+    expect(prisma.claseProgramada.findMany).toHaveBeenCalledTimes(2);
+    expect(prisma.prestamoDocente.findMany).toHaveBeenCalledTimes(2);
+    expect(prisma.practicaLibre.findMany).toHaveBeenCalledTimes(2);
+    expect(prisma.tarea.findMany).toHaveBeenCalledTimes(2);
+    expect(prisma.limpieza.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.claseProgramada.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('asigna a cada aula los resultados obtenidos por lote', async () => {
+    prisma.claseProgramada.findMany
+      .mockResolvedValueOnce([
+        {
+          id: 'clase-id',
+          aulaId: aula.id,
+          grupo: '020-81',
+          horaInicio: new Date('1970-01-01T08:00:00.000Z'),
+          horaFin: new Date('1970-01-01T10:00:00.000Z'),
+          docente: { nombre: 'Docente Uno' },
+          asignatura: { nombre: 'Programación' },
+          asistencias: [{ estado: EstadoAsistencia.ASISTIO }],
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    const result = await service.findAll(bloque);
+
+    expect(result[0]).toMatchObject({
+      estadoCalculado: 'ocupada',
+      bloqueActual: { tipo: 'clase-programada', id: 'clase-id' },
+    });
   });
 
   it('filtra por software, capacidad y características antes de calcular', async () => {

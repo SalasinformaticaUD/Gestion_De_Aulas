@@ -47,12 +47,20 @@ describe('PanelOperativoService', () => {
     prestamos.findUpcomingForDate.mockResolvedValue([
       { id: 'prestamo-1', aulaId: 'aula-2' },
     ]);
-    prisma.practicaLibre.findMany.mockResolvedValue([{ id: 'practica-1', aula: { id: 'aula-2', codigo: 'LAB-02' } }]);
+    prisma.practicaLibre.findMany.mockResolvedValue([
+      { id: 'practica-1', aula: { id: 'aula-2', codigo: 'LAB-02' } },
+    ]);
     prisma.prestamoAudiovisual.findMany.mockResolvedValue([]);
     horario.findClases.mockResolvedValue([
       {
-        id: 'clase-1', horaInicio: new Date(Date.UTC(1970, 0, 1, 8)), horaFin: new Date(Date.UTC(1970, 0, 1, 10)), grupo: '01',
-        aula: { id: 'aula-1', codigo: 'LAB-01' }, docente: { nombre: 'Docente' }, asignatura: { nombre: 'Programación' }, proyectoCurricular: { nombre: 'Sistemas' },
+        id: 'clase-1',
+        horaInicio: new Date(Date.UTC(1970, 0, 1, 8)),
+        horaFin: new Date(Date.UTC(1970, 0, 1, 10)),
+        grupo: '01',
+        aula: { id: 'aula-1', codigo: 'LAB-01' },
+        docente: { nombre: 'Docente' },
+        asignatura: { nombre: 'Programación' },
+        proyectoCurricular: { nombre: 'Sistemas' },
         asistencias: [{ id: 'asistencia-1', estado: EstadoAsistencia.AUSENTE }],
       },
     ]);
@@ -101,6 +109,53 @@ describe('PanelOperativoService', () => {
     });
   });
 
+  it('comparte el cálculo entre solicitudes simultáneas del mismo bloque', async () => {
+    const query = { fecha: '2026-08-20', horaInicio: '08:00' };
+
+    const [primero, segundo] = await Promise.all([
+      service.resumen(query),
+      service.resumen(query),
+    ]);
+
+    expect(primero).toBe(segundo);
+    expect(disponibilidad.findAll).toHaveBeenCalledTimes(1);
+    expect(horario.findClases).toHaveBeenCalledTimes(1);
+  });
+
+  it('permite refrescar el resumen después de una operación', async () => {
+    const query = { fecha: '2026-08-20', horaInicio: '08:00' };
+
+    await service.resumen(query);
+    await service.resumen({ ...query, forzarActualizacion: true });
+
+    expect(disponibilidad.findAll).toHaveBeenCalledTimes(2);
+    expect(horario.findClases).toHaveBeenCalledTimes(2);
+  });
+
+  it('notifica tareas pendientes sin explorar bloques futuros', async () => {
+    prisma.tarea.findMany.mockResolvedValueOnce([
+      {
+        id: 'tarea-1',
+        titulo: 'Revisar equipos',
+        aulaId: 'aula-1',
+        aula: { id: 'aula-1', codigo: 'LAB-01' },
+      },
+    ]);
+
+    const resultado = await service.resumen({
+      fecha: '2026-08-20',
+      horaInicio: '08:00',
+    });
+
+    expect(disponibilidad.findAll).toHaveBeenCalledTimes(1);
+    expect(resultado.alertas).toContainEqual(
+      expect.objectContaining({
+        tipo: 'tarea-operativa',
+        mensaje: '“Revisar equipos” sigue pendiente para LAB-01.',
+      }),
+    );
+  });
+
   it('pagina las aulas calculadas sin crear una fuente duplicada', async () => {
     const resultado = await service.aulas({
       fecha: '2026-08-20',
@@ -121,14 +176,30 @@ describe('PanelOperativoService', () => {
   it('agrupa las asistencias pendientes en una sola advertencia', async () => {
     horario.findClases.mockResolvedValue([
       {
-        id: 'clase-1', horaInicio: new Date(Date.UTC(1970, 0, 1, 8)), horaFin: new Date(Date.UTC(1970, 0, 1, 10)), grupo: '01',
-        aula: { id: 'aula-1', codigo: 'LAB-01' }, docente: { nombre: 'Docente 1' }, asignatura: { nombre: 'Programación' }, proyectoCurricular: null,
-        asistencias: [{ id: 'asistencia-1', estado: EstadoAsistencia.PENDIENTE }],
+        id: 'clase-1',
+        horaInicio: new Date(Date.UTC(1970, 0, 1, 8)),
+        horaFin: new Date(Date.UTC(1970, 0, 1, 10)),
+        grupo: '01',
+        aula: { id: 'aula-1', codigo: 'LAB-01' },
+        docente: { nombre: 'Docente 1' },
+        asignatura: { nombre: 'Programación' },
+        proyectoCurricular: null,
+        asistencias: [
+          { id: 'asistencia-1', estado: EstadoAsistencia.PENDIENTE },
+        ],
       },
       {
-        id: 'clase-2', horaInicio: new Date(Date.UTC(1970, 0, 1, 8)), horaFin: new Date(Date.UTC(1970, 0, 1, 10)), grupo: '02',
-        aula: { id: 'aula-2', codigo: 'LAB-02' }, docente: { nombre: 'Docente 2' }, asignatura: { nombre: 'Bases de datos' }, proyectoCurricular: null,
-        asistencias: [{ id: 'asistencia-2', estado: EstadoAsistencia.PENDIENTE }],
+        id: 'clase-2',
+        horaInicio: new Date(Date.UTC(1970, 0, 1, 8)),
+        horaFin: new Date(Date.UTC(1970, 0, 1, 10)),
+        grupo: '02',
+        aula: { id: 'aula-2', codigo: 'LAB-02' },
+        docente: { nombre: 'Docente 2' },
+        asignatura: { nombre: 'Bases de datos' },
+        proyectoCurricular: null,
+        asistencias: [
+          { id: 'asistencia-2', estado: EstadoAsistencia.PENDIENTE },
+        ],
       },
     ]);
 
@@ -150,13 +221,25 @@ describe('PanelOperativoService', () => {
   it('agrupa las ausencias docentes en una sola alerta crítica', async () => {
     horario.findClases.mockResolvedValue([
       {
-        id: 'clase-1', horaInicio: new Date(Date.UTC(1970, 0, 1, 8)), horaFin: new Date(Date.UTC(1970, 0, 1, 10)), grupo: '01',
-        aula: { id: 'aula-1', codigo: 'LAB-01' }, docente: { nombre: 'Docente 1' }, asignatura: { nombre: 'Programación' }, proyectoCurricular: null,
+        id: 'clase-1',
+        horaInicio: new Date(Date.UTC(1970, 0, 1, 8)),
+        horaFin: new Date(Date.UTC(1970, 0, 1, 10)),
+        grupo: '01',
+        aula: { id: 'aula-1', codigo: 'LAB-01' },
+        docente: { nombre: 'Docente 1' },
+        asignatura: { nombre: 'Programación' },
+        proyectoCurricular: null,
         asistencias: [{ id: 'asistencia-1', estado: EstadoAsistencia.AUSENTE }],
       },
       {
-        id: 'clase-2', horaInicio: new Date(Date.UTC(1970, 0, 1, 8)), horaFin: new Date(Date.UTC(1970, 0, 1, 10)), grupo: '02',
-        aula: { id: 'aula-2', codigo: 'LAB-02' }, docente: { nombre: 'Docente 2' }, asignatura: { nombre: 'Bases de datos' }, proyectoCurricular: null,
+        id: 'clase-2',
+        horaInicio: new Date(Date.UTC(1970, 0, 1, 8)),
+        horaFin: new Date(Date.UTC(1970, 0, 1, 10)),
+        grupo: '02',
+        aula: { id: 'aula-2', codigo: 'LAB-02' },
+        docente: { nombre: 'Docente 2' },
+        asignatura: { nombre: 'Bases de datos' },
+        proyectoCurricular: null,
         asistencias: [{ id: 'asistencia-2', estado: EstadoAsistencia.AUSENTE }],
       },
     ]);

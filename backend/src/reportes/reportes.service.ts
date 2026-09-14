@@ -5,6 +5,7 @@ import {
   Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import * as XLSX from 'xlsx';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConsultarReporteDto } from './dto/consultar-reporte.dto';
 import { PlantillasPdfService } from './plantillas-pdf.service';
@@ -305,6 +306,104 @@ export class ReportesService {
       },
     );
     return this.comprimirPdfs(archivos);
+  }
+
+  async generarPracticasLibresMesExcel(mes: string): Promise<Buffer> {
+    const rango = this.rangoMesCompleto(mes);
+    const practicas = await this.prisma.practicaLibre.findMany({
+      where: {
+        inicio: { gte: rango.desde, lte: rango.hasta },
+        estado: { in: ['DEVUELTO', 'CANCELADO'] },
+      },
+      include: {
+        estudiante: true,
+        docente: true,
+        aula: { include: { proyectoCurricular: true } },
+        atendidoPor: {
+          select: { id: true, nombreCompleto: true, nombreUsuario: true },
+        },
+      },
+      orderBy: { inicio: 'asc' },
+    });
+    if (!practicas.length) {
+      throw new BadRequestException(
+        'No hay prácticas libres para el mes seleccionado.',
+      );
+    }
+
+    const filas = practicas.map((practica) => {
+      const persona = practica.estudiante ?? practica.docente;
+      const identificacion =
+        practica.estudiante?.codigo ?? practica.docente?.documento ?? '';
+      const finReferencia = practica.finReal ?? practica.finEstimada;
+      const duracionMinutos = finReferencia
+        ? Math.max(
+            0,
+            Math.round(
+              (finReferencia.getTime() - practica.inicio.getTime()) / 60_000,
+            ),
+          )
+        : null;
+      return {
+        'ID práctica': practica.id,
+        'ID grupo': practica.grupoId ?? '',
+        'Tipo de persona': practica.estudiante ? 'ESTUDIANTE' : 'DOCENTE',
+        'Código o documento': identificacion,
+        Nombre: persona?.nombre ?? 'Responsable no disponible',
+        Correo: persona?.correo ?? '',
+        Aula: practica.aula.codigo,
+        Ubicación: practica.aula.ubicacion,
+        'Proyecto curricular': practica.aula.proyectoCurricular?.nombre ?? '',
+        'Software solicitado': practica.softwareSolicitado ?? '',
+        'Tipo de responsable': practica.responsableTipo,
+        'Atendido por':
+          practica.atendidoPor?.nombreCompleto ??
+          practica.atendidoPor?.nombreUsuario ??
+          'Sin responsable registrado',
+        'Usuario que atendió': practica.atendidoPor?.nombreUsuario ?? '',
+        Fecha: this.partesBogota(practica.inicio).fecha,
+        'Hora de inicio': this.horaBogota(practica.inicio),
+        'Fin estimado': practica.finEstimada
+          ? this.horaBogota(practica.finEstimada)
+          : '',
+        'Fecha de finalización': practica.finReal
+          ? this.partesBogota(practica.finReal).fecha
+          : '',
+        'Hora de finalización': practica.finReal
+          ? this.horaBogota(practica.finReal)
+          : '',
+        'Duración (minutos)': duracionMinutos,
+        Estado: practica.estado,
+      };
+    });
+
+    const hoja = XLSX.utils.json_to_sheet(filas);
+    hoja['!autofilter'] = { ref: hoja['!ref'] ?? 'A1:T1' };
+    hoja['!cols'] = [
+      { wch: 38 },
+      { wch: 38 },
+      { wch: 18 },
+      { wch: 22 },
+      { wch: 32 },
+      { wch: 34 },
+      { wch: 14 },
+      { wch: 28 },
+      { wch: 28 },
+      { wch: 30 },
+      { wch: 22 },
+      { wch: 30 },
+      { wch: 24 },
+      { wch: 14 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 22 },
+      { wch: 22 },
+      { wch: 20 },
+      { wch: 14 },
+    ];
+    const libro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(libro, hoja, 'Prácticas libres');
+    return XLSX.write(libro, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
   }
 
   async generarPrestamosAudiovisualesMesPdf(mes: string): Promise<Buffer> {

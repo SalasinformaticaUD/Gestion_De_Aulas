@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import * as XLSX from 'xlsx';
 import { ReportesService } from './reportes.service';
 
 describe('ReportesService', () => {
@@ -165,6 +166,59 @@ describe('ReportesService', () => {
     );
     expect(contenido).toContain(
       `Ana Pérez/Ficha_PracticaLibre_${registros[1].id}.pdf`,
+    );
+    jest.useRealTimers();
+  });
+
+  it('genera el historial mensual de prácticas libres en una hoja de Excel', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-09-10T17:00:00.000Z'));
+    prisma.practicaLibre.findMany.mockResolvedValue([
+      {
+        id: '11111111-1111-4111-8111-111111111111',
+        grupoId: '22222222-2222-4222-8222-222222222222',
+        inicio: new Date('2026-09-08T13:00:00.000Z'),
+        finEstimada: new Date('2026-09-08T15:00:00.000Z'),
+        finReal: new Date('2026-09-08T14:30:00.000Z'),
+        estado: 'DEVUELTO',
+        responsableTipo: 'MONITOR',
+        softwareSolicitado: 'MATLAB',
+        estudiante: {
+          codigo: '20260001',
+          nombre: 'Laura Gómez',
+          correo: 'laura@example.edu.co',
+        },
+        docente: null,
+        aula: {
+          codigo: 'Aula 306',
+          ubicacion: 'Piso 3',
+          proyectoCurricular: { nombre: 'Ingeniería de Sistemas' },
+        },
+        atendidoPor: {
+          id: '33333333-3333-4333-8333-333333333333',
+          nombreCompleto: 'Esteban Bautista',
+          nombreUsuario: 'ebautista',
+        },
+      },
+    ]);
+
+    const archivo = await service.generarPracticasLibresMesExcel('2026-09');
+    const libro = XLSX.read(archivo, { type: 'buffer' });
+    const hoja = libro.Sheets['Prácticas libres'];
+    const filas = XLSX.utils.sheet_to_json<Record<string, unknown>>(hoja);
+
+    expect(filas).toHaveLength(1);
+    expect(filas[0]).toEqual(
+      expect.objectContaining({
+        'Código o documento': '20260001',
+        Nombre: 'Laura Gómez',
+        Aula: 'Aula 306',
+        'Software solicitado': 'MATLAB',
+        'Atendido por': 'Esteban Bautista',
+        Fecha: '2026-09-08',
+        'Hora de inicio': '08:00',
+        'Duración (minutos)': 90,
+        Estado: 'DEVUELTO',
+      }),
     );
     jest.useRealTimers();
   });

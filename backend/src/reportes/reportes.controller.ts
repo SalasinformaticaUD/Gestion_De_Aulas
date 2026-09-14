@@ -34,6 +34,20 @@ export class ReportesController {
     );
   }
 
+  @Get('practicas-libres/excel/mes')
+  @RequireModule(MODULOS.PRACTICAS_LIBRES)
+  @RequirePermissions('PRACTICAS_LIBRES_LEER')
+  async practicasLibresMesExcel(
+    @Query('mes') mes: string,
+    @Res() response: Response,
+  ): Promise<void> {
+    this.enviarExcel(
+      response,
+      await this.reportes.generarPracticasLibresMesExcel(mes),
+      `Historial_PracticasLibres_${mes}.xlsx`,
+    );
+  }
+
   @Get('prestamos-audiovisuales/pdf/mes')
   @RequireModule(MODULOS.AUDIOVISUALES)
   @RequirePermissions('AUDIOVISUALES_LEER')
@@ -130,5 +144,15 @@ export class ReportesController {
       'Content-Length': zip.length.toString(),
     });
     response.status(200).send(zip);
+  }
+
+  private enviarExcel(response: Response, excel: Buffer, nombre: string): void {
+    response.set({
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="${nombre.replaceAll('"', '')}"`,
+      'Content-Length': excel.length.toString(),
+    });
+    response.status(200).send(excel);
   }
 }

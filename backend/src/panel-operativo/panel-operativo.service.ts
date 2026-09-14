@@ -21,6 +21,12 @@ import {
 
 @Injectable()
 export class PanelOperativoService {
+  private readonly resumenCache = new Map<
+    string,
+    { expiraEn: number; valor: Promise<PanelOperativoResumen> }
+  >();
+  private readonly resumenCacheTtlMs = 45_000;
+
   constructor(
     private readonly disponibilidad: DisponibilidadAulasService,
     private readonly prestamos: PrestamosDocentesService,
@@ -31,6 +37,38 @@ export class PanelOperativoService {
   async resumen(
     query: ConsultarPanelOperativoDto,
   ): Promise<PanelOperativoResumen> {
+    const bloque = this.resolverBloque(query);
+    const clave = `${query.fecha}:${bloque.horaInicio}:${bloque.horaFin}`;
+    const existente = this.resumenCache.get(clave);
+    if (
+      !query.forzarActualizacion &&
+      existente &&
+      existente.expiraEn > Date.now()
+    ) {
+      return existente.valor;
+    }
+
+    if (this.resumenCache.size > 32) {
+      const ahora = Date.now();
+      for (const [cacheKey, entrada] of this.resumenCache) {
+        if (entrada.expiraEn <= ahora) this.resumenCache.delete(cacheKey);
+      }
+    }
+
+    const valor = this.calcularResumen(query).catch((error: unknown) => {
+      this.resumenCache.delete(clave);
+      throw error;
+    });
+    this.resumenCache.set(clave, {
+      expiraEn: Date.now() + this.resumenCacheTtlMs,
+      valor,
+    });
+    return valor;
+  }
+
+  private async calcularResumen(
+    query: ConsultarPanelOperativoDto,
+  ): Promise<PanelOperativoResumen> {
     const contexto = await this.construirContexto(query);
     const alertasBase = this.construirAlertas(
       contexto.aulas,
@@ -38,7 +76,7 @@ export class PanelOperativoService {
       contexto.prestamos,
     );
     const alertas = [
-      ...(await this.construirAlertasTareas(contexto.tareas, contexto.aulas, query.fecha, contexto.bloque)),
+      ...this.construirAlertasTareas(contexto.tareas),
       ...this.construirAlertasRecientes(contexto),
       ...alertasBase,
     ];
@@ -51,7 +89,9 @@ export class PanelOperativoService {
       metricas: {
         totalAulas: contexto.aulas.length,
         disponibles: contar('disponible'),
-        ocupadas: contexto.horarioActual.filter((item) => item.estado === 'EN_CLASE').length,
+        ocupadas: contexto.horarioActual.filter(
+          (item) => item.estado === 'EN_CLASE',
+        ).length,
         reservadas: contar('reservada'),
         mantenimiento: contar('mantenimiento'),
         bloqueadas: contar('bloqueada'),
@@ -93,9 +133,13 @@ export class PanelOperativoService {
   async alertas(query: ConsultarPanelOperativoDto): Promise<AlertaOperativa[]> {
     const contexto = await this.construirContexto(query);
     return [
-      ...(await this.construirAlertasTareas(contexto.tareas, contexto.aulas, query.fecha, contexto.bloque)),
+      ...this.construirAlertasTareas(contexto.tareas),
       ...this.construirAlertasRecientes(contexto),
-      ...this.construirAlertas(contexto.aulas, contexto.asistencias, contexto.prestamos),
+      ...this.construirAlertas(
+        contexto.aulas,
+        contexto.asistencias,
+        contexto.prestamos,
+      ),
     ];
   }
 
@@ -103,49 +147,77 @@ export class PanelOperativoService {
     const bloque = this.resolverBloque(query);
     const inicioDia = new Date(`${query.fecha}T00:00:00.000-05:00`);
     const finDia = new Date(`${query.fecha}T23:59:59.999-05:00`);
-    const inicioBloque = new Date(`${query.fecha}T${bloque.horaInicio}:00.000-05:00`);
-    const finBloque = new Date(`${query.fecha}T${bloque.horaFin}:00.000-05:00`);
-    const horaInicioPrisma = new Date(Date.UTC(1970, 0, 1, Number(bloque.horaInicio.slice(0, 2))));
-    const horaFinPrisma = new Date(Date.UTC(1970, 0, 1, Number(bloque.horaFin.slice(0, 2))));
-    const desdeObservaciones = new Date(Math.max(inicioDia.getTime(), Date.now() - 24 * 60 * 60 * 1000));
-    const [aulas, prestamos, practicas, audiovisualesActivos, clasesDelDia, observaciones, tareas] = await Promise.all(
-      [
-        this.disponibilidad.findAll({ fecha: query.fecha, ...bloque }),
-        this.prestamos.findUpcomingForDate(query.fecha),
-        this.prisma.practicaLibre.findMany({
-          where: {
-            estado: EstadoPrestamo.ACTIVO,
-            inicio: { lt: finBloque },
-            OR: [
-              { finReal: { gt: inicioBloque } },
-              { finReal: null, OR: [{ finEstimada: null }, { finEstimada: { gt: inicioBloque } }] },
-            ],
-          },
-          include: { aula: true, estudiante: true, docente: true },
-        }),
-        this.prisma.prestamoAudiovisual.findMany({
-          where: { estado: { in: [EstadoPrestamo.ACTIVO, EstadoPrestamo.VENCIDO] }, salidaEn: { lte: finDia }, devolucionReal: null },
-          include: { detalles: { include: { equipo: true } } },
-          orderBy: { devolucionEstimada: 'asc' },
-        }),
-        this.horario.findClases({ fecha: query.fecha }),
-        this.prisma.observacion.findMany({
-          where: { creadoEn: { gte: desdeObservaciones, lte: finDia } },
-          include: { autor: { select: { nombreCompleto: true } }, aula: { select: { id: true, codigo: true } } },
-          orderBy: { creadoEn: 'desc' },
-          take: 8,
-        }),
-        this.prisma.tarea.findMany({
-          where: { estado: EstadoTarea.PENDIENTE, aulaId: { not: null } },
-          include: { aula: { select: { id: true, codigo: true } } },
-          orderBy: [{ prioridad: 'asc' }, { creadoEn: 'asc' }],
-          take: 12,
-        }),
-      ],
+    const inicioBloque = new Date(
+      `${query.fecha}T${bloque.horaInicio}:00.000-05:00`,
     );
+    const finBloque = new Date(`${query.fecha}T${bloque.horaFin}:00.000-05:00`);
+    const horaInicioPrisma = new Date(
+      Date.UTC(1970, 0, 1, Number(bloque.horaInicio.slice(0, 2))),
+    );
+    const horaFinPrisma = new Date(
+      Date.UTC(1970, 0, 1, Number(bloque.horaFin.slice(0, 2))),
+    );
+    const desdeObservaciones = new Date(
+      Math.max(inicioDia.getTime(), Date.now() - 24 * 60 * 60 * 1000),
+    );
+    const [
+      aulas,
+      prestamos,
+      practicas,
+      audiovisualesActivos,
+      clasesDelDia,
+      observaciones,
+      tareas,
+    ] = await Promise.all([
+      this.disponibilidad.findAll({ fecha: query.fecha, ...bloque }),
+      this.prestamos.findUpcomingForDate(query.fecha),
+      this.prisma.practicaLibre.findMany({
+        where: {
+          estado: EstadoPrestamo.ACTIVO,
+          inicio: { lt: finBloque },
+          OR: [
+            { finReal: { gt: inicioBloque } },
+            {
+              finReal: null,
+              OR: [
+                { finEstimada: null },
+                { finEstimada: { gt: inicioBloque } },
+              ],
+            },
+          ],
+        },
+        include: { aula: true, estudiante: true, docente: true },
+      }),
+      this.prisma.prestamoAudiovisual.findMany({
+        where: {
+          estado: { in: [EstadoPrestamo.ACTIVO, EstadoPrestamo.VENCIDO] },
+          salidaEn: { lte: finDia },
+          devolucionReal: null,
+        },
+        include: { detalles: { include: { equipo: true } } },
+        orderBy: { devolucionEstimada: 'asc' },
+      }),
+      this.horario.findClases({ fecha: query.fecha }),
+      this.prisma.observacion.findMany({
+        where: { creadoEn: { gte: desdeObservaciones, lte: finDia } },
+        include: {
+          autor: { select: { nombreCompleto: true } },
+          aula: { select: { id: true, codigo: true } },
+        },
+        orderBy: { creadoEn: 'desc' },
+        take: 8,
+      }),
+      this.prisma.tarea.findMany({
+        where: { estado: EstadoTarea.PENDIENTE, aulaId: { not: null } },
+        include: { aula: { select: { id: true, codigo: true } } },
+        orderBy: [{ prioridad: 'asc' }, { creadoEn: 'asc' }],
+        take: 12,
+      }),
+    ]);
     const clases = clasesDelDia
-      .filter((clase) =>
-        clase.horaInicio < horaFinPrisma && clase.horaFin > horaInicioPrisma,
+      .filter(
+        (clase) =>
+          clase.horaInicio < horaFinPrisma && clase.horaFin > horaInicioPrisma,
       )
       .sort((a, b) =>
         a.aula.codigo.localeCompare(b.aula.codigo, 'es', { numeric: true }),
@@ -162,7 +234,8 @@ export class PanelOperativoService {
       clases.map((clase, index) => [clase.id, asistencias[index].estado]),
     );
     const horarioActual = clases.map((clase) => {
-      const asistencia = estadoPorClase.get(clase.id) ?? EstadoAsistencia.PENDIENTE;
+      const asistencia =
+        estadoPorClase.get(clase.id) ?? EstadoAsistencia.PENDIENTE;
       return {
         id: clase.id,
         horaInicio: this.horaPrisma(clase.horaInicio),
@@ -173,35 +246,65 @@ export class PanelOperativoService {
         proyecto: clase.proyectoCurricular?.nombre ?? null,
         docente: clase.docente.nombre,
         grupo: clase.grupo,
-        estado: asistencia === EstadoAsistencia.AUSENTE ? 'AUSENTE' as const : asistencia === EstadoAsistencia.ASISTIO ? 'EN_CLASE' as const : 'PENDIENTE' as const,
+        estado:
+          asistencia === EstadoAsistencia.AUSENTE
+            ? ('AUSENTE' as const)
+            : asistencia === EstadoAsistencia.ASISTIO
+              ? ('EN_CLASE' as const)
+              : ('PENDIENTE' as const),
       };
     });
-    return { bloque, aulas, asistencias, prestamos, practicas, practicasActivas: practicas.length, audiovisualesActivos, horarioActual, observaciones, tareas, inicioBloque, finBloque };
+    return {
+      bloque,
+      aulas,
+      asistencias,
+      prestamos,
+      practicas,
+      practicasActivas: practicas.length,
+      audiovisualesActivos,
+      horarioActual,
+      observaciones,
+      tareas,
+      inicioBloque,
+      finBloque,
+    };
   }
 
-  private construirAlertasRecientes(contexto: Awaited<ReturnType<PanelOperativoService['construirContexto']>>): AlertaOperativa[] {
+  private construirAlertasRecientes(
+    contexto: Awaited<ReturnType<PanelOperativoService['construirContexto']>>,
+  ): AlertaOperativa[] {
     const ahora = new Date();
-    const enUltimosQuinceMinutos = (fecha: Date) => fecha.getTime() <= ahora.getTime() + 15 * 60 * 1000;
-    const alertas: AlertaOperativa[] = contexto.observaciones.map((observacion) => ({
-      id: `observacion-${observacion.id}`,
-      severidad: 'info',
-      tipo: 'nueva-observacion',
-      mensaje: `${observacion.autor?.nombreCompleto ?? 'Un usuario'} agregó una nueva observación.`,
-      aulaId: observacion.aula.id,
-      aulaCodigo: observacion.aula.codigo,
-      origenId: observacion.id,
-      fechaHora: observacion.creadoEn,
-      enlace: '/observaciones',
-      accion: 'Ver observación',
-    }));
+    const enUltimosQuinceMinutos = (fecha: Date) =>
+      fecha.getTime() <= ahora.getTime() + 15 * 60 * 1000;
+    const alertas: AlertaOperativa[] = contexto.observaciones.map(
+      (observacion) => ({
+        id: `observacion-${observacion.id}`,
+        severidad: 'info',
+        tipo: 'nueva-observacion',
+        mensaje: `${observacion.autor?.nombreCompleto ?? 'Un usuario'} agregó una nueva observación.`,
+        aulaId: observacion.aula.id,
+        aulaCodigo: observacion.aula.codigo,
+        origenId: observacion.id,
+        fechaHora: observacion.creadoEn,
+        enlace: '/observaciones',
+        accion: 'Ver observación',
+      }),
+    );
     for (const prestamo of contexto.audiovisualesActivos) {
       if (!enUltimosQuinceMinutos(prestamo.devolucionEstimada)) continue;
-      const videobeams = prestamo.detalles.filter((detalle) => `${detalle.equipo.tipo} ${detalle.equipo.nombre}`.toLocaleLowerCase('es').includes('video'));
+      const videobeams = prestamo.detalles.filter((detalle) =>
+        `${detalle.equipo.tipo} ${detalle.equipo.nombre}`
+          .toLocaleLowerCase('es')
+          .includes('video'),
+      );
       if (!videobeams.length) continue;
-      const equipos = videobeams.map((detalle) => detalle.equipo.codigoInventario).join(', ');
+      const equipos = videobeams
+        .map((detalle) => detalle.equipo.codigoInventario)
+        .join(', ');
       alertas.push({
         id: `audiovisual-${prestamo.id}`,
-        severidad: prestamo.devolucionEstimada < ahora ? 'critica' : 'advertencia',
+        severidad:
+          prestamo.devolucionEstimada < ahora ? 'critica' : 'advertencia',
         tipo: 'devolucion-audiovisual',
         mensaje: `${equipos} ${prestamo.devolucionEstimada < ahora ? 'superó' : 'está próximo a'} su hora estimada de devolución.`,
         origenId: prestamo.id,
@@ -210,7 +313,10 @@ export class PanelOperativoService {
         accion: 'Ver préstamo',
       });
     }
-    if (ahora >= new Date(contexto.finBloque.getTime() - 15 * 60 * 1000) && ahora < contexto.finBloque) {
+    if (
+      ahora >= new Date(contexto.finBloque.getTime() - 15 * 60 * 1000) &&
+      ahora < contexto.finBloque
+    ) {
       for (const practica of contexto.practicas) {
         alertas.push({
           id: `practica-${practica.id}`,
@@ -229,45 +335,20 @@ export class PanelOperativoService {
     return alertas;
   }
 
-  private async construirAlertasTareas(
-    tareas: Array<{ id: string; titulo: string; aulaId: string | null; aula: { id: string; codigo: string } | null }>,
-    aulasActuales: DisponibilidadAula[],
-    fecha: string,
-    bloqueActual: { horaInicio: string; horaFin: string },
-  ): Promise<AlertaOperativa[]> {
-    if (!tareas.length) return [];
-    const recomendaciones = new Map<string, { fecha: string; horaInicio: string; horaFin: string }>();
-    const pendientes = new Set(tareas.map((tarea) => tarea.aulaId).filter((id): id is string => Boolean(id)));
-    for (const aula of aulasActuales) {
-      if (pendientes.has(aula.aula.id) && aula.estadoCalculado === 'disponible') {
-        recomendaciones.set(aula.aula.id, { fecha, ...bloqueActual });
-        pendientes.delete(aula.aula.id);
-      }
-    }
-    const base = new Date(`${fecha}T00:00:00.000-05:00`);
-    for (let dia = 0; dia < 4 && pendientes.size; dia += 1) {
-      const fechaCandidata = new Date(base.getTime() + dia * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-      for (let hora = dia === 0 ? Number(bloqueActual.horaInicio.slice(0, 2)) + 2 : 6; hora <= 20 && pendientes.size; hora += 2) {
-        const horaInicio = `${String(hora).padStart(2, '0')}:00`;
-        const horaFin = `${String(hora + 2).padStart(2, '0')}:00`;
-        const aulas = await this.disponibilidad.findAll({ fecha: fechaCandidata, horaInicio, horaFin });
-        for (const aula of aulas) {
-          if (pendientes.has(aula.aula.id) && aula.estadoCalculado === 'disponible') {
-            recomendaciones.set(aula.aula.id, { fecha: fechaCandidata, horaInicio, horaFin });
-            pendientes.delete(aula.aula.id);
-          }
-        }
-      }
-    }
+  private construirAlertasTareas(
+    tareas: Array<{
+      id: string;
+      titulo: string;
+      aulaId: string | null;
+      aula: { id: string; codigo: string } | null;
+    }>,
+  ): AlertaOperativa[] {
     return tareas.map((tarea) => {
-      const bloque = tarea.aulaId ? recomendaciones.get(tarea.aulaId) : undefined;
       return {
         id: `tarea-${tarea.id}`,
-        severidad: bloque ? 'info' as const : 'advertencia' as const,
+        severidad: 'advertencia' as const,
         tipo: 'tarea-operativa',
-        mensaje: bloque
-          ? `“${tarea.titulo}” puede realizarse en ${tarea.aula?.codigo ?? 'el aula'} el ${this.fechaLegible(bloque.fecha)}, de ${bloque.horaInicio} a ${bloque.horaFin}.`
-          : `“${tarea.titulo}” sigue pendiente; no se encontró disponibilidad cercana para ${tarea.aula?.codigo ?? 'el aula'}.`,
+        mensaje: `“${tarea.titulo}” sigue pendiente para ${tarea.aula?.codigo ?? 'el aula'}.`,
         aulaId: tarea.aulaId ?? undefined,
         aulaCodigo: tarea.aula?.codigo,
         origenId: tarea.id,
@@ -361,15 +442,33 @@ export class PanelOperativoService {
         horaFin: `${horaFin.toString().padStart(2, '0')}:00`,
       };
     }
-    const partes = new Intl.DateTimeFormat('en-GB', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
-    const horaActual = Number(partes.find((parte) => parte.type === 'hour')?.value ?? '6');
-    const minutoActual = Number(partes.find((parte) => parte.type === 'minute')?.value ?? '0');
-    const bloqueActual = Math.min(20, Math.max(6, Math.floor(horaActual / 2) * 2));
-    const mostrarSiguiente = bloqueActual < 20 && horaActual * 60 + minutoActual >= bloqueActual * 60 + 105;
+    const partes = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'America/Bogota',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(new Date());
+    const horaActual = Number(
+      partes.find((parte) => parte.type === 'hour')?.value ?? '6',
+    );
+    const minutoActual = Number(
+      partes.find((parte) => parte.type === 'minute')?.value ?? '0',
+    );
+    const bloqueActual = Math.min(
+      20,
+      Math.max(6, Math.floor(horaActual / 2) * 2),
+    );
+    const mostrarSiguiente =
+      bloqueActual < 20 &&
+      horaActual * 60 + minutoActual >= bloqueActual * 60 + 105;
     const horaInicio = mostrarSiguiente ? bloqueActual + 2 : bloqueActual;
-    return { horaInicio: `${String(horaInicio).padStart(2, '0')}:00`, horaFin: `${String(horaInicio + 2).padStart(2, '0')}:00` };
+    return {
+      horaInicio: `${String(horaInicio).padStart(2, '0')}:00`,
+      horaFin: `${String(horaInicio + 2).padStart(2, '0')}:00`,
+    };
   }
 
-  private horaPrisma(fecha: Date) { return `${String(fecha.getUTCHours()).padStart(2, '0')}:${String(fecha.getUTCMinutes()).padStart(2, '0')}`; }
-  private fechaLegible(fecha: string) { return new Intl.DateTimeFormat('es-CO', { timeZone: 'America/Bogota', weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(`${fecha}T12:00:00.000-05:00`)); }
+  private horaPrisma(fecha: Date) {
+    return `${String(fecha.getUTCHours()).padStart(2, '0')}:${String(fecha.getUTCMinutes()).padStart(2, '0')}`;
+  }
 }

@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
 import {
+  IsBoolean,
   IsDateString,
   IsInt,
   IsOptional,
@@ -17,6 +18,13 @@ export class ConsultarPanelOperativoDto {
   @IsOptional()
   @Matches(HORA_PATTERN)
   horaInicio?: string;
+
+  @IsOptional()
+  @Transform(
+    ({ value }: { value: unknown }) => value === true || value === 'true',
+  )
+  @IsBoolean()
+  forzarActualizacion?: boolean;
 }
 
 export class ConsultarAulasPanelOperativoDto extends ConsultarPanelOperativoDto {
