@@ -9,7 +9,7 @@ import styles from "./DashboardView.module.css";
 const alertTypeLabels: Record<string, string> = {
   "tarea-operativa": "Tarea operativa", "nueva-observacion": "Nueva observación", "devolucion-audiovisual": "Devolución próxima",
   "fin-practica-libre": "Práctica por finalizar", "ausencia-docente": "Ausencia docente", "asistencia-pendiente": "Asistencia pendiente",
-  mantenimiento: "Mantenimiento", bloqueada: "Aula bloqueada", "prestamo-programado": "Préstamo de aula",
+  mantenimiento: "Mantenimiento", bloqueada: "Aula bloqueada", "prestamo-programado": "Préstamo de aula", "credencial-actualizada": "Credencial actualizada",
 };
 const ordenSeveridad = { critica: 0, advertencia: 1, info: 2 } as const;
 
@@ -28,14 +28,36 @@ export function DashboardView() {
   const [filtroNotificaciones, setFiltroNotificaciones] = useState<"critica" | "advertencia" | "info" | null>(null);
   useEffect(() => {
     let controller: AbortController | null = null;
+    let cargandoPeticion = false;
+    let forzarSiguiente = version > 0;
     const cargar = async () => {
-      controller?.abort(); controller = new AbortController();
-      try { setResumen(await consultarResumenPanel(fechaBogota(), controller.signal)); setError(""); }
-      catch (reason) { if ((reason as { name?: string }).name !== "AbortError") setError(reason instanceof Error ? reason.message : "No fue posible consultar el panel."); }
-      finally { setCargando(false); }
+      if (document.hidden || cargandoPeticion) return;
+      cargandoPeticion = true;
+      controller = new AbortController();
+      const forzarActualizacion = forzarSiguiente;
+      forzarSiguiente = false;
+      try { setResumen(await consultarResumenPanel(fechaBogota(), controller.signal, forzarActualizacion)); setError(""); }
+      catch (reason) {
+        if ((reason as { name?: string }).name === "AbortError") {
+          if (forzarActualizacion) forzarSiguiente = true;
+        } else {
+          setError(reason instanceof Error ? reason.message : "No fue posible consultar el panel.");
+        }
+      }
+      finally { cargandoPeticion = false; setCargando(false); }
     };
-    void cargar(); const intervalo = window.setInterval(() => void cargar(), 60_000);
-    return () => { window.clearInterval(intervalo); controller?.abort(); };
+    const alCambiarVisibilidad = () => {
+      if (document.hidden) controller?.abort();
+      else void cargar();
+    };
+    void cargar();
+    const intervalo = window.setInterval(() => void cargar(), 60_000);
+    document.addEventListener("visibilitychange", alCambiarVisibilidad);
+    return () => {
+      window.clearInterval(intervalo);
+      document.removeEventListener("visibilitychange", alCambiarVisibilidad);
+      controller?.abort();
+    };
   }, [version]);
   const conteoAlertas = useMemo(() => ({
     critica: resumen?.alertas.filter((a) => a.severidad === "critica").length ?? 0,

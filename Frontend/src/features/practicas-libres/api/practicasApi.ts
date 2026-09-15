@@ -11,6 +11,7 @@ export const listarResponsablesPracticas = async () => (await solicitarAulas<Api
 export const finalizarPractica = async (id: string, cumplioReglas: boolean, observacionesIncumplimiento?: string) => map(await solicitarAulas<ApiPractice>(`/practicas-libres/${id}/finalizar`, auth(), { method: "PATCH", body: JSON.stringify({ cumplioReglas, observacionesIncumplimiento }) }));
 export const cancelarPractica = async (id: string) => map(await solicitarAulas<ApiPractice>(`/practicas-libres/${id}/cancelar`, auth(), { method: "PATCH", body: JSON.stringify({}) }));
 export const descargarFichasPracticasMes = (mes: string) => descargarAulas(`/reportes/practicas-libres/pdf/mes?mes=${encodeURIComponent(mes)}`, auth());
+export const descargarHistorialPracticasExcel = (mes: string) => descargarAulas(`/reportes/practicas-libres/excel/mes?mes=${encodeURIComponent(mes)}`, auth());
 export async function buscarEstudiantePractica(codigo: string) {
   try { const item = await solicitarAulas<{ id: string; codigo: string; nombre: string; correo: string | null; multas: unknown[]; practicas: unknown[] }>(`/practicas-libres/estudiantes/${encodeURIComponent(codigo)}`, auth()); return { id: item.id, code: item.codigo, name: item.nombre, email: item.correo ?? undefined, activeFine: item.multas.length > 0, activePractice: item.practicas.length > 0 }; }
   catch (error) { if (typeof error === "object" && error && "estado" in error && (error as { estado: number }).estado === 404) return null; throw error; }

@@ -21,6 +21,8 @@ function token() {
   return valor;
 }
 
-export function consultarResumenPanel(fecha: string, signal?: AbortSignal) {
-  return solicitarAulas<ResumenPanelOperativo>(`/panel-operativo/resumen?fecha=${encodeURIComponent(fecha)}`, token(), { signal });
+export function consultarResumenPanel(fecha: string, signal?: AbortSignal, forzarActualizacion = false) {
+  const params = new URLSearchParams({ fecha });
+  if (forzarActualizacion) params.set("forzarActualizacion", "true");
+  return solicitarAulas<ResumenPanelOperativo>(`/panel-operativo/resumen?${params.toString()}`, token(), { signal });
 }

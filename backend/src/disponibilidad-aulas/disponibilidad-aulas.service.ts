@@ -735,12 +735,9 @@ export class DisponibilidadAulasService {
         motivo: 'Existe una tarea operativa que afecta la disponibilidad.',
       };
     }
-    if (input.limpieza) {
-      return {
-        estado: 'bloqueada',
-        motivo: 'Existe una limpieza programada durante el bloque.',
-      };
-    }
+    // La limpieza se informa como actividad del aula, pero no bloquea su
+    // disponibilidad. Si existe una clase, esa fuente conserva prioridad y el
+    // estado resultante es "ocupada" (mostrado como "En clase" en la UI).
     return {
       estado: 'disponible',
       motivo: 'No existen actividades ni restricciones para el bloque.',

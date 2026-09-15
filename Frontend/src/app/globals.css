@@ -171,9 +171,10 @@ html[data-theme="dark"] { --ink:#f1f3f5; --muted:#aab0ba; --line:#383b43; --surf
 .accessory-picker legend,.return-complete legend { margin-bottom:8px; color:var(--muted); font-size:11.7px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
 .accessory-picker>div { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:10px; }
 .accessory-picker>div label { display:flex; align-items:center; gap:6px; padding:7px 9px; border:1px solid var(--line); border-radius:6px; background:#fafafa; cursor:pointer; }
-.return-summary { padding:12px 14px; border:1px solid #bfdbfe; border-radius:8px; background:#eff6ff; }
+.return-summary { padding:12px 14px; border:1px solid #bfdbfe; border-radius:8px; color:#1e3a5f; background:#eff6ff; }
+.return-summary strong { color:#183b66; }
 .return-summary ul { display:flex; flex-wrap:wrap; gap:6px; padding:0; margin:9px 0 0; list-style:none; }
-.return-summary li { padding:4px 7px; border:1px solid #bfd0e8; border-radius:5px; background:#fff; font-size:13px; font-weight:700; }
+.return-summary li { padding:4px 7px; border:1px solid #bfd0e8; border-radius:5px; color:#263b55; background:#fff; font-size:13px; font-weight:700; }
 .return-complete { display:grid; gap:7px; }
 .return-complete label { display:flex; align-items:flex-start; gap:7px; }
 @media (max-width:980px) {
@@ -203,7 +204,8 @@ html[data-theme="dark"] { --ink:#f1f3f5; --muted:#aab0ba; --line:#383b43; --surf
 
 /* Apariencia compartida: el perfil aplica data-theme sin recargar la aplicación. */
 .profile { color:var(--ink); text-decoration:none; }
-.avatar-has-photo { background-color:var(--primary); background-position:center; background-size:cover; }
+.avatar-has-photo { overflow:hidden; background-color:var(--primary); }
+.avatar-has-photo img { display:block; width:100%; height:100%; object-fit:cover; }
 html[data-theme="dark"] .topbar,
 html[data-theme="dark"] .profile,
 html[data-theme="dark"] .menu-button,
@@ -347,6 +349,9 @@ html[data-theme="dark"] .history-list article { color:var(--ink); background:var
 html[data-theme="dark"] .audiovisual-table tbody tr:nth-child(even) { background:var(--surface-soft); }
 html[data-theme="dark"] .audiovisual-table tbody tr:hover { background:#292c33; }
 html[data-theme="dark"] .dialog-error { border-color:#813340; color:#ffb8c1; background:#3b1e25; }
+html[data-theme="dark"] .return-summary { border-color:#31547f; color:#d7e8ff; background:#17283e; }
+html[data-theme="dark"] .return-summary strong { color:#d7e8ff; }
+html[data-theme="dark"] .return-summary li { border-color:#45678f; color:#eef6ff; background:#243b57; }
 
 /* Casos compuestos que no comparten una clase base de superficie. */
 html[data-theme="dark"] main :is(

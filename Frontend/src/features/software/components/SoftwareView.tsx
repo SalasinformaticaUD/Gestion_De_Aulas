@@ -32,6 +32,7 @@ export function SoftwareView() {
   const [requiredSoftware, setRequiredSoftware] = useState<string[]>([]);
   const [roomSearchText, setRoomSearchText] = useState("");
   const [editor, setEditor] = useState<InstalledSoftware | "new" | null>(null);
+  const [assigning, setAssigning] = useState<InstalledSoftware | null>(null);
   const [showImport, setShowImport] = useState(false);
   const [importResult, setImportResult] = useState<ResultadoImportacionSoftwareExcel | null>(null);
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
@@ -62,7 +63,7 @@ export function SoftwareView() {
 
   const coveredRooms = new Set(assignments.map((assignment) => assignment.roomId)).size;
 
-  const saveSoftware = async (payload: Omit<InstalledSoftware, "id">, id?: string, aulaId?: string, installedAt?: string) => {
+  const saveSoftware = async (payload: Omit<InstalledSoftware, "id">, id?: string, aulaIds: string[] = [], installedAt?: string) => {
     const duplicate = software.some((item) => item.id !== id && item.name.toLocaleLowerCase("es") === payload.name.toLocaleLowerCase("es") && item.version.toLocaleLowerCase("es") === payload.version.toLocaleLowerCase("es"));
     if (duplicate) {
       setNotice({ tone: "error", text: "Ya existe software con el mismo nombre y versión." });
@@ -80,13 +81,9 @@ export function SoftwareView() {
     } else {
       try {
         const created = await crearSoftware(payload);
-        if (aulaId) {
-          await guardarAsignacion(aulaId, created.id, installedAt ?? "");
-          setAssignments((current) => [{ roomId: aulaId, softwareId: created.id, installedAt: installedAt || new Date().toISOString().slice(0, 10) }, ...current]);
-        }
+        if (aulaIds.length) await Promise.all(aulaIds.map((aulaId) => guardarAsignacion(aulaId, created.id, installedAt ?? "")));
         catalogCache.current.clear(); setPage(1); await loadCatalog(1, true); void loadRoomInventory();
-        const aula = rooms.find((room) => room.id === aulaId);
-        setNotice({ tone: "success", text: aula ? `${payload.name} ${payload.version} fue creado y asociado con el Aula ${aula.code}.` : `${payload.name} ${payload.version} fue agregado al catálogo.` });
+        setNotice({ tone: "success", text: aulaIds.length ? `${payload.name} ${payload.version} fue creado y asociado con ${aulaIds.length} aula(s).` : `${payload.name} ${payload.version} fue agregado al catálogo.` });
       } catch (cause) {
         setNotice({ tone: "error", text: cause instanceof Error ? cause.message : "No fue posible crear el software." });
         return false;
@@ -94,6 +91,23 @@ export function SoftwareView() {
     }
     setEditor(null);
     return true;
+  };
+
+  const assignExistingSoftware = async (item: InstalledSoftware, roomIds: string[], installedAt?: string) => {
+    const pendingRoomIds = roomIds.filter((roomId) => !assignments.some((assignment) => assignment.roomId === roomId && assignment.softwareId === item.id));
+    if (!pendingRoomIds.length) return false;
+    try {
+      await Promise.all(pendingRoomIds.map((roomId) => guardarAsignacion(roomId, item.id, installedAt ?? "")));
+      catalogCache.current.clear();
+      await loadCatalog(page, true);
+      await loadRoomInventory();
+      setAssigning(null);
+      setNotice({ tone: "success", text: `${item.name} fue asociado con ${pendingRoomIds.length} aula(s).` });
+      return true;
+    } catch (cause) {
+      setNotice({ tone: "error", text: cause instanceof Error ? cause.message : "No fue posible asociar el software con las aulas." });
+      return false;
+    }
   };
 
   const deleteSoftware = async (item: InstalledSoftware) => {
@@ -156,10 +170,11 @@ export function SoftwareView() {
       <button type="button" role="tab" aria-selected={view === "aulas"} className={view === "aulas" ? styles.activeTab : ""} onClick={() => setView("aulas")}>Instalación por aulas <span>{coveredRooms}</span></button>
     </div>
 
-    {view === "catalogo" && <CatalogView rooms={rooms} software={visibleSoftware} assignments={assignments} searchText={searchText} roomFilter={roomFilter} onSearchText={setSearchText} onSearch={() => { setQuery(searchText); setPage(1); }} onRoomFilter={setRoomFilter} onEdit={setEditor} onDelete={deleteSoftware} meta={meta} onPage={setPage} />}
+    {view === "catalogo" && <CatalogView rooms={rooms} software={visibleSoftware} assignments={assignments} searchText={searchText} roomFilter={roomFilter} onSearchText={setSearchText} onSearch={() => { setQuery(searchText); setPage(1); }} onRoomFilter={setRoomFilter} onEdit={setEditor} onAssign={setAssigning} onDelete={deleteSoftware} meta={meta} onPage={setPage} />}
     {view === "aulas" && <RoomsSoftwareView software={roomSoftware} assignments={roomAssignments} selected={requiredSoftware} matchingRooms={rooms.filter((room) => { const normalized = roomSearchText.trim().toLocaleLowerCase("es"); const matchesSearch = !normalized || (room.code + " " + (room.location ?? "")).toLocaleLowerCase("es").includes(normalized); const matchesSoftware = requiredSoftware.every((softwareId) => roomAssignments.some((assignment) => assignment.roomId === room.id && assignment.softwareId === softwareId)); return matchesSearch && matchesSoftware; })} roomSearchText={roomSearchText} onRoomSearchText={setRoomSearchText} onToggle={(id) => setRequiredSoftware((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])} onClear={() => setRequiredSoftware([])} onRemove={removeAssignment} />}
     {editor === "new" && <NewSoftwareDialog rooms={rooms} onClose={() => setEditor(null)} onSave={saveSoftware} />}
     {editor && editor !== "new" && <SoftwareDialog item={editor} onClose={() => setEditor(null)} onSave={saveSoftware} />}
+    {assigning && <AssignmentDialog rooms={rooms} item={assigning} assignments={assignments} onClose={() => setAssigning(null)} onAssign={(roomIds, installedAt) => assignExistingSoftware(assigning, roomIds, installedAt)} />}
     {showImport && <ImportDialog onClose={() => setShowImport(false)} onImport={importExcel} />}
     {importResult && <ImportResultDialog result={importResult} onClose={() => setImportResult(null)} />}
   </>;
@@ -169,11 +184,11 @@ function Metric({ label, value, detail, tone }: { label: string; value: number; 
   return <article className={`${styles.metric} ${styles[`metric_${tone}`]}`}><div><span>{label}</span><strong>{value}</strong><small>{detail}</small></div><i aria-hidden="true" /></article>;
 }
 
-function CatalogView({ rooms, software, assignments, searchText, roomFilter, onSearchText, onSearch, onRoomFilter, onEdit, onDelete, meta, onPage }: { rooms: Room[]; software: InstalledSoftware[]; assignments: SoftwareAssignment[]; searchText: string; roomFilter: string; onSearchText: (value: string) => void; onSearch: () => void; onRoomFilter: (value: string) => void; onEdit: (item: InstalledSoftware) => void; onDelete: (item: InstalledSoftware) => Promise<void>; meta: { page: number; total: number; totalPages: number }; onPage: (page: number) => void }) {
+function CatalogView({ rooms, software, assignments, searchText, roomFilter, onSearchText, onSearch, onRoomFilter, onEdit, onAssign, onDelete, meta, onPage }: { rooms: Room[]; software: InstalledSoftware[]; assignments: SoftwareAssignment[]; searchText: string; roomFilter: string; onSearchText: (value: string) => void; onSearch: () => void; onRoomFilter: (value: string) => void; onEdit: (item: InstalledSoftware) => void; onAssign: (item: InstalledSoftware) => void; onDelete: (item: InstalledSoftware) => Promise<void>; meta: { page: number; total: number; totalPages: number }; onPage: (page: number) => void }) {
   return <section className={styles.contentCard}><div className={styles.toolbar}><form className={styles.search} onSubmit={(event) => { event.preventDefault(); onSearch(); }}><span aria-hidden="true">⌕</span><input value={searchText} onChange={(event) => onSearchText(event.target.value)} placeholder="Buscar por nombre, versión o descripción..." aria-label="Buscar software" /><button type="submit">Buscar</button></form><label><span>Aula</span><select value={roomFilter} onChange={(event) => onRoomFilter(event.target.value)}><option value="todas">Todas las aulas</option>{rooms.map((room) => <option key={room.id} value={room.id}>Aula {room.code}</option>)}</select></label><span className={styles.resultCount}>{software.length} resultado(s)</span></div><div className="table-wrap"><table className={styles.softwareTable}><thead><tr><th>Software</th><th>Versión</th><th>Estado</th><th>Descripción</th><th>Aulas instaladas</th><th>Distribución</th><th>Acciones</th></tr></thead><tbody>{software.map((item) => {
     const itemAssignments = assignments.filter((assignment) => assignment.softwareId === item.id);
     const status = item.status ?? "ACTIVO";
-    return <tr key={item.id}><td><strong>{item.name}</strong><small>{item.id.slice(0, 13)}…</small></td><td><code>{item.version}</code></td><td><span className={styles.softwareStatus}>{softwareStatusLabels[status]}</span></td><td><span className={styles.description}>{item.description || "Sin descripción"}</span></td><td><strong>{itemAssignments.length}</strong><small>asociación(es)</small></td><td><div className={styles.roomTags}>{itemAssignments.slice(0, 4).map((assignment) => <span key={assignment.roomId}>{rooms.find((room) => room.id === assignment.roomId)?.code}</span>)}{itemAssignments.length > 4 && <b>+{itemAssignments.length - 4}</b>}{itemAssignments.length === 0 && <em>Sin instalar</em>}</div></td><td><div className={styles.actions}><button type="button" onClick={() => onEdit(item)}>Editar</button><button type="button" className={styles.deleteButton} onClick={() => void onDelete(item)}>Eliminar</button></div></td></tr>;
+    return <tr key={item.id}><td><strong>{item.name}</strong><small>{item.id.slice(0, 13)}…</small></td><td><code>{item.version}</code></td><td><span className={styles.softwareStatus}>{softwareStatusLabels[status]}</span></td><td><span className={styles.description}>{item.description || "Sin descripción"}</span></td><td><strong>{itemAssignments.length}</strong><small>asociación(es)</small></td><td><div className={styles.roomTags}>{itemAssignments.slice(0, 4).map((assignment) => <span key={assignment.roomId}>{rooms.find((room) => room.id === assignment.roomId)?.code}</span>)}{itemAssignments.length > 4 && <b>+{itemAssignments.length - 4}</b>}{itemAssignments.length === 0 && <em>Sin instalar</em>}</div></td><td><div className={styles.actions}><button type="button" onClick={() => onAssign(item)}>Asignar a aulas</button><button type="button" onClick={() => onEdit(item)}>Editar</button><button type="button" className={styles.deleteButton} onClick={() => void onDelete(item)}>Eliminar</button></div></td></tr>;
   })}{software.length === 0 && <tr><td colSpan={7} className={styles.emptyTable}>No hay software para los filtros seleccionados.</td></tr>}</tbody></table></div><footer className={styles.pagination}><span>Página {meta.page} de {meta.totalPages || 1}</span><div><button type="button" disabled={meta.page <= 1} onClick={() => onPage(meta.page - 1)}>Anterior</button><button type="button" disabled={meta.page >= meta.totalPages} onClick={() => onPage(meta.page + 1)}>Siguiente</button></div></footer></section>;
 }
 
@@ -194,18 +209,18 @@ function RoomsSoftwareView({ software, assignments, selected, matchingRooms, roo
   })}</div></div></section>;
 }
 
-function NewSoftwareDialog({ rooms, onClose, onSave }: { rooms: Room[]; onClose: () => void; onSave: (payload: Omit<InstalledSoftware, "id">, id?: string, aulaId?: string, installedAt?: string) => Promise<boolean> }) {
+function NewSoftwareDialog({ rooms, onClose, onSave }: { rooms: Room[]; onClose: () => void; onSave: (payload: Omit<InstalledSoftware, "id">, id?: string, aulaIds?: string[], installedAt?: string) => Promise<boolean> }) {
   const [name, setName] = useState("");
   const [version, setVersion] = useState("");
   const [description, setDescription] = useState("");
-  const [aulaId, setAulaId] = useState("");
+  const [aulaIds, setAulaIds] = useState<string[]>([]);
   const [installedAt, setInstalledAt] = useState("");
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     void onSave(
       { name: name.trim(), version: version.trim(), description: description.trim() || undefined },
       undefined,
-      aulaId || undefined,
+      aulaIds,
       installedAt || undefined,
     );
   };
@@ -216,15 +231,15 @@ function NewSoftwareDialog({ rooms, onClose, onSave }: { rooms: Room[]; onClose:
         <label><span>Nombre</span><input value={name} onChange={(event) => setName(event.target.value)} required autoFocus placeholder="Ej. AutoCAD" /></label>
         <label><span>Versión</span><input value={version} onChange={(event) => setVersion(event.target.value)} required placeholder="Ej. 2025" /></label>
         <label className={styles.wideField}><span>Descripción <small>Opcional</small></span><textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={4} placeholder="Uso principal o información relevante..." /></label>
-        <label><span>Aula <small>Opcional</small></span><select value={aulaId} onChange={(event) => setAulaId(event.target.value)}><option value="">No asignar aula ahora</option>{rooms.map((room) => <option key={room.id} value={room.id}>Aula {room.code}</option>)}</select></label>
-        <label><span>Fecha de instalación <small>Opcional</small></span><input type="date" value={installedAt} onChange={(event) => setInstalledAt(event.target.value)} disabled={!aulaId} /></label>
+        <fieldset className={`${styles.wideField} ${styles.roomChecklist}`}><legend>Aulas <small>Opcional, puede seleccionar varias</small></legend><div>{rooms.map((room) => <label key={room.id}><input type="checkbox" checked={aulaIds.includes(room.id)} onChange={(event) => setAulaIds((current) => event.target.checked ? [...current, room.id] : current.filter((id) => id !== room.id))} /><span>Aula {room.code}</span></label>)}</div></fieldset>
+        <label className={styles.wideField}><span>Fecha de instalación <small>Opcional</small></span><input type="date" value={installedAt} onChange={(event) => setInstalledAt(event.target.value)} disabled={!aulaIds.length} /></label>
       </div>
       <footer><button type="button" className={styles.dialogCancel} onClick={onClose}>Cancelar</button><button type="submit" className="button-primary">Crear software</button></footer>
     </form>
   </DialogShell>;
 }
 
-function SoftwareDialog({ item, onClose, onSave }: { item?: InstalledSoftware; onClose: () => void; onSave: (payload: Omit<InstalledSoftware, "id">, id?: string) => Promise<boolean> }) {
+function SoftwareDialog({ item, onClose, onSave }: { item?: InstalledSoftware; onClose: () => void; onSave: (payload: Omit<InstalledSoftware, "id">, id?: string, aulaIds?: string[]) => Promise<boolean> }) {
   const [name, setName] = useState(item?.name ?? "");
   const [version, setVersion] = useState(item?.version ?? "");
   const [description, setDescription] = useState(item?.description ?? "");
@@ -233,13 +248,14 @@ function SoftwareDialog({ item, onClose, onSave }: { item?: InstalledSoftware; o
   return <DialogShell title={item ? "Editar software" : "Nuevo software"} subtitle="Catálogo de software" description="Nombre y versión identifican de forma única el registro." onClose={onClose}><form onSubmit={submit} className={styles.dialogForm}><div className={styles.formGrid}><label><span>Nombre</span><input value={name} onChange={(event) => setName(event.target.value)} required autoFocus placeholder="Ej. AutoCAD" /></label><label><span>Versión</span><input value={version} onChange={(event) => setVersion(event.target.value)} required placeholder="Ej. 2025" /></label>{item && <label><span>Estado</span><select value={status} onChange={(event) => setStatus(event.target.value as keyof typeof softwareStatusLabels)}>{Object.entries(softwareStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>}<label className={styles.wideField}><span>Descripción <small>Opcional</small></span><textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={4} placeholder="Uso principal o información relevante..." /></label></div><footer><button type="button" className={styles.dialogCancel} onClick={onClose}>Cancelar</button><button type="submit" className="button-primary">{item ? "Guardar cambios" : "Crear software"}</button></footer></form></DialogShell>;
 }
 
-function AssignmentDialog({ rooms, software, assignments, onClose, onAssign }: { rooms: Room[]; software: InstalledSoftware[]; assignments: SoftwareAssignment[]; onClose: () => void; onAssign: (assignment: SoftwareAssignment) => Promise<boolean> }) {
-  const [roomId, setRoomId] = useState(rooms[0]?.id ?? "");
-  const [softwareId, setSoftwareId] = useState(software[0]?.id ?? "");
-  const [installedAt, setInstalledAt] = useState("2026-08-25");
-  const duplicate = assignments.some((item) => item.roomId === roomId && item.softwareId === softwareId);
-  const submit = (event: React.FormEvent) => { event.preventDefault(); if (!duplicate && roomId && softwareId) void onAssign({ roomId, softwareId, installedAt }); };
-  return <DialogShell title="Asignar software a un aula" subtitle="Nueva instalación" description="El aula y el software deben existir previamente en sus catálogos." onClose={onClose}><form onSubmit={submit} className={styles.dialogForm}><div className={styles.formGrid}><label><span>Aula</span><select value={roomId} onChange={(event) => setRoomId(event.target.value)}><option value="">Seleccionar aula</option>{rooms.map((room) => <option key={room.id} value={room.id}>{room.code}</option>)}</select></label><label><span>Software</span><select value={softwareId} onChange={(event) => setSoftwareId(event.target.value)}><option value="">Seleccionar software</option>{software.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.version}</option>)}</select></label><label className={styles.wideField}><span>Fecha de instalación <small>Opcional en el backend</small></span><input type="date" value={installedAt} onChange={(event) => setInstalledAt(event.target.value)} /></label></div>{duplicate && <div className={styles.inlineError}>El software ya está asociado con el aula seleccionada.</div>}<footer><button type="button" className={styles.dialogCancel} onClick={onClose}>Cancelar</button><button type="submit" className="button-primary" disabled={duplicate || !softwareId || !roomId}>Guardar asociación</button></footer></form></DialogShell>;
+function AssignmentDialog({ rooms, item, assignments, onClose, onAssign }: { rooms: Room[]; item: InstalledSoftware; assignments: SoftwareAssignment[]; onClose: () => void; onAssign: (roomIds: string[], installedAt?: string) => Promise<boolean> }) {
+  const assignedRoomIds = new Set(assignments.filter((assignment) => assignment.softwareId === item.id).map((assignment) => assignment.roomId));
+  const availableRooms = rooms.filter((room) => !assignedRoomIds.has(room.id));
+  const [roomIds, setRoomIds] = useState<string[]>([]);
+  const [installedAt, setInstalledAt] = useState("");
+  const [saving, setSaving] = useState(false);
+  const submit = async (event: React.FormEvent) => { event.preventDefault(); if (!roomIds.length) return; setSaving(true); const saved = await onAssign(roomIds, installedAt || undefined); if (!saved) setSaving(false); };
+  return <DialogShell title={`Asignar ${item.name}`} subtitle="Nueva instalación" description="Seleccione una o varias aulas. Las aulas donde ya está instalado no aparecen en la lista." onClose={onClose}><form onSubmit={(event) => void submit(event)} className={styles.dialogForm}><div className={styles.formGrid}><fieldset className={`${styles.wideField} ${styles.roomChecklist}`}><legend>Aulas disponibles</legend><div>{availableRooms.map((room) => <label key={room.id}><input type="checkbox" checked={roomIds.includes(room.id)} onChange={(event) => setRoomIds((current) => event.target.checked ? [...current, room.id] : current.filter((id) => id !== room.id))} /><span>Aula {room.code}</span></label>)}{!availableRooms.length && <p>Este software ya está asociado con todas las aulas.</p>}</div></fieldset><label className={styles.wideField}><span>Fecha de instalación <small>Opcional</small></span><input type="date" value={installedAt} onChange={(event) => setInstalledAt(event.target.value)} disabled={!roomIds.length} /></label></div><footer><button type="button" className={styles.dialogCancel} onClick={onClose} disabled={saving}>Cancelar</button><button type="submit" className="button-primary" disabled={!roomIds.length || saving}>{saving ? "Asociando…" : `Asociar a ${roomIds.length || 0} aula(s)`}</button></footer></form></DialogShell>;
 }
 
 function ImportDialog({ onClose, onImport }: { onClose: () => void; onImport: (archivo: File) => Promise<void> }) {

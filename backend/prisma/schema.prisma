@@ -130,6 +130,7 @@ model Usuario {
   auditorias                       Auditoria[]
   accesosCredencial                AccesoCredencial[]
   secretosCredencial               SecretoCredencial[]
+  credencialesCreadas              CredencialOperativa[]       @relation("CreadorCredencialOperativa")
   prestamosAudiovisualesEntregados PrestamoAudiovisual[]       @relation("EntregaPrestamoAudiovisual")
   prestamosAudiovisualesRecibidos  PrestamoAudiovisual[]       @relation("RecepcionPrestamoAudiovisual")
   prestamosAudiovisualesCancelados PrestamoAudiovisual[]       @relation("CancelacionPrestamoAudiovisual")
@@ -659,6 +660,7 @@ model Limpieza {
 
 model CredencialOperativa {
   id               String              @id @default(uuid()) @db.Uuid
+  creadorId        String              @db.Uuid
   nombre           String
   usuario          String?
   secretoCifrado   String?
@@ -667,8 +669,11 @@ model CredencialOperativa {
   accesos          AccesoCredencial[]
   secretos         SecretoCredencial[]
   rolesAutorizados CredencialRol[]
+  creador          Usuario             @relation("CreadorCredencialOperativa", fields: [creadorId], references: [id], onDelete: Restrict)
   creadoEn         DateTime            @default(now())
   actualizadoEn    DateTime            @updatedAt
+
+  @@index([creadorId])
 }
 
 model CredencialRol {
@@ -676,6 +681,8 @@ model CredencialRol {
   rolId        String              @db.Uuid
   credencial   CredencialOperativa @relation(fields: [credencialId], references: [id], onDelete: Cascade)
   rol          Rol                 @relation(fields: [rolId], references: [id], onDelete: Cascade)
+  puedeVer     Boolean             @default(true)
+  puedeEditar  Boolean             @default(false)
 
   @@id([credencialId, rolId])
 }

@@ -197,15 +197,15 @@ export class AuthService {
 
   private validarFotoPerfil(fotoPerfil?: string | null): string | null {
     if (fotoPerfil == null) return null;
-    const coincidencia = /^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(fotoPerfil);
+    const coincidencia = /^data:image\/(png|jpeg|webp|gif);base64,([A-Za-z0-9+/]+={0,2})$/.exec(fotoPerfil);
     if (!coincidencia) {
-      throw new BadRequestException('La foto debe ser una imagen PNG, JPG o WebP válida.');
+      throw new BadRequestException('La foto debe ser una imagen PNG, JPG, WebP o GIF válida.');
     }
     const base64 = coincidencia[2];
     const relleno = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0;
     const bytes = (base64.length * 3) / 4 - relleno;
-    if (bytes > 2 * 1024 * 1024) {
-      throw new BadRequestException('La imagen no puede superar 2 MB.');
+    if (bytes > 3 * 1024 * 1024) {
+      throw new BadRequestException('La imagen no puede superar 3 MB.');
     }
     return fotoPerfil;
   }

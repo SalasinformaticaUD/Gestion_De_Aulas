@@ -91,6 +91,13 @@ describe('AuthService', () => {
     );
   });
 
+  it('acepta un GIF animado como foto de perfil', async () => {
+    const gif = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+    prisma.usuario.update.mockResolvedValue({ fotoPerfil: gif });
+
+    await expect(service.actualizarFotoPerfil(usuario.id, gif)).resolves.toEqual({ fotoPerfil: gif });
+  });
+
   it('rechaza una foto que no sea una data URL de imagen', async () => {
     await expect(service.actualizarFotoPerfil(usuario.id, 'https://ejemplo.test/foto.png')).rejects.toBeInstanceOf(BadRequestException);
   });

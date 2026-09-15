@@ -21,9 +21,6 @@ export class GuardarSecretoCredencialDto {
 export class EliminarCredencialDto {
   @IsString() @MaxLength(200) contrasenaUsuario!: string;
 }
-export class ActualizarRolesCredencialDto {
-  @IsArray() @IsUUID('4', { each: true }) rolIds!: string[];
-}
 export class ConsultarSecretoCredencialDto {
   @IsString() @MaxLength(200) contrasena!: string;
 }

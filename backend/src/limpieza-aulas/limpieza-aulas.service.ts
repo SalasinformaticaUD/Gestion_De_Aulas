@@ -10,6 +10,7 @@ import {
 import type { Prisma } from '@prisma/client';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { DisponibilidadAulasService } from '../disponibilidad-aulas/disponibilidad-aulas.service';
 import { CreateLimpiezaAulaDto } from './dto/create-limpieza-aula.dto';
 import {
   ConsultarIndicadoresLimpiezaDto,
@@ -33,6 +34,7 @@ export class LimpiezaAulasService {
   constructor(
     private readonly prisma: PrismaService,
     @Optional() private readonly auditoria?: AuditoriaService,
+    @Optional() private readonly disponibilidad?: DisponibilidadAulasService,
   ) {}
 
   async create(input: CreateLimpiezaAulaDto, usuarioId?: string) {
@@ -59,6 +61,7 @@ export class LimpiezaAulasService {
   findAll(filters: FindLimpiezaAulasDto = {}) {
     const rango = this.normalizarRango(filters);
     const where: Prisma.LimpiezaWhereInput = {
+      aula: { eliminadoEn: null },
       ...(filters.aulaId && { aulaId: filters.aulaId }),
       ...((rango.desde || rango.hasta) && {
         realizadaEn: {
@@ -126,8 +129,26 @@ export class LimpiezaAulasService {
 
   async findSugerencias(query: ConsultarSugerenciasLimpiezaDto) {
     const { inicio } = this.rangoDiaBogota(this.toDate(query.fecha));
+    const bloque = this.bloqueActualParaSugerencias(query.fecha);
+    const disponibilidad = this.disponibilidad
+      ? await this.disponibilidad.findAll({ fecha: query.fecha, ...bloque })
+      : [];
+    const disponibilidadPorAula = new Map(
+      disponibilidad.map((aula) => [aula.aula.id, aula.estadoCalculado]),
+    );
+    const aulasRecomendables = disponibilidad
+      .filter(
+        (aula) =>
+          aula.estadoCalculado === 'disponible' ||
+          aula.estadoCalculado === 'ocupada',
+      )
+      .map((aula) => aula.aula.id);
     const aulas = await this.prisma.aula.findMany({
-        where: { estado: EstadoAula.OPERATIVA },
+        where: {
+          estado: EstadoAula.OPERATIVA,
+          eliminadoEn: null,
+          ...(this.disponibilidad && { id: { in: aulasRecomendables } }),
+        },
         select: {
           id: true,
           codigo: true,
@@ -156,9 +177,12 @@ export class LimpiezaAulasService {
           aula: { id: aula.id, codigo: aula.codigo, ubicacion: aula.ubicacion },
           ultimaLimpieza,
           diasSinLimpieza,
+          estadoDisponibilidad:
+            disponibilidadPorAula.get(aula.id) ?? 'disponible',
+          enClase: disponibilidadPorAula.get(aula.id) === 'ocupada',
           motivo: ultimaLimpieza
             ? `Última limpieza hace ${diasSinLimpieza} día(s).`
-            : 'Disponible y sin historial de limpieza registrado.',
+            : 'Sin historial de limpieza registrado.',
         };
       })
       .filter(({ diasSinLimpieza }) =>
@@ -176,7 +200,7 @@ export class LimpiezaAulasService {
     return {
       fecha: query.fecha,
       criterio:
-        'Aulas operativas con dos o más días sin limpieza, ordenadas desde la que lleva más tiempo sin atención.',
+        `Aulas operativas con dos o más días sin limpieza, ordenadas desde la que lleva más tiempo sin atención. Si están ocupadas en el bloque ${bloque.horaInicio}-${bloque.horaFin}, permanecen en la prioridad y se identifican como en clase.`,
       sugerencias,
     };
   }
@@ -185,7 +209,7 @@ export class LimpiezaAulasService {
     const rango = this.normalizarRango(query, true);
     const [aulas, limpiezas] = await Promise.all([
       this.prisma.aula.findMany({
-        where: query.aulaId ? { id: query.aulaId } : undefined,
+        where: { eliminadoEn: null, ...(query.aulaId && { id: query.aulaId }) },
         select: { id: true, codigo: true, ubicacion: true },
         orderBy: { codigo: 'asc' },
       }),
@@ -231,7 +255,7 @@ export class LimpiezaAulasService {
     const rango = this.normalizarRango(query);
     const [aulas, limpiezas] = await Promise.all([
       this.prisma.aula.findMany({
-        where: query.aulaId ? { id: query.aulaId } : undefined,
+        where: { eliminadoEn: null, ...(query.aulaId && { id: query.aulaId }) },
         select: { id: true, codigo: true, ubicacion: true },
         orderBy: { codigo: 'asc' },
       }),
@@ -293,8 +317,8 @@ export class LimpiezaAulasService {
   }
 
   private async ensureAulaExists(aulaId: string): Promise<void> {
-    const aula = await this.prisma.aula.findUnique({
-      where: { id: aulaId },
+    const aula = await this.prisma.aula.findFirst({
+      where: { id: aulaId, eliminadoEn: null },
       select: { id: true },
     });
     if (!aula) throw new NotFoundException(`No existe aula con id ${aulaId}.`);
@@ -392,6 +416,20 @@ export class LimpiezaAulasService {
     const inicio = new Date(`${texto}T00:00:00.000-05:00`);
     const fin = new Date(`${texto}T23:59:59.999-05:00`);
     return { inicio, fin, diaSemana: inicio.getUTCDay() };
+  }
+
+  private bloqueActualParaSugerencias(fecha: string) {
+    const partes = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'America/Bogota',
+      hour: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(new Date());
+    const horaActual = Number(partes.find((parte) => parte.type === 'hour')?.value ?? 6);
+    const inicio = Math.min(20, Math.max(6, horaActual - (horaActual % 2)));
+    return {
+      horaInicio: `${String(inicio).padStart(2, '0')}:00`,
+      horaFin: `${String(inicio + 2).padStart(2, '0')}:00`,
+    };
   }
 
   private construirFechas(desde: Date, hasta: Date): string[] {

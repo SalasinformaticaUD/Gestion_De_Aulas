@@ -23,8 +23,8 @@ export function ProfileView() {
   const updatePhoto = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) { setPhotoError("Seleccione un archivo de imagen válido."); return; }
-    if (file.size > 2 * 1024 * 1024) { setPhotoError("La imagen no puede superar 2 MB."); return; }
+    if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type)) { setPhotoError("Seleccione un archivo PNG, JPG, WebP o GIF válido."); return; }
+    if (file.size > 3 * 1024 * 1024) { setPhotoError("La imagen no puede superar 3 MB."); return; }
     const reader = new FileReader();
     reader.onload = async () => {
       const photo = String(reader.result);
@@ -59,7 +59,7 @@ export function ProfileView() {
     <section className={`page-heading ${styles.heading}`}><div><h1>Mi perfil</h1><p>Administre su imagen, seguridad y datos de cuenta.</p></div><span className={styles.accountStatus}><i />Cuenta activa</span></section>
     <div className={styles.layout}>
       <aside className={styles.identityCard}>
-        <div className={styles.photoArea}><div className={styles.photo} role="img" aria-label={`Foto de ${profile.fullName}`} style={profile.photo ? { backgroundImage: `url("${profile.photo}")` } : undefined}>{!profile.photo && <span>{getInitials(profile.fullName)}</span>}</div><button type="button" disabled={updatingPhoto} onClick={() => inputRef.current?.click()}>{updatingPhoto ? "Guardando…" : profile.photo ? "Cambiar foto" : "Agregar foto"}</button>{profile.photo && <button type="button" disabled={updatingPhoto} className={styles.removePhoto} onClick={() => void removePhoto()}>Eliminar foto</button>}<input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={updatePhoto} hidden /><small>JPG, PNG o WebP · máximo 2 MB</small>{photoError && <p role="alert">{photoError}</p>}</div><div className={styles.identityCopy}><h2>{profile.fullName}</h2><span>{profile.role}</span><small>@{profile.username}</small></div><div className={styles.identityMeta}><span><b>Dependencia</b>{profile.department}</span><span><b>Estado</b><i>Activo</i></span></div>
+        <div className={styles.photoArea}><div className={styles.photo} role="img" aria-label={`Foto de ${profile.fullName}`}>{profile.photo ? <img src={profile.photo} alt="" /> : <span>{getInitials(profile.fullName)}</span>}</div><button type="button" disabled={updatingPhoto} onClick={() => inputRef.current?.click()}>{updatingPhoto ? "Guardando…" : profile.photo ? "Cambiar foto" : "Agregar foto"}</button>{profile.photo && <button type="button" disabled={updatingPhoto} className={styles.removePhoto} onClick={() => void removePhoto()}>Eliminar foto</button>}<input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={updatePhoto} hidden /><small>JPG, PNG, WebP o GIF · máximo 3 MB</small>{photoError && <p role="alert">{photoError}</p>}</div><div className={styles.identityCopy}><h2>{profile.fullName}</h2><span>{profile.role}</span><small>@{profile.username}</small></div><div className={styles.identityMeta}><span><b>Dependencia</b>{profile.department}</span><span><b>Estado</b><i>Activo</i></span></div>
       </aside>
       <div className={styles.sections}>
         <section className={styles.profileSection}><header><div><span>01</span><div><h2>Información personal</h2><p>Datos asociados a su cuenta institucional.</p></div></div><b>Solo lectura</b></header><div className={styles.dataGrid}><DataItem label="Nombre completo" value={profile.fullName} /><DataItem label="Correo institucional" value={profile.email} /><DataItem label="Nombre de usuario" value={profile.username} mono /><DataItem label="Cargo" value={profile.role} /></div><aside className={styles.backendNote}></aside></section>

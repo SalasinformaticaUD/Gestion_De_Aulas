@@ -267,6 +267,7 @@ export class HorarioService {
     const fecha = filters.fecha ? new Date(`${filters.fecha}T00:00:00.000Z`) : undefined;
     const diaSemana = fecha ? (fecha.getUTCDay() || 7) : filters.diaSemana;
     const where: Prisma.ClaseProgramadaWhereInput = {
+      aula: { eliminadoEn: null },
       ...(filters.aulaId && { aulaId: filters.aulaId }),
       ...(filters.periodoId && { periodoId: filters.periodoId }),
       ...(diaSemana !== undefined && {
@@ -1419,6 +1420,7 @@ export class HorarioService {
     // hace al menos 20 minutos. Los días anteriores se cierran completos.
     if (fechaTexto === hoyTexto && minutosLimite < 0) return;
     const whereClase: Prisma.ClaseProgramadaWhereInput = {
+      aula: { eliminadoEn: null },
       diaSemana,
       periodo: { fechaInicio: { lte: fecha }, fechaFin: { gte: fecha } },
       ...(fechaTexto === hoyTexto && {

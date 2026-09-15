@@ -1,11 +1,17 @@
 import { NestFactory } from '@nestjs/core';
+import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 import { configureApp } from './configure-app';
 import { environment } from './config/environment';
 
 async function bootstrap() {
   environment.validate();
-  const app = await NestFactory.create(AppModule);
+  // Las fotos se almacenan como data URL. Un archivo de 3 MB crece al
+  // codificarse en base64, por lo que el límite predeterminado de 100 KB de
+  // Express no es suficiente.
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  app.use(json({ limit: '5mb' }));
+  app.use(urlencoded({ extended: true, limit: '5mb' }));
   configureApp(app);
   await app.listen(environment.port);
 }

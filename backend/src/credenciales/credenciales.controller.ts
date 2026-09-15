@@ -13,7 +13,6 @@ import {
 import { MODULOS } from '../auth/auth.constants';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequireAuth } from '../auth/decorators/require-auth.decorator';
-import { RequireAdministrator } from '../auth/decorators/require-administrator.decorator';
 import { RequireModule } from '../auth/decorators/require-module.decorator';
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 import type { UsuarioAutenticado } from '../auth/auth.types';
@@ -22,7 +21,6 @@ import { CreateCredencialeDto } from './dto/create-credenciale.dto';
 import {
   CambiarEstadoCredencialDto,
   ConsultarSecretoCredencialDto,
-  ActualizarRolesCredencialDto,
   CrearAccesoCredencialDto,
   FindCredencialesDto,
   GuardarSecretoCredencialDto,
@@ -46,8 +44,8 @@ export class CredencialesController {
   ) {
     return this.service.findAll(dto, u.id);
   }
-  @Get('roles-autorizables') @RequireAdministrator() @RequirePermissions('CREDENCIALES_LEER') rolesAutorizables() {
-    return this.service.listarRolesAutorizables();
+  @Get('usuarios-autorizables') @RequirePermissions('CREDENCIALES_LEER') usuariosAutorizables() {
+    return this.service.listarUsuariosAutorizables();
   }
   @Post('verificar-acceso') @RequirePermissions('CREDENCIALES_LEER') verificarAcceso(
     @Body() dto: ConsultarSecretoCredencialDto,
@@ -68,7 +66,7 @@ export class CredencialesController {
   ) {
     return this.service.cambiarSecreto(id, dto, u.id);
   }
-  @Post(':id/accesos') @RequireAdministrator() @RequirePermissions('CREDENCIALES_ACTUALIZAR') acceso(
+  @Post(':id/accesos') @RequirePermissions('CREDENCIALES_ACTUALIZAR') acceso(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CrearAccesoCredencialDto,
     @CurrentUser() u: UsuarioAutenticado,
@@ -94,13 +92,6 @@ export class CredencialesController {
     @CurrentUser() u: UsuarioAutenticado,
   ) {
     return this.service.update(id, dto, u.id);
-  }
-  @Put(':id/roles') @RequireAdministrator() @RequirePermissions('CREDENCIALES_ACTUALIZAR') roles(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: ActualizarRolesCredencialDto,
-    @CurrentUser() u: UsuarioAutenticado,
-  ) {
-    return this.service.actualizarRoles(id, dto.rolIds, u.id);
   }
   @Delete(':id') @RequirePermissions('CREDENCIALES_ELIMINAR') remove(
     @Param('id', ParseUUIDPipe) id: string,

@@ -7,6 +7,8 @@ import {
   ConsultarAulasPanelOperativoDto,
   ConsultarPanelOperativoDto,
 } from './dto/consultar-panel-operativo.dto';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { UsuarioAutenticado } from '../auth/auth.types';
 
 @RequireModule(MODULOS.PANEL_OPERATIVO)
 @Controller('panel-operativo')
@@ -15,8 +17,11 @@ export class PanelOperativoController {
 
   @Get('resumen')
   @RequirePermissions('DASHBOARD_LEER')
-  resumen(@Query() query: ConsultarPanelOperativoDto) {
-    return this.panelOperativoService.resumen(query);
+  resumen(
+    @Query() query: ConsultarPanelOperativoDto,
+    @CurrentUser() usuario: UsuarioAutenticado,
+  ) {
+    return this.panelOperativoService.resumen(query, usuario.id);
   }
 
   @Get('aulas')
@@ -27,7 +32,10 @@ export class PanelOperativoController {
 
   @Get('alertas')
   @RequirePermissions('DASHBOARD_LEER')
-  alertas(@Query() query: ConsultarPanelOperativoDto) {
-    return this.panelOperativoService.alertas(query);
+  alertas(
+    @Query() query: ConsultarPanelOperativoDto,
+    @CurrentUser() usuario: UsuarioAutenticado,
+  ) {
+    return this.panelOperativoService.alertas(query, usuario.id);
   }
 }

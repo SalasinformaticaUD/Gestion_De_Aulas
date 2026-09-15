@@ -177,7 +177,7 @@ describe('DisponibilidadAulasService', () => {
     });
   });
 
-  it('bloquea el aula cuando existe una limpieza programada en el bloque', async () => {
+  it('informa la limpieza sin bloquear la disponibilidad del aula', async () => {
     prisma.limpieza.findFirst.mockResolvedValueOnce({
       id: 'limpieza-id',
       observacion: 'Limpieza profunda',
@@ -185,7 +185,7 @@ describe('DisponibilidadAulasService', () => {
 
     const result = await service.findOne(aula.id, bloque);
 
-    expect(result.estadoCalculado).toBe('bloqueada');
+    expect(result.estadoCalculado).toBe('disponible');
     expect(result.fuentes[0]).toMatchObject({
       tipo: 'limpieza-programada',
       id: 'limpieza-id',

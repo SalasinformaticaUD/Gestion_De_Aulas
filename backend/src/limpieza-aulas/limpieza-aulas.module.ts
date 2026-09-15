@@ -3,9 +3,10 @@ import { LimpiezaAulasService } from './limpieza-aulas.service';
 import { LimpiezaAulasController } from './limpieza-aulas.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AuditoriaModule } from '../auditoria/auditoria.module';
+import { DisponibilidadAulasModule } from '../disponibilidad-aulas/disponibilidad-aulas.module';
 
 @Module({
-  imports: [PrismaModule, AuditoriaModule],
+  imports: [PrismaModule, AuditoriaModule, DisponibilidadAulasModule],
   controllers: [LimpiezaAulasController],
   providers: [LimpiezaAulasService],
   exports: [LimpiezaAulasService],

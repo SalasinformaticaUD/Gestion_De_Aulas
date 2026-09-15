@@ -38,9 +38,10 @@ export class PanelOperativoService {
 
   async resumen(
     query: ConsultarPanelOperativoDto,
+    usuarioId?: string,
   ): Promise<PanelOperativoResumen> {
     const bloque = this.resolverBloque(query);
-    const clave = `${query.fecha}:${bloque.horaInicio}:${bloque.horaFin}`;
+    const clave = `${usuarioId ?? 'anonimo'}:${query.fecha}:${bloque.horaInicio}:${bloque.horaFin}`;
     const existente = this.resumenCache.get(clave);
     if (
       !query.forzarActualizacion &&
@@ -57,7 +58,7 @@ export class PanelOperativoService {
       }
     }
 
-    const valor = this.calcularResumen(query).catch((error: unknown) => {
+    const valor = this.calcularResumen(query, usuarioId).catch((error: unknown) => {
       this.resumenCache.delete(clave);
       throw error;
     });
@@ -70,8 +71,12 @@ export class PanelOperativoService {
 
   private async calcularResumen(
     query: ConsultarPanelOperativoDto,
+    usuarioId?: string,
   ): Promise<PanelOperativoResumen> {
     const contexto = await this.construirContexto(query);
+    const alertasCredenciales = usuarioId
+      ? await this.construirAlertasCredenciales(usuarioId)
+      : [];
     const alertasBase = this.construirAlertas(
       contexto.aulas,
       contexto.asistencias,
@@ -85,6 +90,7 @@ export class PanelOperativoService {
         contexto.bloque,
       )),
       ...this.construirAlertasRecientes(contexto),
+      ...alertasCredenciales,
       ...alertasBase,
     ];
     const contar = (estado: DisponibilidadAula['estadoCalculado']) =>
@@ -137,7 +143,10 @@ export class PanelOperativoService {
     };
   }
 
-  async alertas(query: ConsultarPanelOperativoDto): Promise<AlertaOperativa[]> {
+  async alertas(
+    query: ConsultarPanelOperativoDto,
+    usuarioId?: string,
+  ): Promise<AlertaOperativa[]> {
     const contexto = await this.construirContexto(query);
     return [
       ...(await this.construirAlertasTareas(
@@ -147,6 +156,9 @@ export class PanelOperativoService {
         contexto.bloque,
       )),
       ...this.construirAlertasRecientes(contexto),
+      ...(usuarioId
+        ? await this.construirAlertasCredenciales(usuarioId)
+        : []),
       ...this.construirAlertas(
         contexto.aulas,
         contexto.asistencias,
@@ -345,6 +357,100 @@ export class PanelOperativoService {
       }
     }
     return alertas;
+  }
+
+  private async construirAlertasCredenciales(
+    usuarioId: string,
+  ): Promise<AlertaOperativa[]> {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: {
+        roles: { select: { rol: { select: { nombre: true } } } },
+      },
+    });
+    const esAdministrador =
+      usuario?.roles.some(
+        ({ rol }) => rol.nombre.trim().toUpperCase() === 'ADMINISTRADOR',
+      ) ?? false;
+    const credenciales = await this.prisma.credencialOperativa.findMany({
+      where: esAdministrador ? {} : { creadorId: usuarioId },
+      select: { id: true, nombre: true },
+    });
+    if (!credenciales.length) return [];
+
+    const nombres = new Map(
+      credenciales.map((credencial) => [credencial.id, credencial.nombre]),
+    );
+    const desde = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const auditorias = await this.prisma.auditoria.findMany({
+      where: {
+        entidad: 'CredencialOperativa',
+        entidadId: { in: [...nombres.keys()] },
+        accion: 'UPDATE',
+        usuarioId: { not: usuarioId },
+        creadoEn: { gte: desde },
+      },
+      include: {
+        usuario: {
+          select: { nombreCompleto: true, nombreUsuario: true },
+        },
+      },
+      orderBy: { creadoEn: 'desc' },
+      take: 12,
+    });
+
+    return auditorias.map((auditoria) => {
+      const actor =
+        auditoria.usuario?.nombreCompleto ??
+        auditoria.usuario?.nombreUsuario ??
+        'Otro usuario';
+      const credencial = nombres.get(auditoria.entidadId) ?? 'sin nombre';
+      return {
+        id: `credencial-${auditoria.id}`,
+        severidad: 'info' as const,
+        tipo: 'credencial-actualizada',
+        mensaje: `${actor} ${this.describirCambioCredencial(
+          auditoria.datosPrevios,
+          auditoria.datosNuevos,
+        )} en la credencial “${credencial}”.`,
+        origenId: auditoria.entidadId,
+        fechaHora: auditoria.creadoEn,
+        enlace: '/credenciales',
+        accion: 'Ver credencial',
+      };
+    });
+  }
+
+  private describirCambioCredencial(
+    datosPrevios: unknown,
+    datosNuevos: unknown,
+  ) {
+    const previo = this.comoRegistro(datosPrevios);
+    const nuevo = this.comoRegistro(datosNuevos);
+    if (nuevo.secretoActualizado === true) return 'cambió la contraseña';
+    if (nuevo.acceso) return 'modificó los usuarios autorizados';
+
+    const campos: Array<[string, string]> = [
+      ['nombre', 'el nombre'],
+      ['usuario', 'el usuario'],
+      ['descripcion', 'la descripción'],
+      ['estado', 'el estado'],
+    ];
+    const modificados = campos
+      .filter(([campo]) =>
+        JSON.stringify(previo[campo]) !== JSON.stringify(nuevo[campo]),
+      )
+      .map(([, etiqueta]) => etiqueta);
+    if (!modificados.length) return 'actualizó la información';
+    if (modificados.length === 1) return `cambió ${modificados[0]}`;
+    const ultimo = modificados.at(-1);
+    return `cambió ${modificados.slice(0, -1).join(', ')} y ${ultimo}`;
+  }
+
+  private comoRegistro(valor: unknown): Record<string, unknown> {
+    return valor !== null && typeof valor === 'object' && !Array.isArray(valor)
+      ? (valor as Record<string, unknown>)
+      : {};
   }
 
   private async construirAlertasTareas(

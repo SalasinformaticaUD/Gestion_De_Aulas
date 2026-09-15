@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { consultarDisponibilidad, type DisponibilidadApi } from "@/features/disponibilidad/api/disponibilidadApi";
 import styles from "./AvailabilityView.module.css";
 
-const estados: Record<string, string> = { disponible: "Disponible", ocupada: "Ocupada", reservada: "Reservada", mantenimiento: "Mantenimiento", bloqueada: "Bloqueada" };
+const estados: Record<string, string> = { disponible: "Disponible", ocupada: "En clase", reservada: "Reservada", mantenimiento: "Mantenimiento", bloqueada: "Bloqueada" };
 const estadosAsistencia: Record<string, string> = { ASISTIO: "Asistió", AUSENTE: "No asistió", PENDIENTE: "Pendiente" };
 const bloques = ["06:00", "08:00", "10:00", "12:00", "14:00", "16:00", "18:00", "20:00"];
 

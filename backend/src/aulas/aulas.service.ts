@@ -553,6 +553,7 @@ export class AulasService {
               renovacionTecnologica: entrada.necesitaRenovacion,
               proyectoCurricular: { connect: { id: proyecto.id } },
               caracteristicas: caracteristicas,
+              eliminadoEn: null,
             },
           });
           actualizadas.push(aula);
@@ -579,17 +580,10 @@ export class AulasService {
       const ausentes = existentes.filter(
         (aula) => !codigosCargados.has(aula.codigo.toUpperCase()),
       );
-      const relacionados = ausentes.filter((aula) =>
-        Object.values(aula._count).some((cantidad) => cantidad > 0),
-      );
-      if (relacionados.length) {
-        throw new ConflictException(
-          `No se pueden reemplazar las aulas ausentes porque tienen información relacionada: ${relacionados.map((aula) => aula.codigo).join(', ')}.`,
-        );
-      }
       const eliminadas = ausentes.length
-        ? await tx.aula.deleteMany({
+        ? await tx.aula.updateMany({
             where: { id: { in: ausentes.map((aula) => aula.id) } },
+            data: { eliminadoEn: new Date() },
           })
         : { count: 0 };
       return { creadas, actualizadas, eliminadas: eliminadas.count };

@@ -20,6 +20,9 @@ describe('PanelOperativoService', () => {
     observacion: { findMany: jest.fn() },
     tarea: { findMany: jest.fn() },
     limpieza: { findMany: jest.fn() },
+    usuario: { findUnique: jest.fn() },
+    credencialOperativa: { findMany: jest.fn() },
+    auditoria: { findMany: jest.fn() },
   };
   let service: PanelOperativoService;
 
@@ -78,6 +81,9 @@ describe('PanelOperativoService', () => {
     prisma.claseProgramada.findMany.mockResolvedValue([]);
     prisma.prestamoDocente.findMany.mockResolvedValue([]);
     prisma.limpieza.findMany.mockResolvedValue([]);
+    prisma.usuario.findUnique.mockResolvedValue({ roles: [] });
+    prisma.credencialOperativa.findMany.mockResolvedValue([]);
+    prisma.auditoria.findMany.mockResolvedValue([]);
     service = new PanelOperativoService(
       disponibilidad as unknown as DisponibilidadAulasService,
       prestamos as unknown as PrestamosDocentesService,
@@ -119,6 +125,40 @@ describe('PanelOperativoService', () => {
       horaInicio: '08:00',
       horaFin: '10:00',
     });
+  });
+
+  it('notifica al propietario quién cambió la contraseña de su credencial', async () => {
+    prisma.credencialOperativa.findMany.mockResolvedValue([
+      { id: 'credencial-1', nombre: 'Correo del laboratorio' },
+    ]);
+    prisma.auditoria.findMany.mockResolvedValue([
+      {
+        id: 'auditoria-1',
+        entidadId: 'credencial-1',
+        datosPrevios: null,
+        datosNuevos: { secretoActualizado: true },
+        creadoEn: new Date('2026-08-20T13:00:00.000Z'),
+        usuario: { nombreCompleto: 'Ana Analista', nombreUsuario: 'analista' },
+      },
+    ]);
+
+    const resultado = await service.resumen(
+      { fecha: '2026-08-20', horaInicio: '08:00' },
+      'propietario-1',
+    );
+
+    expect(prisma.credencialOperativa.findMany).toHaveBeenCalledWith({
+      where: { creadorId: 'propietario-1' },
+      select: { id: true, nombre: true },
+    });
+    expect(resultado.alertas).toContainEqual(
+      expect.objectContaining({
+        tipo: 'credencial-actualizada',
+        mensaje:
+          'Ana Analista cambió la contraseña en la credencial “Correo del laboratorio”.',
+        enlace: '/credenciales',
+      }),
+    );
   });
 
   it('comparte el cálculo entre solicitudes simultáneas del mismo bloque', async () => {

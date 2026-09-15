@@ -9,7 +9,7 @@ describe('LimpiezaAulasService', () => {
   const otraAulaId = '00000000-0000-4000-8000-000000000002';
   const limpiezaId = '00000000-0000-4000-8000-000000000003';
   const prisma = {
-    aula: { findUnique: jest.fn(), findMany: jest.fn() },
+    aula: { findFirst: jest.fn(), findUnique: jest.fn(), findMany: jest.fn() },
     observacion: { findMany: jest.fn() },
     limpieza: {
       create: jest.fn(),
@@ -28,7 +28,7 @@ describe('LimpiezaAulasService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    prisma.aula.findUnique.mockResolvedValue({ id: aulaId } as never);
+    prisma.aula.findFirst.mockResolvedValue({ id: aulaId } as never);
     prisma.limpieza.findFirst.mockResolvedValue(null as never);
     service = new LimpiezaAulasService(prisma as unknown as PrismaService);
   });
@@ -45,6 +45,7 @@ describe('LimpiezaAulasService', () => {
     expect(prisma.limpieza.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
+          aula: { eliminadoEn: null },
           aulaId,
           realizadaEn: {
             gte: new Date('2026-08-01T00:00:00.000Z'),
@@ -56,7 +57,7 @@ describe('LimpiezaAulasService', () => {
   });
 
   it('rechaza el registro para un aula inexistente', async () => {
-    prisma.aula.findUnique.mockResolvedValue(null as never);
+    prisma.aula.findFirst.mockResolvedValue(null as never);
 
     await expect(service.create({ aulaId })).rejects.toBeInstanceOf(
       NotFoundException,
@@ -145,7 +146,7 @@ describe('LimpiezaAulasService', () => {
       otraAulaId,
     ]);
     expect(prisma.aula.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { estado: EstadoAula.OPERATIVA } }),
+      expect.objectContaining({ where: { estado: EstadoAula.OPERATIVA, eliminadoEn: null } }),
     );
   });
 
@@ -162,6 +163,50 @@ describe('LimpiezaAulasService', () => {
     const resultado = await service.findSugerencias({ fecha: '2026-08-26' });
 
     expect(resultado.sugerencias.map(({ aula }) => aula.id)).toEqual([aulaId]);
+  });
+
+  it('mantiene en la prioridad un aula ocupada y la identifica como en clase', async () => {
+    const disponibilidad = {
+      findAll: jest.fn().mockResolvedValue([
+        { aula: { id: aulaId }, estadoCalculado: 'ocupada' },
+        { aula: { id: otraAulaId }, estadoCalculado: 'disponible' },
+      ]),
+    };
+    service = new LimpiezaAulasService(
+      prisma as unknown as PrismaService,
+      undefined,
+      disponibilidad as never,
+    );
+    prisma.aula.findMany.mockResolvedValue([
+      { id: aulaId, codigo: 'A-101', ubicacion: 'Piso 1', limpiezas: [] },
+      { id: otraAulaId, codigo: 'A-102', ubicacion: 'Piso 1', limpiezas: [] },
+    ] as never);
+
+    const resultado = await service.findSugerencias({ fecha: '2026-08-26' });
+
+    expect(prisma.aula.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          estado: EstadoAula.OPERATIVA,
+          eliminadoEn: null,
+          id: { in: [aulaId, otraAulaId] },
+        },
+      }),
+    );
+    expect(resultado.sugerencias).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          aula: expect.objectContaining({ id: aulaId }),
+          estadoDisponibilidad: 'ocupada',
+          enClase: true,
+        }),
+        expect.objectContaining({
+          aula: expect.objectContaining({ id: otraAulaId }),
+          estadoDisponibilidad: 'disponible',
+          enClase: false,
+        }),
+      ]),
+    );
   });
 
   it('construye una matriz de jornadas por aula y fecha', async () => {

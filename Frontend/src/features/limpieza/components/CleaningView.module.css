@@ -50,8 +50,11 @@ html[data-theme="dark"] .downloadButton:hover { color:#fff; background:#a51022; 
 .recommendationPanel>div { display:grid; gap:7px; max-height:390px; overflow:auto; }
 .recommendationPanel>div>button { display:grid; gap:3px; padding:9px; border:1px solid #e3e5e8; border-left:3px solid var(--primary); border-radius:6px; color:var(--ink); background:#fafbfc; text-align:left; }
 .recommendationPanel>div>button:hover { border-color:#d28c96; background:#fff6f7; }
+.recommendationPanel>div>button:disabled { cursor:not-allowed; opacity:.78; border-color:#d8dde5; background:#f2f4f7; }
 .recommendationPanel>div>button b { color:var(--primary); font-size:14px; }
 .recommendationPanel>div>button span,.recommendationPanel>div>small { color:var(--muted); font-size:11px; line-height:1.35; }
+.recommendationRoomHeader { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.recommendationRoomHeader em { padding:2px 7px; border-radius:999px; color:#8a3b08; background:#fff0d9; font-size:10px; font-style:normal; font-weight:800; text-transform:uppercase; letter-spacing:.03em; }
 .recommendationPanel>.button-primary { min-height:38px; width:100%; margin-top:2px; }
 .registrationActions { display:grid !important; gap:8px; max-height:none !important; overflow:visible !important; }
 .registrationActions>.button-primary,.registrationActions>.dialogCancel { width:100%; min-height:38px; }
@@ -174,6 +177,9 @@ html[data-theme="dark"] .downloadButton:hover { color:#fff; background:#a51022; 
 .removeConfirmation { display:grid; gap:8px; padding:12px; border:1px solid #f3b3b3; border-radius:7px; color:#8b1e2d; background:#fff4f4; }
 .removeConfirmation span { color:#5e6066; font-size:13px; }
 .removeConfirmation>div { display:flex; justify-content:flex-end; gap:8px; }
+.occupancyConfirmation { display:grid; gap:8px; padding:12px; border:1px solid #efc06a; border-radius:7px; color:#78460a; background:#fff8e8; }
+.occupancyConfirmation span { color:#5e4a2f; font-size:13px; line-height:1.45; }
+.occupancyConfirmation>div { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:8px; }
 .removeButton { min-height:38px; padding:0 14px; border:1px solid #e99ca7; border-radius:7px; color:#a51022; background:#fff5f6; font-size:14px; font-weight:750; }
 .removeButton:hover { color:#fff; background:#a51022; }
 @media (max-width:1080px) {

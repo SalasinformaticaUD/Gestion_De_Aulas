@@ -25,9 +25,7 @@ const include = {
       },
     },
   },
-  rolesAutorizados: {
-    select: { rolId: true, rol: { select: { id: true, nombre: true } } },
-  },
+  creador: { select: { id: true, nombreCompleto: true, nombreUsuario: true } },
 } as const;
 type CredencialConAccesos = Prisma.CredencialOperativaGetPayload<{
   include: typeof include;
@@ -42,14 +40,23 @@ export class CredencialesService {
     private auth: AuthService,
   ) {}
   async create(dto: CreateCredencialeDto, usuarioId: string) {
+    await this.validarAccesos(dto.accesos ?? []);
     const credencial = await this.prisma.credencialOperativa.create({
       data: {
+        creadorId: usuarioId,
         nombre: dto.nombre.trim(),
         usuario: dto.usuario?.trim(),
         secretoCifrado: dto.secreto ? this.cifrado.cifrar(dto.secreto) : null,
         descripcion: dto.descripcion?.trim(),
         estado: dto.estado,
-        accesos: { create: { usuarioId, puedeVer: true, puedeEditar: true } },
+        accesos: {
+          create: [
+            { usuarioId, puedeVer: true, puedeEditar: true },
+            ...(dto.accesos ?? [])
+              .filter((acceso) => acceso.usuarioId !== usuarioId)
+              .map((acceso) => ({ usuarioId: acceso.usuarioId, puedeVer: acceso.puedeVer ?? true, puedeEditar: acceso.puedeEditar ?? false })),
+          ],
+        },
       },
       include,
     });
@@ -57,9 +64,10 @@ export class CredencialesService {
     return this.publica(credencial);
   }
   async findAll(dto: FindCredencialesDto, usuarioId: string) {
+    const administrador = await this.esAdministrador(usuarioId);
     const where: Prisma.CredencialOperativaWhereInput = {
       AND: [
-        ...(await this.esAdministrador(usuarioId)
+        ...(administrador
           ? []
           : [{ accesos: { some: { usuarioId, puedeVer: true } } }]),
         ...(dto.responsableId
@@ -79,10 +87,11 @@ export class CredencialesService {
       })) as CredencialConAccesos[]
     ).map((item) => this.publica(item));
   }
-  listarRolesAutorizables() {
-    return this.prisma.rol.findMany({
-      select: { id: true, nombre: true },
-      orderBy: { nombre: 'asc' },
+  listarUsuariosAutorizables() {
+    return this.prisma.usuario.findMany({
+      where: { estado: 'ACTIVA' },
+      select: { id: true, nombreCompleto: true, nombreUsuario: true, correo: true },
+      orderBy: { nombreCompleto: 'asc' },
     });
   }
   async findOne(id: string, usuarioId: string) {
@@ -130,7 +139,7 @@ export class CredencialesService {
     dto: CrearAccesoCredencialDto,
     usuarioId: string,
   ) {
-    await this.access(id, usuarioId, true);
+    await this.gestionarPermisos(id, usuarioId);
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: dto.usuarioId },
       select: { id: true },
@@ -161,18 +170,11 @@ export class CredencialesService {
     });
     return acceso;
   }
-  async actualizarRoles(id: string, rolIds: string[], usuarioId: string) {
-    await this.access(id, usuarioId, true);
-    const roles = await this.prisma.rol.findMany({ where: { id: { in: rolIds } }, select: { id: true } });
-    if (roles.length !== rolIds.length) throw new NotFoundException('Uno o más roles no existen.');
-    await this.prisma.credencialRol.deleteMany({ where: { credencialId: id } });
-    if (rolIds.length) await this.prisma.credencialRol.createMany({ data: rolIds.map((rolId) => ({ credencialId: id, rolId })), skipDuplicates: true });
-    await this.audit(usuarioId, id, 'UPDATE', undefined, { rolesAutorizados: rolIds });
-    return this.findOne(id, usuarioId);
-  }
   async remove(id: string, contrasenaUsuario: string, usuarioId: string) {
     await this.verificarContrasenaUsuario(usuarioId, contrasenaUsuario);
-    const previo = await this.access(id, usuarioId, true);
+    const previo = await this.access(id, usuarioId);
+    if (previo.creadorId !== usuarioId)
+      throw new ForbiddenException('Solo quien creó la credencial puede eliminarla.');
     const eliminado = await this.prisma.credencialOperativa.delete({ where: { id } });
     await this.audit(usuarioId, id, 'DELETE', previo, undefined);
     return { id: eliminado.id, eliminado: true };
@@ -243,13 +245,24 @@ export class CredencialesService {
     if (!c) throw new NotFoundException('La credencial no existe.');
     const administrador = await this.esAdministrador(usuarioId);
     const acceso = c.accesos.find((a) => a.usuarioId === usuarioId);
-    const usuario = administrador ? null : await this.prisma.usuario.findUnique({
-      where: { id: usuarioId }, select: { roles: { select: { rolId: true } } },
-    });
-    const tieneRol = usuario?.roles.some((r) => c.rolesAutorizados.some((r2) => r2.rolId === r.rolId)) ?? false;
-    if (!administrador && (!acceso?.puedeVer && !tieneRol || editar && !acceso?.puedeEditar))
+    const puedeVer = acceso?.puedeVer;
+    const puedeEditar = acceso?.puedeEditar;
+    if (!administrador && (!puedeVer || (editar && !puedeEditar)))
       throw new ForbiddenException('No está autorizado para esta credencial.');
     return c;
+  }
+  private async gestionarPermisos(id: string, usuarioId: string) {
+    const credencial = await this.access(id, usuarioId);
+    if (credencial.creadorId !== usuarioId && !(await this.esAdministrador(usuarioId)))
+      throw new ForbiddenException('Solo quien creó la credencial puede modificar sus permisos.');
+    return credencial;
+  }
+  private async validarAccesos(accesos: Array<{ usuarioId: string }>) {
+    const usuariosIds = [...new Set(accesos.map((acceso) => acceso.usuarioId))];
+    if (usuariosIds.length) {
+      const usuarios = await this.prisma.usuario.findMany({ where: { id: { in: usuariosIds } }, select: { id: true } });
+      if (usuarios.length !== usuariosIds.length) throw new NotFoundException('Uno o más usuarios autorizados no existen.');
+    }
   }
   private async verificarContrasenaUsuario(
     usuarioId: string,

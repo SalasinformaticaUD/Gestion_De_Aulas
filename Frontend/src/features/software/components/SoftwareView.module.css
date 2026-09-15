@@ -59,7 +59,7 @@
 .roomTags span,.roomTags b { min-width:30px; padding:4px 6px; border-radius:4px; color:#175cc4; background:#dbeafe; font-size:13px; text-align:center; }
 .roomTags b { color:var(--muted); background:var(--surface-soft,#eceef1); }
 .roomTags em { color:var(--muted); font-size:13px; font-style:normal; }
-.actions { display:flex; gap:5px; }
+.actions { display:flex; flex-wrap:wrap; gap:5px; }
 .actions button { min-height:29px; padding:0 9px; border:1px solid var(--line); border-radius:5px; color:var(--ink); background:var(--surface,#fff); font-size:13px; font-weight:750; }
 .actions .deleteButton { border-color:#f0b8bf; color:#b51e30; background:#fff5f6; }
 .emptyTable { height:122px; color:var(--muted); text-align:center; }
@@ -136,6 +136,13 @@
 .formGrid input,.formGrid select,.formGrid textarea { width:100%; min-height:38px; padding:8px 10px; border:1px solid var(--line); border-radius:6px; outline:0; color:var(--ink); background:var(--surface-soft,#f8f9fb); font:inherit; font-size:15.6px; text-transform:none; resize:vertical; }
 .formGrid input:focus,.formGrid select:focus,.formGrid textarea:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(165,16,34,.09); }
 .wideField { grid-column:1/-1; }
+.roomChecklist { min-width:0; padding:9px; border:1px solid var(--line); border-radius:7px; }
+.roomChecklist legend { padding:0 5px; color:var(--muted); font-size:13px; font-weight:800; }
+.roomChecklist legend small { font-weight:500; }
+.roomChecklist>div { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; max-height:220px; overflow:auto; }
+.roomChecklist>div>label { display:flex; align-items:center; gap:7px; min-height:32px; padding:5px 7px; border:1px solid var(--line); border-radius:5px; color:var(--ink); background:var(--surface-soft,#f8f9fb); font-size:12px; font-weight:650; letter-spacing:0; text-transform:none; }
+.roomChecklist>div>label input { width:15px; min-height:15px; height:15px; padding:0; flex:0 0 auto; }
+.roomChecklist>div>p { grid-column:1/-1; margin:0; padding:12px; color:var(--muted); text-align:center; }
 .inlineError { padding:10px 12px; border:1px solid #fecaca; border-radius:6px; color:#a42121; background:#fff0f0; font-size:14.3px; font-weight:700; }
 .importInput { font-family:ui-monospace,SFMono-Regular,Menlo,monospace !important; font-size:14.3px !important; line-height:1.5; }
 .importPreview { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border:1px solid #c9d9f3; border-radius:6px; color:#315e9d; background:#eef5ff; font-size:13px; }
@@ -185,6 +192,7 @@
   .dialogForm { padding:15px; }
   .formGrid { grid-template-columns:1fr; }
   .wideField { grid-column:auto; }
+  .roomChecklist>div { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .importPreview { align-items:flex-start; flex-direction:column; }
   .dialogForm>footer { align-items:stretch; flex-direction:column-reverse; }
   .dialogForm>footer button { width:100%; }

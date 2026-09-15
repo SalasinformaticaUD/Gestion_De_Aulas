@@ -122,7 +122,7 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className={`app-shell ${isSidebarCollapsed ? "sidebar-collapsed" : ""}`}>
-      {isScreenSaverActive && <section className="screen-saver" role="dialog" aria-modal="true" aria-label="Protector de pantalla"><div className="screen-saver-profile"><span className={`avatar ${profileData.photo ? "avatar-has-photo" : ""}`} style={profileData.photo ? { backgroundImage: `url("${profileData.photo}")` } : undefined}>{!profileData.photo && getInitials(profileData.fullName)}</span><strong>{profileData.fullName}</strong><small>Sesión activa</small><p>Mueva el mouse, toque la pantalla o presione una tecla para continuar.</p></div></section>}
+      {isScreenSaverActive && <section className="screen-saver" role="dialog" aria-modal="true" aria-label="Protector de pantalla"><div className="screen-saver-profile"><span className={`avatar ${profileData.photo ? "avatar-has-photo" : ""}`}>{profileData.photo ? <img src={profileData.photo} alt="" /> : getInitials(profileData.fullName)}</span><strong>{profileData.fullName}</strong><small>Sesión activa</small><p>Mueva el mouse, toque la pantalla o presione una tecla para continuar.</p></div></section>}
       {isMenuOpen && <button className="menu-overlay" aria-label="Cerrar menú" onClick={closeMenu} />}
       <aside className={`sidebar ${isMenuOpen ? "is-open" : ""} ${isSidebarCollapsed ? "is-collapsed" : ""}`} aria-label="Navegación principal">
         <Link href="/gestion-aulas" className="brand" aria-label="Ir al dashboard" onClick={closeMenu}><Image className="sidebar-aulas-logo" src="/brand/Logo_Cosmos_Aulas_de_Software.png" alt="COSMOS · Aulas de Software" width={1920} height={1080} priority /></Link>
@@ -145,7 +145,7 @@ export function AppShell({ children }: AppShellProps) {
           <span className="topbar-spacer" />
           <ThemeToggle />
           <Link href="/perfil" className="profile" aria-current={pathname === "/perfil" ? "page" : undefined}>
-            <span className={`avatar ${profileData.photo ? "avatar-has-photo" : ""}`} style={profileData.photo ? { backgroundImage: `url("${profileData.photo}")` } : undefined}>{!profileData.photo && getInitials(profileData.fullName)}</span>
+            <span className={`avatar ${profileData.photo ? "avatar-has-photo" : ""}`}>{profileData.photo ? <img src={profileData.photo} alt="" /> : getInitials(profileData.fullName)}</span>
             <span className="profile-copy"><strong>{profileData.fullName}</strong><small>{profileData.role}</small></span>
           </Link>
         </header>
