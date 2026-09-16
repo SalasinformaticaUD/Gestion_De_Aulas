@@ -116,8 +116,8 @@ export function AppShell({ children }: AppShellProps) {
     </Link>
   );
   const canAccessRoute = (href: string) => {
-    const module = moduleByRoute[href];
-    return !module || allowedModules.includes(module);
+    const requiredModule = moduleByRoute[href];
+    return !requiredModule || allowedModules.includes(requiredModule);
   };
 
   return (

@@ -1,1 +1,4 @@
-/node_modules/
+# Dependencies are generated locally and must never be versioned, including
+# those created beside one-off spreadsheet/document generators.
+node_modules/
+**/node_modules/
