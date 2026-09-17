@@ -33,13 +33,13 @@ export default function ApplicationSelectorPage() {
             <span className="application-action">Ingresar <span aria-hidden="true">→</span></span>
           </Link>
 
-          <Link className="application-card application-card-maintenance" href="/mantenimiento-monitores">
+          <Link className="application-card" href={applications.monitores.loginPath}>
             <span className="application-icon application-icon-monitors" aria-hidden="true">♧</span>
             <span className="application-content">
               <strong>{applications.monitores.name}</strong>
-              <span>El aplicativo interno está temporalmente en mantenimiento. Acceda por ahora al aplicativo anterior.</span>
+              <span>{applications.monitores.description}</span>
             </span>
-            <span className="application-action application-action-maintenance">En mantenimiento <span aria-hidden="true">→</span></span>
+            <span className="application-action">Ingresar <span aria-hidden="true">→</span></span>
           </Link>
         </div>
 

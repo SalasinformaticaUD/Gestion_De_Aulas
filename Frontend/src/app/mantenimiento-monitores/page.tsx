@@ -1,5 +1,5 @@
-import { MonitorsMaintenanceRedirect } from "@/features/auth/components/MonitorsMaintenanceRedirect";
+import { redirect } from "next/navigation";
 
 export default function MonitorsMaintenancePage() {
-  return <MonitorsMaintenanceRedirect />;
+  redirect("/login?app=monitores");
 }

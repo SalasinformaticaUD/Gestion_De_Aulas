@@ -26,6 +26,15 @@ export class AuthController {
   }
 
   @RequireAuth()
+  @Post('verificar-contrasena')
+  async verificarContrasena(
+    @Body() dto: VerifyPasswordDto,
+    @CurrentUser() usuario: UsuarioAutenticado,
+  ) {
+    return { valido: await this.authService.verifyCurrentPassword(usuario.id, dto.password) };
+  }
+
+  @RequireAuth()
   @Post('verificar-contrasena-tareas')
   verificarContrasenaTareas(
     @Body() dto: VerifyPasswordDto,

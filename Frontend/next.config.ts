@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
   // todavía tiene cargados desde .next.
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
   outputFileTracingRoot: process.cwd(),
+  // La API Django de Monitores usa barras finales en sus rutas. Evita que
+  // Next.js responda con un 308 antes del rewrite y pierda el Bearer JWT.
+  skipTrailingSlashRedirect: true,
   // Las fichas mensuales agrupan varios PDFs y pueden superar el valor
   // predeterminado de 30 segundos del proxy de rewrites.
   experimental: {

@@ -1,20 +1,32 @@
-import { descargarMonitores, solicitarMonitores } from "./clienteMonitores";
+import { descargarMonitores, solicitarAulas, solicitarMonitores } from "./clienteMonitores";
+import { obtenerSesion } from "@/features/auth/lib/sesion";
 import type { AnotacionApi, ConciliacionApi, ConsultaPublicaApi, DashboardApi, ExcepcionApi, HorarioApi, ImportacionAsistenciaApi, MonitorApi, SesionApi } from "./contratosMonitores";
 
 export const servicioMonitores = {
   listarMonitores: () => solicitarMonitores<MonitorApi[]>("/api/v1/monitors/"),
-  provisionarMonitor: (payload: { full_name: string; codigo_estudiante: string; email: string; username?: string; department: string; numero_documento?: string; proyecto_curricular?: string; telefono?: string }) =>
+  provisionarMonitor: (payload: { full_name: string; codigo_estudiante: string; email: string; username?: string; department: string; numero_documento?: string; proyecto_curricular?: string; telefono?: string; confirm_repeating_monitor: boolean }) =>
     solicitarMonitores<MonitorApi>("/api/v1/monitors/provision/", { method: "POST", body: JSON.stringify({ ...payload, username: payload.username?.trim() || undefined }) }),
   actualizarMonitor: (id: string, payload: Partial<Pick<MonitorApi, "codigo_estudiante" | "full_name" | "department" | "is_active">>) =>
     solicitarMonitores<MonitorApi>(`/api/v1/monitors/${id}/`, { method: "PATCH", body: JSON.stringify(payload) }),
   eliminarMonitor: (id: string) => solicitarMonitores<void>(`/api/v1/monitors/${id}/`, { method: "DELETE" }),
+  editarCuentaMonitor: (id: string, payload: { full_name: string; codigo_estudiante: string; email: string; department: string; numero_documento?: string; proyecto_curricular?: string; telefono?: string; confirm_repeating_monitor: boolean }) =>
+    solicitarMonitores<MonitorApi>(`/api/v1/monitors/${id}/account/`, { method: "PATCH", body: JSON.stringify(payload) }),
+  reenviarActivacion: (id: string) => solicitarMonitores<{ detail: string }>(`/api/v1/monitors/${id}/resend-activation/`, { method: "POST", body: JSON.stringify({}) }),
+  importarMonitores: (archivo: File, confirm_repeating_monitors: boolean) => {
+    const datos = new FormData(); datos.append("file", archivo); datos.append("confirm_repeating_monitors", String(confirm_repeating_monitors));
+    return solicitarMonitores<{ total_rows: number; created: number; skipped: Array<{ row_number: number; email: string; reason: string }>; errors: Array<{ row_number: number; email: string; reason: string }> }>("/api/v1/monitors/import/", { method: "POST", body: datos });
+  },
+  previsualizarNuevoSemestre: () => solicitarMonitores<{ preview: Record<string, number> }>("/api/v1/monitors/new-semester/"),
+  iniciarNuevoSemestre: (new_semester_name: string) => solicitarMonitores<{ archived_semester: string; new_semester: string; affected: Record<string, number> }>("/api/v1/monitors/new-semester/", { method: "POST", body: JSON.stringify({ new_semester_name, confirm: true }) }),
+  verificarContrasenaActual: (password: string) => solicitarAulas<{ valido: boolean }>("/auth/verificar-contrasena", obtenerSesion()?.tokenAcceso, { method: "POST", body: JSON.stringify({ password }), notificarAutorizacion: false }),
   obtenerDashboard: () => solicitarMonitores<DashboardApi>("/api/v1/reports/dashboard/"),
   listarHorarios: () => solicitarMonitores<HorarioApi[]>("/api/v1/schedules/"),
-  crearHorario: (payload: Pick<HorarioApi, "monitor" | "weekday" | "start_time" | "end_time" | "location" | "is_active">) =>
+  crearHorario: (payload: Pick<HorarioApi, "monitor" | "weekday" | "start_time" | "end_time" | "asignatura" | "grupo" | "docente" | "proyecto_curricular" | "location" | "is_active">) =>
     solicitarMonitores<HorarioApi>("/api/v1/schedules/", { method: "POST", body: JSON.stringify(payload) }),
-  actualizarHorario: (id: string, payload: Partial<Pick<HorarioApi, "is_active" | "weekday" | "start_time" | "end_time" | "location">>) =>
+  actualizarHorario: (id: string, payload: Partial<Pick<HorarioApi, "is_active" | "weekday" | "start_time" | "end_time" | "asignatura" | "grupo" | "docente" | "proyecto_curricular" | "location">>) =>
     solicitarMonitores<HorarioApi>(`/api/v1/schedules/${id}/`, { method: "PATCH", body: JSON.stringify(payload) }),
   eliminarHorario: (id: string) => solicitarMonitores<void>(`/api/v1/schedules/${id}/`, { method: "DELETE" }),
+  importarHorarios: (archivo: File) => { const datos = new FormData(); datos.append("file", archivo); return solicitarMonitores<{ total_rows: number; created: number; skipped: Array<{ row_number: number; monitor_email: string; reason: string }>; errors: Array<{ row_number: number; monitor_email: string; reason: string }> }>("/api/v1/schedules/import/", { method: "POST", body: datos }); },
   listarExcepciones: () => solicitarMonitores<ExcepcionApi[]>("/api/v1/schedules/exceptions/"),
   crearExcepcion: (payload: Omit<ExcepcionApi, "id" | "department_label">) =>
     solicitarMonitores<ExcepcionApi>("/api/v1/schedules/exceptions/", { method: "POST", body: JSON.stringify(payload) }),
@@ -51,5 +63,7 @@ export const servicioMonitores = {
   descargarMemorando: (id: string) => descargarMonitores(`/api/v1/reports/memorandums/${id}/pdf/`),
   listarActasCompromiso: () => solicitarMonitores<unknown[]>("/api/v1/reports/commitment-acts/"),
   descargarActaCompromiso: (monitorId: string) => descargarMonitores(`/api/v1/reports/commitment-acts/${monitorId}/pdf/`),
+  descargarActaFirmada: (monitorId: string) => descargarMonitores(`/api/v1/reports/commitment-acts/${monitorId}/signed-pdf/`),
+  revisarActaCompromiso: (monitorId: string, action: "accept" | "reject", rejection_reason = "") => solicitarMonitores<unknown>(`/api/v1/reports/commitment-acts/${monitorId}/review/`, { method: "POST", body: JSON.stringify({ action, rejection_reason }) }),
   listarHistorico: (parametros = "") => solicitarMonitores<unknown[]>(`/api/v1/reports/history/${parametros ? `?${parametros}` : ""}`),
 };

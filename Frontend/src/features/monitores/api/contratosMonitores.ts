@@ -2,9 +2,13 @@ export type MonitorApi = {
   id: string;
   user_email?: string;
   codigo_estudiante: string;
+  numero_documento: string;
   full_name: string;
+  proyecto_curricular: string;
+  telefono: string;
   department: string;
   is_active: boolean;
+  activation_email_sent?: boolean;
 };
 
 export type HorarioApi = {
@@ -14,6 +18,10 @@ export type HorarioApi = {
   weekday: number;
   start_time: string;
   end_time: string;
+  asignatura: string;
+  grupo: string;
+  docente: string;
+  proyecto_curricular: string;
   location: string;
   is_active: boolean;
 };

@@ -43,9 +43,11 @@ async function interpretarRespuesta<T>(respuesta: Response, notificarAutorizacio
         respuesta.status,
       );
     }
+    const datos = typeof cuerpo === "object" && cuerpo !== null ? cuerpo as Record<string, unknown> : null;
+    const primerDetalle = datos && Object.values(datos).flatMap((valor) => Array.isArray(valor) ? valor : [valor]).find((valor) => typeof valor === "string");
     const mensaje =
-      typeof cuerpo === "object" && cuerpo !== null
-        ? String((cuerpo as { detail?: unknown; message?: unknown }).detail ?? (cuerpo as { message?: unknown }).message ?? "La operación no pudo completarse.")
+      datos
+        ? String(datos.detail ?? datos.message ?? primerDetalle ?? "La operación no pudo completarse.")
         : String(cuerpo || "La operación no pudo completarse.");
     throw new ErrorApi(mensaje, respuesta.status, cuerpo);
   }
