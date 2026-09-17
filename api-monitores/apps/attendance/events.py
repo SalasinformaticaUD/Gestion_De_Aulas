@@ -1,5 +1,0 @@
-from apps.common.choices import NotificationEventChoices
-
-ATTENDANCE_IMPORTED = NotificationEventChoices.ATTENDANCE_IMPORTED
-ATTENDANCE_RECONCILIATION_FAILED = NotificationEventChoices.ATTENDANCE_RECONCILIATION_FAILED
-
