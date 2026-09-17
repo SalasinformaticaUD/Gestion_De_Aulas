@@ -59,6 +59,13 @@
 .roomTags span,.roomTags b { min-width:30px; padding:4px 6px; border-radius:4px; color:#175cc4; background:#dbeafe; font-size:13px; text-align:center; }
 .roomTags b { color:var(--muted); background:var(--surface-soft,#eceef1); }
 .roomTags em { color:var(--muted); font-size:13px; font-style:normal; }
+.roomDistribution { position:relative; }
+.roomDistribution summary { padding:4px 6px; border:1px solid var(--line); border-radius:4px; color:var(--primary); background:var(--surface,#fff); font-size:13px; font-weight:750; cursor:pointer; list-style:none; white-space:nowrap; }
+.roomDistribution summary::-webkit-details-marker { display:none; }
+.roomDistribution summary::after { content:"⌄"; margin-left:5px; }
+.roomDistribution[open] summary::after { content:"⌃"; }
+.roomDistribution>div { position:absolute; z-index:10; top:calc(100% + 5px); right:0; width:220px; display:flex; flex-wrap:wrap; gap:4px; padding:8px; border:1px solid var(--line); border-radius:6px; background:var(--surface,#fff); box-shadow:0 8px 18px rgba(18,24,40,.16); }
+.roomDistribution>div span { min-width:30px; padding:4px 6px; border-radius:4px; color:#175cc4; background:#dbeafe; font-size:13px; text-align:center; }
 .actions { display:flex; flex-wrap:wrap; gap:5px; }
 .actions button { min-height:29px; padding:0 9px; border:1px solid var(--line); border-radius:5px; color:var(--ink); background:var(--surface,#fff); font-size:13px; font-weight:750; }
 .actions .deleteButton { border-color:#f0b8bf; color:#b51e30; background:#fff5f6; }
@@ -105,8 +112,21 @@
 .roomGrid>article>div>span strong,.roomGrid>article>div>span small { display:block; }
 .roomGrid>article>div>span strong { overflow:hidden; color:var(--ink); font-size:13px; text-overflow:ellipsis; white-space:nowrap; }
 .roomGrid>article>div>span small { margin-top:3px; color:var(--muted); font-size:10.4px; }
-.roomGrid>article>div>span button { width:22px; height:22px; flex:0 0 auto; border:0; border-radius:4px; color:#a42121; background:#fee2e2; font-size:18.2px; }
+.roomGrid>article>div>span button { width:22px; height:22px; flex:0 0 auto; margin-left:14px; border:0; border-radius:4px; color:#a42121; background:#fee2e2; font-size:18.2px; }
 .roomGrid>article>div>p { margin:0; padding:14px 5px; color:var(--muted); font-size:13px; text-align:center; }
+.roomPrograms { display:grid !important; gap:7px !important; }
+.matchingPrograms { display:flex; flex-wrap:wrap; gap:5px; padding:0 !important; }
+.matchingPrograms>small { width:100%; color:var(--muted); font-size:10.4px; font-weight:750; text-transform:uppercase; }
+.matchingPrograms>span { display:block !important; width:auto !important; padding:5px 7px !important; border-color:#b9d6fb !important; color:#175cc4; background:#edf6ff !important; }
+.matchingPrograms>span small { margin-top:2px !important; color:#4b78b7 !important; }
+.installedPrograms summary { padding:7px 8px; border:1px solid var(--line); border-radius:5px; color:var(--primary); background:var(--surface,#fff); font-size:12px; font-weight:750; cursor:pointer; list-style:none; }
+.installedPrograms summary::-webkit-details-marker { display:none; }
+.installedPrograms summary::after { content:"⌄"; float:right; }
+.installedPrograms[open] summary::after { content:"⌃"; }
+.installedPrograms>div { display:grid; gap:7px; padding-top:8px; }
+.installedPrograms>div>span { display:grid !important; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:18px; padding:9px 10px !important; }
+.installedPrograms>div>span i { padding-right:18px; border-right:1px solid var(--line); }
+.installedPrograms>div>span button { margin-left:0; }
 .importHeader button { min-height:36px; }
 .importTable { min-width:900px; }
 .importTable time { font-size:14.3px; }
