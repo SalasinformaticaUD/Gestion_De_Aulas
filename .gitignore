@@ -2,3 +2,12 @@
 # those created beside one-off spreadsheet/document generators.
 node_modules/
 **/node_modules/
+
+# Artefactos locales de pruebas, renderizado y análisis ajenos al runtime.
+tmp/
+outputs/
+output/
+.tmp-*/
+qa_*/
+informe*_render/
+lo-test/
