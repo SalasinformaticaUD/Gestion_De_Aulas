@@ -1,6 +1,5 @@
-import { descargarMonitores, solicitarAulas, solicitarMonitores } from "./clienteMonitores";
-import { obtenerSesion } from "@/features/auth/lib/sesion";
-import type { AnotacionApi, ConciliacionApi, ConsultaPublicaApi, DashboardApi, ExcepcionApi, HorarioApi, ImportacionAsistenciaApi, MonitorApi, SesionApi } from "./contratosMonitores";
+import { descargarMonitores, solicitarMonitores } from "./clienteMonitores";
+import type { AnotacionApi, ConciliacionApi, ConsultaPublicaApi, DashboardApi, DetalleInconsistenciaApi, ExcepcionApi, HorarioApi, ImportacionAsistenciaApi, IndicadoresInconsistenciasApi, InconsistenciaApi, MonitorApi, SesionApi } from "./contratosMonitores";
 
 export const servicioMonitores = {
   listarMonitores: () => solicitarMonitores<MonitorApi[]>("/api/v1/monitors/"),
@@ -18,7 +17,7 @@ export const servicioMonitores = {
   },
   previsualizarNuevoSemestre: () => solicitarMonitores<{ preview: Record<string, number> }>("/api/v1/monitors/new-semester/"),
   iniciarNuevoSemestre: (new_semester_name: string) => solicitarMonitores<{ archived_semester: string; new_semester: string; affected: Record<string, number> }>("/api/v1/monitors/new-semester/", { method: "POST", body: JSON.stringify({ new_semester_name, confirm: true }) }),
-  verificarContrasenaActual: (password: string) => solicitarAulas<{ valido: boolean }>("/auth/verificar-contrasena", obtenerSesion()?.tokenAcceso, { method: "POST", body: JSON.stringify({ password }), notificarAutorizacion: false }),
+  verificarContrasenaActual: (password: string) => solicitarMonitores<{ valido: boolean }>("/api/v1/auth/verify-password/", { method: "POST", body: JSON.stringify({ password }) }),
   obtenerDashboard: () => solicitarMonitores<DashboardApi>("/api/v1/reports/dashboard/"),
   listarHorarios: () => solicitarMonitores<HorarioApi[]>("/api/v1/schedules/"),
   crearHorario: (payload: Pick<HorarioApi, "monitor" | "weekday" | "start_time" | "end_time" | "asignatura" | "grupo" | "docente" | "proyecto_curricular" | "location" | "is_active">) =>
@@ -46,6 +45,11 @@ export const servicioMonitores = {
   listarConciliaciones: () => solicitarMonitores<ConciliacionApi[]>("/api/v1/attendance/pending-reconciliation/"),
   asignarMonitor: (registroId: string, monitorId: string) =>
     solicitarMonitores<ConciliacionApi>(`/api/v1/attendance/pending-reconciliation/${registroId}/assign-monitor/`, { method: "POST", body: JSON.stringify({ monitor_id: monitorId }) }),
+  listarInconsistencias: () => solicitarMonitores<InconsistenciaApi[]>("/api/v1/attendance/inconsistencies/"),
+  obtenerDetalleInconsistencia: (id:string) => solicitarMonitores<DetalleInconsistenciaApi>(`/api/v1/attendance/inconsistencies/${id}/`),
+  obtenerIndicadoresInconsistencias: () => solicitarMonitores<IndicadoresInconsistenciasApi>("/api/v1/attendance/inconsistencies/stats/"),
+  crearSolucionInconsistencia: (id:string, payload:{ annotation_type:string; action:string; delta_minutes:number; description:string }) => solicitarMonitores<InconsistenciaApi>(`/api/v1/attendance/inconsistencies/${id}/create-solution/`, { method:"POST", body:JSON.stringify(payload) }),
+  invalidarInconsistencia: (id:string, reason:string) => solicitarMonitores<InconsistenciaApi>(`/api/v1/attendance/inconsistencies/${id}/invalidate/`, { method:"POST", body:JSON.stringify({ reason }) }),
   importarAsistencia: (archivo: File) => {
     const datos = new FormData();
     datos.append("source_file", archivo);

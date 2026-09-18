@@ -39,7 +39,7 @@ async function interpretarRespuesta<T>(respuesta: Response, notificarAutorizacio
     if (notificarAutorizacion) notificarErrorAutorizacion(respuesta.status);
     if (typeof cuerpo === "string" && cuerpo.trimStart().startsWith("<")) {
       throw new ErrorApi(
-        "El servidor devolvió una página HTML en lugar de la respuesta de autenticación. Reinicie el frontend para aplicar el proxy /api/aulas.",
+        "El servidor devolvió una página HTML inesperada. Verifica que API Monitores esté iniciada y revisa el detalle de la operación.",
         respuesta.status,
       );
     }
@@ -88,7 +88,7 @@ export async function solicitarMonitores<T>(ruta: string, opciones: RequestInit 
   const token = obtenerSesion()?.tokenAcceso;
   if (token) cabeceras.set("Authorization", `Bearer ${token}`);
   if (!["GET", "HEAD", "OPTIONS"].includes(metodo)) {
-    const csrf = decodeURIComponent(leerCookie("csrftoken"));
+    const csrf = decodeURIComponent(leerCookie("monitores_csrftoken"));
     if (csrf) cabeceras.set("X-CSRFToken", csrf);
   }
   const respuesta = await fetch(`${baseMonitores}${ruta}`, {
@@ -135,4 +135,14 @@ export type RespuestaLoginCentral = {
     puedeAccederMonitores: boolean;
     urlMonitores: string | null;
   };
+};
+
+export type RespuestaLoginMonitores = {
+  id: string;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  department: string | null;
 };

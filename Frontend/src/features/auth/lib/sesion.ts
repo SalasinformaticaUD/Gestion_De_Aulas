@@ -22,7 +22,7 @@ export function obtenerSesion(): SesionAplicacion | null {
   if (!guardada) return null;
   try {
     const sesion = JSON.parse(guardada) as SesionAplicacion;
-    if (!sesion.tokenAcceso || sesion.expiraEn <= Date.now()) {
+    if ((sesion.aplicacion === "aulas" && !sesion.tokenAcceso) || sesion.expiraEn <= Date.now()) {
       window.sessionStorage.removeItem(claveAlmacenamiento);
       return null;
     }

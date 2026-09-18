@@ -70,7 +70,7 @@ Este documento incorpora los requerimientos entregados para Gestión de Monitore
 - [x] Permitir visualizar y descargar el PDF disponible.
 - [x] Mostrar acciones de revisión según el estado del acta.
 - [x] Mostrar un contador de resultados calculado sobre la consulta.
-- [ ] Agregar paginación dinámica específica para la tabla de actas cuando haya múltiples páginas.
+- [x] Agregar paginación dinámica específica para la tabla de actas cuando haya múltiples páginas.
 - [ ] Verificar con registros reales la actualización automática después de generar, firmar, aceptar, rechazar, eliminar o modificar un acta.
 - [ ] Verificar la aplicación de permisos por rol para cada acción de acta.
 
@@ -100,15 +100,15 @@ Este documento incorpora los requerimientos entregados para Gestión de Monitore
 
 - [x] Mostrar contador con el total de anotaciones realizadas.
 - [x] Incluir el campo Tipo de anotación con “Olvido de registro” y otras novedades.
-- [ ] Cambiar el rótulo Fecha por **Fecha de la novedad**.
-- [ ] Mostrar el texto de ayuda requerido en “Horas a ajustar (h)” y limitar explícitamente el rango a 0.01–24 horas.
+- [x] Cambiar el rótulo Fecha por **Fecha de la novedad**.
+- [x] Mostrar el texto de ayuda requerido en “Horas a ajustar (h)” y limitar explícitamente el rango a 0.01–24 horas.
 - [x] Agregar el botón **Registrar anotación**.
-- [ ] Agregar filtros de historial: Buscar monitor, Tipo y Acción.
-- [ ] Agregar la columna **Registro** al historial.
+- [x] Agregar filtros de historial: Buscar monitor, Tipo y Acción.
+- [x] Agregar la columna **Registro** al historial.
 - [x] Mostrar Fecha, Monitor, Tipo, Acción, Ajuste, Motivo y Gestión en el historial.
 - [x] Mostrar nombre y código del monitor.
 - [x] Mostrar la operación y el ajuste de horas.
-- [ ] Mostrar de forma explícita quién realizó la gestión en cada fila.
+- [x] Mostrar de forma explícita quién realizó la gestión en cada fila.
 - [x] Agregar acciones **Editar** y **Eliminar**.
 - [x] Agregar paginación con página, cantidad de registros, Anterior y Siguiente.
 - [x] Mantener el mensaje sobre el impacto de los cambios en reportes, dashboard y consulta pública.
@@ -116,19 +116,19 @@ Este documento incorpora los requerimientos entregados para Gestión de Monitore
 
 ## Módulo Inconsistencias
 
-- [ ] Agregar los indicadores Por conciliar y Errores marcación.
-- [ ] Agregar la sección Errores automáticos de marcación y la descripción de tipos de inconsistencia.
-- [ ] Agregar tabla con Monitor, Fecha, Marcación, Error y Gestión.
-- [ ] Agregar “Crear anotación de solución”, Motivo de invalidación e Invalidar registro.
-- [ ] Agregar el detalle “Marcaciones y horarios cercanos”.
-- [ ] Mostrar día, fecha, horario, horas, asignatura, marcaciones, estados, relaciones y duplicados.
-- [ ] Identificar visualmente Emparejado y Duplicado ignorado.
-- [ ] Permitir gestionar mediante anotación de solución o invalidación y conservar monitor/dependencia en el detalle.
+- [x] Agregar los indicadores Por conciliar y Errores marcación.
+- [x] Agregar la sección Errores automáticos de marcación y la descripción de tipos de inconsistencia.
+- [x] Agregar tabla con Monitor, Fecha, Marcación, Error y Gestión.
+- [x] Agregar “Crear anotación de solución”, Motivo de invalidación e Invalidar registro.
+- [x] Agregar el detalle “Marcaciones y horarios cercanos”.
+- [x] Mostrar día, fecha, horario, horas, asignatura, marcaciones, estados, relaciones y duplicados.
+- [x] Identificar visualmente Emparejado y Duplicado ignorado.
+- [x] Permitir gestionar mediante anotación de solución o invalidación y conservar monitor/dependencia en el detalle.
 
 ## Módulo Excepciones
 
 - [x] Mostrar información de estados de las excepciones y calcular el estado según vigencia y activación.
-- [ ] Ajustar los nombres de estado solicitados exactamente a Activa, Próxima a iniciar, Finalizada e Inactiva.
+- [x] Ajustar los nombres de estado solicitados exactamente a Activa, Próxima a iniciar, Finalizada e Inactiva.
 - [ ] Agregar usuarios incluidos y bloques horarios en Nueva excepción.
 - [ ] Agregar la casilla **Todo el semestre académico** y deshabilitar las fechas al seleccionarla.
 - [ ] Mostrar Usuarios y Bloques en Excepciones registradas.

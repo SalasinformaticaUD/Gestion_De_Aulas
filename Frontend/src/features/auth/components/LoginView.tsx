@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { getApplication } from "@/features/auth/config/applications";
 import { guardarSesion } from "@/features/auth/lib/sesion";
-import { solicitarAulas, type RespuestaLoginCentral } from "@/features/monitores/api/clienteMonitores";
+import { solicitarAulas, solicitarMonitores, type RespuestaLoginCentral, type RespuestaLoginMonitores } from "@/features/monitores/api/clienteMonitores";
 import { CosmosLogo } from "@/components/brand/CosmosLogo";
 import { UniversityLogo } from "@/components/brand/UniversityLogo";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
@@ -43,19 +43,45 @@ export function LoginView() {
     setIsValidating(true);
 
     try {
+      if (application.key === "monitores") {
+        const local = await solicitarMonitores<RespuestaLoginMonitores>("/api/v1/auth/login/", {
+          method: "POST",
+          body: JSON.stringify({ username: username.trim(), password }),
+        });
+        const nombreCompleto = `${local.first_name} ${local.last_name}`.trim() || local.username;
+        guardarSesion({
+          aplicacion: "monitores",
+          tokenAcceso: "",
+          expiraEn: Date.now() + 8 * 60 * 60 * 1000,
+          usuario: {
+            id: local.id,
+            nombreCompleto,
+            nombreUsuario: local.username,
+            correo: local.email,
+            fotoPerfil: null,
+            cargo: null,
+            dependencia: local.department ? { id: local.department, nombre: local.department } : null,
+            roles: [local.role],
+            permisos: [],
+            modulos: ["MONITORES"],
+          },
+          aplicacionesAutorizadas: ["monitores"],
+        });
+        setFeedback("success");
+        const destino = nextPath?.startsWith("/") ? nextPath : application.destination;
+        window.setTimeout(() => router.push(destino), 450);
+        return;
+      }
       const central = await solicitarAulas<RespuestaLoginCentral>("/auth/login", undefined, {
         method: "POST",
         body: JSON.stringify({ identificador: username.trim(), password }),
       });
-      const permitido = application.key === "monitores"
-        ? central.aplicaciones.puedeAccederMonitores
-        : central.aplicaciones.puedeAccederAulas;
+      const permitido = central.aplicaciones.puedeAccederAulas;
       if (!permitido) throw new Error(`Su usuario no tiene permisos para ${application.name}.`);
       const aplicacionesAutorizadas = [
         ...(central.aplicaciones.puedeAccederAulas ? ["aulas" as const] : []),
         ...(central.aplicaciones.puedeAccederMonitores ? ["monitores" as const] : []),
       ];
-      // La API de Monitores recibe este mismo token; nunca se reenvían credenciales.
       guardarSesion({ aplicacion:application.key, tokenAcceso:central.accessToken, expiraEn:Date.now() + central.expiresIn * 1000, usuario:central.usuario, aplicacionesAutorizadas });
       setFeedback("success");
       const destino = nextPath?.startsWith("/") ? nextPath : application.destination;

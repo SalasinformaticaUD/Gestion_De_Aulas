@@ -42,6 +42,7 @@ export type ExcepcionApi = {
 export type AnotacionApi = {
   id: string;
   leader: string;
+  leader_name?: string;
   monitor: string;
   session: string | null;
   department: string;
@@ -96,6 +97,97 @@ export type ImportacionAsistenciaApi = {
   failed_rows: number;
   error_message: string;
   created_at: string;
+};
+
+export type HorarioCercanoInconsistenciaApi = {
+  id: string;
+  weekday: number;
+  weekday_label: string;
+  start_time: string;
+  end_time: string;
+  assigned_minutes: number;
+  asignatura: string;
+  grupo: string;
+  docente: string;
+  proyecto_curricular: string;
+  project_label: string;
+  location: string;
+};
+
+export type MarcacionCercanaInconsistenciaApi = {
+  id: string;
+  row_number: number;
+  event_at: string | null;
+  entry_at: string | null;
+  exit_at: string | null;
+  record_type: string;
+  operation: string;
+  pairing_status: string;
+  pairing_status_label: string;
+  paired_record: string | null;
+  duplicate_of: string | null;
+  pairing_reason: string;
+  reconciliation_status: string;
+  is_current: boolean;
+};
+
+export type EventoInconsistenciaApi = {
+  id: string;
+  action: string;
+  action_label: string;
+  note: string;
+  actor: string | null;
+  actor_name: string;
+  created_at: string;
+};
+
+export type InconsistenciaApi = {
+  id: string;
+  raw_record: string;
+  monitor: string | null;
+  monitor_name: string | null;
+  monitor_code: string | null;
+  department: string;
+  department_label: string;
+  raw_full_name: string;
+  raw_department: string;
+  work_day: string;
+  weekday: string;
+  inconsistency_type: string;
+  inconsistency_type_label: string;
+  status: string;
+  status_label: string;
+  message: string;
+  resolution_note: string;
+  solution_annotation: string | null;
+  event_at: string | null;
+  pairing_status: string;
+  pairing_status_label: string;
+  detected_at: string | null;
+  validated_at: string | null;
+};
+
+export type DetalleInconsistenciaApi = InconsistenciaApi & {
+  nearby_schedules: HorarioCercanoInconsistenciaApi[];
+  nearby_marks: MarcacionCercanaInconsistenciaApi[];
+  work_session: {
+    id: string;
+    schedule: HorarioCercanoInconsistenciaApi | null;
+    actual_start: string;
+    actual_end: string;
+    normal_minutes: number;
+    overtime_minutes: number;
+    penalty_minutes: number;
+    late_minutes: number;
+    session_state: string;
+    invalidation_reason: string;
+  } | null;
+  events: EventoInconsistenciaApi[];
+};
+
+export type IndicadoresInconsistenciasApi = {
+  pending_reconciliation: number;
+  marking_errors: number;
 };
 
 export type FilaDashboardApi = {

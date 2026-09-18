@@ -36,6 +36,7 @@ export type SesionMonitor = {
 export type AnotacionMonitor = {
   id: string;
   monitorId: string;
+  registroId: string | null;
   fecha: string;
   tipo: "OLVIDO_REGISTRO" | "HORAS_VIRTUALES" | "PERMISO" | "NOVEDAD";
   accion: "SUMAR" | "DESCONTAR" | "ANOTAR";

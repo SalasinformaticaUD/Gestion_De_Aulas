@@ -15,7 +15,7 @@ export const adaptarExcepcion = (item: ExcepcionApi): ExcepcionHorario => ({ id:
 
 const tipos: Record<AnotacionApi["annotation_type"], AnotacionMonitor["tipo"]> = { missing_punch:"OLVIDO_REGISTRO", virtual_hours:"HORAS_VIRTUALES", permission:"PERMISO", novelty:"NOVEDAD" };
 const acciones: Record<AnotacionApi["action"], AnotacionMonitor["accion"]> = { add:"SUMAR", deduct:"DESCONTAR", note:"ANOTAR" };
-export const adaptarAnotacion = (item: AnotacionApi): AnotacionMonitor => ({ id:item.id, monitorId:item.monitor, fecha:item.occurred_on, tipo:tipos[item.annotation_type], accion:acciones[item.action], horas:Math.abs(item.delta_minutes)/60, motivo:item.description, responsable:item.leader });
+export const adaptarAnotacion = (item: AnotacionApi): AnotacionMonitor => ({ id:item.id, monitorId:item.monitor, registroId:item.session, fecha:item.occurred_on, tipo:tipos[item.annotation_type], accion:acciones[item.action], horas:Math.abs(item.delta_minutes)/60, motivo:item.description, responsable:item.leader_name || item.leader });
 
 const estados: Record<SesionApi["overtime_status"], SesionMonitor["estadoExtra"]> = { pending:"PENDIENTE", approved:"APROBADA", rejected:"RECHAZADA", not_applicable:"NO_APLICA" };
 export const adaptarSesion = (item: SesionApi): SesionMonitor => ({ id:item.id, monitorId:item.monitor, fecha:item.work_day, entrada:item.actual_start?.slice(0,8) ?? "—", salida:item.actual_end?.slice(0,8) ?? "—", horasNormales:item.normal_minutes/60, horasExtra:item.overtime_minutes/60, horasRetraso:item.late_minutes/60, estadoExtra:estados[item.overtime_status], retrasoExento:item.lateness_excused, excepcion:item.lateness_exception_name || undefined });

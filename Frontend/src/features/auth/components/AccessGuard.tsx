@@ -37,12 +37,14 @@ export function AccessGuard({ application, children }: AccessGuardProps) {
       router.replace(`/login?app=${application}&next=${encodeURIComponent(pathname)}`);
     }, milisegundosRestantes);
     const validarSesion = async () => {
-      await solicitarAulas("/auth/me", sesion.tokenAcceso);
-      // Monitores mantiene su perfil operativo local y debe confirmar que el UUID
-      // del JWT central está vinculado a un usuario activo en esa aplicación.
       if (application === "monitores") {
-        await solicitarMonitores("/api/v1/platform/me/");
+        if (sesion.tokenAcceso) {
+          await solicitarMonitores("/api/v1/platform/handoff-admin/", { method: "POST" });
+        }
+        await solicitarMonitores("/api/v1/auth/me/");
+        return;
       }
+      await solicitarAulas("/auth/me", sesion.tokenAcceso);
     };
     validarSesion()
       .then(() => { if (activo) setIsAllowed(true); })
