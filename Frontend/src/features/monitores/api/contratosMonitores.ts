@@ -201,6 +201,7 @@ export type FilaDashboardApi = {
   penalty_minutes: number;
   remaining_minutes: number;
   late_count: number;
+  memorandums_count: number;
   has_memorandum: boolean;
 };
 
