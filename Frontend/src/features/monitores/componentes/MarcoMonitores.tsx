@@ -9,6 +9,7 @@ import { UniversityLogo } from "@/components/brand/UniversityLogo";
 import { CosmosLogo } from "@/components/brand/CosmosLogo";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { ModuleSwitcher } from "@/components/layout/ModuleSwitcher";
+import { solicitarMonitores } from "@/features/monitores/api/clienteMonitores";
 
 const navegacion = [
   { href:"/gestion-monitores", label:"Dashboard" },
@@ -23,6 +24,7 @@ const navegacion = [
   { href:"/gestion-monitores/anotaciones", label:"Anotaciones" },
   { href:"/gestion-monitores/inconsistencias", label:"Inconsistencias" },
   { href:"/gestion-monitores/excepciones", label:"Excepciones" },
+  { href:"/gestion-monitores/usuarios", label:"Usuarios" },
 ] as const;
 
 export function MarcoMonitores({ children }: { children:React.ReactNode }) {
@@ -31,6 +33,7 @@ export function MarcoMonitores({ children }: { children:React.ReactNode }) {
   const [panelContraido, setPanelContraido] = useState(false);
   const [perfil, setPerfil] = useState<UserProfile>(defaultProfile);
   const [ahora, setAhora] = useState<Date | null>(null);
+  const [puedeGestionarUsuarios, setPuedeGestionarUsuarios] = useState(false);
   useEffect(() => {
     const refrescar = () => {
       const usuario = obtenerSesion()?.usuario;
@@ -42,6 +45,14 @@ export function MarcoMonitores({ children }: { children:React.ReactNode }) {
       window.removeEventListener(eventoSesion, refrescar);
     };
   }, []);
+  useEffect(() => {
+    let vigente = true;
+    void solicitarMonitores<{ role: string }>("/api/v1/auth/me/")
+      .then((usuario) => { if (vigente) setPuedeGestionarUsuarios(usuario.role === "admin"); })
+      .catch(() => { if (vigente) setPuedeGestionarUsuarios(false); });
+    return () => { vigente = false; };
+  }, []);
+  const navegacionVisible = navegacion.filter((item) => item.href !== "/gestion-monitores/usuarios" || puedeGestionarUsuarios);
   useEffect(() => {
     const actualizar = () => setAhora(new Date());
     actualizar(); const reloj = window.setInterval(actualizar, 1000);
@@ -65,7 +76,7 @@ export function MarcoMonitores({ children }: { children:React.ReactNode }) {
     {menuAbierto && <button className="menu-overlay" aria-label="Cerrar menú" onClick={() => setMenuAbierto(false)} />}
     <aside className={`sidebar ${menuAbierto ? "is-open" : ""}`} aria-label="Navegación de gestión de monitores">
       <div className="brand"><CosmosLogo className="sidebar-cosmos-logo" variant="light" priority /><span><small>Gestión de Monitores</small></span></div>
-      <nav className="nav"><p className="nav-label">Monitores</p>{navegacion.map((item) => <Link key={item.href} href={item.href} className="nav-link" aria-current={ruta === item.href ? "page" : undefined} onClick={() => setMenuAbierto(false)}><span className="nav-icon" aria-hidden="true">•</span>{item.label}</Link>)}</nav>
+      <nav className="nav"><p className="nav-label">Monitores</p>{navegacionVisible.map((item) => <Link key={item.href} href={item.href} className="nav-link" aria-current={ruta === item.href ? "page" : undefined} onClick={() => setMenuAbierto(false)}><span className="nav-icon" aria-hidden="true">•</span>{item.label}</Link>)}</nav>
       <footer className="sidebar-footer"><ModuleSwitcher current="monitores" onNavigate={() => setMenuAbierto(false)} /><button type="button" className="nav-link nav-logout" onClick={salir}><span className="nav-icon" aria-hidden="true">↪</span>Salir</button></footer>
     </aside>
     <section className="workspace"><header className="topbar"><button className="menu-button" type="button" aria-label={panelContraido ? "Mostrar menú" : "Ocultar menú"} aria-expanded={menuAbierto || !panelContraido} onClick={alternarMenu}>☰</button><span className="period">SEMESTRE 2026-3</span><div className="date-time"><span>{fecha}</span><time dateTime={ahora?.toISOString()}>{hora}</time></div><span className="topbar-spacer" /><ThemeToggle /><Link href="/gestion-monitores/perfil" className="profile"><span className={`avatar ${perfil.photo ? "avatar-has-photo" : ""}`}>{perfil.photo ? <img src={perfil.photo} alt="" /> : getInitials(perfil.fullName)}</span><span className="profile-copy"><strong>{perfil.fullName}</strong><small>{perfil.role}</small></span></Link></header><main>{children}</main></section>

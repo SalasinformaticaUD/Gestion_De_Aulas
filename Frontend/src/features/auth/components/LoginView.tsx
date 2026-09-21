@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { getApplication } from "@/features/auth/config/applications";
-import { guardarSesion } from "@/features/auth/lib/sesion";
-import { solicitarAulas, solicitarMonitores, type RespuestaLoginCentral, type RespuestaLoginMonitores } from "@/features/monitores/api/clienteMonitores";
+import { cambiarAplicacionActiva, guardarSesion, obtenerSesion, tieneAccesoAplicacion } from "@/features/auth/lib/sesion";
+import { ErrorApi, solicitarAulas, solicitarMonitores, type RespuestaLoginCentral, type RespuestaLoginMonitores } from "@/features/monitores/api/clienteMonitores";
 import { CosmosLogo } from "@/components/brand/CosmosLogo";
 import { UniversityLogo } from "@/components/brand/UniversityLogo";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
@@ -31,6 +31,14 @@ export function LoginView() {
     setIsValidating(false);
   }, [application.key]);
 
+  useEffect(() => {
+    const sesion = obtenerSesion();
+    if (!tieneAccesoAplicacion(application.key, sesion)) return;
+    cambiarAplicacionActiva(application.key);
+    const destino = nextPath?.startsWith("/") ? nextPath : application.destination;
+    router.replace(destino);
+  }, [application.key, nextPath, router, application.destination]);
+
   async function submitLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!username.trim() || !password) {
@@ -43,7 +51,31 @@ export function LoginView() {
     setIsValidating(true);
 
     try {
-      if (application.key === "monitores") {
+      const iniciarSesionCentral = async () => {
+        const central = await solicitarAulas<RespuestaLoginCentral>("/auth/login", undefined, {
+          method: "POST",
+          body: JSON.stringify({ identificador: username.trim(), password }),
+        });
+        const permitido = application.key === "monitores"
+          ? central.aplicaciones.puedeAccederMonitores
+          : central.aplicaciones.puedeAccederAulas;
+        if (!permitido) throw new Error(`Su usuario no tiene permisos para ${application.name}.`);
+        const aplicacionesAutorizadas = [
+          ...(central.aplicaciones.puedeAccederAulas ? ["aulas" as const] : []),
+          ...(central.aplicaciones.puedeAccederMonitores ? ["monitores" as const] : []),
+        ];
+        guardarSesion({ aplicacion: application.key, tokenAcceso: central.accessToken, expiraEn: Date.now() + central.expiresIn * 1000, usuario: central.usuario, aplicacionesAutorizadas });
+      };
+
+      try {
+        // La cuenta central es la fuente de identidad para ambos aplicativos.
+        // Así, ingresar desde Monitores funciona igual que ingresar desde Aulas.
+        await iniciarSesionCentral();
+      } catch (problemaCentral) {
+        // Se conserva el acceso de las cuentas históricas que únicamente
+        // existen en Monitores. Otros errores (incluido 429) no deben generar
+        // un segundo intento ni ocultar el diagnóstico recibido.
+        if (application.key !== "monitores" || !(problemaCentral instanceof ErrorApi) || problemaCentral.estado !== 401) throw problemaCentral;
         const local = await solicitarMonitores<RespuestaLoginMonitores>("/api/v1/auth/login/", {
           method: "POST",
           body: JSON.stringify({ username: username.trim(), password }),
@@ -67,22 +99,7 @@ export function LoginView() {
           },
           aplicacionesAutorizadas: ["monitores"],
         });
-        setFeedback("success");
-        const destino = nextPath?.startsWith("/") ? nextPath : application.destination;
-        window.setTimeout(() => router.push(destino), 450);
-        return;
       }
-      const central = await solicitarAulas<RespuestaLoginCentral>("/auth/login", undefined, {
-        method: "POST",
-        body: JSON.stringify({ identificador: username.trim(), password }),
-      });
-      const permitido = central.aplicaciones.puedeAccederAulas;
-      if (!permitido) throw new Error(`Su usuario no tiene permisos para ${application.name}.`);
-      const aplicacionesAutorizadas = [
-        ...(central.aplicaciones.puedeAccederAulas ? ["aulas" as const] : []),
-        ...(central.aplicaciones.puedeAccederMonitores ? ["monitores" as const] : []),
-      ];
-      guardarSesion({ aplicacion:application.key, tokenAcceso:central.accessToken, expiraEn:Date.now() + central.expiresIn * 1000, usuario:central.usuario, aplicacionesAutorizadas });
       setFeedback("success");
       const destino = nextPath?.startsWith("/") ? nextPath : application.destination;
       window.setTimeout(() => router.push(destino), 450);

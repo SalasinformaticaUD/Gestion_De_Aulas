@@ -1,10 +1,27 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { applications } from "@/features/auth/config/applications";
+import { cambiarAplicacionActiva, eventoSesion, obtenerSesion, tieneAccesoAplicacion, type SesionAplicacion } from "@/features/auth/lib/sesion";
 import { UniversityLogo } from "@/components/brand/UniversityLogo";
 import { CosmosLogo } from "@/components/brand/CosmosLogo";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 export default function ApplicationSelectorPage() {
+  const [sesion, setSesion] = useState<SesionAplicacion | null | undefined>(undefined);
+  useEffect(() => {
+    const actualizar = () => setSesion(obtenerSesion());
+    actualizar();
+    window.addEventListener(eventoSesion, actualizar);
+    window.addEventListener("storage", actualizar);
+    return () => { window.removeEventListener(eventoSesion, actualizar); window.removeEventListener("storage", actualizar); };
+  }, []);
+  const tieneAcceso = (aplicacion: "aulas" | "monitores") => Boolean(sesion && tieneAccesoAplicacion(aplicacion, sesion));
+  const destino = (aplicacion: "aulas" | "monitores") => tieneAcceso(aplicacion) ? applications[aplicacion].destination : applications[aplicacion].loginPath;
+  const seleccionar = (aplicacion: "aulas" | "monitores") => {
+    if (tieneAcceso(aplicacion)) cambiarAplicacionActiva(aplicacion);
+  };
   return (
     <main className="app-selector">
       <ThemeToggle />
@@ -24,7 +41,7 @@ export default function ApplicationSelectorPage() {
         </div>
 
         <div className="application-grid">
-          <Link className="application-card" href={applications.aulas.loginPath}>
+          <Link className="application-card" href={destino("aulas")} onClick={() => seleccionar("aulas")}>
             <span className="application-icon" aria-hidden="true">♧</span>
             <span className="application-content">
               <strong>{applications.aulas.name}</strong>
@@ -33,7 +50,7 @@ export default function ApplicationSelectorPage() {
             <span className="application-action">Ingresar <span aria-hidden="true">→</span></span>
           </Link>
 
-          <Link className="application-card" href={applications.monitores.loginPath}>
+          <Link className="application-card" href={destino("monitores")} onClick={() => seleccionar("monitores")}>
             <span className="application-icon application-icon-monitors" aria-hidden="true">♧</span>
             <span className="application-content">
               <strong>{applications.monitores.name}</strong>

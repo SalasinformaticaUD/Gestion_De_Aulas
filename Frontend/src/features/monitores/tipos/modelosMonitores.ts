@@ -55,6 +55,9 @@ export type ExcepcionHorario = {
   ignorarRetrasos: boolean;
   aprobarHorasExtra: boolean;
   activa: boolean;
+  usuarios: string[];
+  bloques: string[];
+  todoElSemestre: boolean;
 };
 
 export type RegistroConciliacion = {

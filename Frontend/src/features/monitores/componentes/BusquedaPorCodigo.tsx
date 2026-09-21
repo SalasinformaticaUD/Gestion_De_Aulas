@@ -1,6 +1,35 @@
 "use client";
+
 import Link from "next/link";
-import { useState,type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { servicioMonitores } from "@/features/monitores/api/servicioMonitores";
+import { AvisoTemporal } from "./AvisoTemporal";
 import estilos from "./SistemaVisualMonitores.module.css";
-export function BusquedaPorCodigo(){const[codigo,setCodigo]=useState("");const[resultado,setResultado]=useState<{nombre:string;dependencia:string;horas:number}|null>(null);const[error,setError]=useState("");const buscar=async(e:FormEvent)=>{e.preventDefault();setError("");try{const respuesta=await servicioMonitores.consultaPublica(codigo.trim());setResultado({nombre:respuesta.monitor.full_name,dependencia:respuesta.monitor.department,horas:respuesta.metrics.total_minutes/60})}catch(problema){setResultado(null);setError(problema instanceof Error?problema.message:"No se encontró el monitor.")}};return <section className={estilos.tarjeta}><header><div><span className={estilos.etiqueta}>Consulta de monitor</span><h2>Búsqueda por código estudiantil</h2><p>Consulte rápidamente el acumulado y acceda al detalle individual.</p></div></header><form className={estilos.busquedaCodigo} onSubmit={buscar}><label className={estilos.campoAncho}><span>Código estudiantil</span><input value={codigo} onChange={e=>setCodigo(e.target.value)} placeholder="Ej. 20211001001" required/></label><button className="button-primary">Buscar monitor</button></form>{error&&<div className={`${estilos.aviso} ${estilos.avisoError}`}>{error}</div>}{resultado&&<div className={estilos.resultadoBusqueda}><div><strong>{resultado.nombre}</strong><span>{resultado.dependencia} · {resultado.horas.toFixed(1)} horas acumuladas</span></div><Link className={estilos.botonSecundario} href="/gestion-monitores/monitores">Ver directorio</Link></div>}</section>}
+
+export function BusquedaPorCodigo() {
+  const [codigo, setCodigo] = useState("");
+  const [resultado, setResultado] = useState<{ nombre: string; dependencia: string; horas: number } | null>(null);
+  const [error, setError] = useState("");
+
+  const buscar = async (evento: FormEvent) => {
+    evento.preventDefault();
+    setError("");
+    try {
+      const respuesta = await servicioMonitores.consultaPublica(codigo.trim());
+      setResultado({ nombre: respuesta.monitor.full_name, dependencia: respuesta.monitor.department, horas: respuesta.metrics.total_minutes / 60 });
+    } catch (problema) {
+      setResultado(null);
+      setError(problema instanceof Error ? problema.message : "No se encontró el monitor.");
+    }
+  };
+
+  return <section className={estilos.tarjeta}>
+    <header><div><span className={estilos.etiqueta}>Consulta de monitor</span><h2>Búsqueda por código estudiantil</h2><p>Consulte rápidamente el acumulado y acceda al detalle individual.</p></div></header>
+    <form className={estilos.busquedaCodigo} onSubmit={buscar}>
+      <label className={estilos.campoAncho}><span>Código estudiantil</span><input value={codigo} onChange={(evento) => setCodigo(evento.target.value)} placeholder="Ej. 20211001001" required /></label>
+      <button className="button-primary">Buscar monitor</button>
+    </form>
+    {error && <AvisoTemporal mensaje={error} tipo="error" alCerrar={() => setError("")} />}
+    {resultado && <div className={estilos.resultadoBusqueda}><div><strong>{resultado.nombre}</strong><span>{resultado.dependencia} · {resultado.horas.toFixed(1)} horas acumuladas</span></div><Link className={estilos.botonSecundario} href="/gestion-monitores/monitores">Ver directorio</Link></div>}
+  </section>;
+}

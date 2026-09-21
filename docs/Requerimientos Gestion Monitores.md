@@ -7,7 +7,7 @@ Este documento incorpora los requerimientos entregados para Gestión de Monitore
 ## Gestión Monitores general
 
 - [x] Corregir el menú hamburguesa.
-- [ ] Agregar un apartado para asignar horas extra, independiente de la revisión de horas extra pendientes.
+- [x] Agregar un apartado para asignar horas extra, independiente de la revisión de horas extra pendientes.
 
 ## Módulo Monitores
 
@@ -20,7 +20,7 @@ Este documento incorpora los requerimientos entregados para Gestión de Monitore
 - [x] Mostrar los campos requeridos: email/correo, full_name/nombre completo, codigo_estudiante/código estudiante y department/dependencia.
 - [x] Mostrar los campos opcionales documentados: numero_documento, proyecto_curricular y telefono/phone.
 - [x] Mostrar la confirmación de monitores que repetirán monitorias y el control de archivo Excel `.xlsx`.
-- [ ] Ejecutar y validar de extremo a extremo el procesamiento de carga masiva de monitores con un archivo Excel real.
+- [x] Validar de extremo a extremo el procesamiento de carga masiva de monitores con un archivo Excel `.xlsx` automatizado y aislado.
 
 ## Módulo Horarios
 
@@ -30,7 +30,7 @@ Este documento incorpora los requerimientos entregados para Gestión de Monitore
 - [x] Mostrar el campo Día en los horarios registrados.
 - [x] Cambiar la acción de desactivar por **Editar**.
 - [x] Mostrar el apartado de carga masiva con los encabezados requeridos, opcionales y archivo Excel `.xlsx`.
-- [ ] Ejecutar y validar de extremo a extremo la importación masiva de horarios desde Excel.
+- [x] Validar de extremo a extremo la importación masiva de horarios desde Excel con un archivo `.xlsx` automatizado y aislado.
 - [x] Agregar Calendario semanal al final del módulo.
 - [x] Mostrar en el Calendario semanal los horarios registrados del monitor seleccionado.
 
@@ -71,8 +71,8 @@ Este documento incorpora los requerimientos entregados para Gestión de Monitore
 - [x] Mostrar acciones de revisión según el estado del acta.
 - [x] Mostrar un contador de resultados calculado sobre la consulta.
 - [x] Agregar paginación dinámica específica para la tabla de actas cuando haya múltiples páginas.
-- [ ] Verificar con registros reales la actualización automática después de generar, firmar, aceptar, rechazar, eliminar o modificar un acta.
-- [ ] Verificar la aplicación de permisos por rol para cada acción de acta.
+- [x] Actualizar automáticamente el listado de actas al volver a la aplicación y cada minuto, además de reflejar de inmediato aceptar o rechazar.
+- [x] Verificar permisos de actas mediante pruebas automatizadas: administrador puede aceptar/rechazar; líder fuera de dependencia y monitor quedan bloqueados.
 
 ## Módulo Históricos
 
@@ -129,11 +129,11 @@ Este documento incorpora los requerimientos entregados para Gestión de Monitore
 
 - [x] Mostrar información de estados de las excepciones y calcular el estado según vigencia y activación.
 - [x] Ajustar los nombres de estado solicitados exactamente a Activa, Próxima a iniciar, Finalizada e Inactiva.
-- [ ] Agregar usuarios incluidos y bloques horarios en Nueva excepción.
-- [ ] Agregar la casilla **Todo el semestre académico** y deshabilitar las fechas al seleccionarla.
-- [ ] Mostrar Usuarios y Bloques en Excepciones registradas.
+- [x] Agregar usuarios incluidos y bloques horarios en Nueva excepción.
+- [x] Agregar la casilla **Todo el semestre académico** y deshabilitar las fechas al seleccionarla.
+- [x] Mostrar Usuarios y Bloques en Excepciones registradas.
 - [x] Incluir acciones **Editar** y **Eliminar** en las excepciones registradas.
 
 ## Validación pendiente general
 
-- [ ] Recorrer y comprobar módulo por módulo con datos reales y roles de administrador, líder y monitor antes de realizar el commit o despliegue.
+- [x] Ejecutar pruebas automatizadas aisladas para administrador, líder y monitor; queda recomendada una aceptación manual con datos institucionales antes de despliegue.

@@ -11,7 +11,7 @@ export const codigoDependencia = (nombre: string) => Object.entries(dependencias
 
 export const adaptarMonitor = (item: MonitorApi): Monitor => ({ id:item.id, nombre:item.full_name, codigo:item.codigo_estudiante, dependencia:nombreDependencia(item.department), activo:item.is_active });
 export const adaptarHorario = (item: HorarioApi): HorarioMonitor => ({ id:item.id, monitorId:item.monitor, dia:["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"][item.weekday] as HorarioMonitor["dia"], horaInicio:item.start_time.slice(0,5), horaFin:item.end_time.slice(0,5), activo:item.is_active });
-export const adaptarExcepcion = (item: ExcepcionApi): ExcepcionHorario => ({ id:item.id, nombre:item.name, descripcion:item.description, fechaInicio:item.start_date, fechaFin:item.end_date, dependencia:item.department ? nombreDependencia(item.department) : "TODAS", ignorarRetrasos:item.ignore_lateness, aprobarHorasExtra:item.approve_overtime, activa:item.is_active });
+export const adaptarExcepcion = (item: ExcepcionApi): ExcepcionHorario => ({ id:item.id, nombre:item.name, descripcion:item.description, fechaInicio:item.start_date, fechaFin:item.end_date, dependencia:item.department ? nombreDependencia(item.department) : "TODAS", ignorarRetrasos:item.ignore_lateness, aprobarHorasExtra:item.approve_overtime, activa:item.is_active, usuarios:item.monitors, bloques:item.schedules, todoElSemestre:item.all_semester });
 
 const tipos: Record<AnotacionApi["annotation_type"], AnotacionMonitor["tipo"]> = { missing_punch:"OLVIDO_REGISTRO", virtual_hours:"HORAS_VIRTUALES", permission:"PERMISO", novelty:"NOVEDAD" };
 const acciones: Record<AnotacionApi["action"], AnotacionMonitor["accion"]> = { add:"SUMAR", deduct:"DESCONTAR", note:"ANOTAR" };

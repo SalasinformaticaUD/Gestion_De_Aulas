@@ -1,32 +1,35 @@
-"use client";
-
-import type { FormEvent } from "react";
 import estilos from "../SistemaVisualMonitores.module.css";
 
 type ConsultaCodigoProps = {
-  codigo: string;
-  error: string;
-  onCodigoChange: (codigo: string) => void;
-  onSubmit: (evento: FormEvent<HTMLFormElement>) => void;
+  busqueda: string;
+  total: number;
+  visibles: number;
+  onBusquedaChange: (busqueda: string) => void;
 };
 
-export function ConsultaCodigo({ codigo, error, onCodigoChange, onSubmit }: ConsultaCodigoProps) {
+export function ConsultaCodigo({ busqueda, total, visibles, onBusquedaChange }: ConsultaCodigoProps) {
   return (
     <section className={`${estilos.tarjeta} ${estilos.dashboardConsulta}`}>
       <header>
         <div>
-          <h2>Consulta por código</h2>
-          <p>Consulta las horas y registros por día de un monitor visible para tu dependencia.</p>
+          <h2>Buscar monitores</h2>
+          <p>Filtra automáticamente la lista de monitores por nombre o código estudiantil.</p>
         </div>
       </header>
-      <form className={estilos.busquedaCodigo} onSubmit={onSubmit}>
+      <div className={estilos.busquedaCodigo}>
         <label className={estilos.campoAncho}>
-          <span>Código de estudiante</span>
-          <input value={codigo} onChange={(evento) => onCodigoChange(evento.target.value)} placeholder="Código de estudiante" required />
+          <span>Nombre o código</span>
+          <input
+            type="search"
+            value={busqueda}
+            onChange={(evento) => onBusquedaChange(evento.target.value)}
+            placeholder="Escribe un nombre o código de estudiante"
+            autoComplete="off"
+          />
         </label>
-        <button className="button-primary">Consultar</button>
-      </form>
-      {error && <p className={`${estilos.aviso} ${estilos.avisoError}`}>{error}</p>}
+        {busqueda && <button type="button" className={estilos.botonSecundario} onClick={() => onBusquedaChange("")}>Limpiar</button>}
+        <span className={estilos.contadorBusqueda}>{visibles} de {total} monitor(es)</span>
+      </div>
     </section>
   );
 }

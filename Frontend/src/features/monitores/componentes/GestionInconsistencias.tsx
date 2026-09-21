@@ -4,6 +4,7 @@ import { Fragment, useState } from "react";
 import type { DetalleInconsistenciaApi, InconsistenciaApi, MarcacionCercanaInconsistenciaApi } from "@/features/monitores/api/contratosMonitores";
 import { servicioMonitores } from "@/features/monitores/api/servicioMonitores";
 import { usarRecursoApi } from "@/features/monitores/ganchos/usarRecursoApi";
+import { AvisoTemporal } from "./AvisoTemporal";
 import estilos from "./SistemaVisualMonitores.module.css";
 
 function formatoHoras(minutos: number) {
@@ -154,7 +155,8 @@ export function GestionInconsistencias() {
         <span className={`${estilos.insignia} ${estilos.peligro}`}>Errores marcación: {indicadores.datos.marking_errors}</span>
       </div>
     </section>
-    {(aviso || recurso.error || indicadores.error) && <div className={estilos.aviso}>{aviso || recurso.error || indicadores.error}</div>}
+    {(recurso.error || indicadores.error) && <div className={`${estilos.aviso} ${estilos.avisoError}`}>{recurso.error || indicadores.error}</div>}
+    {aviso && <AvisoTemporal mensaje={aviso} tipo={aviso.includes("correctamente") || aviso.startsWith("Se ") ? "exito" : "error"} alCerrar={() => setAviso("")} />}
     <section className={estilos.tarjeta}>
       <header><div><h2>Errores automáticos de marcación</h2><p>Revise las marcaciones y horarios cercanos; resuelva con una anotación o invalide el registro cuando corresponda.</p></div></header>
       <div className={estilos.tablaContenedor}>

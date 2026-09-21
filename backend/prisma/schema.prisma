@@ -17,6 +17,17 @@ enum EstadoCuenta {
   BLOQUEADA
 }
 
+enum PerfilMonitores {
+  ADMIN
+  LIDER
+}
+
+enum DependenciaMonitores {
+  PHYSICS
+  INFORMATICS_LABS
+  ELECTRICAL
+}
+
 enum EstadoAula {
   OPERATIVA
   MANTENIMIENTO
@@ -165,6 +176,8 @@ model Rol {
   id                      String          @id @default(uuid()) @db.Uuid
   nombre                  String          @unique
   descripcion             String?
+  perfilMonitores         PerfilMonitores?
+  dependenciaMonitores    DependenciaMonitores?
   usuarios                UsuarioRol[]
   permisos                RolPermiso[]
   credencialesAutorizadas CredencialRol[]

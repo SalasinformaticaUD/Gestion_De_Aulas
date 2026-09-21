@@ -59,6 +59,7 @@ export class AuthService {
     }
 
     const usuarioAutenticado = this.toAuthenticatedUser(usuario);
+    const puedeAccederMonitores = usuario.roles.some(({ rol }) => Boolean(rol.perfilMonitores));
     const token = this.tokens.sign({
       sub: usuarioAutenticado.id,
       nombreUsuario: usuarioAutenticado.nombreUsuario,
@@ -74,7 +75,7 @@ export class AuthService {
         puedeAccederAulas: usuarioAutenticado.modulos.some(
           (codigo) => codigo !== 'MONITORES',
         ),
-        puedeAccederMonitores: usuarioAutenticado.modulos.includes('MONITORES'),
+        puedeAccederMonitores: puedeAccederMonitores && usuarioAutenticado.modulos.includes('MONITORES'),
         urlMonitores: process.env.MONITORES_API_URL?.trim() || null,
       },
     };
@@ -162,6 +163,7 @@ export class AuthService {
     roles: Array<{
       rol: {
         nombre: string;
+        perfilMonitores: 'ADMIN' | 'LIDER' | null;
         permisos: Array<{
           permiso: {
             codigo: string;

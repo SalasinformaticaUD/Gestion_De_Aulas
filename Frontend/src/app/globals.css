@@ -1306,3 +1306,11 @@ html[data-theme="dark"] .maintenance-card { color:var(--ink); background:var(--s
 html[data-theme="dark"] .maintenance-card>p:not(.maintenance-label),html[data-theme="dark"] .maintenance-card small { color:var(--muted); }
 html[data-theme="dark"] .maintenance-icon { color:#edc16d; background:#352a18; }
 html[data-theme="dark"] .maintenance-label,html[data-theme="dark"] .application-action-maintenance { color:#edc16d; }
+
+/* Tarjetas de indicadores: cada tono conserva fondo suave además de la franja superior. */
+.metrics > .metric { --metric-soft:#fff0f0; border-color:#f1b5b0; background:linear-gradient(135deg,var(--surface) 0%,var(--metric-soft) 100%); box-shadow:0 5px 14px rgba(18,24,40,.045); }
+.metrics > .metric.metric-success { --metric-soft:#edfaf1; border-color:#b6e4c6; }
+.metrics > .metric.metric-info { --metric-soft:#edf4ff; border-color:#bdd5ff; }
+.metrics > .metric.metric-violet { --metric-soft:#f5efff; border-color:#d8c7f6; }
+.metrics > .metric.metric-warning { --metric-soft:#fff8e8; border-color:#efd59b; }
+html[data-theme="dark"] .metrics > .metric { background:linear-gradient(135deg,color-mix(in srgb,var(--accent,var(--primary)) 15%,var(--surface)) 0%,var(--surface) 72%); }

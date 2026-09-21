@@ -8,7 +8,11 @@ export type MonitorApi = {
   telefono: string;
   department: string;
   is_active: boolean;
+  semester?: string | null;
+  semester_is_active?: boolean | null;
+  account_status?: "ACTIVE" | "PENDING" | "INACTIVE";
   activation_email_sent?: boolean;
+  has_previous_monitoring?: boolean;
 };
 
 export type HorarioApi = {
@@ -30,6 +34,10 @@ export type ExcepcionApi = {
   id: string;
   name: string;
   description: string;
+  monitors: string[];
+  schedules: string[];
+  all_semester: boolean;
+  semester: string | null;
   start_date: string;
   end_date: string;
   department: string | null;
@@ -82,7 +90,7 @@ export type ConciliacionApi = {
   exit_at: string | null;
   monitor: string | null;
   monitor_name: string;
-  reconciliation_status: "pending" | "matched" | "manual_review";
+  reconciliation_status: "pending" | "matched" | "manual_review" | "rejected";
   manual_review_reason: string;
   processed_at: string | null;
   processing_error: string;
@@ -145,7 +153,7 @@ export type InconsistenciaApi = {
   id: string;
   raw_record: string;
   monitor: string | null;
-  monitor_name: string | null;
+  monitor_name: string;
   monitor_code: string | null;
   department: string;
   department_label: string;
