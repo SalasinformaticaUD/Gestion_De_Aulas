@@ -1,7 +1,7 @@
 # Informe Plan de Integración 36 - Consolidación documental y centralización de Registros
 
 FECHA: 21/09/2026  
-AUTOR: Esteban Bautista  
+AUTOR: Juan Esteban Cañon y Julian Romero
 
 ## OBJETIVO DE LA JORNADA
 
