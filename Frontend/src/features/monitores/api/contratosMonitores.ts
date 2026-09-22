@@ -178,6 +178,8 @@ export type InconsistenciaApi = {
   message: string;
   resolution_note: string;
   solution_annotation: string | null;
+  solution_annotation_description: string | null;
+  solution_annotation_delta_minutes: number | null;
   event_at: string | null;
   pairing_status: string;
   pairing_status_label: string;
@@ -206,6 +208,7 @@ export type DetalleInconsistenciaApi = InconsistenciaApi & {
 export type IndicadoresInconsistenciasApi = {
   pending_reconciliation: number;
   marking_errors: number;
+  pending_by_type: Record<string, number>;
 };
 
 export type FilaDashboardApi = {

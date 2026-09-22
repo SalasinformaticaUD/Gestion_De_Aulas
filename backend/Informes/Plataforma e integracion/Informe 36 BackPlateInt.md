@@ -59,6 +59,35 @@ Dar continuidad a los Informes 34 y 35 mediante la consolidación de los módulo
 * Se mantuvieron los encabezados oscuros de tablas, estados mediante etiquetas y botones de acción compactos.
 * Se revisó la compatibilidad de los estilos agregados con las variables de color existentes, incluido el modo oscuro.
 
+### Anotaciones
+
+* Se habilitó la consulta de anotaciones para perfiles de monitor. La API filtra estrictamente los resultados para que cada monitor únicamente pueda ver las anotaciones relacionadas con su propio perfil.
+* Se mantuvieron las operaciones de crear, editar y eliminar exclusivamente para administradores y líderes.
+* Se retiró el formulario fijo de la página y se incorporó el botón **Nueva anotación**, que abre un modal para registrar una novedad.
+* La edición de anotaciones ahora utiliza el mismo modal, cargando la información existente.
+* Para el perfil monitor, el módulo se presenta como **Mis anotaciones**, sin buscador de otros monitores ni acciones administrativas.
+* Se simplificó el filtro de acción, retirando la opción **Solo anotar** de la búsqueda.
+
+### Inconsistencias de asistencia
+
+* Se rediseñó la tabla de inconsistencias para reducir la altura de las filas, distribuir mejor las columnas y aplicar botones con la misma estética de los demás módulos.
+* Se eliminó el formulario incrustado de la columna Gestión. Las acciones se ejecutan ahora mediante modales.
+* **Crear anotación** abre un modal con horas a ajustar y motivo de solución; **Invalidar** abre un modal con motivo obligatorio.
+* Se incorporaron las pestañas **Pendientes**, **Historial** y **Duplicados**, con paginación, buscador por nombre o código y filtro de dependencia visible únicamente para administradores.
+* Se agregaron tarjetas superiores con el total pendiente y el desglose de inconsistencias por tipo de error.
+* Se extendió la API para consultar historial, duplicados y el desglose de pendientes por tipo.
+* Se corrigió el flujo de invalidación: puede invalidarse directamente un registro y también desde Historial cuando la inconsistencia fue resuelta inicialmente mediante anotación.
+* El Historial muestra ahora la descripción de la anotación aplicada, sus horas de ajuste o el motivo de invalidación registrado.
+* Se compactó el detalle para separar con claridad horarios, marcaciones e información/gestión de la inconsistencia.
+
+### Excepciones y Usuarios
+
+* Se eliminó el formulario fijo de Excepciones y se añadió el botón **Agregar excepción**.
+* La creación y edición se realizan en un modal reutilizable, con la información existente precargada al editar.
+* Se incorporó el alcance de la excepción: **todos los usuarios** o **usuarios específicos**.
+* Los selectores de usuarios y bloques horarios solo se muestran cuando se escoge el alcance por usuarios específicos; para alcance global se guarda la excepción sin asociaciones particulares.
+* Se retiró el botón **Nuevo usuario local** del encabezado del módulo Usuarios, conservando la administración local disponible en el formulario del módulo.
+
 ## VALIDACIÓN TÉCNICA Y DE CALIDAD
 
 * Se ejecutó la compilación de producción del frontend mediante `npm run build`.
@@ -67,6 +96,9 @@ Dar continuidad a los Informes 34 y 35 mediante la consolidación de los módulo
 * Resultado final: **7 pruebas aprobadas y 0 fallos**.
 * Las pruebas cubrieron aceptación y rechazo de actas, notificaciones asociadas, prevención de carga duplicada, consulta de históricos de múltiples semestres y consulta de detalle para monitores históricos.
 * Se ejecutó `git diff --check` en ambos proyectos, sin errores de espacios o formato. Los avisos observados corresponden únicamente a normalización futura de finales de línea entre Windows y Git.
+* Se ejecutó nuevamente la compilación del frontend después de los ajustes de Anotaciones, Inconsistencias, Excepciones y Usuarios. Finalizó correctamente con **38 rutas** y sin errores de TypeScript.
+* Se ejecutaron las pruebas de Anotaciones, incluyendo el aislamiento de anotaciones por monitor: **3 pruebas aprobadas y 0 fallos**.
+* Se ejecutaron las pruebas del módulo de asistencia: **2 pruebas aprobadas y 0 fallos**.
 
 ## PRÓXIMOS PASOS
 
@@ -76,7 +108,10 @@ Dar continuidad a los Informes 34 y 35 mediante la consolidación de los módulo
 4. Probar con datos reales o de prueba de semestres cerrados el botón **Ver registros** para confirmar que se muestren sesiones, horarios, anotaciones e inconsistencias históricas.
 5. Validar que los líderes solo puedan consultar registros e históricos correspondientes a su dependencia y que el filtro de dependencia permanezca exclusivo para administradores.
 6. Mantener los cambios en ambiente local hasta obtener validación funcional completa y autorización explícita antes de cualquier despliegue.
+7. Validar manualmente Inconsistencias con casos reales: crear anotación, invalidar directamente, invalidar después de una anotación desde Historial y confirmar que el motivo/descripción se visualice correctamente.
+8. Validar Excepciones en los dos alcances: una excepción global y otra para usuarios/bloques específicos, confirmando que solo afecten las sesiones esperadas.
+9. Revisar visualmente los modales y tablas en modo oscuro y en pantallas pequeñas, especialmente los selectores desplegables de Excepciones y el Historial de Inconsistencias.
 
 ## ESTADO FINAL
 
-Se consolidó la gestión de asistencia dentro de un único módulo de Registros, eliminando la duplicidad operativa entre Importar Registros, Históricos y la tabla del Dashboard. También se reforzó el ciclo documental de Actas con recordatorios, prevención de cargas duplicadas y notificaciones de revisión. Las modificaciones fueron compiladas y probadas satisfactoriamente en ambiente local; quedan pendientes las validaciones visuales y funcionales finales en Docker con usuarios y datos representativos.
+Se consolidó la gestión de asistencia dentro de un único módulo de Registros, eliminando la duplicidad operativa entre Importar Registros, Históricos y la tabla del Dashboard. También se reforzaron Anotaciones, Inconsistencias y Excepciones con acciones guiadas por modales, controles de alcance, historial trazable y permisos de consulta acordes al rol. Las modificaciones fueron compiladas y probadas satisfactoriamente en ambiente local; se recomienda realizar las validaciones manuales indicadas en Docker con usuarios y datos representativos antes de cualquier despliegue.

@@ -52,7 +52,9 @@ export const servicioMonitores = {
   listarPaginaHistorialAsistencia: (page = 1) => solicitarMonitores<{ count: number; next: string | null; previous: string | null; results: ConciliacionApi[] }>(`/api/v1/attendance/history/?page=${page}`),
   asignarMonitor: (registroId: string, monitorId: string) =>
     solicitarMonitores<ConciliacionApi>(`/api/v1/attendance/pending-reconciliation/${registroId}/assign-monitor/`, { method: "POST", body: JSON.stringify({ monitor_id: monitorId }) }),
-  listarInconsistencias: () => solicitarMonitores<InconsistenciaApi[]>("/api/v1/attendance/inconsistencies/"),
+  listarInconsistencias: (parametros = "") => solicitarMonitores<InconsistenciaApi[]>(`/api/v1/attendance/inconsistencies/${parametros ? `?${parametros}` : ""}`),
+  listarHistorialInconsistencias: (parametros = "") => solicitarMonitores<InconsistenciaApi[]>(`/api/v1/attendance/inconsistencies/history/${parametros ? `?${parametros}` : ""}`),
+  listarDuplicadosInconsistencias: (parametros = "") => solicitarMonitores<InconsistenciaApi[]>(`/api/v1/attendance/inconsistencies/duplicates/${parametros ? `?${parametros}` : ""}`),
   obtenerDetalleInconsistencia: (id:string) => solicitarMonitores<DetalleInconsistenciaApi>(`/api/v1/attendance/inconsistencies/${id}/`),
   obtenerIndicadoresInconsistencias: () => solicitarMonitores<IndicadoresInconsistenciasApi>("/api/v1/attendance/inconsistencies/stats/"),
   crearSolucionInconsistencia: (id:string, payload:{ annotation_type:string; action:string; delta_minutes:number; description:string }) => solicitarMonitores<InconsistenciaApi>(`/api/v1/attendance/inconsistencies/${id}/create-solution/`, { method:"POST", body:JSON.stringify(payload) }),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { servicioMonitores } from "@/features/monitores/api/servicioMonitores";
 import styles from "./GestionUsuariosMonitores.module.css";
 
@@ -24,8 +24,6 @@ export function GestionUsuariosMonitores() {
   const [error, setError] = useState("");
   const [nuevaClave, setNuevaClave] = useState("");
   const [rolActual, setRolActual] = useState<string | null>(null);
-  const formularioRef = useRef<HTMLElement | null>(null);
-  const nombresRef = useRef<HTMLInputElement | null>(null);
 
   const cargar = async () => {
     setCargando(true); setError("");
@@ -38,13 +36,6 @@ export function GestionUsuariosMonitores() {
   useEffect(() => { void cargar(); }, []);
 
   const limpiar = () => { setEdicion(null); setForm(vacio); setNuevaClave(""); setAviso(""); };
-  const crearUsuarioLocal = () => {
-    limpiar();
-    requestAnimationFrame(() => {
-      formularioRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      nombresRef.current?.focus();
-    });
-  };
   const editar = (usuario: UsuarioGestion) => {
     if (usuario.source === "AULAS") { setError("Esta cuenta se administra desde Gestión de Aulas."); return; }
     setError(""); setAviso(""); setNuevaClave(""); setEdicion(usuario);
@@ -71,12 +62,12 @@ export function GestionUsuariosMonitores() {
   if (rolActual !== "admin") return <main className={styles.loading}>Este módulo está disponible solo para administradores de Gestión de Monitores.</main>;
 
   return <section className={styles.page}>
-    <header className={styles.heading}><div><span>Administración</span><h1>Usuarios</h1><p>Administre las cuentas locales de administradores y líderes. Los usuarios procedentes de Aulas se consultan aquí, pero se modifican desde su sistema de origen.</p></div><button type="button" className={styles.newButton} onClick={crearUsuarioLocal}>+ Nuevo usuario local</button></header>
+    <header className={styles.heading}><div><span>Administración</span><h1>Usuarios</h1><p>Administre las cuentas locales de administradores y líderes. Los usuarios procedentes de Aulas se consultan aquí, pero se modifican desde su sistema de origen.</p></div></header>
     {error && <p className={styles.error} role="alert">{error}</p>}{aviso && <p className={styles.notice} role="status">{aviso}</p>}
     <div className={styles.grid}>
-      <section ref={formularioRef} className={styles.card}><div className={styles.cardHeader}><h2>{edicion ? "Editar usuario local" : "Crear usuario local"}</h2><p>{edicion ? "Los cambios se aplican únicamente a esta cuenta local." : "Use esta opción para cuentas que no provienen de Gestión de Aulas."}</p></div>
+      <section className={styles.card}><div className={styles.cardHeader}><h2>{edicion ? "Editar usuario local" : "Crear usuario local"}</h2><p>{edicion ? "Los cambios se aplican únicamente a esta cuenta local." : "Use esta opción para cuentas que no provienen de Gestión de Aulas."}</p></div>
         <form onSubmit={(event) => void guardar(event)} className={styles.form}>
-          <div className={styles.two}><label><span>Nombres</span><input ref={nombresRef} value={form.first_name} onChange={(event) => setForm({ ...form, first_name: event.target.value })} required /></label><label><span>Apellidos</span><input value={form.last_name} onChange={(event) => setForm({ ...form, last_name: event.target.value })} /></label></div>
+          <div className={styles.two}><label><span>Nombres</span><input value={form.first_name} onChange={(event) => setForm({ ...form, first_name: event.target.value })} required /></label><label><span>Apellidos</span><input value={form.last_name} onChange={(event) => setForm({ ...form, last_name: event.target.value })} /></label></div>
           <div className={styles.two}><label><span>Usuario</span><input value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} required /></label><label><span>Correo</span><input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required /></label></div>
           {!edicion && <label><span>Contraseña inicial</span><input type="password" minLength={10} value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required /><small>Mínimo 10 caracteres.</small></label>}
           <div className={styles.two}><label><span>Perfil</span><select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value as Rol, department: event.target.value === "admin" ? null : form.department })}><option value="leader">Líder de dependencia</option><option value="admin">Administrador de Monitores</option></select></label>{form.role === "leader" && <label><span>Dependencia</span><select value={form.department ?? ""} onChange={(event) => setForm({ ...form, department: event.target.value as Dependencia })} required><option value="">Seleccionar dependencia</option>{dependencias.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>}</div>
