@@ -1,2 +1,5 @@
-import { HistoricoApiView } from "@/features/monitores/componentes/HistoricoApiView";
-export default function PaginaHistoricos() { return <HistoricoApiView />; }
+import { redirect } from "next/navigation";
+
+export default function RedireccionHistoricos() {
+  redirect("/gestion-monitores/registros");
+}

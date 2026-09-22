@@ -27,7 +27,7 @@ export function BusquedaPorCodigo() {
     <header><div><span className={estilos.etiqueta}>Consulta de monitor</span><h2>Búsqueda por código estudiantil</h2><p>Consulte rápidamente el acumulado y acceda al detalle individual.</p></div></header>
     <form className={estilos.busquedaCodigo} onSubmit={buscar}>
       <label className={estilos.campoAncho}><span>Código estudiantil</span><input value={codigo} onChange={(evento) => setCodigo(evento.target.value)} placeholder="Ej. 20211001001" required /></label>
-      <button className="button-primary">Buscar monitor</button>
+      <button className="button-primary">Buscar</button>
     </form>
     {error && <AvisoTemporal mensaje={error} tipo="error" alCerrar={() => setError("")} />}
     {resultado && <div className={estilos.resultadoBusqueda}><div><strong>{resultado.nombre}</strong><span>{resultado.dependencia} · {resultado.horas.toFixed(1)} horas acumuladas</span></div><Link className={estilos.botonSecundario} href="/gestion-monitores/monitores">Ver directorio</Link></div>}

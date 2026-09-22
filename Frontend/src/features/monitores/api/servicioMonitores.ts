@@ -16,7 +16,7 @@ export const servicioMonitores = {
     return solicitarMonitores<{ total_rows: number; created: number; skipped: Array<{ row_number: number; email: string; reason: string }>; errors: Array<{ row_number: number; email: string; reason: string }> }>("/api/v1/monitors/import/", { method: "POST", body: datos });
   },
   previsualizarNuevoSemestre: () => solicitarMonitores<{ preview: Record<string, number> }>("/api/v1/monitors/new-semester/"),
-  iniciarNuevoSemestre: (new_semester_name: string) => solicitarMonitores<{ archived_semester: string; new_semester: string; affected: Record<string, number> }>("/api/v1/monitors/new-semester/", { method: "POST", body: JSON.stringify({ new_semester_name, confirm: true }) }),
+  iniciarNuevoSemestre: (new_semester_name: string, starts_on: string, ends_on: string) => solicitarMonitores<{ archived_semester: string; new_semester: string; starts_on: string; ends_on: string; affected: Record<string, number> }>("/api/v1/monitors/new-semester/", { method: "POST", body: JSON.stringify({ new_semester_name, starts_on, ends_on, confirm: true }) }),
   verificarContrasenaActual: (password: string) => solicitarMonitores<{ valido: boolean }>("/api/v1/auth/verify-password/", { method: "POST", body: JSON.stringify({ password }) }),
   obtenerPerfilMonitores: () => solicitarMonitores<{ role: string }>("/api/v1/auth/me/"),
   listarUsuariosGestion: () => solicitarMonitores<Array<{ id:string; username:string; email:string; first_name:string; last_name:string; full_name:string; role:"admin"|"leader"; department:"physics"|"informatics_labs"|"electrical"|null; is_active:boolean; source:"AULAS"|"MONITORES"; usuario_externo_id:string|null }>>("/api/v1/auth/users/"),
@@ -73,8 +73,15 @@ export const servicioMonitores = {
   reenviarMemorando: (id: string) => solicitarMonitores<unknown>(`/api/v1/reports/memorandums/${id}/resend/`, { method: "POST" }),
   descargarMemorando: (id: string) => descargarMonitores(`/api/v1/reports/memorandums/${id}/pdf/`),
   listarActasCompromiso: (semester?: string) => solicitarMonitores<unknown[]>(`/api/v1/reports/commitment-acts/${semester ? `?semester=${encodeURIComponent(semester)}` : ""}`),
+  obtenerMiActaCompromiso: () => solicitarMonitores<Record<string, unknown>>("/api/v1/reports/commitment-acts/me/"),
+  subirMiActaCompromiso: (archivo: File) => {
+    const datos = new FormData(); datos.append("signed_file", archivo);
+    return solicitarMonitores<Record<string, unknown>>("/api/v1/reports/commitment-acts/me/", { method: "POST", body: datos });
+  },
+  descargarMiActaCompromiso: () => descargarMonitores("/api/v1/reports/commitment-acts/me/pdf/"),
   descargarActaCompromiso: (monitorId: string) => descargarMonitores(`/api/v1/reports/commitment-acts/${monitorId}/pdf/`),
   descargarActaFirmada: (monitorId: string) => descargarMonitores(`/api/v1/reports/commitment-acts/${monitorId}/signed-pdf/`),
   revisarActaCompromiso: (monitorId: string, action: "accept" | "reject", rejection_reason = "") => solicitarMonitores<unknown>(`/api/v1/reports/commitment-acts/${monitorId}/review/`, { method: "POST", body: JSON.stringify({ action, rejection_reason }) }),
   listarHistorico: (parametros = "") => solicitarMonitores<unknown[]>(`/api/v1/reports/history/${parametros ? `?${parametros}` : ""}`),
+  obtenerDetalleRegistrosMonitor: (monitorId: string) => solicitarMonitores<{ sessions: SesionApi[]; schedules: HorarioApi[]; annotations: AnotacionApi[]; inconsistencies: InconsistenciaApi[] }>(`/api/v1/reports/monitor-records/${monitorId}/`),
 };

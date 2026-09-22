@@ -79,7 +79,7 @@ export function GestionExcepciones() {
       start_date: formulario.fechaInicio, end_date: formulario.fechaFin,
       department: formulario.dependencia === "TODAS" ? null : codigoDependencia(formulario.dependencia),
       ignore_lateness: formulario.ignorarRetrasos, approve_overtime: formulario.aprobarHorasExtra,
-      is_active: formulario.activa, all_semester: formulario.todoElSemestre,
+      is_active: edicion ? formulario.activa : true, all_semester: formulario.todoElSemestre,
       monitors: formulario.usuarios, schedules: formulario.bloques,
     };
     try {
@@ -140,7 +140,7 @@ export function GestionExcepciones() {
           </section>
           <label className={estilos.verificacion}><input type="checkbox" checked={formulario.ignorarRetrasos} onChange={(e) => setFormulario({ ...formulario, ignorarRetrasos: e.target.checked })} /><span><strong>No contar retrasos</strong><br />Exime la tardanza durante el periodo.</span></label>
           <label className={estilos.verificacion}><input type="checkbox" checked={formulario.aprobarHorasExtra} onChange={(e) => setFormulario({ ...formulario, aprobarHorasExtra: e.target.checked })} /><span><strong>Contar horas extra</strong><br />Aprueba automáticamente el tiempo adicional.</span></label>
-          <label className={estilos.verificacion}><input type="checkbox" checked={formulario.activa} onChange={(e) => setFormulario({ ...formulario, activa: e.target.checked })} /><span><strong>Excepción activa</strong></span></label>
+          {edicion && <label className={estilos.verificacion}><input type="checkbox" checked={formulario.activa} onChange={(e) => setFormulario({ ...formulario, activa: e.target.checked })} /><span><strong>Excepción activa</strong></span></label>}
           <button className="button-primary" type="submit" disabled={guardando || !formulario.usuarios.length || !formulario.bloques.length}>{guardando ? "Guardando…" : edicion ? "Guardar cambios" : "Crear excepción"}</button>
         </form>
       </section>

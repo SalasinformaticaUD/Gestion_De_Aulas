@@ -69,6 +69,10 @@ export type SesionApi = {
   work_day: string;
   actual_start: string | null;
   actual_end: string | null;
+  normalized_start?: string | null;
+  normalized_end?: string | null;
+  scheduled_start?: string | null;
+  scheduled_end?: string | null;
   normal_minutes: number;
   overtime_minutes: number;
   penalty_minutes: number;
@@ -76,7 +80,13 @@ export type SesionApi = {
   lateness_excused: boolean;
   lateness_exception_name: string;
   overtime_status: "not_applicable" | "pending" | "approved" | "rejected";
+  overtime_auto_approved?: boolean;
+  overtime_exception_name?: string;
   overtime_review_note: string;
+  overtime_reviewed_by_name?: string;
+  overtime_reviewed_at?: string | null;
+  overtime_rejection_penalized?: boolean;
+  session_state?: string;
 };
 
 export type ConciliacionApi = {

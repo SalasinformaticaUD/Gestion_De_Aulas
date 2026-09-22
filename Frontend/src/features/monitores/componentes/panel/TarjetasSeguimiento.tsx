@@ -8,10 +8,6 @@ export function TarjetasSeguimiento({ tablero }: { tablero: DashboardApi }) {
       {tablero.pending_overtime.map((item) => <article key={item.session_id}><strong>{item.monitor_name}</strong><span>{item.work_day} · {(item.overtime_minutes / 60).toFixed(1)} h por aprobar</span></article>)}
       {!tablero.pending_overtime.length && <EstadoVacio mensaje="No hay horas extra por aprobar." />}
     </Tarjeta>
-    <Tarjeta titulo="Notificaciones">
-      {tablero.notifications.map((item) => <article key={item.id}><strong>{item.title}</strong><span>{item.body}</span></article>)}
-      {!tablero.notifications.length && <EstadoVacio mensaje="No hay notificaciones recientes." />}
-    </Tarjeta>
     <Tarjeta titulo="Anotaciones recientes" enlace={{ href: "/gestion-monitores/anotaciones", texto: "Ver todas" }}>
       {tablero.recent_annotations.map((item) => <article key={item.id}><strong>{item.monitor_name} <em>{item.action === "deduct" ? "−" : item.action === "add" ? "+" : ""}{Math.abs(item.delta_minutes / 60).toFixed(1)} h</em></strong><span>{item.description || `Novedad · ${item.occurred_on}`}</span></article>)}
       {!tablero.recent_annotations.length && <EstadoVacio mensaje="Sin anotaciones recientes." />}

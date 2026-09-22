@@ -6,8 +6,10 @@ import { servicioMonitores } from "@/features/monitores/api/servicioMonitores";
 import { AvisoTemporal } from "./AvisoTemporal";
 import { Paginacion } from "./Paginacion";
 import { usarPaginacion } from "@/features/monitores/ganchos/usarPaginacion";
+import { usarRecursoApi } from "@/features/monitores/ganchos/usarRecursoApi";
 import estilos from "./SistemaVisualMonitores.module.css";
 import estilosPestanas from "./PestanasActas.module.css";
+import { BarraNotificacionesDashboard } from "./panel/BarraNotificacionesDashboard";
 
 type Tipo = "memorandos" | "actas";
 type Fila = Record<string, unknown>;
@@ -25,11 +27,14 @@ const fecha = (valor: unknown) =>
       }).format(new Date(String(valor)));
 
 export function ReportesApiView({ tipo }: { tipo: Tipo }) {
+  const perfil = usarRecursoApi(servicioMonitores.obtenerPerfilMonitores, { role: "leader" });
+  const notificaciones = usarRecursoApi(servicioMonitores.listarNotificaciones, []);
   const [rows, setRows] = useState<Fila[]>([]);
   const [monitores, setMonitores] = useState<MonitorApi[]>([]);
   const [buscar, setBuscar] = useState("");
   const [estado, setEstado] = useState("todos");
   const [dependencia, setDependencia] = useState("todas");
+  const [filtrosActas, setFiltrosActas] = useState({ buscar: "", estado: "todos", dependencia: "todas" });
   const [filtros, setFiltros] = useState({
     buscar: "",
     estado: "todos",
@@ -42,8 +47,15 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
   const [semestreHistorico, setSemestreHistorico] = useState("");
   const [actaPorRechazar, setActaPorRechazar] = useState<Fila | null>(null);
   const [motivoRechazo, setMotivoRechazo] = useState("");
+  const [archivoActa, setArchivoActa] = useState<File | null>(null);
   const cargarDocumentos = useCallback(async () => {
+    if (perfil.cargando) return;
     try {
+      if (tipo === "actas" && perfil.datos.role === "monitor") {
+        setRows([await servicioMonitores.obtenerMiActaCompromiso()]);
+        setMonitores([]);
+        return;
+      }
       const listaMonitores = await servicioMonitores.listarMonitores();
       setMonitores(listaMonitores);
       if (tipo === "actas" && vistaActas === "HISTORICO" && !semestreHistorico) {
@@ -64,7 +76,7 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
           : "No fue posible cargar los documentos.",
       );
     }
-  }, [tipo, vistaActas, semestreHistorico]);
+  }, [tipo, vistaActas, semestreHistorico, perfil.cargando, perfil.datos.role]);
   useEffect(() => {
     void cargarDocumentos();
     const actualizarAlVolver = () => void cargarDocumentos();
@@ -89,11 +101,11 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
               "es",
             );
           return (
-            (!buscar || texto.includes(buscar.toLocaleLowerCase("es"))) &&
-            (estado === "todos" ||
+            (!filtrosActas.buscar || texto.includes(filtrosActas.buscar.toLocaleLowerCase("es"))) &&
+            (filtrosActas.estado === "todos" ||
               String(row.status ?? "pending").toLowerCase() ===
-                estado) &&
-            (dependencia === "todas" || monitor?.department === dependencia)
+                filtrosActas.estado) &&
+            (filtrosActas.dependencia === "todas" || monitor?.department === filtrosActas.dependencia)
           );
         }
         return (
@@ -105,12 +117,25 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
             monitor?.department === filtros.dependencia)
         );
       }),
-    [rows, tipo, filtros, monitorPorId, buscar, estado, dependencia],
+    [rows, tipo, filtros, filtrosActas, monitorPorId],
   );
   const paginacionActas = usarPaginacion(filas, 10);
   useEffect(() => {
     if (tipo === "actas") paginacionActas.reiniciar();
-  }, [tipo, buscar, estado, dependencia]);
+  }, [tipo, filtrosActas]);
+
+  const subirActaPersonal = async (evento: FormEvent<HTMLFormElement>) => {
+    evento.preventDefault();
+    if (!archivoActa || Boolean(rows[0]?.has_signed)) return;
+    setProcesando("subir-acta"); setError("");
+    try {
+      const actualizada = await servicioMonitores.subirMiActaCompromiso(archivoActa);
+      setRows([actualizada]); setArchivoActa(null);
+      setAviso("El acta fue enviada correctamente y quedó pendiente de revisión.");
+    } catch (problema) {
+      setError(problema instanceof Error ? problema.message : "No fue posible subir el acta.");
+    } finally { setProcesando(""); }
+  };
   const abrirPdf = async (row: Fila, firmado = false, descargar = false) => {
     try {
       const blob =
@@ -246,6 +271,22 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
   );
 
   if (tipo === "actas") {
+    if (perfil.datos.role === "monitor") {
+      const miActa = rows[0];
+      const enviada = Boolean(miActa?.has_signed);
+      const estadoPersonal = String(miActa?.status ?? "pending").toLowerCase();
+      return <div className={estilos.actasApi}>
+        <section className={`page-heading ${estilos.encabezado}`}><div><span className={estilos.etiqueta}>Gestión documental</span><h1>Mi acta de compromiso</h1><p>Descargue, firme y cargue el acta correspondiente al periodo académico actual.</p></div></section>
+        {error && <AvisoTemporal mensaje={error} tipo="error" alCerrar={() => setError("")} />}
+        {aviso && <AvisoTemporal mensaje={aviso} tipo="exito" alCerrar={() => setAviso("")} />}
+        {!enviada && <div className={`${estilos.aviso} ${estilos.avisoAdvertencia}`} role="status"><strong>Recordatorio:</strong> debe descargar, firmar y subir el acta correspondiente al periodo académico vigente.</div>}
+        {enviada && <div className={`${estilos.aviso} ${estadoPersonal === "accepted" ? estilos.avisoExito : estadoPersonal === "rejected" ? estilos.avisoError : estilos.avisoAdvertencia}`} role="status">Su acta está <strong>{estadoPersonal === "accepted" ? "aprobada" : estadoPersonal === "rejected" ? "rechazada" : "pendiente de revisión"}</strong>{estadoPersonal === "rejected" && miActa?.rejection_reason ? `: ${String(miActa.rejection_reason)}` : "."}</div>}
+        <div className={estilos.dashboardConNotificaciones}><section className={estilos.tarjeta}><header><div><h2>Entrega del acta</h2><p>Solo se admite un archivo PDF de máximo 10 MB.</p></div></header><div className={estilos.formulario}>
+          <button type="button" className={estilos.botonSecundario} onClick={async () => { const blob = await servicioMonitores.descargarMiActaCompromiso(); const url=URL.createObjectURL(blob); window.open(url,"_blank","noopener,noreferrer"); window.setTimeout(()=>URL.revokeObjectURL(url),60000); }}>Ver acta para firmar</button>
+          <form onSubmit={subirActaPersonal}><label className={estilos.zonaCarga}><span><strong>{archivoActa?.name ?? (enviada ? String(miActa?.signed_file_name ?? "Acta enviada") : "Seleccione el acta firmada")}</strong>{enviada ? "Ya existe un archivo cargado; no se permiten envíos duplicados." : "Formato PDF · máximo 10 MB"}</span><input type="file" accept="application/pdf,.pdf" disabled={enviada} onChange={(evento)=>setArchivoActa(evento.target.files?.[0] ?? null)} /></label><div className={estilos.accionesFormulario}><button className="button-primary" type="submit" disabled={enviada || !archivoActa || procesando === "subir-acta"}>{enviada ? "Archivo ya subido" : procesando === "subir-acta" ? "Subiendo…" : "Subir archivo"}</button></div></form>
+        </div></section><BarraNotificacionesDashboard notificaciones={notificaciones.datos} /></div>
+      </div>;
+    }
     const firmadas = rows.filter((row) => Boolean(row.has_signed)).length;
     return (
       <div className={estilos.actasApi}>
@@ -319,11 +360,11 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
         <section className={estilos.tarjeta}>
           <header className={estilosPestanas.cabeceraPestanas}>
             <div className={estilosPestanas.pestanas} role="tablist" aria-label="Vista de actas">
-              <button type="button" role="tab" aria-selected={vistaActas === "ACTUAL"} className={vistaActas === "ACTUAL" ? estilosPestanas.pestanaActiva : ""} onClick={() => { setVistaActas("ACTUAL"); setSemestreHistorico(""); setBuscar(""); setEstado("todos"); setDependencia("todas"); }}>
+              <button type="button" role="tab" aria-selected={vistaActas === "ACTUAL"} className={vistaActas === "ACTUAL" ? estilosPestanas.pestanaActiva : ""} onClick={() => { setVistaActas("ACTUAL"); setSemestreHistorico(""); setBuscar(""); setEstado("todos"); setDependencia("todas"); setFiltrosActas({ buscar:"", estado:"todos", dependencia:"todas" }); }}>
                 Gestión actual <span>{vistaActas === "ACTUAL" ? rows.length : ""}</span>
               </button>
-              <button type="button" role="tab" aria-selected={vistaActas === "HISTORICO"} className={vistaActas === "HISTORICO" ? estilosPestanas.pestanaActiva : ""} onClick={() => { setVistaActas("HISTORICO"); setSemestreHistorico(""); setBuscar(""); setEstado("todos"); setDependencia("todas"); }}>
-                Historial <span>{semestresHistoricos.length}</span>
+              <button type="button" role="tab" aria-selected={vistaActas === "HISTORICO"} className={vistaActas === "HISTORICO" ? estilosPestanas.pestanaActiva : ""} onClick={() => { setVistaActas("HISTORICO"); setSemestreHistorico(""); setBuscar(""); setEstado("todos"); setDependencia("todas"); setFiltrosActas({ buscar:"", estado:"todos", dependencia:"todas" }); }}>
+                Historial
               </button>
             </div>
             <div className={estilosPestanas.indicadorVista}><i />{vistaActas === "ACTUAL" ? "Actas del semestre vigente" : "Consulta de periodos archivados"}</div>
@@ -359,7 +400,7 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
                 <option value="rejected">Rechazadas</option>
               </select>
             </label>
-            <label className={estilos.campo}>
+            {perfil.datos.role === "admin" && <label className={estilos.campo}>
               <span>Dependencia</span>
               <select
                 value={dependencia}
@@ -372,18 +413,14 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
                   </option>
                 ))}
               </select>
-            </label>
+            </label>}
             <div className={estilos.accionesFormulario}>
               <button
                 type="button"
                 className="button-primary"
-                onClick={() => {
-                  setBuscar("");
-                  setEstado("todos");
-                  setDependencia("todas");
-                }}
+                onClick={() => setFiltrosActas({ buscar, estado, dependencia })}
               >
-                Restablecer
+                Filtrar
               </button>
             </div>
           </div>
@@ -605,7 +642,7 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
               <option value="pendiente">Pendiente</option>
             </select>
           </label>
-          <label className={estilos.campo}>
+          {perfil.datos.role === "admin" && <label className={estilos.campo}>
             <span>Dependencia</span>
             <select
               value={dependencia}
@@ -618,7 +655,7 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
                 </option>
               ))}
             </select>
-          </label>
+          </label>}
           <button
             type="button"
             className="button-primary"

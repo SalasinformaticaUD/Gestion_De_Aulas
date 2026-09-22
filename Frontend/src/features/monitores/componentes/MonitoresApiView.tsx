@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { adaptarMonitor } from "@/features/monitores/api/adaptadoresMonitores";
 import { servicioMonitores } from "@/features/monitores/api/servicioMonitores";
 import type {
@@ -33,17 +33,10 @@ const vacio: FormMonitor = {
 const soloNumeros = (valor: string) => valor.replace(/\D/g, "");
 const estadoCuenta = (monitor: MonitorApi) =>
   monitor.account_status ?? (monitor.is_active ? "ACTIVE" : "INACTIVE");
-const prioridadEstado = (monitor: MonitorApi) =>
-  ({ ACTIVE: 3, PENDING: 2, INACTIVE: 1 })[estadoCuenta(monitor)];
 const etiquetaEstado = (monitor: MonitorApi) =>
   ({ ACTIVE: "Activo", PENDING: "Pendiente", INACTIVE: "Inactivo" })[
     estadoCuenta(monitor)
   ];
-const estadoParaFiltro: Record<string, "ACTIVE" | "PENDING" | "INACTIVE"> = {
-  ACTIVOS: "ACTIVE",
-  PENDIENTES: "PENDING",
-  INACTIVOS: "INACTIVE",
-};
 
 function FormularioMonitor({
   form,
@@ -160,7 +153,9 @@ export function MonitoresApiView() {
   const [rows, setRows] = useState<MonitorApi[]>([]);
   const [form, setForm] = useState(vacio);
   const [buscar, setBuscar] = useState("");
-  const [estado, setEstado] = useState("ACTIVOS");
+  const [semestreFiltro, setSemestreFiltro] = useState("ACTUAL");
+  const [crearModal, setCrearModal] = useState(false);
+  const [cargaModal, setCargaModal] = useState(false);
   const [alertasPorMonitor, setAlertasPorMonitor] = useState<
     Record<
       string,
@@ -187,9 +182,9 @@ export function MonitoresApiView() {
   const [contrasena, setContrasena] = useState("");
   const [semestreModal, setSemestreModal] = useState(false);
   const [nuevoSemestre, setNuevoSemestre] = useState("");
+  const [fechaInicioSemestre, setFechaInicioSemestre] = useState("");
+  const [fechaFinSemestre, setFechaFinSemestre] = useState("");
   const [impacto, setImpacto] = useState<Record<string, number> | null>(null);
-  const crearRef = useRef<HTMLElement | null>(null);
-  const cargaRef = useRef<HTMLElement | null>(null);
   const fallo = (e: unknown, fallback: string) =>
     setError(e instanceof Error ? e.message : fallback);
   async function cargar() {
@@ -222,21 +217,20 @@ export function MonitoresApiView() {
     void cargar();
   }, []);
   const visibles = useMemo(() => {
-    const filtrados = rows.filter((item) => {
+    return rows.filter((item) => {
         const texto =
           `${item.full_name} ${item.codigo_estudiante} ${item.user_email ?? ""}`.toLocaleLowerCase(
             "es",
           );
         return (
           (!buscar || texto.includes(buscar.toLocaleLowerCase("es"))) &&
-          (estado === "TODOS" ||
-            estadoCuenta(item) === estadoParaFiltro[estado])
+          (semestreFiltro === "ACTUAL"
+            ? item.semester_is_active === true
+            : item.semester === semestreFiltro)
         );
-      });
-    return estado === "TODOS"
-      ? filtrados.sort((a, b) => prioridadEstado(b) - prioridadEstado(a) || a.full_name.localeCompare(b.full_name, "es"))
-      : filtrados;
-  }, [rows, buscar, estado]);
+      }).sort((a, b) => a.full_name.localeCompare(b.full_name, "es"));
+  }, [rows, buscar, semestreFiltro]);
+  const semestres = useMemo(() => [...new Set(rows.map((item) => item.semester).filter((item): item is string => Boolean(item)))], [rows]);
   async function crear(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     setGuardando(true);
@@ -245,6 +239,7 @@ export function MonitoresApiView() {
       const creado = await servicioMonitores.provisionarMonitor(form);
       setRows((actual) => [creado, ...actual]);
       setForm(vacio);
+      setCrearModal(false);
       setAviso(
         creado.account_status === "PENDING"
           ? "Monitor creado. Se envió el correo de activación y permanecerá pendiente hasta que configure su contraseña."
@@ -370,9 +365,11 @@ export function MonitoresApiView() {
     setGuardando(true);
     try {
       const resultado =
-        await servicioMonitores.iniciarNuevoSemestre(nuevoSemestre);
-      setSemestreModal(false);
-      setNuevoSemestre("");
+        await servicioMonitores.iniciarNuevoSemestre(nuevoSemestre, fechaInicioSemestre, fechaFinSemestre);
+        setSemestreModal(false);
+        setNuevoSemestre("");
+        setFechaInicioSemestre("");
+        setFechaFinSemestre("");
       setAviso(
         `Se inició el semestre ${resultado.new_semester}. Los registros históricos se conservaron.`,
       );
@@ -397,9 +394,7 @@ export function MonitoresApiView() {
           <button
             type="button"
             className={estilos.botonSecundario}
-            onClick={() =>
-              cargaRef.current?.scrollIntoView({ behavior: "smooth" })
-            }
+            onClick={() => setCargaModal(true)}
           >
             Cargar Excel
           </button>
@@ -413,9 +408,7 @@ export function MonitoresApiView() {
           <button
             type="button"
             className="button-primary"
-            onClick={() =>
-              crearRef.current?.scrollIntoView({ behavior: "smooth" })
-            }
+            onClick={() => setCrearModal(true)}
           >
             Nuevo monitor
           </button>
@@ -457,101 +450,7 @@ export function MonitoresApiView() {
           alCerrar={() => setAviso("")}
         />
       )}
-      <div className={estilos.distribucionFormulario}>
-        <div className={estilos.columnaFormularios}>
-          <section
-            ref={crearRef}
-            className={`${estilos.tarjeta} ${estilos.formularioFijo}`}
-          >
-            <header>
-              <div>
-                <h2>Crear monitor</h2>
-                <p>Las cuentas nuevas reciben activación; si el monitor repite, se reutiliza automáticamente su cuenta existente.</p>
-              </div>
-            </header>
-            <form onSubmit={crear}>
-              <FormularioMonitor
-                form={form}
-                onChange={setForm}
-                texto="+ Crear y enviar activación"
-                guardando={guardando}
-              />
-            </form>
-          </section>
-          <section
-            ref={cargaRef}
-            className={`${estilos.tarjeta} ${estilos.cargaMasivaCuentas}`}
-          >
-            <header>
-              <div>
-                <h2>Carga masiva</h2>
-                <p>Puedes usar encabezados en inglés o español.</p>
-              </div>
-            </header>
-            <form className={estilos.formularioCargaMasiva} onSubmit={importar}>
-              <div className={estilos.especificacionArchivo}>
-                <p>
-                  <strong>Requeridos:</strong>
-                </p>
-                <ul>
-                  <li>email / correo</li>
-                  <li>full_name / nombre completo</li>
-                  <li>codigo_estudiante / codigo estudiante</li>
-                  <li>
-                    department / dependencia (
-                    <strong>
-                      Monitores Aulas de Software, Monitores Laboratorios,
-                      Monitores Fisica
-                    </strong>
-                    )
-                  </li>
-                </ul>
-                <p>
-                  <strong>Opcionales:</strong>
-                </p>
-                <ul>
-                  <li>numero_documento / numero documento</li>
-                  <li>
-                    proyecto_curricular / proyecto curricular
-                    (ingenieria_electronica, ingenieria_sistemas,
-                    ingenieria_electrica, ingenieria_industrial,
-                    ingenieria_catastral, licenciatura_fisica)
-                  </li>
-                  <li>telefono / phone</li>
-                </ul>
-              </div>
-              <label className={estilos.archivoCarga}>
-                Archivo Excel (.xlsx)
-                <input
-                  type="file"
-                  accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                  onChange={(e) => setArchivo(e.target.files?.[0] ?? null)}
-                />
-                <small>{archivo?.name ?? "Ningún archivo seleccionado"}</small>
-              </label>
-              <button className="button-primary" disabled={guardando}>
-                ↑ Procesar archivo
-              </button>
-              {resultadoCarga && (
-                <div className={estilos.resultadoImportacion}>
-                  <span>
-                    <b>{resultadoCarga.total_rows}</b>Filas
-                  </span>
-                  <span>
-                    <b>{resultadoCarga.created}</b>Creados
-                  </span>
-                  <span>
-                    <b>{resultadoCarga.skipped.length}</b>Omitidos
-                  </span>
-                  <span>
-                    <b>{resultadoCarga.errors.length}</b>Con error
-                  </span>
-                </div>
-              )}
-            </form>
-          </section>
-        </div>
-        <section className={`${estilos.tarjeta} ${estilos.listadoCuentas}`}>
+      <section className={`${estilos.tarjeta} ${estilos.listadoCuentas}`}>
           <header>
             <div>
               <h2>Directorio de monitores</h2>
@@ -576,15 +475,13 @@ export function MonitoresApiView() {
               />
             </label>
             <label className={estilos.campo}>
-              <span>Estado</span>
+              <span>Semestre</span>
               <select
-                value={estado}
-                onChange={(e) => setEstado(e.target.value)}
+                value={semestreFiltro}
+                onChange={(e) => setSemestreFiltro(e.target.value)}
               >
-                <option value="TODOS">Todos</option>
-                <option value="ACTIVOS">Activos</option>
-                <option value="PENDIENTES">Pendientes</option>
-                <option value="INACTIVOS">Inactivos</option>
+                <option value="ACTUAL">Semestre actual</option>
+                {semestres.filter((semestre) => !rows.some((item) => item.semester === semestre && item.semester_is_active === true)).map((semestre) => <option key={semestre} value={semestre}>{semestre}</option>)}
               </select>
             </label>
           </div>
@@ -690,8 +587,28 @@ export function MonitoresApiView() {
               </tbody>
             </table>
           </div>
-        </section>
-      </div>
+      </section>
+      {crearModal && (
+        <div className={estilos.fondoModal}>
+          <section className={`${estilos.modal} ${estilos.modalFormularioMonitor}`} role="dialog" aria-modal="true" aria-labelledby="titulo-crear-monitor">
+            <header><div><h2 id="titulo-crear-monitor">Crear monitor</h2><p>Se valida código, correo y documento antes de registrar la cuenta.</p></div><button type="button" onClick={() => setCrearModal(false)}>×</button></header>
+            <form onSubmit={crear}><FormularioMonitor form={form} onChange={setForm} texto="+ Crear y enviar activación" guardando={guardando} /></form>
+          </section>
+        </div>
+      )}
+      {cargaModal && (
+        <div className={estilos.fondoModal}>
+          <section className={`${estilos.modal} ${estilos.modalCargaMonitores}`} role="dialog" aria-modal="true" aria-labelledby="titulo-carga-monitores">
+            <header><div><h2 id="titulo-carga-monitores">Carga masiva de monitores</h2><p>Seleccione un Excel con los encabezados indicados.</p></div><button type="button" onClick={() => setCargaModal(false)}>×</button></header>
+            <form className={estilos.formularioCargaMasiva} onSubmit={importar}>
+              <div className={estilos.especificacionArchivo}><p><strong>Datos requeridos:</strong></p><ul><li><strong>email / correo:</strong> correo institucional único.</li><li><strong>full_name / nombre completo:</strong> nombres y apellidos.</li><li><strong>codigo_estudiante / código estudiante:</strong> solo números.</li><li><strong>department / dependencia:</strong> Monitores Aulas de Software, Monitores Laboratorios o Monitores Física.</li></ul><p><strong>Datos opcionales:</strong></p><ul><li>numero_documento / número documento.</li><li>proyecto_curricular / proyecto curricular.</li><li>telefono / phone.</li></ul></div>
+              <label className={estilos.archivoCarga}>Archivo Excel (.xlsx)<input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(e) => setArchivo(e.target.files?.[0] ?? null)} /><small>{archivo?.name ?? "Ningún archivo seleccionado"}</small></label>
+              <button className="button-primary" disabled={guardando}>{guardando ? "Procesando…" : "↑ Procesar archivo"}</button>
+              {resultadoCarga && <div className={estilos.resultadoImportacion}><span><b>{resultadoCarga.total_rows}</b>Filas</span><span><b>{resultadoCarga.created}</b>Creados</span><span><b>{resultadoCarga.skipped.length}</b>Omitidos</span><span><b>{resultadoCarga.errors.length}</b>Con error</span></div>}
+            </form>
+          </section>
+        </div>
+      )}
       {edicion && (
         <div className={estilos.fondoModal}>
           <section className={estilos.modal} role="dialog" aria-modal="true">
@@ -789,6 +706,10 @@ export function MonitoresApiView() {
                   onChange={(e) => setNuevoSemestre(e.target.value)}
                 />
               </label>
+              <div className={estilos.formularioDoble}>
+                <label className={estilos.campo}><span>Fecha de inicio</span><input required type="date" value={fechaInicioSemestre} onChange={(e) => setFechaInicioSemestre(e.target.value)} /></label>
+                <label className={estilos.campo}><span>Fecha de finalización</span><input required type="date" min={fechaInicioSemestre || undefined} value={fechaFinSemestre} onChange={(e) => setFechaFinSemestre(e.target.value)} /></label>
+              </div>
               <button className="button-primary" disabled={guardando}>
                 Confirmar inicio de semestre
               </button>

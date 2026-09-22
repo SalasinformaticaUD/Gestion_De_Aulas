@@ -36,7 +36,7 @@ export function ConsultaPublica() {
     <main className={estilos.contenidoPublico}>
       <section className={`${estilos.tarjeta} ${estilos.buscadorPublico}`}>
         <header><div><span className={estilos.etiqueta}>Consulta pública</span><h2>Consulte sus horas de monitoría</h2><p>Ingrese el código estudiantil registrado en el sistema.</p></div></header>
-        <form className={estilos.formulario} onSubmit={consultar}><label className={estilos.campo}><span>Código estudiantil</span><input value={codigo} onChange={(evento) => { setCodigo(evento.target.value); setError(""); }} placeholder="Ej. 20211001001" required /></label><button className="button-primary" type="submit" disabled={cargando}>{cargando ? "Consultando…" : "Consultar"}</button></form>
+        <form className={estilos.formulario} onSubmit={consultar}><label className={estilos.campo}><span>Código estudiantil</span><input value={codigo} onChange={(evento) => { setCodigo(evento.target.value); setError(""); }} placeholder="Ej. 20211001001" required /></label><button className="button-primary" type="submit" disabled={cargando}>{cargando ? "Buscando…" : "Buscar"}</button></form>
         {error && <AvisoTemporal mensaje={error} tipo="error" alCerrar={() => setError("")} />}
       </section>
       {resultado && <section className={estilos.resultadoPublico}>
