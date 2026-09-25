@@ -1,1 +1,55 @@
 .page{display:grid;gap:1.25rem}.heading{display:flex;align-items:flex-start;justify-content:space-between;gap:1.5rem;padding:1.25rem 1.35rem;border:1px solid var(--line);border-radius:14px;background:linear-gradient(135deg,var(--surface) 0%,#eef5ff 100%)}.heading span{display:block;color:#1d5ea6;font-size:.72rem;font-weight:850;letter-spacing:.11em;text-transform:uppercase}.heading h1,.heading p{margin:0}.heading h1{margin-top:.25rem;font-size:1.45rem}.heading p{max-width:780px;margin-top:.45rem;color:var(--muted);font-size:.87rem;line-height:1.45}.newButton,.primary{min-height:2.45rem;padding:.55rem .9rem;border:0;border-radius:7px;color:#fff;background:#145ea8;font:inherit;font-weight:800;cursor:pointer}.newButton{white-space:nowrap}.grid{display:grid;grid-template-columns:minmax(320px,.85fr) minmax(480px,1.35fr);gap:1.25rem;align-items:start}.card{overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--surface);box-shadow:var(--shadow)}.cardHeader{padding:1rem 1.1rem;border-bottom:1px solid var(--line)}.cardHeader h2,.cardHeader p{margin:0}.cardHeader h2{font-size:1.02rem}.cardHeader p{margin-top:.3rem;color:var(--muted);font-size:.79rem}.form{display:grid;gap:.8rem;padding:1rem 1.1rem}.form label{display:grid;gap:.35rem;color:var(--muted);font-size:.7rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase}.form input,.form select,.passwordBox input{box-sizing:border-box;width:100%;min-height:2.4rem;padding:.5rem .65rem;border:1px solid var(--line);border-radius:7px;color:var(--ink);background:var(--surface-soft);font:inherit;letter-spacing:normal;text-transform:none}.form small{font-size:.72rem;text-transform:none;letter-spacing:normal}.two{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}.switch{display:flex!important;align-items:center;gap:.5rem;color:var(--ink)!important;letter-spacing:normal!important;text-transform:none!important}.switch input{width:auto;min-height:auto;accent-color:#145ea8}.form footer{display:flex;justify-content:flex-end;gap:.55rem}.secondary{min-height:2.45rem;padding:.55rem .9rem;border:1px solid var(--line);border-radius:7px;color:var(--ink);background:var(--surface-soft);font:inherit;font-weight:750;cursor:pointer}.passwordBox{display:grid;gap:.5rem;padding:1rem 1.1rem;border-top:1px solid var(--line);background:#fff8eb}.passwordBox h3,.passwordBox p{margin:0}.passwordBox h3{font-size:.9rem}.passwordBox p{color:#7a5a19;font-size:.76rem}.passwordBox>div{display:grid;grid-template-columns:1fr auto;gap:.5rem}.passwordBox button{padding:.45rem .7rem;border:1px solid #c88d20;border-radius:7px;color:#75500a;background:#fff;font:inherit;font-weight:750;cursor:pointer}.list{display:grid}.list article{display:flex;justify-content:space-between;gap:1rem;padding:1rem 1.1rem;border-bottom:1px solid var(--line)}.identity strong,.identity small{display:block}.identity small{margin-top:.24rem;color:var(--muted);font-size:.77rem}.identity div{display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.55rem}.identity div span,.actions>span{padding:.22rem .45rem;border-radius:99px;font-size:.68rem;font-weight:800}.admin{color:#6d3700;background:#ffe4b8}.leader{color:#155991;background:#d8edff}.department{color:#535d69;background:#edf0f4}.actions{display:grid;justify-items:end;align-content:start;gap:.4rem;text-align:right}.external{color:#704c00;background:#fff1c9}.local{color:#3f5368;background:#e6eef6}.active{color:#087239;background:#dff8e8}.inactive{color:#a72331;background:#ffeaed}.actions button{padding:.35rem .65rem;border:1px solid #1d68b1;border-radius:6px;color:#155a9c;background:#fff;font:inherit;font-size:.76rem;font-weight:800;cursor:pointer}.actions small{color:var(--muted);font-size:.7rem}.error,.notice{margin:0;padding:.75rem .9rem;border:1px solid;border-radius:8px;font-size:.84rem}.error{color:#a51f32;border-color:#f1bcc5;background:#fff1f3}.notice{color:#0d6b3d;border-color:#afe4c6;background:#eafff1}.empty,.loading{padding:2rem;color:var(--muted);text-align:center}@media(max-width:980px){.grid{grid-template-columns:1fr}}@media(max-width:620px){.heading{flex-direction:column}.newButton{width:100%}.two{grid-template-columns:1fr}.list article{flex-direction:column}.actions{justify-items:start;text-align:left}.passwordBox>div{grid-template-columns:1fr}}
+/* Usuarios: superficies sólidas y formularios que priorizan la lectura. */
+.heading {
+  background: var(--surface-soft);
+}
+.heading span {
+  color: var(--primary);
+}
+.two {
+  grid-template-columns: minmax(0, 1fr);
+}
+.card:has(:global([class*="opcionesSelectorInstitucional"]:not([hidden]))) {
+  overflow: visible;
+}
+.form :global([class*="selectorInstitucional"]) {
+  min-width: 0;
+  width: 100%;
+}
+.form :global([class*="opcionesSelectorInstitucional"]) {
+  min-width: 100%;
+  width: max-content;
+  max-width: min(28rem, calc(100vw - 2rem));
+}
+:global(html[data-theme="dark"]) .heading {
+  border-color: var(--line);
+  background: #23252b;
+}
+:global(html[data-theme="dark"]) .heading span {
+  color: #f27888;
+}
+:global(html[data-theme="dark"]) .passwordBox {
+  border-top-color: #80622d;
+  background: #2c2418;
+}
+:global(html[data-theme="dark"]) .passwordBox h3 {
+  color: var(--ink);
+}
+:global(html[data-theme="dark"]) .passwordBox p {
+  color: #ead293;
+}
+:global(html[data-theme="dark"]) .passwordBox input {
+  border-color: #5a513e;
+  color: var(--ink);
+  background: #1c1e23;
+}
+:global(html[data-theme="dark"]) .passwordBox button {
+  border-color: #80622d;
+  color: #f4d77e;
+  background: #332917;
+}
+:global(html[data-theme="dark"]) .passwordBox button:hover {
+  border-color: #d59b27;
+  color: #fff;
+  background: #57401d;
+}

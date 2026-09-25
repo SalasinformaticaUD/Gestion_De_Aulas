@@ -7,3 +7,23 @@
 .passwordError { border-color:#fecaca; color:#b42318; background:#fff1f2; }
 .accessGrid { display:grid; grid-template-columns:minmax(180px,.65fr) minmax(0,1fr); gap:9px; padding:14px; }.accessGrid>div,.accessList { min-width:0; padding:11px 12px; border:1px solid var(--line); border-radius:7px; background:var(--surface-soft,#f8f9fb); }.accessGrid span,.accessList>span { display:block; color:var(--muted); font-size:10.4px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; }.accessListWide { grid-column:1/-1; }.accessList ul { display:grid; grid-template-columns:repeat(auto-fit,minmax(205px,1fr)); gap:6px; padding:0; margin:9px 0 0; list-style:none; }.accessList li { min-width:0; padding:6px 8px; border-left:3px solid var(--primary); border-radius:4px; color:var(--ink); background:var(--surface); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; font-weight:700; overflow-wrap:anywhere; }.accessList p { margin:8px 0 0; color:var(--muted); font-size:13px; }
 @media(max-width:560px){.accessGrid{grid-template-columns:1fr}.accessListWide{grid-column:auto}.accessList ul{grid-template-columns:1fr}}
+
+/* En móviles, los listados de acceso se consultan bajo demanda para evitar un perfil excesivamente largo. */
+.accessDetails { margin-top:9px; }
+.accessDetails summary { display:none; }
+.accessDetails > ul { margin-top:0; }
+.accessDetails > p { margin-top:0; }
+@media (min-width:561px) {
+  .accessDetails:not([open]) > ul { display:grid; }
+  .accessDetails:not([open]) > p { display:block; }
+}
+@media (max-width:560px) {
+  .accessDetails { margin-top:8px; border-top:1px solid var(--line); }
+  .accessDetails summary { min-height:36px; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:0 2px; cursor:pointer; color:var(--ink); font-size:12px; font-weight:750; list-style:none; }
+  .accessDetails summary::-webkit-details-marker { display:none; }
+  .accessDetails summary > span { color:var(--ink); font-size:12px; font-weight:750; letter-spacing:0; text-transform:none; }
+  .accessDetails summary > b { color:var(--primary); font-size:17px; line-height:1; transition:transform .18s ease; }
+  .accessDetails[open] summary > b { transform:rotate(180deg); }
+  .accessDetails > ul { margin-top:0; padding-bottom:2px; }
+  .accessDetails > p { padding-bottom:4px; }
+}

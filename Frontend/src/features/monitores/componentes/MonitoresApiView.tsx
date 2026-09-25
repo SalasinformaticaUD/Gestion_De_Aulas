@@ -9,6 +9,7 @@ import type {
 } from "@/features/monitores/api/contratosMonitores";
 import estilos from "./SistemaVisualMonitores.module.css";
 import { AvisoTemporal } from "./AvisoTemporal";
+import { SelectorDependenciaAdmin } from "./FiltroDependenciaAdmin";
 
 type FormMonitor = {
   full_name: string;
@@ -31,6 +32,7 @@ const vacio: FormMonitor = {
   confirm_repeating_monitor: false,
 };
 const soloNumeros = (valor: string) => valor.replace(/\D/g, "");
+const nombresDependencia: Record<string, string> = { informatics_labs: "Monitores Aulas de Software", electrical: "Monitores Laboratorios", physics: "Monitores Física" };
 const estadoCuenta = (monitor: MonitorApi) =>
   monitor.account_status ?? (monitor.is_active ? "ACTIVE" : "INACTIVE");
 const etiquetaEstado = (monitor: MonitorApi) =>
@@ -43,11 +45,13 @@ function FormularioMonitor({
   onChange,
   texto,
   guardando,
+  dependenciaFija,
 }: {
   form: FormMonitor;
   onChange: (form: FormMonitor) => void;
   texto: string;
   guardando: boolean;
+  dependenciaFija?: string | null;
 }) {
   return (
     <div className={estilos.formulario}>
@@ -130,18 +134,21 @@ function FormularioMonitor({
           <option value="licenciatura_fisica">Licenciatura en Física</option>
         </select>
       </label>
-      <label className={estilos.campo}>
-        <span>Dependencia</span>
-        <select
-          required
-          value={form.department}
-          onChange={(e) => onChange({ ...form, department: e.target.value })}
-        >
-          <option value="informatics_labs">Monitores Aulas de Software</option>
-          <option value="electrical">Monitores Laboratorios</option>
-          <option value="physics">Monitores Fisica</option>
-        </select>
-      </label>
+      {dependenciaFija ? (
+        <label className={estilos.campo}>
+          <span>Dependencia</span>
+          <input value={nombresDependencia[dependenciaFija] ?? dependenciaFija} readOnly aria-readonly="true" />
+        </label>
+      ) : (
+        <label className={estilos.campo}>
+          <span>Dependencia</span>
+          <select required value={form.department} onChange={(e) => onChange({ ...form, department: e.target.value })}>
+            <option value="informatics_labs">Monitores Aulas de Software</option>
+            <option value="electrical">Monitores Laboratorios</option>
+            <option value="physics">Monitores Física</option>
+          </select>
+        </label>
+      )}
       <button className="button-primary" disabled={guardando}>
         {guardando ? "Procesando…" : texto}
       </button>
@@ -152,8 +159,13 @@ function FormularioMonitor({
 export function MonitoresApiView() {
   const [rows, setRows] = useState<MonitorApi[]>([]);
   const [form, setForm] = useState(vacio);
+  const [perfilMonitores, setPerfilMonitores] = useState<{ role: string; department?: string | null } | null>(null);
   const [buscar, setBuscar] = useState("");
+  const [dependenciaFiltro, setDependenciaFiltro] = useState("");
   const [semestreFiltro, setSemestreFiltro] = useState("ACTUAL");
+  const [resultadoReenvio, setResultadoReenvio] = useState<{ id: string; tipo: "exito" | "error"; mensaje: string } | null>(null);
+  const [reenviandoId, setReenviandoId] = useState<string | null>(null);
+  const [selectorSemestreAbierto, setSelectorSemestreAbierto] = useState(false);
   const [crearModal, setCrearModal] = useState(false);
   const [cargaModal, setCargaModal] = useState(false);
   const [alertasPorMonitor, setAlertasPorMonitor] = useState<
@@ -215,7 +227,13 @@ export function MonitoresApiView() {
   }
   useEffect(() => {
     void cargar();
+    void servicioMonitores.obtenerPerfilMonitores().then((perfil) => {
+      setPerfilMonitores(perfil);
+      const dependencia = perfil.department;
+      if (perfil.role === "leader" && dependencia) setForm((actual) => ({ ...actual, department: dependencia }));
+    }).catch(() => setPerfilMonitores(null));
   }, []);
+  const dependenciaLider = perfilMonitores?.role === "leader" ? perfilMonitores.department : null;
   const visibles = useMemo(() => {
     return rows.filter((item) => {
         const texto =
@@ -224,21 +242,26 @@ export function MonitoresApiView() {
           );
         return (
           (!buscar || texto.includes(buscar.toLocaleLowerCase("es"))) &&
+          (!dependenciaFiltro || item.department === dependenciaFiltro) &&
           (semestreFiltro === "ACTUAL"
             ? item.semester_is_active === true
             : item.semester === semestreFiltro)
         );
       }).sort((a, b) => a.full_name.localeCompare(b.full_name, "es"));
-  }, [rows, buscar, semestreFiltro]);
+  }, [rows, buscar, semestreFiltro, dependenciaFiltro]);
   const semestres = useMemo(() => [...new Set(rows.map((item) => item.semester).filter((item): item is string => Boolean(item)))], [rows]);
+  const semestresHistoricos = useMemo(
+    () => semestres.filter((semestre) => !rows.some((item) => item.semester === semestre && item.semester_is_active === true)),
+    [rows, semestres],
+  );
   async function crear(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     setGuardando(true);
     setError("");
     try {
-      const creado = await servicioMonitores.provisionarMonitor(form);
+      const creado = await servicioMonitores.provisionarMonitor({ ...form, department: dependenciaLider ?? form.department });
       setRows((actual) => [creado, ...actual]);
-      setForm(vacio);
+      setForm({ ...vacio, department: dependenciaLider ?? vacio.department });
       setCrearModal(false);
       setAviso(
         creado.account_status === "PENDING"
@@ -321,11 +344,16 @@ export function MonitoresApiView() {
     }
   }
   async function reenviar(item: MonitorApi) {
+    setReenviandoId(item.id);
+    setResultadoReenvio(null);
     try {
       const respuesta = await servicioMonitores.reenviarActivacion(item.id);
-      setAviso(respuesta.detail);
+      setResultadoReenvio({ id: item.id, tipo: "exito", mensaje: respuesta.detail || "Correo de activación enviado correctamente." });
     } catch (e) {
-      fallo(e, "No fue posible reenviar el correo.");
+      const mensaje = e instanceof Error ? e.message : "No fue posible reenviar el correo.";
+      setResultadoReenvio({ id: item.id, tipo: "error", mensaje });
+    } finally {
+      setReenviandoId(null);
     }
   }
   async function confirmarEliminacion(evento: FormEvent<HTMLFormElement>) {
@@ -465,7 +493,7 @@ export function MonitoresApiView() {
               Actualizar
             </button>
           </header>
-          <div className={estilos.barraHerramientas}>
+          <div className={estilos.barraHerramientas}><SelectorDependenciaAdmin visible={perfilMonitores?.role === "admin"} value={dependenciaFiltro} onChange={setDependenciaFiltro} />
             <label className={estilos.campoAncho}>
               <span>Buscar</span>
               <input
@@ -474,16 +502,15 @@ export function MonitoresApiView() {
                 placeholder="Nombre, código o correo"
               />
             </label>
-            <label className={estilos.campo}>
-              <span>Semestre</span>
-              <select
-                value={semestreFiltro}
-                onChange={(e) => setSemestreFiltro(e.target.value)}
-              >
-                <option value="ACTUAL">Semestre actual</option>
-                {semestres.filter((semestre) => !rows.some((item) => item.semester === semestre && item.semester_is_active === true)).map((semestre) => <option key={semestre} value={semestre}>{semestre}</option>)}
-              </select>
-            </label>
+            <div className={`${estilos.campo} ${estilos.selectorSemestreMonitor}`}>
+              <span id="etiqueta-semestre-monitor">Semestre</span>
+              <button type="button" className={estilos.activadorSemestreMonitor} aria-labelledby="etiqueta-semestre-monitor" aria-expanded={selectorSemestreAbierto} aria-haspopup="listbox" onClick={() => setSelectorSemestreAbierto((abierto) => !abierto)}>
+                {semestreFiltro === "ACTUAL" ? "Semestre actual" : semestreFiltro}<span aria-hidden="true">{selectorSemestreAbierto ? "▴" : "▾"}</span>
+              </button>
+              {selectorSemestreAbierto && <div className={estilos.opcionesSemestreMonitor} role="listbox" aria-label="Semestre">
+                {[{ value: "ACTUAL", label: "Semestre actual" }, ...semestresHistoricos.map((semestre) => ({ value: semestre, label: semestre }))].map((opcion) => <button key={opcion.value} type="button" role="option" aria-selected={semestreFiltro === opcion.value} className={semestreFiltro === opcion.value ? estilos.opcionSemestreActiva : undefined} onClick={() => { setSemestreFiltro(opcion.value); setSelectorSemestreAbierto(false); }}>{opcion.label}</button>)}
+              </div>}
+            </div>
           </div>
           <div className={estilos.tablaContenedor}>
             <table className={`${estilos.tabla} ${estilos.tablaCuentas}`}>
@@ -556,7 +583,7 @@ export function MonitoresApiView() {
                             >
                               Editar
                             </button>
-                            {estadoCuenta(item) === "PENDING" && <button type="button" onClick={() => void reenviar(item)}>Reenviar correo</button>}
+                            {estadoCuenta(item) === "PENDING" && <><button type="button" disabled={reenviandoId === item.id} onClick={() => void reenviar(item)}>{reenviandoId === item.id ? "Reenviando…" : "Reenviar correo"}</button>{resultadoReenvio?.id === item.id && <p className={`${estilos.resultadoReenvioCorreo} ${resultadoReenvio.tipo === "error" ? estilos.resultadoReenvioError : estilos.resultadoReenvioExito}`} role={resultadoReenvio.tipo === "error" ? "alert" : "status"}>{resultadoReenvio.mensaje}</p>}</>}
                             <button
                               type="button"
                               onClick={() => void alternar(item)}
@@ -592,7 +619,7 @@ export function MonitoresApiView() {
         <div className={estilos.fondoModal}>
           <section className={`${estilos.modal} ${estilos.modalFormularioMonitor}`} role="dialog" aria-modal="true" aria-labelledby="titulo-crear-monitor">
             <header><div><h2 id="titulo-crear-monitor">Crear monitor</h2><p>Se valida código, correo y documento antes de registrar la cuenta.</p></div><button type="button" onClick={() => setCrearModal(false)}>×</button></header>
-            <form onSubmit={crear}><FormularioMonitor form={form} onChange={setForm} texto="+ Crear y enviar activación" guardando={guardando} /></form>
+            <form onSubmit={crear}><FormularioMonitor form={form} onChange={setForm} texto="+ Crear y enviar activación" guardando={guardando} dependenciaFija={dependenciaLider} /></form>
           </section>
         </div>
       )}

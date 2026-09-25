@@ -40,6 +40,7 @@ export function ConciliacionAsistencia() {
   const [selecciones, setSelecciones] = useState<Record<string, string>>({});
   const [aviso, setAviso] = useState("");
   const [procesando, setProcesando] = useState("");
+  const dependenciaVisible = recursoPerfil.datos.role === "admin" ? dependencia : (recursoPerfil.datos.department ?? "");
 
   const monitores = useMemo(() => recursoMonitores.datos.map(adaptarMonitor), [recursoMonitores.datos]);
   const monitoresActivos = useMemo(() => monitores.filter((monitor) => monitor.activo), [monitores]);
@@ -48,11 +49,11 @@ export function ConciliacionAsistencia() {
   const filtrados = useMemo(
     () => recurso.datos.filter((item) =>
       (!nombre || item.raw_full_name.toLocaleLowerCase("es").includes(nombre.toLocaleLowerCase("es"))) &&
-      (!dependencia || item.raw_department === dependencia) &&
+      (!dependenciaVisible || item.raw_department === dependenciaVisible) &&
       (!fecha || item.work_day === fecha) &&
       (!motivo || `${item.manual_review_reason} ${item.processing_error}`.toLocaleLowerCase("es").includes(motivo.toLocaleLowerCase("es"))),
     ),
-    [recurso.datos, nombre, dependencia, fecha, motivo],
+    [recurso.datos, nombre, dependenciaVisible, fecha, motivo],
   );
   const paginacion = usarPaginacion(filtrados, 8);
   const totalPaginasHistorial = Math.max(1, Math.ceil(recursoHistorial.datos.count / TAMANO_PAGINA_HISTORIAL));
@@ -110,7 +111,7 @@ export function ConciliacionAsistencia() {
     {vista === "HISTORIAL" && <section className={`${estilos.tarjeta} ${estilos.historialConciliacion}`}>
       <header><div><h2>Historial</h2><p>{recursoHistorial.datos.count} registros visibles.</p></div></header>
       <div className={estilos.tablaContenedor}><table className={estilos.tabla}><thead><tr><th>Nombre crudo</th><th>Dependencia</th><th>Fecha</th><th>Estado</th><th>Monitor</th></tr></thead><tbody>
-        {recursoHistorial.datos.results.map((registro) => <tr key={registro.id}><td><strong>{registro.raw_full_name}</strong></td><td>{nombreDependencia(registro.raw_department)}</td><td>{fechaLarga(registro.work_day)}</td><td><span className={`${estilos.insignia} ${registro.reconciliation_status === "matched" ? estilos.exito : estilos.peligro}`}>{registro.reconciliation_status === "matched" ? "Conciliado" : "Rechazado"}</span></td><td><strong>{registro.monitor_name || "Sin monitor asociado"}</strong></td></tr>)}
+        {recursoHistorial.datos.results.filter((registro) => !dependenciaVisible || registro.raw_department === dependenciaVisible).map((registro) => <tr key={registro.id}><td><strong>{registro.raw_full_name}</strong></td><td>{nombreDependencia(registro.raw_department)}</td><td>{fechaLarga(registro.work_day)}</td><td><span className={`${estilos.insignia} ${registro.reconciliation_status === "matched" ? estilos.exito : estilos.peligro}`}>{registro.reconciliation_status === "matched" ? "Conciliado" : "Rechazado"}</span></td><td><strong>{registro.monitor_name || "Sin monitor asociado"}</strong></td></tr>)}
         {!recursoHistorial.cargando && recursoHistorial.datos.results.length === 0 && <tr><td colSpan={5} className={estilos.vacio}>No hay registros conciliados o rechazados en el historial.</td></tr>}
       </tbody></table></div>
       <Paginacion pagina={paginaHistorial} totalPaginas={totalPaginasHistorial} total={recursoHistorial.datos.count} anterior={() => setPaginaHistorial((actual) => Math.max(1, actual - 1))} siguiente={() => setPaginaHistorial((actual) => Math.min(totalPaginasHistorial, actual + 1))} />

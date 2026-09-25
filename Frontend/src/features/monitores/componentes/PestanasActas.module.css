@@ -6,3 +6,29 @@
 .indicadorVista { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 14.3px; }
 .indicadorVista i { width: 8px; height: 8px; border-radius: 50%; background: #16a34a; box-shadow: 0 0 0 4px #dcfce7; }
 @media (max-width: 560px) { .cabeceraPestanas { align-items: stretch; flex-direction: column; padding: 10px; } .pestanas { width: 100%; } .pestanas button { flex: 1; } }
+
+:global(html[data-theme="dark"]) .pestanas { background: #181a1f; border: 1px solid #383b44; }
+:global(html[data-theme="dark"]) .pestanas button { color: #b9c0cc; }
+:global(html[data-theme="dark"]) .pestanas button.pestanaActiva { color: #f3f5f8; background: #2a2d34; box-shadow: 0 1px 3px rgba(0, 0, 0, .3); }
+:global(html[data-theme="dark"]) .pestanas button span { color: #d7dce5; background: #3a3d46; }
+:global(html[data-theme="dark"]) .indicadorVista { color: #c5cad4; }
+:global(html[data-theme="dark"]) .indicadorVista i { box-shadow: 0 0 0 4px #1f4a32; }
+/* Fuerza la superficie oscura de ambas pestañas, incluso con reglas compartidas cargadas después. */
+:global(html[data-theme="dark"]) .pestanas {
+  background: #181a1f !important;
+  border-color: #383b44 !important;
+}
+:global(html[data-theme="dark"]) .pestanas button {
+  color: #b9c0cc !important;
+  background: transparent !important;
+}
+:global(html[data-theme="dark"]) .pestanas button.pestanaActiva {
+  color: #f3f5f8 !important;
+  background: #2a2d34 !important;
+}
+/* El contador de Gestión actual se mantiene visible en ambas pestañas. */
+.pestanas button span {
+  color: #313842;
+  background: #d9dde3;
+  font-weight: 750;
+}

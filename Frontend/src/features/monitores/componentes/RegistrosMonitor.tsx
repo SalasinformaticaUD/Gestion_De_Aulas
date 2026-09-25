@@ -104,7 +104,7 @@ export function RegistrosMonitor({ monitorId }: { monitorId: string }) {
               </div>
             </header>
             <div className={estilos.tablaContenedor}>
-              <table className={estilos.tabla}>
+              <table className={`${estilos.tabla} ${estilos.tablaInconsistenciasRelacionadas}`}>
                 <thead>
                   <tr>
                     <th>Fecha</th>

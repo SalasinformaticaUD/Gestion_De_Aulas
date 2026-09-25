@@ -1,5 +1,6 @@
-import { descargarMonitores, solicitarMonitores } from "./clienteMonitores";
-import type { AnotacionApi, ConciliacionApi, ConsultaPublicaApi, DashboardApi, DetalleInconsistenciaApi, ExcepcionApi, HorarioApi, ImportacionAsistenciaApi, IndicadoresInconsistenciasApi, InconsistenciaApi, MonitorApi, SesionApi } from "./contratosMonitores";
+import { descargarMonitores, solicitarAulas, solicitarMonitores } from "./clienteMonitores";
+import { obtenerSesion } from "@/features/auth/lib/sesion";
+import type { AnotacionApi, ConciliacionApi, ConsultaPublicaApi, DashboardApi, DetalleInconsistenciaApi, PanelMonitorApi, RegistrosPersonalesApi, ExcepcionApi, HorarioApi, ImportacionAsistenciaApi, IndicadoresInconsistenciasApi, InconsistenciaApi, MonitorApi, SesionApi } from "./contratosMonitores";
 
 export const servicioMonitores = {
   listarMonitores: () => solicitarMonitores<MonitorApi[]>("/api/v1/monitors/"),
@@ -17,13 +18,18 @@ export const servicioMonitores = {
   },
   previsualizarNuevoSemestre: () => solicitarMonitores<{ preview: Record<string, number> }>("/api/v1/monitors/new-semester/"),
   iniciarNuevoSemestre: (new_semester_name: string, starts_on: string, ends_on: string) => solicitarMonitores<{ archived_semester: string; new_semester: string; starts_on: string; ends_on: string; affected: Record<string, number> }>("/api/v1/monitors/new-semester/", { method: "POST", body: JSON.stringify({ new_semester_name, starts_on, ends_on, confirm: true }) }),
-  verificarContrasenaActual: (password: string) => solicitarMonitores<{ valido: boolean }>("/api/v1/auth/verify-password/", { method: "POST", body: JSON.stringify({ password }) }),
-  obtenerPerfilMonitores: () => solicitarMonitores<{ role: string }>("/api/v1/auth/me/"),
+  verificarContrasenaActual: (password: string) => solicitarAulas<{ valido: boolean }>("/auth/verificar-contrasena", obtenerSesion()?.tokenAcceso, { method: "POST", body: JSON.stringify({ password }) }),
+  obtenerPerfilMonitores: async () => {
+    const perfil = await solicitarMonitores<{ role: string; department?: string | null }>("/api/v1/auth/me/");
+    return { ...perfil, role: perfil.role.trim().toLowerCase() };
+  },
   listarUsuariosGestion: () => solicitarMonitores<Array<{ id:string; username:string; email:string; first_name:string; last_name:string; full_name:string; role:"admin"|"leader"; department:"physics"|"informatics_labs"|"electrical"|null; is_active:boolean; source:"AULAS"|"MONITORES"; usuario_externo_id:string|null }>>("/api/v1/auth/users/"),
   crearUsuarioGestion: (payload: { username:string; email:string; first_name:string; last_name:string; password:string; role:"admin"|"leader"; department:"physics"|"informatics_labs"|"electrical"|null; is_active:boolean }) => solicitarMonitores("/api/v1/auth/users/", { method:"POST", body:JSON.stringify(payload) }),
   actualizarUsuarioGestion: (id:string, payload: { username:string; email:string; first_name:string; last_name:string; password?:undefined; role:"admin"|"leader"; department:"physics"|"informatics_labs"|"electrical"|null; is_active:boolean }) => solicitarMonitores(`/api/v1/auth/users/${id}/`, { method:"PATCH", body:JSON.stringify(payload) }),
   restablecerClaveUsuarioGestion: (id:string, password:string) => solicitarMonitores(`/api/v1/auth/users/${id}/password/`, { method:"POST", body:JSON.stringify({ password }) }),
-  obtenerDashboard: () => solicitarMonitores<DashboardApi>("/api/v1/reports/dashboard/"),
+  obtenerDashboard: (department?: string) => solicitarMonitores<DashboardApi>(`/api/v1/reports/dashboard/${department ? `?department=${encodeURIComponent(department)}` : ""}`),
+  obtenerMiDashboardMonitor: () => solicitarMonitores<PanelMonitorApi>("/api/v1/reports/dashboard/me/"),
+  obtenerMisRegistros: () => solicitarMonitores<RegistrosPersonalesApi>("/api/v1/reports/monitor-records/me/"),
   listarHorarios: () => solicitarMonitores<HorarioApi[]>("/api/v1/schedules/"),
   crearHorario: (payload: Pick<HorarioApi, "monitor" | "weekday" | "start_time" | "end_time" | "asignatura" | "grupo" | "docente" | "proyecto_curricular" | "location" | "is_active">) =>
     solicitarMonitores<HorarioApi>("/api/v1/schedules/", { method: "POST", body: JSON.stringify(payload) }),
@@ -58,6 +64,7 @@ export const servicioMonitores = {
   obtenerDetalleInconsistencia: (id:string) => solicitarMonitores<DetalleInconsistenciaApi>(`/api/v1/attendance/inconsistencies/${id}/`),
   obtenerIndicadoresInconsistencias: () => solicitarMonitores<IndicadoresInconsistenciasApi>("/api/v1/attendance/inconsistencies/stats/"),
   crearSolucionInconsistencia: (id:string, payload:{ annotation_type:string; action:string; delta_minutes:number; description:string }) => solicitarMonitores<InconsistenciaApi>(`/api/v1/attendance/inconsistencies/${id}/create-solution/`, { method:"POST", body:JSON.stringify(payload) }),
+  invalidarSesion: (id:string, reason:string) => solicitarMonitores<SesionApi>(`/api/v1/work-sessions/${id}/invalidate/`, { method:"POST", body:JSON.stringify({ reason }) }),
   invalidarInconsistencia: (id:string, reason:string) => solicitarMonitores<InconsistenciaApi>(`/api/v1/attendance/inconsistencies/${id}/invalidate/`, { method:"POST", body:JSON.stringify({ reason }) }),
   importarAsistencia: (archivo: File) => {
     const datos = new FormData();

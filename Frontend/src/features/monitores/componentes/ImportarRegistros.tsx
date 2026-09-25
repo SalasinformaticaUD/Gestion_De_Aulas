@@ -25,6 +25,7 @@ import { Paginacion } from "./Paginacion";
 import { HistorialReciente } from "./panel/HistorialReciente";
 import estilos from "./SistemaVisualMonitores.module.css";
 import estilosPestanas from "./PestanasActas.module.css";
+import { SelectorDependenciaAdmin } from "./FiltroDependenciaAdmin";
 
 type Vista = "ACTUAL" | "RECIENTES" | "HISTORICO";
 type FilaHistorica = {
@@ -52,7 +53,8 @@ function descargar(nombre: string, filas: string[][]) {
     .map((fila) =>
       fila.map((valor) => `"${valor.replaceAll('"', '""')}"`).join(";"),
     )
-    .join("\n");
+    .join("\
+");
   const enlace = document.createElement("a");
   enlace.href = URL.createObjectURL(
     new Blob([contenido], { type: "text/csv;charset=utf-8;" }),
@@ -101,14 +103,15 @@ export function ImportarRegistros() {
   const [cargandoHistorico, setCargandoHistorico] = useState(false);
   const [buscar, setBuscar] = useState("");
   const [dependencia, setDependencia] = useState("");
+  const [dependenciaActual, setDependenciaActual] = useState("");
   const [semestre, setSemestre] = useState("");
 
   const monitores = useMemo(
     () =>
       recursoMonitores.datos
-        .filter((item) => item.is_active && item.semester_is_active === true)
+        .filter((item) => item.is_active && item.semester_is_active === true && (!dependenciaActual || item.department === dependenciaActual))
         .map(adaptarMonitor),
-    [recursoMonitores.datos],
+    [recursoMonitores.datos, dependenciaActual],
   );
   const resumenes = useMemo(
     () =>
@@ -355,6 +358,7 @@ export function ImportarRegistros() {
               <h2>Monitores del periodo actual</h2>
               <p>Solo se muestran cuentas activas del semestre vigente.</p>
             </div>
+            <SelectorDependenciaAdmin visible={perfil.datos.role === "admin"} value={dependenciaActual} onChange={setDependenciaActual} />
             <button
               type="button"
               className={estilos.botonSecundario}

@@ -26,6 +26,13 @@ const tipos = [
   ["duplicate_mark", "Duplicado"],
   ["end_of_day", "Final de jornada"],
 ] as const;
+const claseMetricaTipo = {
+  odd_mark: estilos.metricaInconsistenciaAmbar,
+  short_pair: estilos.metricaInconsistenciaAzul,
+  out_of_day_window: estilos.metricaInconsistenciaVioleta,
+  duplicate_mark: estilos.metricaInconsistenciaRoja,
+  end_of_day: estilos.metricaInconsistenciaNeutra,
+} as const;
 const dependencias = [
   ["physics", "Monitores Física"],
   ["informatics_labs", "Monitores Aulas de Software"],
@@ -198,6 +205,7 @@ export function GestionInconsistencias() {
   const [modalAccion, setModalAccion] = useState<ModalAccion>(null);
   const [horas, setHoras] = useState("0");
   const [motivo, setMotivo] = useState("");
+  const [confirmoInvalidacion, setConfirmoInvalidacion] = useState(false);
   const datosVista =
     vista === "PENDIENTES"
       ? pendientes.datos
@@ -245,13 +253,30 @@ export function GestionInconsistencias() {
     setAviso("");
     try {
       setDetalle(await servicioMonitores.obtenerDetalleInconsistencia(item.id));
-    } catch (error) {
-      setAviso(
-        error instanceof Error
-          ? error.message
-          : "No fue posible consultar el detalle.",
-      );
-    } finally {
+          } catch (error) {
+        if (error instanceof Error && error.message.includes("sesion procesada")) {
+             try {
+                 const dt = await servicioMonitores.obtenerInconsistencia(item.id);
+                 if (dt.work_session) {
+                     await servicioMonitores.invalidarSesion(dt.work_session.id, descripcion);
+                     setAviso("Se invalidó automáticamente la sesión derivada.");
+                     setModalAccion(null);
+                     setDetalle(null);
+                     await recargarTodo();
+                     return;
+                 }
+             } catch (e) {
+                 console.error("Error al invalidar sesión derivada", e);
+             }
+             setAviso("La marcación ya generó una sesión. Debe invalidar la sesión derivada manualmente.");
+        } else {
+             setAviso(
+               error instanceof Error
+                 ? error.message
+                 : "No fue posible actualizar la inconsistencia.",
+             );
+        }
+      } finally {
       setCargandoDetalle("");
     }
   };
@@ -262,6 +287,7 @@ export function GestionInconsistencias() {
     setAviso("");
     setHoras("0");
     setMotivo("");
+    setConfirmoInvalidacion(false);
     setModalAccion({ modo, item });
   };
   const guardarAccion = async () => {
@@ -275,6 +301,14 @@ export function GestionInconsistencias() {
       );
       return;
     }
+    if (modalAccion.modo === "invalidacion" && !confirmoInvalidacion) {
+
+      setAviso("Confirme que desea rechazar la marcación antes de continuar.");
+
+      return;
+
+    }
+
     const item = modalAccion.item;
     setProcesando(item.id);
     try {
@@ -289,19 +323,36 @@ export function GestionInconsistencias() {
         await servicioMonitores.invalidarInconsistencia(item.id, descripcion);
       setAviso(
         modalAccion.modo === "solucion"
-          ? "Se creó y vinculó la anotación de solución."
-          : "Registro invalidado correctamente.",
+          ? "Se creó y vinculó la anotación de solución. La marcación original permanece registrada."
+          : "Marcación invalidada correctamente.",
       );
       setModalAccion(null);
       setDetalle(null);
       await recargarTodo();
-    } catch (error) {
-      setAviso(
-        error instanceof Error
-          ? error.message
-          : "No fue posible actualizar la inconsistencia.",
-      );
-    } finally {
+          } catch (error) {
+        if (error instanceof Error && error.message.includes("sesion procesada")) {
+             try {
+                 const dt = await servicioMonitores.obtenerInconsistencia(item.id);
+                 if (dt.work_session) {
+                     await servicioMonitores.invalidarSesion(dt.work_session.id, descripcion);
+                     setAviso("Se invalidó automáticamente la sesión derivada.");
+                     setModalAccion(null);
+                     setDetalle(null);
+                     await recargarTodo();
+                     return;
+                 }
+             } catch (e) {
+                 console.error("Error al invalidar sesión derivada", e);
+             }
+             setAviso("La marcación ya generó una sesión. Debe invalidar la sesión derivada manualmente.");
+        } else {
+             setAviso(
+               error instanceof Error
+                 ? error.message
+                 : "No fue posible actualizar la inconsistencia.",
+             );
+        }
+      } finally {
       setProcesando("");
     }
   };
@@ -334,7 +385,7 @@ export function GestionInconsistencias() {
         </article>
         {tipos.map(([tipo, etiqueta]) => (
           <article
-            className={`${estilos.metrica} ${estilos.metricaInconsistencia}`}
+            className={`${estilos.metrica} ${estilos.metricaInconsistencia} ${claseMetricaTipo[tipo]}`}
             key={tipo}
           >
             <span>{etiqueta}</span>
@@ -522,7 +573,7 @@ export function GestionInconsistencias() {
                               }
                               onClick={() => abrirAccion("solucion", item)}
                             >
-                              Crear anotación
+                              Resolver con anotación
                             </button>
                             <button
                               type="button"
@@ -530,7 +581,7 @@ export function GestionInconsistencias() {
                               disabled={procesando === item.id}
                               onClick={() => abrirAccion("invalidacion", item)}
                             >
-                              Invalidar
+                              Invalidar marcación
                             </button>
                           </>
                         )}
@@ -541,7 +592,7 @@ export function GestionInconsistencias() {
                             disabled={procesando === item.id}
                             onClick={() => abrirAccion("invalidacion", item)}
                           >
-                            Invalidar
+                            Invalidar marcación
                           </button>
                         )}
                       </div>
@@ -589,8 +640,8 @@ export function GestionInconsistencias() {
               <div>
                 <h2 id="titulo-modal-inconsistencia">
                   {modalAccion.modo === "solucion"
-                    ? "Crear anotación de solución"
-                    : "Invalidar registro"}
+                    ? "Resolver con anotación"
+                    : "Invalidar marcación"}
                 </h2>
                 <p>
                   {modalAccion.item.monitor_name ||
@@ -623,6 +674,11 @@ export function GestionInconsistencias() {
                   </small>
                 </label>
               )}
+              <p className={estilos.descripcionAccionInconsistencia}>
+                {modalAccion.modo === "solucion"
+                  ? "Registra una anotación para explicar o ajustar horas. La marcación original no se rechaza con esta acción."
+                  : "Rechaza esta marcación y cierra la inconsistencia. Esta acción no crea un ajuste de horas."}
+              </p>
               <label className={estilos.campo}>
                 <span>
                   {modalAccion.modo === "solucion"
@@ -640,6 +696,20 @@ export function GestionInconsistencias() {
                   required
                 />
               </label>
+              {modalAccion.modo === "invalidacion" && (
+                <label className={estilos.verificacion}>
+                  <input
+                    type="checkbox"
+                    checked={confirmoInvalidacion}
+                    onChange={(event) => setConfirmoInvalidacion(event.target.checked)}
+                  />
+                  <span>
+                    Confirmo que deseo rechazar esta marcación.
+                    <br />
+                    Esta decisión quedará registrada con el motivo indicado.
+                  </span>
+                </label>
+              )}
               <div className={estilos.accionesModalDecision}>
                 <button
                   type="button"
@@ -656,15 +726,17 @@ export function GestionInconsistencias() {
                       : estilos.rechazarExtra
                   }
                   disabled={
-                    procesando === modalAccion.item.id || !motivo.trim()
+                    procesando === modalAccion.item.id ||
+                    !motivo.trim() ||
+                    (modalAccion.modo === "invalidacion" && !confirmoInvalidacion)
                   }
                   onClick={() => void guardarAccion()}
                 >
                   {procesando
                     ? "Guardando…"
                     : modalAccion.modo === "solucion"
-                      ? "Crear anotación"
-                      : "Invalidar registro"}
+                      ? "Resolver con anotación"
+                      : "Invalidar marcación"}
                 </button>
               </div>
             </div>

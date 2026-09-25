@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useCallback, useMemo, useState, type FormEvent } from "react";
 import { obtenerSesion } from "@/features/auth/lib/sesion";
 import {
   adaptarAnotacion,
   adaptarMonitor,
+  nombreDependencia,
 } from "@/features/monitores/api/adaptadoresMonitores";
 import type {
   AnotacionApi,
@@ -16,6 +17,7 @@ import { usarRecursoApi } from "@/features/monitores/ganchos/usarRecursoApi";
 import type { AnotacionMonitor } from "@/features/monitores/tipos/modelosMonitores";
 import { Paginacion } from "./Paginacion";
 import estilos from "./SistemaVisualMonitores.module.css";
+import { SelectorDependenciaAdmin, useFiltroDependenciaAdmin } from "./FiltroDependenciaAdmin";
 
 const vacio = {
   monitorId: "",
@@ -42,16 +44,16 @@ export function GestionAnotaciones() {
     (rol) => rol.trim().toLowerCase() === "monitor",
   );
   const puedeGestionar = !esMonitor;
+  const { esAdministrador, dependencia, setDependencia } = useFiltroDependenciaAdmin();
   const recurso = usarRecursoApi(
     servicioMonitores.listarAnotaciones,
     [] as AnotacionApi[],
   );
-  const recursoMonitores = usarRecursoApi(
-    puedeGestionar
-      ? servicioMonitores.listarMonitores
-      : async () => [] as MonitorApi[],
-    [] as MonitorApi[],
+  const cargarMonitores = useCallback(
+    () => puedeGestionar ? servicioMonitores.listarMonitores() : Promise.resolve([] as MonitorApi[]),
+    [puedeGestionar],
   );
+  const recursoMonitores = usarRecursoApi(cargarMonitores, [] as MonitorApi[]);
   const [modalFormulario, setModalFormulario] = useState(false);
   const [edicion, setEdicion] = useState<string | null>(null);
   const [formulario, setFormulario] = useState(vacio);
@@ -83,10 +85,11 @@ export function GestionAnotaciones() {
                 .toLocaleLowerCase("es")
                 .includes(termino)) &&
             (tipoFiltro === "TODOS" || item.tipo === tipoFiltro) &&
-            (accionFiltro === "TODAS" || item.accion === accionFiltro)
+            (accionFiltro === "TODAS" || item.accion === accionFiltro) &&
+            (!puedeGestionar || !dependencia || monitor?.dependencia === nombreDependencia(dependencia))
           );
         }),
-    [accionFiltro, anotaciones, buscar, monitores, tipoFiltro],
+    [accionFiltro, anotaciones, buscar, monitores, tipoFiltro, dependencia],
   );
   const paginacion = usarPaginacion(filtradas, 8);
   const cerrarFormulario = () => {
@@ -244,7 +247,7 @@ export function GestionAnotaciones() {
             <p>{filtradas.length} anotación(es) con los filtros actuales.</p>
           </div>
         </header>
-        <div className={estilos.barraHerramientas}>
+        <div className={`${estilos.barraHerramientas} ${estilos.filtrosAnotaciones}`}>
           {puedeGestionar && (
             <label className={estilos.campoAncho}>
               <span>Buscar monitor</span>
@@ -257,7 +260,8 @@ export function GestionAnotaciones() {
               />
             </label>
           )}
-          <label className={estilos.campo}>
+          <SelectorDependenciaAdmin visible={esAdministrador} value={dependencia} onChange={(value) => actualizarFiltro(() => setDependencia(value))} />
+          <label className={`${estilos.campo} ${estilos.filtroTipoAnotacion}`}>
             <span>Tipo</span>
             <select
               value={tipoFiltro}
@@ -272,7 +276,7 @@ export function GestionAnotaciones() {
               <option value="NOVEDAD">Novedad</option>
             </select>
           </label>
-          <label className={estilos.campo}>
+          <label className={`${estilos.campo} ${estilos.filtroAccionAnotacion}`}>
             <span>Acción</span>
             <select
               value={accionFiltro}
@@ -287,7 +291,7 @@ export function GestionAnotaciones() {
           </label>
         </div>
         <div className={estilos.tablaContenedor}>
-          <table className={estilos.tabla}>
+          <table className={`${estilos.tabla} ${puedeGestionar ? estilos.tablaAnotacionesGestion : estilos.tablaAnotacionesPersonal}`}>
             <thead>
               <tr>
                 <th>Fecha</th>
@@ -452,7 +456,7 @@ export function GestionAnotaciones() {
                     <option value="NOVEDAD">Novedad</option>
                   </select>
                 </label>
-                <label className={estilos.campo}>
+                <label className={`${estilos.campo} ${estilos.filtroAccionAnotacion}`}>
                   <span>Acción</span>
                   <select
                     value={formulario.accion}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { MonitorApi } from "@/features/monitores/api/contratosMonitores";
 import { servicioMonitores } from "@/features/monitores/api/servicioMonitores";
 import { AvisoTemporal } from "./AvisoTemporal";
@@ -45,9 +45,11 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
   const [procesando, setProcesando] = useState("");
   const [vistaActas, setVistaActas] = useState<"ACTUAL" | "HISTORICO">("ACTUAL");
   const [semestreHistorico, setSemestreHistorico] = useState("");
+  const [totalActasActuales, setTotalActasActuales] = useState<number | null>(null);
   const [actaPorRechazar, setActaPorRechazar] = useState<Fila | null>(null);
   const [motivoRechazo, setMotivoRechazo] = useState("");
   const [archivoActa, setArchivoActa] = useState<File | null>(null);
+  const selectorArchivoActa = useRef<HTMLInputElement>(null);
   const cargarDocumentos = useCallback(async () => {
     if (perfil.cargando) return;
     try {
@@ -68,7 +70,11 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
           : await servicioMonitores.listarActasCompromiso(
               vistaActas === "HISTORICO" ? semestreHistorico : undefined,
             );
-      setRows(documentos as Fila[]);
+      const documentosActas = documentos as Fila[];
+      setRows(documentosActas);
+      if (tipo === "actas" && vistaActas === "ACTUAL") {
+        setTotalActasActuales(documentosActas.length);
+      }
     } catch (problema) {
       setError(
         problema instanceof Error
@@ -101,11 +107,11 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
               "es",
             );
           return (
-            (!filtrosActas.buscar || texto.includes(filtrosActas.buscar.toLocaleLowerCase("es"))) &&
-            (filtrosActas.estado === "todos" ||
+            (!buscar || texto.includes(buscar.toLocaleLowerCase("es"))) &&
+            (estado === "todos" ||
               String(row.status ?? "pending").toLowerCase() ===
-                filtrosActas.estado) &&
-            (filtrosActas.dependencia === "todas" || monitor?.department === filtrosActas.dependencia)
+                estado) &&
+            (dependencia === "todas" || monitor?.department === dependencia)
           );
         }
         return (
@@ -117,26 +123,29 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
             monitor?.department === filtros.dependencia)
         );
       }),
-    [rows, tipo, filtros, filtrosActas, monitorPorId],
+    [rows, tipo, filtros, buscar, estado, dependencia, monitorPorId],
   );
   const paginacionActas = usarPaginacion(filas, 10);
   useEffect(() => {
     if (tipo === "actas") paginacionActas.reiniciar();
   }, [tipo, filtrosActas]);
 
-  const subirActaPersonal = async (evento: FormEvent<HTMLFormElement>) => {
-    evento.preventDefault();
-    if (!archivoActa || Boolean(rows[0]?.has_signed)) return;
+  const enviarActaPersonal = async (archivo: File) => {
     setProcesando("subir-acta"); setError("");
     try {
-      const actualizada = await servicioMonitores.subirMiActaCompromiso(archivoActa);
+      const actualizada = await servicioMonitores.subirMiActaCompromiso(archivo);
       setRows([actualizada]); setArchivoActa(null);
       setAviso("El acta fue enviada correctamente y quedó pendiente de revisión.");
     } catch (problema) {
       setError(problema instanceof Error ? problema.message : "No fue posible subir el acta.");
     } finally { setProcesando(""); }
   };
-  const abrirPdf = async (row: Fila, firmado = false, descargar = false) => {
+  const subirActaPersonal = async (evento: FormEvent<HTMLFormElement>) => {
+    evento.preventDefault();
+    const puedeCorregir = String(rows[0]?.status ?? "").toLowerCase() === "rejected";
+    if (!archivoActa || (Boolean(rows[0]?.has_signed) && !puedeCorregir)) return;
+    await enviarActaPersonal(archivoActa);
+  };  const abrirPdf = async (row: Fila, firmado = false, descargar = false) => {
     try {
       const blob =
         tipo === "memorandos"
@@ -206,18 +215,14 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
   const revisarActa = async (row: Fila, action: "accept" | "reject", motivo = "") => {
     setProcesando(String(row.monitor));
     try {
-      const actualizado = await servicioMonitores.revisarActaCompromiso(
+      await servicioMonitores.revisarActaCompromiso(
         String(row.monitor),
         action,
         motivo ?? "",
       );
-      setRows((actual) =>
-        actual.map((item) =>
-          String(item.monitor) === String(row.monitor)
-            ? (actualizado as Fila)
-            : item,
-        ),
-      );
+      // Recargar la consulta evita dejar en pantalla una versión anterior del
+      // estado y sincroniza también la vista de historial con lo persistido.
+      await cargarDocumentos();
       setAviso(
         action === "accept"
           ? "Acta aceptada correctamente."
@@ -265,7 +270,10 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
   );
   const semestresHistoricos = useMemo(
     () =>
-      [...new Set(monitores.filter((monitor) => monitor.semester && monitor.semester_is_active === false).map((monitor) => monitor.semester as string))]
+      // El historial también debe permitir consultar el periodo vigente;
+      // de lo contrario los estados aceptada/rechazada del semestre actual
+      // solo podían verse en "Gestión actual".
+      [...new Set(monitores.filter((monitor) => monitor.semester).map((monitor) => monitor.semester as string))]
         .sort((a, b) => b.localeCompare(a, "es")),
     [monitores],
   );
@@ -275,6 +283,7 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
       const miActa = rows[0];
       const enviada = Boolean(miActa?.has_signed);
       const estadoPersonal = String(miActa?.status ?? "pending").toLowerCase();
+      const puedeCorregir = estadoPersonal === "rejected";
       return <div className={estilos.actasApi}>
         <section className={`page-heading ${estilos.encabezado}`}><div><span className={estilos.etiqueta}>Gestión documental</span><h1>Mi acta de compromiso</h1><p>Descargue, firme y cargue el acta correspondiente al periodo académico actual.</p></div></section>
         {error && <AvisoTemporal mensaje={error} tipo="error" alCerrar={() => setError("")} />}
@@ -283,8 +292,8 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
         {enviada && <div className={`${estilos.aviso} ${estadoPersonal === "accepted" ? estilos.avisoExito : estadoPersonal === "rejected" ? estilos.avisoError : estilos.avisoAdvertencia}`} role="status">Su acta está <strong>{estadoPersonal === "accepted" ? "aprobada" : estadoPersonal === "rejected" ? "rechazada" : "pendiente de revisión"}</strong>{estadoPersonal === "rejected" && miActa?.rejection_reason ? `: ${String(miActa.rejection_reason)}` : "."}</div>}
         <div className={estilos.dashboardConNotificaciones}><section className={estilos.tarjeta}><header><div><h2>Entrega del acta</h2><p>Solo se admite un archivo PDF de máximo 10 MB.</p></div></header><div className={estilos.formulario}>
           <button type="button" className={estilos.botonSecundario} onClick={async () => { const blob = await servicioMonitores.descargarMiActaCompromiso(); const url=URL.createObjectURL(blob); window.open(url,"_blank","noopener,noreferrer"); window.setTimeout(()=>URL.revokeObjectURL(url),60000); }}>Ver acta para firmar</button>
-          <form onSubmit={subirActaPersonal}><label className={estilos.zonaCarga}><span><strong>{archivoActa?.name ?? (enviada ? String(miActa?.signed_file_name ?? "Acta enviada") : "Seleccione el acta firmada")}</strong>{enviada ? "Ya existe un archivo cargado; no se permiten envíos duplicados." : "Formato PDF · máximo 10 MB"}</span><input type="file" accept="application/pdf,.pdf" disabled={enviada} onChange={(evento)=>setArchivoActa(evento.target.files?.[0] ?? null)} /></label><div className={estilos.accionesFormulario}><button className="button-primary" type="submit" disabled={enviada || !archivoActa || procesando === "subir-acta"}>{enviada ? "Archivo ya subido" : procesando === "subir-acta" ? "Subiendo…" : "Subir archivo"}</button></div></form>
-        </div></section><BarraNotificacionesDashboard notificaciones={notificaciones.datos} /></div>
+          <form onSubmit={subirActaPersonal}><label className={estilos.zonaCarga}><span><strong>{archivoActa?.name ?? (puedeCorregir ? "Seleccione el acta corregida" : enviada ? String(miActa?.signed_file_name ?? "Acta enviada") : "Seleccione el acta firmada")}</strong>{puedeCorregir ? "Adjunte el PDF corregido para enviarlo nuevamente a revisión." : enviada ? "Ya existe un archivo cargado; no se permiten envíos duplicados." : "Formato PDF · máximo 10 MB"}</span><input ref={selectorArchivoActa} type="file" accept="application/pdf,.pdf" disabled={enviada && !puedeCorregir} onChange={(evento) => { const archivo = evento.target.files?.[0] ?? null; setArchivoActa(archivo); if (puedeCorregir && archivo) void enviarActaPersonal(archivo); }} /></label><div className={estilos.accionesFormulario}>{puedeCorregir ? <button className="button-primary" type="button" disabled={procesando === "subir-acta"} onClick={() => selectorArchivoActa.current?.click()}>{procesando === "subir-acta" ? "Enviando…" : "Corregir acta"}</button> : <button className="button-primary" type="submit" disabled={enviada || !archivoActa || procesando === "subir-acta"}>{procesando === "subir-acta" ? "Subiendo…" : enviada ? "Archivo ya subido" : "Subir archivo"}</button>}</div></form>
+        </div></section></div>
       </div>;
     }
     const firmadas = rows.filter((row) => Boolean(row.has_signed)).length;
@@ -361,7 +370,7 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
           <header className={estilosPestanas.cabeceraPestanas}>
             <div className={estilosPestanas.pestanas} role="tablist" aria-label="Vista de actas">
               <button type="button" role="tab" aria-selected={vistaActas === "ACTUAL"} className={vistaActas === "ACTUAL" ? estilosPestanas.pestanaActiva : ""} onClick={() => { setVistaActas("ACTUAL"); setSemestreHistorico(""); setBuscar(""); setEstado("todos"); setDependencia("todas"); setFiltrosActas({ buscar:"", estado:"todos", dependencia:"todas" }); }}>
-                Gestión actual <span>{vistaActas === "ACTUAL" ? rows.length : ""}</span>
+                Gestión actual <span>{totalActasActuales ?? rows.length}</span>
               </button>
               <button type="button" role="tab" aria-selected={vistaActas === "HISTORICO"} className={vistaActas === "HISTORICO" ? estilosPestanas.pestanaActiva : ""} onClick={() => { setVistaActas("HISTORICO"); setSemestreHistorico(""); setBuscar(""); setEstado("todos"); setDependencia("todas"); setFiltrosActas({ buscar:"", estado:"todos", dependencia:"todas" }); }}>
                 Historial
@@ -479,6 +488,9 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
                         <span className={`${estilos.insignia} ${tono}`}>
                           {etiqueta}
                         </span>
+                        {row.reviewed_at ? (
+                          <small>Revisada: {fecha(row.reviewed_at)}</small>
+                        ) : null}
                         {estadoActa === "rejected" && row.rejection_reason ? (
                           <small>{String(row.rejection_reason)}</small>
                         ) : null}

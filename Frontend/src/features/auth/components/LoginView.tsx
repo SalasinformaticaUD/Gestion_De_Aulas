@@ -64,7 +64,7 @@ export function LoginView() {
           ...(central.aplicaciones.puedeAccederAulas ? ["aulas" as const] : []),
           ...(central.aplicaciones.puedeAccederMonitores ? ["monitores" as const] : []),
         ];
-        guardarSesion({ aplicacion: application.key, tokenAcceso: central.accessToken, expiraEn: Date.now() + central.expiresIn * 1000, usuario: central.usuario, aplicacionesAutorizadas });
+        guardarSesion({ aplicacion: application.key, tokenAcceso: central.accessToken, origen: "central", expiraEn: Date.now() + central.expiresIn * 1000, usuario: central.usuario, aplicacionesAutorizadas });
       };
 
       try {
@@ -83,8 +83,9 @@ export function LoginView() {
         const nombreCompleto = `${local.first_name} ${local.last_name}`.trim() || local.username;
         guardarSesion({
           aplicacion: "monitores",
-          tokenAcceso: "",
-          expiraEn: Date.now() + 8 * 60 * 60 * 1000,
+          tokenAcceso: local.access_token,
+          origen: "monitores-local",
+          expiraEn: Date.now() + local.expires_in * 1000,
           usuario: {
             id: local.id,
             nombreCompleto,

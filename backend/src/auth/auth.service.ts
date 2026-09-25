@@ -59,7 +59,11 @@ export class AuthService {
     }
 
     const usuarioAutenticado = this.toAuthenticatedUser(usuario);
-    const puedeAccederMonitores = usuario.roles.some(({ rol }) => Boolean(rol.perfilMonitores));
+    const perfilMonitores = usuario.roles.map(({ rol }) => rol).find((rol) => rol.perfilMonitores);
+    const puedeAccederMonitores = Boolean(perfilMonitores?.perfilMonitores);
+    const puedeCambiarAAulasDesdeMonitores = perfilMonitores?.perfilMonitores === 'ADMIN'
+      || (perfilMonitores?.perfilMonitores === 'LIDER'
+        && perfilMonitores.dependenciaMonitores === 'INFORMATICS_LABS');
     const token = this.tokens.sign({
       sub: usuarioAutenticado.id,
       nombreUsuario: usuarioAutenticado.nombreUsuario,
@@ -72,7 +76,7 @@ export class AuthService {
       tokenType: 'Bearer',
       usuario: usuarioAutenticado,
       aplicaciones: {
-        puedeAccederAulas: usuarioAutenticado.modulos.some(
+        puedeAccederAulas: puedeCambiarAAulasDesdeMonitores || usuarioAutenticado.modulos.some(
           (codigo) => codigo !== 'MONITORES',
         ),
         puedeAccederMonitores: puedeAccederMonitores && usuarioAutenticado.modulos.includes('MONITORES'),

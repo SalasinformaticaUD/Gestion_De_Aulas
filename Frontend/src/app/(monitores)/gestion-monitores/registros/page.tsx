@@ -1,5 +1,5 @@
-import { ImportarRegistros } from "@/features/monitores/componentes/ImportarRegistros";
+import { RegistrosPorRol } from "@/features/monitores/componentes/RegistrosPorRol";
 
 export default function PaginaRegistros() {
-  return <ImportarRegistros />;
+  return <RegistrosPorRol />;
 }

@@ -99,7 +99,8 @@ export async function solicitarMonitores<T>(
   const respuesta = await fetch(`${baseMonitores}${ruta}`, {
     ...opciones,
     signal: opciones.signal ?? AbortSignal.timeout(8000),
-    credentials: "include",
+    // La identidad se transmite por Authorization; una cookie de otra pestaña no debe participar.
+    credentials: "omit",
     headers: cabeceras,
   });
   return interpretarRespuesta<T>(respuesta, Boolean(token) && notificarAutorizacion);
@@ -109,7 +110,7 @@ export async function descargarMonitores(ruta: string, opciones: RequestInit = {
   const cabeceras = new Headers(opciones.headers);
   const token = obtenerSesion()?.tokenAcceso;
   if (token) cabeceras.set("Authorization", `Bearer ${token}`);
-  const respuesta = await fetch(`${baseMonitores}${ruta}`, { ...opciones, headers: cabeceras });
+  const respuesta = await fetch(`${baseMonitores}${ruta}`, { ...opciones, credentials: "omit", headers: cabeceras });
   if (!respuesta.ok) {
     notificarErrorAutorizacion(respuesta.status);
     throw new ErrorApi("No fue posible descargar el documento.", respuesta.status);
@@ -143,6 +144,8 @@ export type RespuestaLoginCentral = {
 };
 
 export type RespuestaLoginMonitores = {
+  access_token: string;
+  expires_in: number;
   id: string;
   username: string;
   email: string;

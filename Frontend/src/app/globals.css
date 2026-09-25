@@ -424,7 +424,7 @@ html[data-theme="dark"] .university-logo-dark,
 .paginacion-monitores button { min-height:32px; padding:0 10px; border:1px solid var(--line); border-radius:6px; color:var(--ink); background:var(--surface); font-size:12px; font-weight:750; }
 .paginacion-monitores button:disabled { cursor:not-allowed; opacity:.42; }
 @media(max-width:560px){.paginacion-monitores{align-items:flex-start;flex-direction:column}.paginacion-monitores>div{width:100%}.paginacion-monitores button{flex:1}}
-.theme-toggle{width:38px;height:38px;display:grid;place-items:center;flex:0 0 38px;padding:0;border:1px solid var(--line);border-radius:8px;color:var(--ink);background:var(--surface);font-size:21px;line-height:1}.theme-toggle:hover{border-color:var(--primary)}.app-selector>.theme-toggle,.auth-page>.theme-toggle{position:absolute;top:20px;right:20px}.topbar>.theme-toggle{margin-left:auto}.nav-module-switcher{width:100%;border:0;text-align:left;font:inherit}
+.theme-toggle{position:relative;z-index:2;width:38px;height:38px;display:grid;place-items:center;flex:0 0 38px;padding:0;border:1px solid var(--line);border-radius:8px;color:var(--ink);background:var(--surface);font-size:21px;line-height:1}.theme-toggle:hover{border-color:var(--primary)}.app-selector>.theme-toggle,.auth-page>.theme-toggle{position:absolute;top:20px;right:20px}.topbar>.theme-toggle{margin-left:auto}.nav-module-switcher{width:100%;border:0;text-align:left;font:inherit}
 
 /* Protector de pantalla tras cinco minutos sin interacción. */
 .screen-saver{position:fixed;z-index:1000;inset:0;display:grid;place-items:center;padding:24px;overflow:hidden;color:#fff;background:radial-gradient(circle at 50% 35%,#342130 0,#16171c 52%,#08090b 100%);cursor:none}.screen-saver::before,.screen-saver::after{content:"";position:absolute;width:min(62vw,760px);height:min(62vw,760px);border:1px solid rgba(255,255,255,.055);border-radius:50%;pointer-events:none}.screen-saver::before{transform:translate(-32%,-24%)}.screen-saver::after{transform:translate(34%,28%)}.screen-saver-profile{position:relative;z-index:1;display:grid;justify-items:center;text-align:center;animation:screen-saver-float 6s ease-in-out infinite}.screen-saver-profile .avatar{width:min(82vw,420px);height:min(82vw,420px);border:4px solid rgba(255,255,255,.88);border-radius:50%;box-shadow:0 16px 44px rgba(0,0,0,.42);font-size:clamp(52px,20vw,108px)}.screen-saver-profile strong{max-width:min(90vw,520px);margin-top:19px;font-size:clamp(25px,3vw,38px);letter-spacing:-.03em}.screen-saver-profile small{margin-top:7px;color:#d9dce2;font-size:15px}.screen-saver-profile p{max-width:360px;margin:27px 0 0;color:#b9bec8;font-size:14px;line-height:1.45}@keyframes screen-saver-float{50%{transform:translateY(-10px)}}@media (prefers-reduced-motion:reduce){.screen-saver-profile{animation:none}}
@@ -1283,7 +1283,18 @@ html[data-theme="dark"] .usuarios-actions-secondary:hover {
   object-fit: contain;
 }
 
+.sidebar .brand .sidebar-monitores-logo {
+  width: 190px;
+  height: 66px;
+  object-fit: contain;
+}
+
 @media (max-width: 820px) {
+  .sidebar:has(.sidebar-monitores-logo) .brand {
+    width: 144px;
+    min-width: 144px;
+    padding-inline: 7px;
+  }
   .sidebar .brand .sidebar-aulas-logo {
     width: 142px;
     height: 58px;
@@ -1314,3 +1325,90 @@ html[data-theme="dark"] .maintenance-label,html[data-theme="dark"] .application-
 .metrics > .metric.metric-violet { --metric-soft:#f5efff; border-color:#d8c7f6; }
 .metrics > .metric.metric-warning { --metric-soft:#fff8e8; border-color:#efd59b; }
 html[data-theme="dark"] .metrics > .metric { background:linear-gradient(135deg,color-mix(in srgb,var(--accent,var(--primary)) 15%,var(--surface)) 0%,var(--surface) 72%); }
+
+/* El marco nunca puede superar el ancho físico del teléfono. */
+@media (max-width: 820px) {
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  .app-shell,
+  .workspace,
+  .workspace main {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .sidebar .brand .sidebar-monitores-logo {
+    width: 130px;
+    height: 54px;
+  }
+}
+@media (max-width: 820px), (hover: none) and (pointer: coarse) {
+  body {
+    overflow-x: hidden;
+  }
+
+  main {
+    width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+}
+/* Selector inicial: evita desbordes y escalas excesivas en teléfono. */
+@media (max-width: 560px) {
+  .app-selector {
+    display: block;
+    min-height: 100dvh;
+    padding: 16px 12px 28px;
+    overflow-x: hidden;
+  }
+  .selector-panel {
+    width: 100%;
+    max-width: 30rem;
+    margin: 0 auto;
+    padding: 0;
+  }
+  .selector-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    justify-items: center;
+    gap: 10px;
+    padding-top: 42px;
+  }
+  .selector-header .selector-logo,
+  .selector-header .cosmos-logo {
+    width: 100%;
+    max-width: 158px;
+    min-width: 0;
+    height: auto;
+  }
+  .selector-copy {
+    padding: 26px 8px 24px;
+  }
+  .selector-copy h1 {
+    font-size: clamp(1.45rem, 6.4vw, 1.85rem);
+    line-height: 1.18;
+  }
+  .selector-copy p {
+    margin-top: 8px;
+    font-size: clamp(1rem, 4.2vw, 1.15rem);
+    line-height: 1.35;
+  }
+  .application-grid { gap: 14px; }
+  .application-card {
+    min-height: 0;
+    padding: 24px 25px;
+    border-radius: 14px;
+  }
+  .application-icon { width: 54px; height: 54px; font-size: 34px; }
+  .application-content { margin-top: 18px; }
+  .application-content strong { font-size: clamp(1.35rem, 6vw, 1.65rem); }
+  .application-content > span:last-child { margin-top: 8px; font-size: 1rem; line-height: 1.4; }
+  .application-action { padding-top: 20px; font-size: 1.05rem; }
+  .selector-footer { margin: 24px 10px 0; font-size: .78rem; line-height: 1.4; }
+  .app-selector > .theme-toggle { top: 12px; right: 12px; }
+}

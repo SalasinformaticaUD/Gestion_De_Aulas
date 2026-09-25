@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { applyTheme, defaultProfile, getInitials, loadTheme, profileFromSession, type UserProfile } from "@/features/perfil/lib/profile";
 import { cerrarSesion, eventoSesion, obtenerSesion } from "@/features/auth/lib/sesion";
-import { UniversityLogo } from "@/components/brand/UniversityLogo";
-import { CosmosLogo } from "@/components/brand/CosmosLogo";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { ModuleSwitcher } from "@/components/layout/ModuleSwitcher";
 import { solicitarMonitores } from "@/features/monitores/api/clienteMonitores";
+import { SelectoresNativosPersonalizados } from "./SelectoresNativosPersonalizados";
+import { CampanaNotificaciones } from "./CampanaNotificaciones";
 
 const navegacion = [
   { href:"/gestion-monitores", label:"Dashboard" },
@@ -33,6 +34,9 @@ export function MarcoMonitores({ children }: { children:React.ReactNode }) {
   const [perfil, setPerfil] = useState<UserProfile>(defaultProfile);
   const [ahora, setAhora] = useState<Date | null>(null);
   const [puedeGestionarUsuarios, setPuedeGestionarUsuarios] = useState(false);
+  const [esMonitor, setEsMonitor] = useState(() =>
+    (obtenerSesion()?.usuario.roles ?? []).some((rol) => rol.trim().toLowerCase() === "monitor"),
+  );
   useEffect(() => {
     const refrescar = () => {
       const usuario = obtenerSesion()?.usuario;
@@ -47,11 +51,25 @@ export function MarcoMonitores({ children }: { children:React.ReactNode }) {
   useEffect(() => {
     let vigente = true;
     void solicitarMonitores<{ role: string }>("/api/v1/auth/me/")
-      .then((usuario) => { if (vigente) setPuedeGestionarUsuarios(usuario.role === "admin"); })
-      .catch(() => { if (vigente) setPuedeGestionarUsuarios(false); });
+      .then((usuario) => { if (vigente) { const rol = usuario.role.trim().toLowerCase(); setPuedeGestionarUsuarios(rol === "admin"); setEsMonitor(rol === "monitor"); } })
+      .catch(() => {
+        if (vigente) {
+          const rolesSesion = obtenerSesion()?.usuario.roles ?? [];
+          setPuedeGestionarUsuarios(false);
+          setEsMonitor(rolesSesion.some((rol) => rol.trim().toLowerCase() === "monitor"));
+        }
+      });
     return () => { vigente = false; };
   }, []);
-  const navegacionVisible = navegacion.filter((item) => item.href !== "/gestion-monitores/usuarios" || puedeGestionarUsuarios);
+  const rutasMonitor = new Set([
+    "/gestion-monitores",
+    "/gestion-monitores/anotaciones",
+    "/gestion-monitores/registros",
+    "/gestion-monitores/actas",
+  ]);
+  const navegacionVisible = navegacion.filter((item) =>
+    esMonitor ? rutasMonitor.has(item.href) : item.href !== "/gestion-monitores/usuarios" || puedeGestionarUsuarios,
+  );
   useEffect(() => {
     const actualizar = () => setAhora(new Date());
     actualizar(); const reloj = window.setInterval(actualizar, 1000);
@@ -71,13 +89,14 @@ export function MarcoMonitores({ children }: { children:React.ReactNode }) {
     }
     setPanelContraido((contraido) => !contraido);
   };
-  return <div className={`app-shell ${panelContraido ? "sidebar-collapsed" : ""}`}>
+  return <div className={`app-shell ${panelContraido ? "sidebar-collapsed" : ""}`}><SelectoresNativosPersonalizados />
     {menuAbierto && <button className="menu-overlay" aria-label="Cerrar menú" onClick={() => setMenuAbierto(false)} />}
     <aside className={`sidebar ${menuAbierto ? "is-open" : ""}`} aria-label="Navegación de gestión de monitores">
-      <div className="brand"><CosmosLogo className="sidebar-cosmos-logo" variant="light" priority /><span><small>Gestión de Monitores</small></span></div>
+      <Link href="/gestion-monitores" className="brand" aria-label="Ir al panel de monitores" onClick={() => setMenuAbierto(false)}><Image className="sidebar-monitores-logo" src="/brand/Logo_Cosmos_Monitores.png" alt="Monitores · Laboratorios de Ingeniería" width={608} height={322} priority /></Link>
       <nav className="nav"><p className="nav-label">Monitores</p>{navegacionVisible.map((item) => <Link key={item.href} href={item.href} className="nav-link" aria-current={ruta === item.href ? "page" : undefined} onClick={() => setMenuAbierto(false)}><span className="nav-icon" aria-hidden="true">•</span>{item.label}</Link>)}</nav>
       <footer className="sidebar-footer"><ModuleSwitcher current="monitores" onNavigate={() => setMenuAbierto(false)} /><button type="button" className="nav-link nav-logout" onClick={salir}><span className="nav-icon" aria-hidden="true">↪</span>Salir</button></footer>
     </aside>
-    <section className="workspace"><header className="topbar"><button className="menu-button" type="button" aria-label={panelContraido ? "Mostrar menú" : "Ocultar menú"} aria-expanded={menuAbierto || !panelContraido} onClick={alternarMenu}>☰</button><span className="period">SEMESTRE 2026-3</span><div className="date-time"><span>{fecha}</span><time dateTime={ahora?.toISOString()}>{hora}</time></div><span className="topbar-spacer" /><ThemeToggle /><Link href="/gestion-monitores/perfil" className="profile"><span className={`avatar ${perfil.photo ? "avatar-has-photo" : ""}`}>{perfil.photo ? <img src={perfil.photo} alt="" /> : getInitials(perfil.fullName)}</span><span className="profile-copy"><strong>{perfil.fullName}</strong><small>{perfil.role}</small></span></Link></header><main>{children}</main></section>
+    <section className="workspace"><header className="topbar"><button className="menu-button" type="button" aria-label={panelContraido ? "Mostrar menú" : "Ocultar menú"} aria-expanded={menuAbierto || !panelContraido} onClick={alternarMenu}>☰</button><span className="period">SEMESTRE 2026-3</span><div className="date-time"><span>{fecha}</span><time dateTime={ahora?.toISOString()}>{hora}</time></div><span className="topbar-spacer" /><CampanaNotificaciones /><ThemeToggle /><Link href="/gestion-monitores/perfil" className="profile"><span className={`avatar ${perfil.photo ? "avatar-has-photo" : ""}`}>{perfil.photo ? <img src={perfil.photo} alt="" /> : getInitials(perfil.fullName)}</span><span className="profile-copy"><strong>{perfil.fullName}</strong><small>{perfil.role}</small></span></Link></header><main>{children}</main></section>
   </div>;
 }
+

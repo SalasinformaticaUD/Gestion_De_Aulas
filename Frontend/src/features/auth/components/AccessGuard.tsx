@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { applications, type ApplicationKey } from "@/features/auth/config/applications";
-import { cambiarAplicacionActiva, cerrarSesion, obtenerSesion, tieneAccesoAplicacion } from "@/features/auth/lib/sesion";
+import { cambiarAplicacionActiva, cerrarSesion, guardarSesion, obtenerSesion, tieneAccesoAplicacion } from "@/features/auth/lib/sesion";
 import { ErrorApi, eventoErrorAutorizacion, solicitarAulas, solicitarMonitores } from "@/features/monitores/api/clienteMonitores";
 import { notify } from "@/lib/notifications";
 
@@ -21,10 +21,19 @@ export function AccessGuard({ application, children }: AccessGuardProps) {
       router.replace(`/login?app=${application}&next=${encodeURIComponent(pathname)}`);
       return;
     }
-    if (!tieneAccesoAplicacion(application, sesion)) {
+    const normalizar = (valor: string) => valor.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").trim().toUpperCase();
+    const perfiles = [...(sesion.usuario.roles ?? []), sesion.usuario.cargo ?? ""].map(normalizar);
+    const esAdmin = perfiles.some((perfil) => perfil === "ADMIN" || perfil === "ADMINISTRADOR" || (perfil.includes("ADMIN") && perfil.includes("MONITOR")));
+    const esLiderAulasSoftware = perfiles.some((perfil) => perfil.includes("LIDER") || perfil.includes("LEADER")) && [sesion.usuario.dependencia?.id, sesion.usuario.dependencia?.nombre, ...perfiles].some((valor) => { const dependencia = normalizar(valor ?? ""); return dependencia === "INFORMATICS_LABS" || dependencia.includes("INFORMATICS") || dependencia.includes("AULAS DE SOFTWARE"); });
+    const esSesionCentral = sesion.origen !== "monitores-local";
+    const puedeAccederAulasPorRol = application === "aulas" && esSesionCentral && Boolean(sesion.tokenAcceso) && (esAdmin || esLiderAulasSoftware);
+    if (!tieneAccesoAplicacion(application, sesion) && !puedeAccederAulasPorRol) {
       const alternativa = sesion.aplicacionesAutorizadas[0];
       router.replace(alternativa ? `${applications[alternativa].destination}?acceso=denegado` : `/login?app=${application}`);
       return;
+    }
+    if (puedeAccederAulasPorRol && !tieneAccesoAplicacion(application, sesion)) {
+      guardarSesion({ ...sesion, aplicacion: application, aplicacionesAutorizadas: [...new Set([...sesion.aplicacionesAutorizadas, application])] });
     }
     cambiarAplicacionActiva(application);
     const milisegundosRestantes = sesion.expiraEn - Date.now();
@@ -39,27 +48,9 @@ export function AccessGuard({ application, children }: AccessGuardProps) {
     }, milisegundosRestantes);
     const validarSesion = async () => {
       if (application === "monitores") {
-        const clavePuente = `sgoas:monitores-sesion:${sesion.usuario.id}:${sesion.expiraEn}`;
-        const prepararPuente = async () => {
-          await solicitarAulas("/integraciones/monitores/sesion", sesion.tokenAcceso, { method: "POST" });
-          await solicitarMonitores("/api/v1/platform/handoff-admin/", { method: "POST", notificarAutorizacion: false });
-          window.sessionStorage.setItem(clavePuente, "activa");
-        };
-        if (sesion.tokenAcceso) {
-          // La sesión de Django se crea una sola vez por sesión central. Esto
-          // evita repetir el traspaso al recorrer cada página de Monitores.
-          if (!window.sessionStorage.getItem(clavePuente)) await prepararPuente();
-          try {
-            await solicitarMonitores("/api/v1/auth/me/", { notificarAutorizacion: false });
-          } catch (error) {
-            // Puede perderse únicamente la cookie local (por reinicio del
-            // servicio). Se reconstruye una vez sin cerrar la sesión central.
-            if (!(error instanceof ErrorApi) || error.estado !== 401) throw error;
-            window.sessionStorage.removeItem(clavePuente);
-            await prepararPuente();
-          }
-          return;
-        }
+        // Cada petición lleva el token propio de la pestaña. No se abre una
+        // sesión Django mediante cookie, porque las cookies se comparten entre
+        // pestañas y podrían sustituir la identidad de otro usuario.
         await solicitarMonitores("/api/v1/auth/me/", { notificarAutorizacion: false });
         return;
       }

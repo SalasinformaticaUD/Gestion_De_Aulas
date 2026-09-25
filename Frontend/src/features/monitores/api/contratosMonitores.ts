@@ -230,7 +230,29 @@ export type DashboardApi = {
   monitor_rows: FilaDashboardApi[];
   pending_overtime: Array<{ session_id: string; monitor_name: string; work_day: string; overtime_minutes: number }>;
   recent_annotations: Array<{ id: string; monitor_name: string; annotation_type: string; action: string; delta_minutes: number; occurred_on: string; description: string }>;
-  notifications: Array<{ id: string; title: string; body: string; is_read: boolean }>;
+  notifications: Array<{ id: string; event_type?: string; title: string; body: string; payload?: Record<string, unknown>; is_read: boolean; created_at?: string }>;
+};
+
+
+export type PanelMonitorApi = {
+  monitor: Pick<MonitorApi, "id" | "full_name" | "codigo_estudiante">;
+  schedules: HorarioApi[];
+  recent_sessions: SesionApi[];
+  recent_annotations: AnotacionApi[];
+  late_count: number;
+};
+export type RegistrosPersonalesApi = {
+  monitor: Pick<MonitorApi, "id" | "full_name" | "codigo_estudiante" | "numero_documento" | "proyecto_curricular" | "telefono" | "semester" | "semester_is_active" | "department" | "is_active"> & { proyecto_curricular_label: string };
+  sessions: SesionApi[];
+  schedules: HorarioApi[];
+  annotations: AnotacionApi[];
+  inconsistencies: InconsistenciaApi[];
+  memorandums: Array<{
+    id: string;
+    late_count_threshold: number;
+    sent_at: string | null;
+    created_at: string;
+  }>;
 };
 
 export type ConsultaPublicaApi = {
