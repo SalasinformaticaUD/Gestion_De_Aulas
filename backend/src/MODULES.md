@@ -21,6 +21,7 @@ se comunican mediante controladores REST.
 | `credenciales`            | `/credenciales`            | RF-133 a RF-142 | Credenciales operativas cifradas, acceso restringido e historial.                                                                                 |
 | `reportes`                | `/reportes`                | RF-143 a RF-155 | Generación y exportación de formatos, reportes e indicadores.                                                                                     |
 | `panel-operativo`         | `/panel-operativo`         | RF-156 a RF-165 | Vista consolidada de lectura, aulas paginadas y alertas calculadas en tiempo real.                                                                |
+| `solicitudes-instalacion` | `/solicitudes-instalacion` | Plan del módulo | Importación y normalización trazable, revisión, aprobación, generación de tareas, seguimiento, historial y exportación de solicitudes de software. |
 
 ## Módulos transversales
 
@@ -71,6 +72,7 @@ siguen el formato HTTP de Nest (`400` validación, `404` referencia inexistente 
 | Limpieza      | `GET/POST /limpieza-aulas`, `GET/PATCH /limpieza-aulas/:id`, `GET /limpieza-aulas/sugerencias`, `GET /limpieza-aulas/matriz` y `GET /limpieza-aulas/indicadores`.                                                                                                                                                                                                               |
 | Credenciales  | `GET/POST/PATCH /credenciales`, `PATCH /credenciales/:id/estado`, `POST /credenciales/:id/accesos` y `GET /credenciales/:id/secreto`; el secreto solo se entrega por esta última ruta con permiso explícito.                                                                                                                                                                    |
 | Reportes      | `GET /reportes/:reporte` y `GET /reportes/:reporte/csv`, donde `reporte` es `uso-aulas`, `practicas-libres`, `prestamos-audiovisuales`, `asistencia-docente`, `multas` o `limpieza`. Aceptan `desde`, `hasta`, `pagina` y `limite`.                                                                                                                                             |
+| Solicitudes de instalación | Además de importación, normalización, consulta y corrección, publica `GET /exportar`, `GET /importaciones/:id/resultado.csv`, `POST /:id/previsualizar-aprobacion`, `POST /:id/aprobar`, `POST /:id/rechazar`, `GET /:id/tareas` y `POST /:id/tareas/:tareaId/confirmar-instalacion`. La aprobación total o parcial crea tareas idempotentes por software y aula dentro de una transacción. El inventario solo se actualiza mediante confirmación explícita de una tarea completada. Las exportaciones respetan los filtros visibles, requieren permiso específico y dejan auditoría. |
 
 ### Contratos internos para Core
 

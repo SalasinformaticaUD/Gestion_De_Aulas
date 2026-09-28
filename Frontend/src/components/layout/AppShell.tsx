@@ -22,6 +22,7 @@ const moduleByRoute: Record<string, string> = {
   "/prestamos-docentes": "PRESTAMOS_DOCENTES",
   "/audiovisuales": "AUDIOVISUALES",
   "/software": "SOFTWARE",
+  "/solicitudes-instalacion": "SOLICITUDES_INSTALACION",
   "/credenciales": "CREDENCIALES",
   "/usuarios": "ADMINISTRACION",
   "/estudiantes": "ESTUDIANTES",

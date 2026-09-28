@@ -105,44 +105,81 @@ enum EstadoLimpieza {
   NOVEDAD
 }
 
+enum EstadoImportacionSolicitud {
+  PROCESANDO
+  COMPLETA
+  PARCIAL
+  FALLIDA
+}
+
+enum EstadoSolicitudInstalacion {
+  PENDIENTE_REVISION
+  REQUIERE_AJUSTES
+  APROBADA_PARCIAL
+  APROBADA
+  EN_EJECUCION
+  FINALIZADA
+  RECHAZADA
+  CANCELADA
+}
+
+enum EstadoRevisionItemSolicitud {
+  PENDIENTE
+  VALIDADO
+  REQUIERE_AJUSTES
+  DESCARTADO
+}
+
+enum EstadoNormalizacionSolicitud {
+  PENDIENTE
+  COINCIDENCIA
+  NUEVO
+  AMBIGUO
+  DESCARTADO
+}
+
 // Identidad, autorización y auditoría
 model Usuario {
-  id                               String                      @id @default(uuid()) @db.Uuid
-  nombreCompleto                   String
-  nombreUsuario                    String                      @unique
-  correo                           String                      @unique
-  passwordHash                     String
-  fotoPerfil                       String?                     @db.Text
-  cargo                            String?
-  estado                           EstadoCuenta                @default(ACTIVA)
-  dependenciaId                    String?                     @db.Uuid
-  dependencia                      Dependencia?                @relation(fields: [dependenciaId], references: [id])
-  roles                            UsuarioRol[]
-  asistencias                      AsistenciaDocente[]         @relation("RegistroAsistencia")
-  tareasAsignadas                  Tarea[]                     @relation("ResponsableTarea")
-  tareasOperativasCreadas          Tarea[]                     @relation("CreadorTareaOperativa")
-  tareasOperativasCanceladas       Tarea[]                     @relation("CanceladorTareaOperativa")
-  decisionesTarea                  DecisionTareaOperativa[]    @relation("DecisionTareaUsuario")
-  informesTarea                    InformeSeguimientoTarea[]   @relation("InformeTareaUsuario")
-  observacionesCreadas             Observacion[]               @relation("AutorObservacion")
-  responsabilidadesTarea           ResponsableTareaOperativa[] @relation("ResponsableOperativoUsuario")
-  responsablesTareaAgregados       ResponsableTareaOperativa[] @relation("ResponsableOperativoAgregadoPor")
-  auditorias                       Auditoria[]
-  accesosCredencial                AccesoCredencial[]
-  secretosCredencial               SecretoCredencial[]
-  credencialesCreadas              CredencialOperativa[]       @relation("CreadorCredencialOperativa")
-  prestamosAudiovisualesEntregados PrestamoAudiovisual[]       @relation("EntregaPrestamoAudiovisual")
-  prestamosAudiovisualesRecibidos  PrestamoAudiovisual[]       @relation("RecepcionPrestamoAudiovisual")
-  prestamosAudiovisualesCancelados PrestamoAudiovisual[]       @relation("CancelacionPrestamoAudiovisual")
-  importacionesSoftware            ImportacionSoftware[]
-  multasImpuestas                  Multa[]                     @relation("MultaImpuestaPor")
-  multasCumplidas                  Multa[]                     @relation("MultaCumplidaPor")
-  multasAnuladas                   Multa[]                     @relation("MultaAnuladaPor")
-  prestamosDocentesCreados         PrestamoDocente[]           @relation("PrestamoDocenteEncargado")
-  practicasLibresAtendidas         PracticaLibre[]             @relation("AtencionPracticaLibre")
-  limpiezasRegistradas             Limpieza[]                  @relation("RegistroLimpieza")
-  creadoEn                         DateTime                    @default(now())
-  actualizadoEn                    DateTime                    @updatedAt
+  id                                String                            @id @default(uuid()) @db.Uuid
+  nombreCompleto                    String
+  nombreUsuario                     String                            @unique
+  correo                            String                            @unique
+  passwordHash                      String
+  fotoPerfil                        String?                           @db.Text
+  cargo                             String?
+  estado                            EstadoCuenta                      @default(ACTIVA)
+  dependenciaId                     String?                           @db.Uuid
+  dependencia                       Dependencia?                      @relation(fields: [dependenciaId], references: [id])
+  roles                             UsuarioRol[]
+  asistencias                       AsistenciaDocente[]               @relation("RegistroAsistencia")
+  tareasAsignadas                   Tarea[]                           @relation("ResponsableTarea")
+  tareasOperativasCreadas           Tarea[]                           @relation("CreadorTareaOperativa")
+  tareasOperativasCanceladas        Tarea[]                           @relation("CanceladorTareaOperativa")
+  decisionesTarea                   DecisionTareaOperativa[]          @relation("DecisionTareaUsuario")
+  informesTarea                     InformeSeguimientoTarea[]         @relation("InformeTareaUsuario")
+  observacionesCreadas              Observacion[]                     @relation("AutorObservacion")
+  responsabilidadesTarea            ResponsableTareaOperativa[]       @relation("ResponsableOperativoUsuario")
+  responsablesTareaAgregados        ResponsableTareaOperativa[]       @relation("ResponsableOperativoAgregadoPor")
+  auditorias                        Auditoria[]
+  accesosCredencial                 AccesoCredencial[]
+  secretosCredencial                SecretoCredencial[]
+  credencialesCreadas               CredencialOperativa[]             @relation("CreadorCredencialOperativa")
+  prestamosAudiovisualesEntregados  PrestamoAudiovisual[]             @relation("EntregaPrestamoAudiovisual")
+  prestamosAudiovisualesRecibidos   PrestamoAudiovisual[]             @relation("RecepcionPrestamoAudiovisual")
+  prestamosAudiovisualesCancelados  PrestamoAudiovisual[]             @relation("CancelacionPrestamoAudiovisual")
+  importacionesSoftware             ImportacionSoftware[]
+  importacionesSolicitudes          ImportacionSolicitudInstalacion[]
+  solicitudesInstalacionRevisadas   SolicitudInstalacion[]
+  softwareSolicitadoRevisado        SoftwareSolicitado[]
+  confirmacionesInventarioSolicitud SolicitudSoftwareTarea[]          @relation("ConfirmacionInventarioSolicitud")
+  multasImpuestas                   Multa[]                           @relation("MultaImpuestaPor")
+  multasCumplidas                   Multa[]                           @relation("MultaCumplidaPor")
+  multasAnuladas                    Multa[]                           @relation("MultaAnuladaPor")
+  prestamosDocentesCreados          PrestamoDocente[]                 @relation("PrestamoDocenteEncargado")
+  practicasLibresAtendidas          PracticaLibre[]                   @relation("AtencionPracticaLibre")
+  limpiezasRegistradas              Limpieza[]                        @relation("RegistroLimpieza")
+  creadoEn                          DateTime                          @default(now())
+  actualizadoEn                     DateTime                          @updatedAt
 }
 
 model Dependencia {
@@ -243,18 +280,21 @@ model Aula {
   observaciones          Observacion[]
   tareas                 Tarea[]
   limpiezas              Limpieza[]
+  itemsSolicitud         ItemSolicitudAula[]
+  aliasesSolicitud       AliasAula[]
   eliminadoEn            DateTime?
   creadoEn               DateTime                 @default(now())
   actualizadoEn          DateTime                 @updatedAt
 }
 
 model PeriodoAcademico {
-  id          String            @id @default(uuid()) @db.Uuid
-  nombre      String            @unique
+  id          String                 @id @default(uuid()) @db.Uuid
+  nombre      String                 @unique
   fechaInicio DateTime
   fechaFin    DateTime
-  activo      Boolean           @default(false)
+  activo      Boolean                @default(false)
   clases      ClaseProgramada[]
+  solicitudes SolicitudInstalacion[]
 }
 
 model ProyectoCurricular {
@@ -264,6 +304,7 @@ model ProyectoCurricular {
   aulasAsignadas AulaProyectoCurricular[]
   asignaturas    Asignatura[]
   clases         ClaseProgramada[]
+  solicitudes    SolicitudInstalacion[]
 }
 
 model AulaProyectoCurricular {
@@ -277,24 +318,26 @@ model AulaProyectoCurricular {
 }
 
 model Asignatura {
-  id                   String              @id @default(uuid()) @db.Uuid
-  codigo               String              @unique
+  id                   String                     @id @default(uuid()) @db.Uuid
+  codigo               String                     @unique
   nombre               String
-  proyectoCurricularId String?             @db.Uuid
-  proyectoCurricular   ProyectoCurricular? @relation(fields: [proyectoCurricularId], references: [id])
+  proyectoCurricularId String?                    @db.Uuid
+  proyectoCurricular   ProyectoCurricular?        @relation(fields: [proyectoCurricularId], references: [id])
   clases               ClaseProgramada[]
+  itemsSolicitud       ItemSolicitudInstalacion[]
 }
 
 model Docente {
-  id                     String                @id @default(uuid()) @db.Uuid
-  documento              String?               @unique
+  id                     String                 @id @default(uuid()) @db.Uuid
+  documento              String?                @unique
   nombre                 String
-  correo                 String?               @unique
+  correo                 String?                @unique
   proyecto               String?
   clases                 ClaseProgramada[]
   prestamos              PrestamoDocente[]
   practicasLibres        PracticaLibre[]
   prestamosAudiovisuales PrestamoAudiovisual[]
+  solicitudes            SolicitudInstalacion[]
 }
 
 model ClaseProgramada {
@@ -340,12 +383,14 @@ model AsistenciaDocente {
 }
 
 model Software {
-  id          String         @id @default(uuid()) @db.Uuid
+  id          String               @id @default(uuid()) @db.Uuid
   nombre      String
   version     String
   descripcion String?
-  estado      EstadoSoftware @default(ACTIVO)
+  estado      EstadoSoftware       @default(ACTIVO)
   aulas       AulaSoftware[]
+  solicitudes SoftwareSolicitado[]
+  aliases     AliasSoftware[]
 
   @@unique([nombre, version])
 }
@@ -375,6 +420,182 @@ model ImportacionSoftware {
 
   @@index([creadoEn])
   @@index([usuarioId, creadoEn])
+}
+
+// Solicitudes institucionales de instalación de software
+model ImportacionSolicitudInstalacion {
+  id                 String                     @id @default(uuid()) @db.Uuid
+  usuarioId          String?                    @db.Uuid
+  nombreArchivo      String
+  hashArchivo        String                     @unique
+  estado             EstadoImportacionSolicitud @default(PROCESANDO)
+  totalFilas         Int                        @default(0)
+  solicitudesCreadas Int                        @default(0)
+  filasDuplicadas    Int                        @default(0)
+  filasObservadas    Int                        @default(0)
+  filasRechazadas    Int                        @default(0)
+  errores            Json?
+  creadoEn           DateTime                   @default(now())
+  finalizadoEn       DateTime?
+  usuario            Usuario?                   @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  solicitudes        SolicitudInstalacion[]
+
+  @@index([estado, creadoEn])
+  @@index([usuarioId, creadoEn])
+}
+
+model SolicitudInstalacion {
+  id                         String                          @id @default(uuid()) @db.Uuid
+  importacionId              String                          @db.Uuid
+  hashContenido              String?                         @unique
+  identificadorOrigen        String?
+  filaOrigen                 Int
+  fechaInicioFormulario      DateTime?
+  fechaPeticion              DateTime
+  correoRespondienteOriginal String?
+  nombreRespondienteOriginal String?
+  docenteId                  String?                         @db.Uuid
+  docenteNombreOriginal      String?
+  docenteCorreoOriginal      String?
+  proyectoCurricularId       String?                         @db.Uuid
+  proyectoCurricularOriginal String?
+  periodoId                  String?                         @db.Uuid
+  observacionGeneral         String?                         @db.Text
+  consentimientoDatos        Boolean?
+  historicaAlImportar        Boolean                         @default(false)
+  motivoHistorialInicial     String?
+  estado                     EstadoSolicitudInstalacion      @default(PENDIENTE_REVISION)
+  alertas                    Json?
+  datosOriginales            Json
+  revisadaPorId              String?                         @db.Uuid
+  revisadaEn                 DateTime?
+  aprobadaEn                 DateTime?
+  rechazadaEn                DateTime?
+  motivoRechazo              String?                         @db.Text
+  creadoEn                   DateTime                        @default(now())
+  actualizadoEn              DateTime                        @updatedAt
+  importacion                ImportacionSolicitudInstalacion @relation(fields: [importacionId], references: [id], onDelete: Restrict)
+  docente                    Docente?                        @relation(fields: [docenteId], references: [id], onDelete: SetNull)
+  proyectoCurricular         ProyectoCurricular?             @relation(fields: [proyectoCurricularId], references: [id], onDelete: SetNull)
+  periodo                    PeriodoAcademico?               @relation(fields: [periodoId], references: [id], onDelete: SetNull)
+  revisadaPor                Usuario?                        @relation(fields: [revisadaPorId], references: [id], onDelete: SetNull)
+  items                      ItemSolicitudInstalacion[]
+
+  @@unique([importacionId, filaOrigen])
+  @@index([identificadorOrigen])
+  @@index([estado, fechaPeticion])
+  @@index([periodoId, estado])
+  @@index([docenteId, fechaPeticion])
+  @@index([proyectoCurricularId, fechaPeticion])
+  @@index([historicaAlImportar, fechaPeticion])
+}
+
+model ItemSolicitudInstalacion {
+  id                 String                      @id @default(uuid()) @db.Uuid
+  solicitudId        String                      @db.Uuid
+  posicion           Int
+  asignaturaId       String?                     @db.Uuid
+  asignaturaOriginal String?
+  observaciones      String?                     @db.Text
+  estadoRevision     EstadoRevisionItemSolicitud @default(PENDIENTE)
+  alertas            Json?
+  datosOriginales    Json?
+  creadoEn           DateTime                    @default(now())
+  actualizadoEn      DateTime                    @updatedAt
+  solicitud          SolicitudInstalacion        @relation(fields: [solicitudId], references: [id], onDelete: Cascade)
+  asignatura         Asignatura?                 @relation(fields: [asignaturaId], references: [id], onDelete: SetNull)
+  aulas              ItemSolicitudAula[]
+  softwareSolicitado SoftwareSolicitado[]
+
+  @@unique([solicitudId, posicion])
+  @@index([asignaturaId])
+  @@index([estadoRevision])
+}
+
+model ItemSolicitudAula {
+  id               String                       @id @default(uuid()) @db.Uuid
+  itemId           String                       @db.Uuid
+  posicion         Int
+  aulaId           String?                      @db.Uuid
+  valorOriginal    String
+  valorNormalizado String?
+  estado           EstadoNormalizacionSolicitud @default(PENDIENTE)
+  item             ItemSolicitudInstalacion     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  aula             Aula?                        @relation(fields: [aulaId], references: [id], onDelete: SetNull)
+  tareasGeneradas  SolicitudSoftwareTarea[]
+
+  @@unique([itemId, posicion])
+  @@index([aulaId])
+  @@index([estado])
+}
+
+model SoftwareSolicitado {
+  id                 String                       @id @default(uuid()) @db.Uuid
+  itemId             String                       @db.Uuid
+  posicion           Int
+  softwareId         String?                      @db.Uuid
+  nombreOriginal     String
+  versionOriginal    String?
+  nombreNormalizado  String?
+  versionNormalizada String?
+  estado             EstadoNormalizacionSolicitud @default(PENDIENTE)
+  revisadoPorId      String?                      @db.Uuid
+  revisadoEn         DateTime?
+  observaciones      String?                      @db.Text
+  creadoEn           DateTime                     @default(now())
+  actualizadoEn      DateTime                     @updatedAt
+  item               ItemSolicitudInstalacion     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  software           Software?                    @relation(fields: [softwareId], references: [id], onDelete: SetNull)
+  revisadoPor        Usuario?                     @relation(fields: [revisadoPorId], references: [id], onDelete: SetNull)
+  tareasGeneradas    SolicitudSoftwareTarea[]
+
+  @@unique([itemId, posicion])
+  @@index([softwareId])
+  @@index([estado])
+  @@index([nombreNormalizado, versionNormalizada])
+}
+
+model SolicitudSoftwareTarea {
+  softwareSolicitadoId      String             @db.Uuid
+  itemAulaId                String             @db.Uuid
+  tareaId                   String             @unique @db.Uuid
+  inventarioConfirmadoPorId String?            @db.Uuid
+  creadaEn                  DateTime           @default(now())
+  inventarioConfirmadoEn    DateTime?
+  softwareSolicitado        SoftwareSolicitado @relation(fields: [softwareSolicitadoId], references: [id], onDelete: Cascade)
+  itemAula                  ItemSolicitudAula  @relation(fields: [itemAulaId], references: [id], onDelete: Restrict)
+  tarea                     Tarea              @relation(fields: [tareaId], references: [id], onDelete: Restrict)
+  inventarioConfirmadoPor   Usuario?           @relation("ConfirmacionInventarioSolicitud", fields: [inventarioConfirmadoPorId], references: [id], onDelete: SetNull)
+
+  @@id([softwareSolicitadoId, itemAulaId])
+  @@index([itemAulaId])
+  @@index([inventarioConfirmadoPorId])
+}
+
+model AliasSoftware {
+  id               String   @id @default(uuid()) @db.Uuid
+  alias            String
+  aliasNormalizado String   @unique
+  softwareId       String   @db.Uuid
+  activo           Boolean  @default(true)
+  creadoEn         DateTime @default(now())
+  actualizadoEn    DateTime @updatedAt
+  software         Software @relation(fields: [softwareId], references: [id], onDelete: Cascade)
+
+  @@index([softwareId, activo])
+}
+
+model AliasAula {
+  id               String   @id @default(uuid()) @db.Uuid
+  alias            String
+  aliasNormalizado String   @unique
+  aulaId           String   @db.Uuid
+  activo           Boolean  @default(true)
+  creadoEn         DateTime @default(now())
+  actualizadoEn    DateTime @updatedAt
+  aula             Aula     @relation(fields: [aulaId], references: [id], onDelete: Cascade)
+
+  @@index([aulaId, activo])
 }
 
 // Usuarios externos, préstamos y sanciones
@@ -593,6 +814,7 @@ model Tarea {
   decisiones             DecisionTareaOperativa[]
   informes               InformeSeguimientoTarea[]
   responsables           ResponsableTareaOperativa[]
+  origenSolicitud        SolicitudSoftwareTarea?
 
   @@index([aulaId, inicio, fin])
   @@index([grupoId, creadoEn])

@@ -15,7 +15,7 @@ El módulo deberá permitir:
 - importar el archivo Excel de respuestas del formulario;
 - validar su estructura y conservar los datos originales;
 - convertir las columnas repetidas de software adicional en una colección variable de ítems;
-- normalizar docentes, proyectos curriculares, aulas, asignaturas, nombres de software y versiones;
+- normalizar docentes, periodos y aulas; conservar proyectos curriculares, asignaturas y software como texto original;
 - identificar información incompleta, ambigua o duplicada para revisión humana;
 - consultar solicitudes actuales e históricas;
 - aprobar total o parcialmente una solicitud, o rechazarla con justificación;
@@ -34,18 +34,18 @@ Fuera del alcance inicial:
 
 ## 1. Reglas generales
 
-- [ ] Implementar el módulo NestJS en `backend/src/solicitudes-instalacion`.
-- [ ] Agregar el módulo y sus contratos al mapa técnico del backend.
-- [ ] Reutilizar `PrismaService`, autenticación, permisos, auditoría y formato común de errores.
-- [ ] Reutilizar los catálogos existentes de docentes, proyectos curriculares, aulas y software.
-- [ ] No modificar directamente la base de Gestión de Monitores.
-- [ ] No duplicar la lógica del módulo de Tareas Operativas.
-- [ ] No crear instalaciones en `AulaSoftware` durante la importación o aprobación.
-- [ ] Procesar la aprobación y la creación de tareas dentro de una transacción.
-- [ ] Conservar siempre el texto original importado, aunque exista un valor normalizado.
-- [ ] Evitar duplicar importaciones mediante huella del archivo y referencia de fila/origen.
-- [ ] Proteger los datos personales mediante permisos y auditoría.
-- [ ] Las respuestas donde no se haya aceptado el tratamiento de datos deben quedar marcadas para revisión y no procesarse automáticamente hasta definir la política institucional.
+- [x] Implementar el módulo NestJS en `backend/src/solicitudes-instalacion`.
+- [x] Agregar el módulo y sus contratos al mapa técnico del backend.
+- [x] Reutilizar `PrismaService`, autenticación, permisos, auditoría y formato común de errores.
+- [x] Reutilizar los catálogos existentes de docentes, periodos y aulas; no exigir relaciones de catálogo para proyecto, asignatura o software.
+- [x] No modificar directamente la base de Gestión de Monitores.
+- [x] No duplicar la lógica del módulo de Tareas Operativas.
+- [x] No crear instalaciones en `AulaSoftware` durante la importación o aprobación.
+- [x] Procesar la aprobación y la creación de tareas dentro de una transacción.
+- [x] Conservar siempre el texto original importado, aunque exista un valor normalizado.
+- [x] Evitar duplicar importaciones mediante huella del archivo y referencia de fila/origen.
+- [x] Proteger los datos personales mediante permisos y auditoría.
+- [x] Considerar aceptado el tratamiento de datos dentro del flujo institucional, sin confirmación manual adicional.
 
 ---
 
@@ -167,13 +167,11 @@ La normalización debe ser determinista y auditable:
 - eliminar espacios sobrantes y unificar mayúsculas/minúsculas para comparación;
 - conservar tildes y texto original para presentación;
 - validar y normalizar correos institucionales sin reemplazar silenciosamente valores inválidos;
-- relacionar proyectos curriculares con el catálogo existente;
-- interpretar aulas separadas por comas, guiones, espacios o saltos de línea;
-- relacionar asignaturas existentes cuando haya una coincidencia confiable;
+- conservar proyecto curricular y asignatura como texto plano sin exigir una relación de catálogo;
+- extraer como aulas todas las secuencias independientes de exactamente tres dígitos;
 - separar listas de software por saltos de línea, punto y coma y viñetas;
 - tratar las comas con cautela, porque pueden separar software o formar parte de una descripción;
-- extraer la versión solo cuando sea reconocible sin perder información;
-- consultar `AliasSoftware` antes de crear un candidato nuevo;
+- conservar el nombre y la versión del software dentro del texto solicitado, permitiendo programas nuevos;
 - enviar coincidencias ambiguas a revisión manual.
 
 No se recomienda usar inteligencia artificial como autoridad automática durante el MVP. Puede incorporarse posteriormente para sugerir coincidencias, pero la aceptación debe permanecer en manos de un usuario autorizado.
@@ -201,7 +199,7 @@ Un duplicado potencial no se elimina automáticamente. El revisor decide si se c
 - `SolicitudesInstalacionController`: contratos HTTP y permisos.
 - `SolicitudesInstalacionService`: consulta, estados, aprobación y rechazo.
 - `ImportacionSolicitudesService`: lectura y validación del Excel.
-- `NormalizacionSolicitudesService`: docentes, proyectos, aulas, asignaturas y software.
+- `NormalizacionSolicitudesService`: docentes, periodos y aulas; proyecto, asignatura y software se preservan como texto.
 - `GeneracionTareasInstalacionService`: integración transaccional con Tareas Operativas.
 - DTOs específicos para importación, filtros, corrección, aprobación y rechazo.
 
@@ -303,7 +301,7 @@ Incluye solicitudes finalizadas, rechazadas, canceladas y solicitudes de periodo
 - acceso de solo lectura al detalle, decisiones y tareas generadas;
 - exportación del resultado filtrado.
 
-La clasificación no debe depender únicamente de la fecha. `Actuales` corresponde al periodo activo y estados abiertos; `Historial` corresponde a estados terminales o periodos cerrados.
+La clasificación inicial de una importación aplica primero el corte del 15 de julio de 2026: las peticiones anteriores pasan al historial. Desde esa fecha, una solicitud pasa al historial cuando al menos una de sus celdas de software está marcada con relleno verde; las demás permanecen en peticiones actuales. Los estados terminales y periodos cerrados continúan formando parte del historial durante la operación posterior.
 
 #### `Importar Excel`
 
@@ -342,7 +340,7 @@ La aprobación permitirá seleccionar individualmente asignaturas, software y au
 
 ### Software instalado
 
-- Reutilizar el catálogo `Software` para normalizar nombres y versiones.
+- No exigir que el software solicitado exista en el catálogo para aprobar y crear tareas.
 - No crear relaciones `AulaSoftware` durante la importación o aprobación.
 - Al terminar una tarea de instalación, ofrecer una acción explícita para confirmar la instalación y actualizar el inventario del aula.
 
@@ -370,39 +368,39 @@ La aprobación permitirá seleccionar individualmente asignaturas, software y au
 
 ### Incremento 1 — Contrato y persistencia
 
-- [ ] Definir modelos Prisma y migración.
-- [ ] Registrar módulo y permisos.
-- [ ] Implementar importación con preservación de valores originales.
-- [ ] Convertir columnas repetidas en ítems y programas relacionados.
-- [ ] Implementar consultas paginadas de solicitudes actuales e históricas.
-- [ ] Documentar formato admitido y respuesta de importación.
+- [x] Definir modelos Prisma y migración.
+- [x] Registrar módulo y permisos.
+- [x] Implementar importación con preservación de valores originales.
+- [x] Convertir columnas repetidas en ítems y programas relacionados.
+- [x] Implementar consultas paginadas de solicitudes actuales e históricas.
+- [x] Documentar formato admitido y respuesta de importación.
 
 ### Incremento 2 — Normalización y revisión
 
-- [ ] Implementar alias de software y aulas.
-- [ ] Relacionar docentes, proyectos, asignaturas, software y aulas existentes.
-- [ ] Identificar ambiguos, incompletos y duplicados.
-- [ ] Crear flujo frontend de importación y previsualización.
-- [ ] Crear listado, filtros y detalle de solicitud.
-- [ ] Permitir corrección manual sin perder el valor original.
+- [x] Implementar alias y coincidencia por código para aulas.
+- [x] Relacionar docentes, periodos y aulas existentes; preservar proyecto, asignatura y software como texto.
+- [x] Identificar ambiguos, incompletos y duplicados.
+- [x] Crear flujo frontend de importación y previsualización.
+- [x] Crear listado, filtros y detalle de solicitud.
+- [x] Permitir corrección manual sin perder el valor original.
 
 ### Incremento 3 — Aprobación e integración operativa
 
-- [ ] Implementar aprobación total y parcial.
-- [ ] Implementar rechazo obligatorio con motivo.
-- [ ] Crear tareas idempotentes, una por software y aula.
-- [ ] Mostrar en la solicitud el progreso de sus tareas.
-- [ ] Actualizar el estado de la solicitud según las tareas relacionadas.
-- [ ] Preparar confirmación explícita hacia el inventario instalado.
+- [x] Implementar aprobación total y parcial.
+- [x] Implementar rechazo obligatorio con motivo.
+- [x] Crear tareas idempotentes, una por software y aula.
+- [x] Mostrar en la solicitud el progreso de sus tareas.
+- [x] Actualizar el estado de la solicitud según las tareas relacionadas.
+- [x] Preparar confirmación explícita hacia el inventario instalado.
 
 ### Incremento 4 — Calidad y cierre
 
-- [ ] Exportar solicitudes filtradas y resultados de importación.
-- [ ] Integrar auditoría completa.
-- [ ] Validar permisos con perfiles diferentes.
-- [ ] Probar archivos históricos, filas incompletas y cargas repetidas.
-- [ ] Revisar modo claro, oscuro y diseño responsive.
-- [ ] Actualizar documento general, mapa de módulos y contratos técnicos.
+- [x] Exportar solicitudes filtradas y resultados de importación.
+- [x] Integrar auditoría completa.
+- [x] Validar permisos con perfiles diferentes.
+- [x] Probar archivos históricos, filas incompletas y cargas repetidas.
+- [x] Revisar modo claro, oscuro y diseño responsive.
+- [x] Actualizar documento general, mapa de módulos y contratos técnicos.
 
 ---
 
@@ -410,27 +408,27 @@ La aprobación permitirá seleccionar individualmente asignaturas, software y au
 
 ### Backend
 
-- [ ] Archivo válido, inválido y previamente importado.
-- [ ] Conversión de una fila con uno, dos y cinco bloques de solicitud.
-- [ ] Separación de varios programas dentro de una celda.
-- [ ] Coincidencia por alias y caso ambiguo.
-- [ ] Aula, docente o proyecto inexistente.
-- [ ] Consentimiento no aceptado.
-- [ ] Duplicado potencial conservado para revisión.
-- [ ] Aprobación total y parcial.
-- [ ] Creación de una tarea por software y aula.
-- [ ] Repetición de aprobación sin tareas duplicadas.
-- [ ] Rechazo con motivo y auditoría.
+- [x] Archivo válido, inválido y previamente importado.
+- [x] Conversión de una fila con uno, dos y cinco bloques de solicitud.
+- [x] Separación de varios programas dentro de una celda.
+- [x] Coincidencia de aulas por código o alias y caso ambiguo.
+- [x] Aula, docente o proyecto inexistente.
+- [x] Consentimiento no aceptado.
+- [x] Duplicado potencial conservado para revisión.
+- [x] Aprobación total y parcial.
+- [x] Creación de una tarea por software y aula.
+- [x] Repetición de aprobación sin tareas duplicadas.
+- [x] Rechazo con motivo y auditoría.
 
 ### Frontend
 
 - [ ] Importación y previsualización del Excel real.
-- [ ] Filtros y paginación de actuales e historial.
-- [ ] Visualización de varias asignaturas y varios programas.
-- [ ] Corrección de valores ambiguos.
-- [ ] Previsualización y confirmación de tareas.
-- [ ] Restricciones visuales y de API por permisos.
-- [ ] Estados de carga, vacío, error y procesamiento parcial.
+- [x] Filtros y paginación de actuales e historial.
+- [x] Visualización de varias asignaturas y varios programas.
+- [x] Corrección de valores ambiguos.
+- [x] Previsualización y confirmación de tareas.
+- [x] Restricciones visuales y de API por permisos.
+- [x] Estados de carga, vacío, error y procesamiento parcial.
 
 ### Flujo E2E principal
 
