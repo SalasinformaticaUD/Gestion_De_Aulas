@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ObservacionesService } from './observaciones.service';
 import { CreateObservacioneDto } from './dto/create-observacione.dto';
+import { CreateObservacionesBatchDto } from './dto/create-observaciones-batch.dto';
 import { UpdateObservacioneDto } from './dto/update-observacione.dto';
 import { FindObservacionesDto } from './dto/find-observaciones.dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -26,8 +27,23 @@ export class ObservacionesController {
 
   @Post()
   @RequirePermissions('OBSERVACIONES_CREAR')
-  create(@Body() createObservacioneDto: CreateObservacioneDto, @CurrentUser() usuario?: UsuarioAutenticado) {
+  create(
+    @Body() createObservacioneDto: CreateObservacioneDto,
+    @CurrentUser() usuario?: UsuarioAutenticado,
+  ) {
     return this.observacionesService.create(createObservacioneDto, usuario?.id);
+  }
+
+  @Post('lote')
+  @RequirePermissions('OBSERVACIONES_CREAR')
+  createBatch(
+    @Body() createObservacionesBatchDto: CreateObservacionesBatchDto,
+    @CurrentUser() usuario?: UsuarioAutenticado,
+  ) {
+    return this.observacionesService.createBatch(
+      createObservacionesBatchDto,
+      usuario?.id,
+    );
   }
 
   @Get()

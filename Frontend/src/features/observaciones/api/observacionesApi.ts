@@ -27,6 +27,10 @@ export async function crearObservacion(input: { aulaId: string; tipo: Observatio
   return map(await solicitarAulas<ApiObservation>("/observaciones", token(), { method: "POST", body: JSON.stringify(input) }));
 }
 
+export async function crearObservaciones(input: { aulaIds: string[]; tipo: ObservationType; contenido: string; vigenteDesde: string | null; vigenteHasta: string | null }) {
+  return (await solicitarAulas<ApiObservation[]>("/observaciones/lote", token(), { method: "POST", body: JSON.stringify(input) })).map(map);
+}
+
 export async function actualizarObservacion(id: string, input: { aulaId: string; tipo: ObservationType; contenido: string; vigenteDesde: string | null; vigenteHasta: string | null }) {
   return map(await solicitarAulas<ApiObservation>(`/observaciones/${id}`, token(), { method: "PATCH", body: JSON.stringify(input) }));
 }

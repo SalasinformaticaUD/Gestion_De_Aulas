@@ -111,10 +111,15 @@ async function main() {
   const permisos = await prisma.permiso.findMany({ select: { id: true } });
   const administrador = await prisma.rol.upsert({
     where: { nombre: 'ADMINISTRADOR' },
-    update: {},
+    update: {
+      perfilMonitores: 'ADMIN',
+      dependenciaMonitores: null,
+    },
     create: {
       nombre: 'ADMINISTRADOR',
       descripcion: 'Acceso administrativo inicial.',
+      perfilMonitores: 'ADMIN',
+      dependenciaMonitores: null,
     },
   });
   await prisma.rolPermiso.deleteMany({ where: { rolId: administrador.id } });

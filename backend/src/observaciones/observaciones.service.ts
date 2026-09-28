@@ -6,6 +6,7 @@ import {
 import { Prisma, TipoObservacion } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateObservacioneDto } from './dto/create-observacione.dto';
+import { CreateObservacionesBatchDto } from './dto/create-observaciones-batch.dto';
 import { FindObservacionesDto } from './dto/find-observaciones.dto';
 import { UpdateObservacioneDto } from './dto/update-observacione.dto';
 
@@ -31,6 +32,31 @@ export class ObservacionesService {
       },
       include: this.detalle(),
     });
+  }
+
+  async createBatch(input: CreateObservacionesBatchDto, usuarioId?: string) {
+    const aulaIds = [...new Set(input.aulaIds)];
+    await this.ensureAulasExist(aulaIds);
+    const tipo = input.tipo ?? TipoObservacion.GENERAL;
+    const vigenteDesde = this.normalizarVigencia(input.vigenteDesde);
+    const vigenteHasta = this.normalizarVigencia(input.vigenteHasta);
+    this.validarVigencia(tipo, vigenteDesde, vigenteHasta);
+
+    return this.prisma.$transaction(
+      aulaIds.map((aulaId) =>
+        this.prisma.observacion.create({
+          data: {
+            aulaId,
+            autorId: usuarioId,
+            tipo,
+            contenido: input.contenido.trim(),
+            vigenteDesde,
+            vigenteHasta,
+          },
+          include: this.detalle(),
+        }),
+      ),
+    );
   }
 
   findAll(filters: FindObservacionesDto = {}) {
@@ -118,11 +144,10 @@ export class ObservacionesService {
       where: {
         aulaId,
         tipo: TipoObservacion.RESTRICCION,
-        OR: [
-          { vigenteDesde: null },
-          { vigenteDesde: { lt: hasta ?? fecha } },
+        OR: [{ vigenteDesde: null }, { vigenteDesde: { lt: hasta ?? fecha } }],
+        AND: [
+          { OR: [{ vigenteHasta: null }, { vigenteHasta: { gt: fecha } }] },
         ],
-        AND: [{ OR: [{ vigenteHasta: null }, { vigenteHasta: { gt: fecha } }] }],
       },
       orderBy: { creadoEn: 'desc' },
     });
@@ -138,13 +163,36 @@ export class ObservacionesService {
     }
   }
 
+  private async ensureAulasExist(aulaIds: string[]): Promise<void> {
+    const aulas = await this.prisma.aula.findMany({
+      where: { id: { in: aulaIds } },
+      select: { id: true },
+    });
+    const existentes = new Set(aulas.map((aula) => aula.id));
+    const faltantes = aulaIds.filter((aulaId) => !existentes.has(aulaId));
+    if (faltantes.length) {
+      throw new NotFoundException(
+        `No existen aulas con id: ${faltantes.join(', ')}.`,
+      );
+    }
+  }
+
   private normalizarVigencia(value?: string | null): Date | null {
     return value ? new Date(value) : null;
   }
 
-  private validarVigencia(tipo: TipoObservacion, vigenteDesde: Date | null, vigenteHasta: Date | null): void {
-    if (tipo === TipoObservacion.RESTRICCION && (!vigenteDesde || !vigenteHasta)) {
-      throw new BadRequestException('Una restricción debe definir las fechas desde y hasta.');
+  private validarVigencia(
+    tipo: TipoObservacion,
+    vigenteDesde: Date | null,
+    vigenteHasta: Date | null,
+  ): void {
+    if (
+      tipo === TipoObservacion.RESTRICCION &&
+      (!vigenteDesde || !vigenteHasta)
+    ) {
+      throw new BadRequestException(
+        'Una restricción debe definir las fechas desde y hasta.',
+      );
     }
     if (vigenteDesde && vigenteHasta && vigenteHasta <= vigenteDesde) {
       throw new BadRequestException(
@@ -154,6 +202,9 @@ export class ObservacionesService {
   }
 
   private detalle() {
-    return { aula: true, autor: { select: { id: true, nombreCompleto: true } } };
+    return {
+      aula: true,
+      autor: { select: { id: true, nombreCompleto: true } },
+    };
   }
 }
