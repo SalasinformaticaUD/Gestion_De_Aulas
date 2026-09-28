@@ -53,4 +53,5 @@ export class CreateUsuarioDto {
   @ArrayUnique()
   @IsUUID('4', { each: true })
   rolIds?: string[];
+
 }

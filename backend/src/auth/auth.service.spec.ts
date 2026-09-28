@@ -54,6 +54,8 @@ describe('AuthService', () => {
         {
           rol: {
             nombre: 'MONITOR',
+            perfilMonitores: 'LIDER',
+            dependenciaMonitores: 'INFORMATICS_LABS',
             permisos: [
               {
                 permiso: {

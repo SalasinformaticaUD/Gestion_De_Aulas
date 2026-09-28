@@ -8,7 +8,11 @@ export type MonitorApi = {
   telefono: string;
   department: string;
   is_active: boolean;
+  semester?: string | null;
+  semester_is_active?: boolean | null;
+  account_status?: "ACTIVE" | "PENDING" | "INACTIVE";
   activation_email_sent?: boolean;
+  has_previous_monitoring?: boolean;
 };
 
 export type HorarioApi = {
@@ -30,6 +34,10 @@ export type ExcepcionApi = {
   id: string;
   name: string;
   description: string;
+  monitors: string[];
+  schedules: string[];
+  all_semester: boolean;
+  semester: string | null;
   start_date: string;
   end_date: string;
   department: string | null;
@@ -61,6 +69,10 @@ export type SesionApi = {
   work_day: string;
   actual_start: string | null;
   actual_end: string | null;
+  normalized_start?: string | null;
+  normalized_end?: string | null;
+  scheduled_start?: string | null;
+  scheduled_end?: string | null;
   normal_minutes: number;
   overtime_minutes: number;
   penalty_minutes: number;
@@ -68,7 +80,13 @@ export type SesionApi = {
   lateness_excused: boolean;
   lateness_exception_name: string;
   overtime_status: "not_applicable" | "pending" | "approved" | "rejected";
+  overtime_auto_approved?: boolean;
+  overtime_exception_name?: string;
   overtime_review_note: string;
+  overtime_reviewed_by_name?: string;
+  overtime_reviewed_at?: string | null;
+  overtime_rejection_penalized?: boolean;
+  session_state?: string;
 };
 
 export type ConciliacionApi = {
@@ -82,7 +100,7 @@ export type ConciliacionApi = {
   exit_at: string | null;
   monitor: string | null;
   monitor_name: string;
-  reconciliation_status: "pending" | "matched" | "manual_review";
+  reconciliation_status: "pending" | "matched" | "manual_review" | "rejected";
   manual_review_reason: string;
   processed_at: string | null;
   processing_error: string;
@@ -145,7 +163,7 @@ export type InconsistenciaApi = {
   id: string;
   raw_record: string;
   monitor: string | null;
-  monitor_name: string | null;
+  monitor_name: string;
   monitor_code: string | null;
   department: string;
   department_label: string;
@@ -160,6 +178,8 @@ export type InconsistenciaApi = {
   message: string;
   resolution_note: string;
   solution_annotation: string | null;
+  solution_annotation_description: string | null;
+  solution_annotation_delta_minutes: number | null;
   event_at: string | null;
   pairing_status: string;
   pairing_status_label: string;
@@ -188,6 +208,7 @@ export type DetalleInconsistenciaApi = InconsistenciaApi & {
 export type IndicadoresInconsistenciasApi = {
   pending_reconciliation: number;
   marking_errors: number;
+  pending_by_type: Record<string, number>;
 };
 
 export type FilaDashboardApi = {
@@ -209,7 +230,29 @@ export type DashboardApi = {
   monitor_rows: FilaDashboardApi[];
   pending_overtime: Array<{ session_id: string; monitor_name: string; work_day: string; overtime_minutes: number }>;
   recent_annotations: Array<{ id: string; monitor_name: string; annotation_type: string; action: string; delta_minutes: number; occurred_on: string; description: string }>;
-  notifications: Array<{ id: string; title: string; body: string; is_read: boolean }>;
+  notifications: Array<{ id: string; event_type?: string; title: string; body: string; payload?: Record<string, unknown>; is_read: boolean; created_at?: string }>;
+};
+
+
+export type PanelMonitorApi = {
+  monitor: Pick<MonitorApi, "id" | "full_name" | "codigo_estudiante">;
+  schedules: HorarioApi[];
+  recent_sessions: SesionApi[];
+  recent_annotations: AnotacionApi[];
+  late_count: number;
+};
+export type RegistrosPersonalesApi = {
+  monitor: Pick<MonitorApi, "id" | "full_name" | "codigo_estudiante" | "numero_documento" | "proyecto_curricular" | "telefono" | "semester" | "semester_is_active" | "department" | "is_active"> & { proyecto_curricular_label: string };
+  sessions: SesionApi[];
+  schedules: HorarioApi[];
+  annotations: AnotacionApi[];
+  inconsistencies: InconsistenciaApi[];
+  memorandums: Array<{
+    id: string;
+    late_count_threshold: number;
+    sent_at: string | null;
+    created_at: string;
+  }>;
 };
 
 export type ConsultaPublicaApi = {

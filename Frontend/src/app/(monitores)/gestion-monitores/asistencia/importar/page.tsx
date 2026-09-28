@@ -1,2 +1,5 @@
-import { ImportarRegistros } from "@/features/monitores/componentes/ImportarRegistros";
-export default function PaginaImportacionAsistencia() { return <ImportarRegistros />; }
+import { redirect } from "next/navigation";
+
+export default function RedireccionImportarRegistros() {
+  redirect("/gestion-monitores/registros");
+}

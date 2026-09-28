@@ -14,6 +14,7 @@ function usePaginacion<T>(elementos: T[], tamano = 8) {
     anterior: () => setPagina((valor) => Math.max(1, valor - 1)),
     siguiente: () => setPagina((valor) => Math.min(totalPaginas, valor + 1)),
     reiniciar: () => setPagina(1),
+    irA: (p: number) => setPagina(p),
   };
 }
 

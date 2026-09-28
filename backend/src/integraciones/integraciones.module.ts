@@ -5,9 +5,10 @@ import { AuthModule } from '../auth/auth.module';
 import { MonitoresClientService } from './monitores-client.service';
 import { MonitoresProvisioningService } from './monitores-provisioning.service';
 import { MonitoresServiceTokenGuard } from './monitores-service-token.guard';
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, PrismaModule],
   controllers: [IntegracionesController, MonitoresProvisioningController],
   providers: [
     MonitoresClientService,

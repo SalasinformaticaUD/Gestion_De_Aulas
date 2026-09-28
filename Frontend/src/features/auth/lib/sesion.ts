@@ -4,9 +4,12 @@ import type { UsuarioCentral } from "@/features/monitores/api/clienteMonitores";
 const claveAlmacenamiento = "cosmos-session";
 export const eventoSesion = "sgoas:session-changed";
 
+export type OrigenSesion = "central" | "monitores-local";
+
 export type SesionAplicacion = {
   aplicacion: ApplicationKey;
   tokenAcceso: string;
+  origen?: OrigenSesion;
   expiraEn: number;
   usuario: UsuarioCentral;
   aplicacionesAutorizadas: ApplicationKey[];
@@ -22,7 +25,8 @@ export function obtenerSesion(): SesionAplicacion | null {
   if (!guardada) return null;
   try {
     const sesion = JSON.parse(guardada) as SesionAplicacion;
-    if ((sesion.aplicacion === "aulas" && !sesion.tokenAcceso) || sesion.expiraEn <= Date.now()) {
+    const origen = sesion.origen ?? (sesion.tokenAcceso ? "central" : "monitores-local");
+    if ((sesion.aplicacion === "aulas" && !sesion.tokenAcceso) || (origen === "monitores-local" && !sesion.tokenAcceso) || sesion.expiraEn <= Date.now()) {
       window.sessionStorage.removeItem(claveAlmacenamiento);
       return null;
     }
@@ -31,7 +35,7 @@ export function obtenerSesion(): SesionAplicacion | null {
     let aplicacionesAutorizadas = Array.isArray(sesion.aplicacionesAutorizadas)
       ? sesion.aplicacionesAutorizadas.filter((app): app is ApplicationKey => app === "aulas" || app === "monitores")
       : [sesion.aplicacion];
-    return { ...sesion, aplicacionesAutorizadas };
+    return { ...sesion, origen, aplicacionesAutorizadas };
   } catch {
     window.sessionStorage.removeItem(claveAlmacenamiento);
     return null;

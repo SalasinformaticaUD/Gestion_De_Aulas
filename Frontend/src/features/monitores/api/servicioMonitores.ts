@@ -1,5 +1,6 @@
-import { descargarMonitores, solicitarMonitores } from "./clienteMonitores";
-import type { AnotacionApi, ConciliacionApi, ConsultaPublicaApi, DashboardApi, DetalleInconsistenciaApi, ExcepcionApi, HorarioApi, ImportacionAsistenciaApi, IndicadoresInconsistenciasApi, InconsistenciaApi, MonitorApi, SesionApi } from "./contratosMonitores";
+import { descargarMonitores, solicitarAulas, solicitarMonitores } from "./clienteMonitores";
+import { obtenerSesion } from "@/features/auth/lib/sesion";
+import type { AnotacionApi, ConciliacionApi, ConsultaPublicaApi, DashboardApi, DetalleInconsistenciaApi, PanelMonitorApi, RegistrosPersonalesApi, ExcepcionApi, HorarioApi, ImportacionAsistenciaApi, IndicadoresInconsistenciasApi, InconsistenciaApi, MonitorApi, SesionApi } from "./contratosMonitores";
 
 export const servicioMonitores = {
   listarMonitores: () => solicitarMonitores<MonitorApi[]>("/api/v1/monitors/"),
@@ -16,9 +17,19 @@ export const servicioMonitores = {
     return solicitarMonitores<{ total_rows: number; created: number; skipped: Array<{ row_number: number; email: string; reason: string }>; errors: Array<{ row_number: number; email: string; reason: string }> }>("/api/v1/monitors/import/", { method: "POST", body: datos });
   },
   previsualizarNuevoSemestre: () => solicitarMonitores<{ preview: Record<string, number> }>("/api/v1/monitors/new-semester/"),
-  iniciarNuevoSemestre: (new_semester_name: string) => solicitarMonitores<{ archived_semester: string; new_semester: string; affected: Record<string, number> }>("/api/v1/monitors/new-semester/", { method: "POST", body: JSON.stringify({ new_semester_name, confirm: true }) }),
-  verificarContrasenaActual: (password: string) => solicitarMonitores<{ valido: boolean }>("/api/v1/auth/verify-password/", { method: "POST", body: JSON.stringify({ password }) }),
-  obtenerDashboard: () => solicitarMonitores<DashboardApi>("/api/v1/reports/dashboard/"),
+  iniciarNuevoSemestre: (new_semester_name: string, starts_on: string, ends_on: string) => solicitarMonitores<{ archived_semester: string; new_semester: string; starts_on: string; ends_on: string; affected: Record<string, number> }>("/api/v1/monitors/new-semester/", { method: "POST", body: JSON.stringify({ new_semester_name, starts_on, ends_on, confirm: true }) }),
+  verificarContrasenaActual: (password: string) => solicitarAulas<{ valido: boolean }>("/auth/verificar-contrasena", obtenerSesion()?.tokenAcceso, { method: "POST", body: JSON.stringify({ password }) }),
+  obtenerPerfilMonitores: async () => {
+    const perfil = await solicitarMonitores<{ role: string; department?: string | null }>("/api/v1/auth/me/");
+    return { ...perfil, role: perfil.role.trim().toLowerCase() };
+  },
+  listarUsuariosGestion: () => solicitarMonitores<Array<{ id:string; username:string; email:string; first_name:string; last_name:string; full_name:string; role:"admin"|"leader"; department:"physics"|"informatics_labs"|"electrical"|null; is_active:boolean; source:"AULAS"|"MONITORES"; usuario_externo_id:string|null }>>("/api/v1/auth/users/"),
+  crearUsuarioGestion: (payload: { username:string; email:string; first_name:string; last_name:string; password:string; role:"admin"|"leader"; department:"physics"|"informatics_labs"|"electrical"|null; is_active:boolean }) => solicitarMonitores("/api/v1/auth/users/", { method:"POST", body:JSON.stringify(payload) }),
+  actualizarUsuarioGestion: (id:string, payload: { username:string; email:string; first_name:string; last_name:string; password?:undefined; role:"admin"|"leader"; department:"physics"|"informatics_labs"|"electrical"|null; is_active:boolean }) => solicitarMonitores(`/api/v1/auth/users/${id}/`, { method:"PATCH", body:JSON.stringify(payload) }),
+  restablecerClaveUsuarioGestion: (id:string, password:string) => solicitarMonitores(`/api/v1/auth/users/${id}/password/`, { method:"POST", body:JSON.stringify({ password }) }),
+  obtenerDashboard: (department?: string) => solicitarMonitores<DashboardApi>(`/api/v1/reports/dashboard/${department ? `?department=${encodeURIComponent(department)}` : ""}`),
+  obtenerMiDashboardMonitor: () => solicitarMonitores<PanelMonitorApi>("/api/v1/reports/dashboard/me/"),
+  obtenerMisRegistros: () => solicitarMonitores<RegistrosPersonalesApi>("/api/v1/reports/monitor-records/me/"),
   listarHorarios: () => solicitarMonitores<HorarioApi[]>("/api/v1/schedules/"),
   crearHorario: (payload: Pick<HorarioApi, "monitor" | "weekday" | "start_time" | "end_time" | "asignatura" | "grupo" | "docente" | "proyecto_curricular" | "location" | "is_active">) =>
     solicitarMonitores<HorarioApi>("/api/v1/schedules/", { method: "POST", body: JSON.stringify(payload) }),
@@ -27,9 +38,9 @@ export const servicioMonitores = {
   eliminarHorario: (id: string) => solicitarMonitores<void>(`/api/v1/schedules/${id}/`, { method: "DELETE" }),
   importarHorarios: (archivo: File) => { const datos = new FormData(); datos.append("file", archivo); return solicitarMonitores<{ total_rows: number; created: number; skipped: Array<{ row_number: number; monitor_email: string; reason: string }>; errors: Array<{ row_number: number; monitor_email: string; reason: string }> }>("/api/v1/schedules/import/", { method: "POST", body: datos }); },
   listarExcepciones: () => solicitarMonitores<ExcepcionApi[]>("/api/v1/schedules/exceptions/"),
-  crearExcepcion: (payload: Omit<ExcepcionApi, "id" | "department_label">) =>
+  crearExcepcion: (payload: Omit<ExcepcionApi, "id" | "department_label" | "semester">) =>
     solicitarMonitores<ExcepcionApi>("/api/v1/schedules/exceptions/", { method: "POST", body: JSON.stringify(payload) }),
-  actualizarExcepcion: (id: string, payload: Partial<Omit<ExcepcionApi, "id" | "department_label">>) =>
+  actualizarExcepcion: (id: string, payload: Partial<Omit<ExcepcionApi, "id" | "department_label" | "semester">>) =>
     solicitarMonitores<ExcepcionApi>(`/api/v1/schedules/exceptions/${id}/`, { method: "PATCH", body: JSON.stringify(payload) }),
   eliminarExcepcion: (id: string) => solicitarMonitores<void>(`/api/v1/schedules/exceptions/${id}/`, { method: "DELETE" }),
   listarAnotaciones: () => solicitarMonitores<AnotacionApi[]>("/api/v1/annotations/"),
@@ -43,12 +54,17 @@ export const servicioMonitores = {
     return solicitarMonitores<SesionApi>(`/api/v1/sessions/${id}/review-overtime/`, { method: "POST", body: JSON.stringify(payload) });
   },
   listarConciliaciones: () => solicitarMonitores<ConciliacionApi[]>("/api/v1/attendance/pending-reconciliation/"),
+  listarHistorialAsistencia: async () => (await solicitarMonitores<{ count: number; next: string | null; previous: string | null; results: ConciliacionApi[] }>("/api/v1/attendance/history/?page_size=50")).results,
+  listarPaginaHistorialAsistencia: (page = 1) => solicitarMonitores<{ count: number; next: string | null; previous: string | null; results: ConciliacionApi[] }>(`/api/v1/attendance/history/?page=${page}`),
   asignarMonitor: (registroId: string, monitorId: string) =>
     solicitarMonitores<ConciliacionApi>(`/api/v1/attendance/pending-reconciliation/${registroId}/assign-monitor/`, { method: "POST", body: JSON.stringify({ monitor_id: monitorId }) }),
-  listarInconsistencias: () => solicitarMonitores<InconsistenciaApi[]>("/api/v1/attendance/inconsistencies/"),
+  listarInconsistencias: (parametros = "") => solicitarMonitores<InconsistenciaApi[]>(`/api/v1/attendance/inconsistencies/${parametros ? `?${parametros}` : ""}`),
+  listarHistorialInconsistencias: (parametros = "") => solicitarMonitores<InconsistenciaApi[]>(`/api/v1/attendance/inconsistencies/history/${parametros ? `?${parametros}` : ""}`),
+  listarDuplicadosInconsistencias: (parametros = "") => solicitarMonitores<InconsistenciaApi[]>(`/api/v1/attendance/inconsistencies/duplicates/${parametros ? `?${parametros}` : ""}`),
   obtenerDetalleInconsistencia: (id:string) => solicitarMonitores<DetalleInconsistenciaApi>(`/api/v1/attendance/inconsistencies/${id}/`),
   obtenerIndicadoresInconsistencias: () => solicitarMonitores<IndicadoresInconsistenciasApi>("/api/v1/attendance/inconsistencies/stats/"),
   crearSolucionInconsistencia: (id:string, payload:{ annotation_type:string; action:string; delta_minutes:number; description:string }) => solicitarMonitores<InconsistenciaApi>(`/api/v1/attendance/inconsistencies/${id}/create-solution/`, { method:"POST", body:JSON.stringify(payload) }),
+  invalidarSesion: (id:string, reason:string) => solicitarMonitores<SesionApi>(`/api/v1/work-sessions/${id}/invalidate/`, { method:"POST", body:JSON.stringify({ reason }) }),
   invalidarInconsistencia: (id:string, reason:string) => solicitarMonitores<InconsistenciaApi>(`/api/v1/attendance/inconsistencies/${id}/invalidate/`, { method:"POST", body:JSON.stringify({ reason }) }),
   importarAsistencia: (archivo: File) => {
     const datos = new FormData();
@@ -65,9 +81,16 @@ export const servicioMonitores = {
   listarMemorandos: () => solicitarMonitores<unknown[]>("/api/v1/reports/memorandums/"),
   reenviarMemorando: (id: string) => solicitarMonitores<unknown>(`/api/v1/reports/memorandums/${id}/resend/`, { method: "POST" }),
   descargarMemorando: (id: string) => descargarMonitores(`/api/v1/reports/memorandums/${id}/pdf/`),
-  listarActasCompromiso: () => solicitarMonitores<unknown[]>("/api/v1/reports/commitment-acts/"),
+  listarActasCompromiso: (semester?: string) => solicitarMonitores<unknown[]>(`/api/v1/reports/commitment-acts/${semester ? `?semester=${encodeURIComponent(semester)}` : ""}`),
+  obtenerMiActaCompromiso: () => solicitarMonitores<Record<string, unknown>>("/api/v1/reports/commitment-acts/me/"),
+  subirMiActaCompromiso: (archivo: File) => {
+    const datos = new FormData(); datos.append("signed_file", archivo);
+    return solicitarMonitores<Record<string, unknown>>("/api/v1/reports/commitment-acts/me/", { method: "POST", body: datos });
+  },
+  descargarMiActaCompromiso: () => descargarMonitores("/api/v1/reports/commitment-acts/me/pdf/"),
   descargarActaCompromiso: (monitorId: string) => descargarMonitores(`/api/v1/reports/commitment-acts/${monitorId}/pdf/`),
   descargarActaFirmada: (monitorId: string) => descargarMonitores(`/api/v1/reports/commitment-acts/${monitorId}/signed-pdf/`),
   revisarActaCompromiso: (monitorId: string, action: "accept" | "reject", rejection_reason = "") => solicitarMonitores<unknown>(`/api/v1/reports/commitment-acts/${monitorId}/review/`, { method: "POST", body: JSON.stringify({ action, rejection_reason }) }),
   listarHistorico: (parametros = "") => solicitarMonitores<unknown[]>(`/api/v1/reports/history/${parametros ? `?${parametros}` : ""}`),
+  obtenerDetalleRegistrosMonitor: (monitorId: string) => solicitarMonitores<{ sessions: SesionApi[]; schedules: HorarioApi[]; annotations: AnotacionApi[]; inconsistencies: InconsistenciaApi[] }>(`/api/v1/reports/monitor-records/${monitorId}/`),
 };
