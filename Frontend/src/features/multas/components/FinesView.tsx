@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as XLSX from "xlsx";
+import { tienePermiso } from "@/features/auth/lib/sesion";
 import { anularMulta, buscarEstudiante, buscarMultasMasivo, cargarMultasExcel, cargarMultasPaginadas, crearMotivoMulta, crearMulta, cumplirMulta, type BulkFineSearchResult, type PaginaMultas, type ResultadoCargaMultas } from "@/features/multas/api/multasApi";
 import type { FineReason, FineRecord, FineStatus, FineStudent } from "@/features/multas/types";
 import styles from "./FinesView.module.css";
@@ -32,6 +33,7 @@ export function FinesView() {
   const [bulkSearchResult, setBulkSearchResult] = useState<BulkFineSearchResult | null>(null);
   const [loadResult, setLoadResult] = useState<ResultadoCargaMultas | null>(null);
   const cache = useRef(new Map<string, PaginaMultas>());
+  const canCreate = tienePermiso("MULTAS_CREAR");
 
   const reload = useCallback(async (targetPage = page, force = false, targetView: View = view) => { try {
     const scope = targetView === "historial" ? "historial" : "activas";
@@ -73,7 +75,7 @@ export function FinesView() {
   const changeView = (next: View) => { setView(next); setStatusFilter("todas"); setPage(1); };
 
   return <>
-    <section className={`page-heading ${styles.heading}`}><div><h1>Multas</h1><p>Registro, cumplimiento y anulación de restricciones aplicadas a estudiantes.</p></div><div className={styles.actions}><button type="button" className={styles.saveButton} onClick={() => downloadFines(fines, reasons)}>Guardar multas</button><button type="button" className={styles.loadButton} onClick={() => { setLoadResult(null); setShowLoad(true); }}>Cargar multas</button><button type="button" className={styles.saveButton} onClick={() => { setBulkSearchResult(null); setShowBulkSearch(true); }}>Buscar multas masivamente</button><button type="button" className="button-primary" onClick={() => { setPrefillCode(""); setPrefillReason(""); setPrefillDescription(""); setPrefillPracticeId(""); setPrefillSuggestedFine(""); setShowCreate(true); }}>+ Nueva multa</button></div></section>
+    <section className={`page-heading ${styles.heading}`}><div><h1>Multas</h1><p>Registro, cumplimiento y anulación de restricciones aplicadas a estudiantes.</p></div><div className={styles.actions}><button type="button" className={styles.saveButton} onClick={() => downloadFines(fines, reasons)}>Guardar multas</button>{canCreate && <><button type="button" className={styles.loadButton} onClick={() => { setLoadResult(null); setShowLoad(true); }}>Cargar multas</button><button type="button" className="button-primary" onClick={() => { setPrefillCode(""); setPrefillReason(""); setPrefillDescription(""); setPrefillPracticeId(""); setPrefillSuggestedFine(""); setShowCreate(true); }}>+ Nueva multa</button></>}<button type="button" className={styles.saveButton} onClick={() => { setBulkSearchResult(null); setShowBulkSearch(true); }}>Buscar multas masivamente</button></div></section>
 
     <section className={styles.metrics} aria-label="Resumen de multas">
       <Metric label="Activas" value={summary.activa} detail="Bloquean prácticas libres" tone="red" />
@@ -137,8 +139,9 @@ function CreateFineDialog({ reasons, initialCode, initialReason, initialDescript
     const seleccionado = initialReason ? reasons.find((reason) => reason.name === initialReason) : undefined;
     setReasonId((actual) => seleccionado?.id ?? (actual || reasons[0].id));
   }, [initialReason, reasons]);
-  const practiceId = initialPracticeId || student?.activePracticeId;
-  const submit = (event: React.FormEvent) => { event.preventDefault(); if (student && reasonId && practiceId && multaSugerida.trim()) void onCreate({ student, reasonId, description: description.trim() || undefined, suggestedFine: multaSugerida.trim(), practiceId }); };
+  const practiceId = initialPracticeId || student?.activePracticeId || "sin-practica";
+  const canSubmit = Boolean(student && reasonId && multaSugerida.trim());
+  const submit = (event: React.FormEvent) => { event.preventDefault(); if (canSubmit && student) void onCreate({ student, reasonId, description: description.trim() || undefined, suggestedFine: multaSugerida.trim(), ...(practiceId !== "sin-practica" && { practiceId }) }); };
   return <DialogShell title="Nueva multa" subtitle="Restricción estudiantil" description={initialCode ? "Estudiante seleccionado desde la práctica libre." : "Identifique un estudiante con práctica libre activa y seleccione el motivo."} onClose={onClose}><form onSubmit={submit}>{initialCode ? <div className={styles.studentResult}>{student ? <><b>✓</b><span><strong>{student.name}</strong><small>Código {student.code} · Estudiante seleccionado</small></span></> : <span>Validando estudiante seleccionado…</span>}</div> : <><div className={styles.studentLookup}><label><span>Código estudiantil</span><input value={code} onChange={(event) => { setCode(event.target.value); setStudent(null); setNotFound(false); }} minLength={3} maxLength={30} required autoFocus placeholder="Ej. 2021102044" /></label><button type="button" onClick={lookup} disabled={code.trim().length < 3}>Buscar</button></div>{student && <div className={styles.studentResult}><b>{student.activePracticeId ? "✓" : "!"}</b><span><strong>{student.name}</strong><small>{student.activePracticeId ? `Práctica activa en ${student.activePracticeRoom ?? "aula asignada"}` : "No tiene una práctica libre activa"}</small></span></div>}{notFound && <div className={styles.inlineError}>El estudiante no existe.</div>}</>}<div className={styles.formGrid}><label className={styles.wideField}><span>Motivo</span><select value={reasonId} onChange={(event) => setReasonId(event.target.value)}>{reasons.map((reason) => <option key={reason.id} value={reason.id}>{reason.name}</option>)}</select></label><label className={styles.wideField}><span>Descripción <small>Opcional · {description.length}/2000</small></span><textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={2000} rows={5} placeholder="Detalle las circunstancias de la multa..." /></label><label className={styles.wideField}><span>Multa sugerida *</span><textarea required value={multaSugerida} onChange={(event) => setMultaSugerida(event.target.value)} maxLength={160} rows={2} /></label></div><div className={styles.blockWarning}><strong>Esta acción bloqueará las prácticas libres</strong><span>La restricción permanecerá hasta registrar cumplimiento o anulación.</span></div><footer><button type="button" className={styles.dialogCancel} onClick={onClose}>Cancelar</button><button type="submit" className="button-primary" disabled={!student || !reasonId || !practiceId || !multaSugerida.trim()}>Imponer multa</button></footer></form></DialogShell>;
 }
 

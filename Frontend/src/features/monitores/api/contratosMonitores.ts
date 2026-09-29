@@ -89,6 +89,13 @@ export type SesionApi = {
   session_state?: string;
 };
 
+export type PaginaApi<T> = {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
+};
+
 export type ConciliacionApi = {
   id: string;
   import_job: string;

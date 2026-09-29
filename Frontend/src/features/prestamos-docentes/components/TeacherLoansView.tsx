@@ -10,6 +10,7 @@ import type { TeacherLoan, TeacherLoanStatus } from "@/features/prestamos-docent
 import styles from "./TeacherLoansView.module.css";
 
 type LoanView = "gestion" | "historial";
+type LoanAction = "finalizar" | "cancelar";
 
 const statusLabels: Record<TeacherLoanStatus, string> = {
   SOLICITADO: "Solicitado",
@@ -33,6 +34,8 @@ export function TeacherLoansView() {
   const [dateFilter, setDateFilter] = useState("");
   const [showRequest, setShowRequest] = useState(false);
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  const [actionConfirmation, setActionConfirmation] = useState<{ loan: TeacherLoan; action: LoanAction } | null>(null);
+  const [confirmingAction, setConfirmingAction] = useState(false);
 
   const currentLoans = loans.filter((loan) => currentStatuses.includes(loan.status));
   const historicalLoans = loans.filter((loan) => historyStatuses.includes(loan.status));
@@ -66,6 +69,18 @@ export function TeacherLoansView() {
   const finishLoan = async (target: TeacherLoan) => {
     if (target.status !== "APROBADO" && target.status !== "ACTIVO") return;
     try { await finalizarPrestamoDocente(target.id); await reload(); setNotice({ tone: "success", text: `${target.id} finalizado.` }); } catch (error) { setNotice({ tone: "error", text: error instanceof Error ? error.message : "No fue posible finalizar." }); }
+  };
+
+  const confirmLoanAction = async () => {
+    if (!actionConfirmation) return;
+    setConfirmingAction(true);
+    try {
+      if (actionConfirmation.action === "finalizar") await finishLoan(actionConfirmation.loan);
+      else await cancelLoan(actionConfirmation.loan);
+      setActionConfirmation(null);
+    } finally {
+      setConfirmingAction(false);
+    }
   };
 
   const createLoan = async (payload: { docenteId?: string; docenteNuevoNombre?: string; docenteNuevoDocumento?: string; aulaId: string; softwareId?: string; inicio: string; fin: string; motivo?: string }) => {
@@ -104,7 +119,7 @@ export function TeacherLoansView() {
       </div>
 
       <div className="table-wrap"><table className={styles.loanTable}><thead><tr><th>Solicitud</th><th>Docente</th><th>Aula</th><th>Fecha y bloque</th><th>Motivo</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
-        {visibleLoans.map((loan) => <LoanRow key={loan.id} loan={loan} onApprove={() => approveLoan(loan)} onCancel={() => cancelLoan(loan)} onFinish={() => finishLoan(loan)} />)}
+        {visibleLoans.map((loan) => <LoanRow key={loan.id} loan={loan} onApprove={() => approveLoan(loan)} onCancel={() => setActionConfirmation({ loan, action: "cancelar" })} onFinish={() => setActionConfirmation({ loan, action: "finalizar" })} />)}
         {visibleLoans.length === 0 && <tr><td colSpan={7} className={styles.emptyTable}>No hay préstamos para los filtros seleccionados.</td></tr>}
       </tbody></table></div>
     </section>
@@ -112,6 +127,7 @@ export function TeacherLoansView() {
     
 
     {showRequest && <RequestLoanDialog teachers={teachers} software={software} onClose={() => setShowRequest(false)} onSubmit={createLoan} />}
+    {actionConfirmation && <LoanActionConfirmationDialog loan={actionConfirmation.loan} action={actionConfirmation.action} loading={confirmingAction} onClose={() => !confirmingAction && setActionConfirmation(null)} onConfirm={() => void confirmLoanAction()} />}
   </>;
 }
 
@@ -135,6 +151,12 @@ function LoanRow({ loan, onApprove, onCancel, onFinish }: { loan: TeacherLoan; o
 
 function StatusBadge({ status }: { status: TeacherLoanStatus }) {
   return <span className={`${styles.status} ${styles[`status_${status.toLocaleLowerCase()}`]}`}><i />{statusLabels[status]}</span>;
+}
+
+function LoanActionConfirmationDialog({ loan, action, loading, onClose, onConfirm }: { loan: TeacherLoan; action: LoanAction; loading: boolean; onClose: () => void; onConfirm: () => void }) {
+  const finishing = action === "finalizar";
+  const actionLabel = finishing ? "finalizar" : "cancelar";
+  return <div className={styles.backdrop} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="loan-action-confirmation-title"><header><div><span>Confirmación requerida</span><h2 id="loan-action-confirmation-title">¿Desea {actionLabel} este préstamo?</h2><p>Esta acción se aplicará al préstamo seleccionado.</p></div><button type="button" onClick={onClose} disabled={loading} aria-label="Cerrar">×</button></header><form onSubmit={(event) => { event.preventDefault(); onConfirm(); }}><div className={styles.actionConfirmation}><strong>{loan.id}</strong><span>{loan.teacher.name} · Aula {loan.roomCode}</span><p>{finishing ? "El préstamo quedará finalizado y el aula se liberará." : "La solicitud o reserva quedará cancelada y el aula se liberará."}</p></div><footer><button type="button" className={styles.dialogCancel} onClick={onClose} disabled={loading}>Volver</button><button type="submit" className={finishing ? styles.finishButton : styles.cancelButton} disabled={loading}>{loading ? "Procesando…" : `${finishing ? "Sí, finalizar" : "Sí, cancelar"} préstamo`}</button></footer></form></section></div>;
 }
 
 function today() { return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(new Date()); }

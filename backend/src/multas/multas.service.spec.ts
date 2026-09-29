@@ -3,6 +3,23 @@ import * as XLSX from 'xlsx';
 import { MultasService } from './multas.service';
 
 describe('MultasService', () => {
+  it('registra una multa sin exigir una práctica libre activa', async () => {
+    const prisma = {
+      estudiante: { findFirst: jest.fn().mockResolvedValue({ id: 'estudiante-1' }) },
+      motivoMulta: { findUnique: jest.fn().mockResolvedValue({ id: 'motivo-1' }) },
+      multa: { create: jest.fn().mockResolvedValue({ id: 'multa-1' }) },
+    };
+    const service = new MultasService(prisma as never);
+
+    await expect(service.create({
+      codigoEstudiante: '20261001',
+      motivoId: 'motivo-1',
+      multaSugerida: 'Presentar compromiso escrito.',
+    })).resolves.toEqual({ id: 'multa-1' });
+
+    expect(prisma.multa.create).toHaveBeenCalled();
+  });
+
   it('localiza exclusivamente multas activas del estudiante', async () => {
     const prisma = {
       multa: {

@@ -57,3 +57,4 @@ pm run lint), validando la integridad del tipado y reglas de hooks.
 ## ESTADO FINAL
 
 El módulo de Inconsistencias es totalmente resolutivo desde su propia interfaz, y la trazabilidad visual del módulo de Registros por Día es ahora 100% fidedigna con la política de cruce contra el turno real. Los pendientes heredados sobre la validación y UX fueron resueltos en su totalidad.
+ 

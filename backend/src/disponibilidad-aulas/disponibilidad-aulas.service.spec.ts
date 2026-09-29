@@ -192,6 +192,23 @@ describe('DisponibilidadAulasService', () => {
     });
   });
 
+  it('informa una práctica libre activa sin reservar el aula', async () => {
+    prisma.practicaLibre.findFirst.mockResolvedValueOnce({
+      id: 'practica-id',
+      estudiante: { codigo: '2026100001' },
+      estado: 'ACTIVO',
+    });
+
+    const result = await service.findOne(aula.id, bloque);
+
+    expect(result.estadoCalculado).toBe('disponible');
+    expect(result.fuentes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ tipo: 'practica-libre', id: 'practica-id' }),
+      ]),
+    );
+  });
+
   it('informa la siguiente actividad posterior al bloque', async () => {
     prisma.claseProgramada.findFirst
       .mockResolvedValueOnce(null)

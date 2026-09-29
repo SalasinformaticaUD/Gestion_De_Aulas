@@ -66,6 +66,7 @@
 .dialog>header p { margin:5px 0 0; color:#b5bac3; font-size:15.6px; }
 .dialog>header button { width:31px; height:31px; border:0; border-radius:5px; color:#d7d9dd; background:#303238; font-size:24.7px; }
 .dialog form { display:grid; gap:15px; padding:20px; }
+.actionConfirmation{display:grid;gap:7px;padding:14px;border:1px solid var(--line);border-radius:8px;background:#fafbfc}.actionConfirmation strong{color:var(--primary);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15.6px}.actionConfirmation span{color:var(--ink);font-size:15.6px;font-weight:750}.actionConfirmation p{margin:0;color:var(--muted);font-size:14.3px;line-height:1.45}
 .formSection { min-width:0; display:grid; gap:11px; padding:14px; margin:0; border:1px solid var(--line); border-radius:8px; }
 .formSection legend { padding:0 7px; color:#424852; font-size:15.6px; font-weight:800; }
 .formSection legend>b { width:21px; height:21px; display:inline-grid; place-items:center; margin-right:5px; border-radius:50%; color:#fff; background:var(--primary); font-size:13px; }

@@ -49,6 +49,8 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
   const [actaPorRechazar, setActaPorRechazar] = useState<Fila | null>(null);
   const [motivoRechazo, setMotivoRechazo] = useState("");
   const [archivoActa, setArchivoActa] = useState<File | null>(null);
+  const [paginaMemorandos, setPaginaMemorandos] = useState(1);
+  const [totalMemorandos, setTotalMemorandos] = useState(0);
   const selectorArchivoActa = useRef<HTMLInputElement>(null);
   const cargarDocumentos = useCallback(async () => {
     if (perfil.cargando) return;
@@ -58,18 +60,22 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
         setMonitores([]);
         return;
       }
+      if (tipo === "memorandos") {
+        const documentos = await servicioMonitores.listarPaginaMemorandos(paginaMemorandos);
+        setRows(documentos.results as Fila[]);
+        setTotalMemorandos(documentos.count);
+        setMonitores([]);
+        return;
+      }
       const listaMonitores = await servicioMonitores.listarMonitores();
       setMonitores(listaMonitores);
       if (tipo === "actas" && vistaActas === "HISTORICO" && !semestreHistorico) {
         setRows([]);
         return;
       }
-      const documentos =
-        tipo === "memorandos"
-          ? await servicioMonitores.listarMemorandos()
-          : await servicioMonitores.listarActasCompromiso(
-              vistaActas === "HISTORICO" ? semestreHistorico : undefined,
-            );
+      const documentos = await servicioMonitores.listarActasCompromiso(
+        vistaActas === "HISTORICO" ? semestreHistorico : undefined,
+      );
       const documentosActas = documentos as Fila[];
       setRows(documentosActas);
       if (tipo === "actas" && vistaActas === "ACTUAL") {
@@ -82,7 +88,7 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
           : "No fue posible cargar los documentos.",
       );
     }
-  }, [tipo, vistaActas, semestreHistorico, perfil.cargando, perfil.datos.role]);
+  }, [tipo, vistaActas, semestreHistorico, paginaMemorandos, perfil.cargando, perfil.datos.role]);
   useEffect(() => {
     void cargarDocumentos();
     const actualizarAlVolver = () => void cargarDocumentos();
@@ -120,7 +126,7 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
               ? Boolean(row.sent_at)
               : !row.sent_at)) &&
           (filtros.dependencia === "todas" ||
-            monitor?.department === filtros.dependencia)
+            String(row.department ?? monitor?.department ?? "") === filtros.dependencia)
         );
       }),
     [rows, tipo, filtros, buscar, estado, dependencia, monitorPorId],
@@ -621,18 +627,18 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
       <section className={estilos.metricas}>
         <article className={`${estilos.metrica} ${estilos.violeta}`}>
           <span>Generados</span>
-          <strong>{rows.length}</strong>
+          <strong>{totalMemorandos}</strong>
           <small>Memorandos disponibles</small>
         </article>
         <article className={`${estilos.metrica} ${estilos.verde}`}>
           <span>Enviados</span>
           <strong>{enviados}</strong>
-          <small>Con correo confirmado</small>
+          <small>En esta página</small>
         </article>
         <article className={`${estilos.metrica} ${estilos.ambar}`}>
           <span>Pendientes</span>
           <strong>{rows.length - enviados}</strong>
-          <small>Requieren envío</small>
+          <small>En esta página</small>
         </article>
       </section>
       <section className={estilos.tarjeta}>
@@ -671,7 +677,7 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
           <button
             type="button"
             className="button-primary"
-            onClick={() => setFiltros({ buscar: "", estado, dependencia })}
+            onClick={() => { setFiltros({ buscar: "", estado, dependencia }); setPaginaMemorandos(1); }}
           >
             Filtrar
           </button>
@@ -733,6 +739,7 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
             </tbody>
           </table>
         </div>
+        <Paginacion pagina={paginaMemorandos} totalPaginas={Math.max(1, Math.ceil(totalMemorandos / 20))} total={totalMemorandos} anterior={() => setPaginaMemorandos((actual) => Math.max(1, actual - 1))} siguiente={() => setPaginaMemorandos((actual) => Math.min(Math.max(1, Math.ceil(totalMemorandos / 20)), actual + 1))} />
       </section>
     </div>
   );

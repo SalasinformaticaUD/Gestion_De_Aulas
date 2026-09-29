@@ -723,12 +723,9 @@ export class DisponibilidadAulasService {
         motivo: 'Existe un préstamo docente aprobado o activo.',
       };
     }
-    if (input.practica) {
-      return {
-        estado: 'reservada',
-        motivo: 'Existe una práctica libre activa.',
-      };
-    }
+    // Una práctica libre no bloquea el aula para otra práctica libre. El
+    // registro se conserva en las fuentes para informar el uso actual, pero
+    // la validación de creación decide si existen restricciones incompatibles.
     if (input.tarea) {
       return {
         estado: 'bloqueada',

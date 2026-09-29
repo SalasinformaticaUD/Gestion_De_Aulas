@@ -56,3 +56,8 @@
 .metric{--metric-soft:#f4f5f7;border-color:var(--accent);background:linear-gradient(135deg,var(--surface) 0%,var(--metric-soft) 100%)}
 .metric_green{--metric-soft:#edfaf1}.metric_blue{--metric-soft:#edf4ff}.metric_violet{--metric-soft:#f5f0ff}.metric_amber{--metric-soft:#fff8e8}
 :global(html[data-theme="dark"]) .metric{background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 15%,var(--surface)) 0%,var(--surface) 72%)}
+
+/* El panel conserva la altura del viewport: solo la lista se desplaza. */
+.operationalPanel{height:calc(100dvh - 28px);min-height:0;display:flex;flex-direction:column}
+.alertList{min-height:0;flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+@media(max-width:1120px){.operationalPanel{height:auto;display:block}.alertList{max-height:360px}}

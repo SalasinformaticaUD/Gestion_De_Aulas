@@ -1,9 +1,10 @@
 import { descargarMonitores, solicitarAulas, solicitarMonitores } from "./clienteMonitores";
 import { obtenerSesion } from "@/features/auth/lib/sesion";
-import type { AnotacionApi, ConciliacionApi, ConsultaPublicaApi, DashboardApi, DetalleInconsistenciaApi, PanelMonitorApi, RegistrosPersonalesApi, ExcepcionApi, HorarioApi, ImportacionAsistenciaApi, IndicadoresInconsistenciasApi, InconsistenciaApi, MonitorApi, SesionApi } from "./contratosMonitores";
+import type { AnotacionApi, ConciliacionApi, ConsultaPublicaApi, DashboardApi, DetalleInconsistenciaApi, PanelMonitorApi, RegistrosPersonalesApi, ExcepcionApi, HorarioApi, ImportacionAsistenciaApi, IndicadoresInconsistenciasApi, InconsistenciaApi, MonitorApi, PaginaApi, SesionApi } from "./contratosMonitores";
 
 export const servicioMonitores = {
   listarMonitores: () => solicitarMonitores<MonitorApi[]>("/api/v1/monitors/"),
+  listarPaginaMonitores: (pagina = 1) => solicitarMonitores<PaginaApi<MonitorApi>>(`/api/v1/monitors/?page=${pagina}&page_size=20`),
   provisionarMonitor: (payload: { full_name: string; codigo_estudiante: string; email: string; username?: string; department: string; numero_documento?: string; proyecto_curricular?: string; telefono?: string; confirm_repeating_monitor: boolean }) =>
     solicitarMonitores<MonitorApi>("/api/v1/monitors/provision/", { method: "POST", body: JSON.stringify({ ...payload, username: payload.username?.trim() || undefined }) }),
   actualizarMonitor: (id: string, payload: Partial<Pick<MonitorApi, "codigo_estudiante" | "full_name" | "department" | "is_active">>) =>
@@ -31,6 +32,7 @@ export const servicioMonitores = {
   obtenerMiDashboardMonitor: () => solicitarMonitores<PanelMonitorApi>("/api/v1/reports/dashboard/me/"),
   obtenerMisRegistros: () => solicitarMonitores<RegistrosPersonalesApi>("/api/v1/reports/monitor-records/me/"),
   listarHorarios: () => solicitarMonitores<HorarioApi[]>("/api/v1/schedules/"),
+  listarPaginaHorarios: (pagina = 1) => solicitarMonitores<PaginaApi<HorarioApi>>(`/api/v1/schedules/?page=${pagina}&page_size=20`),
   crearHorario: (payload: Pick<HorarioApi, "monitor" | "weekday" | "start_time" | "end_time" | "asignatura" | "grupo" | "docente" | "proyecto_curricular" | "location" | "is_active">) =>
     solicitarMonitores<HorarioApi>("/api/v1/schedules/", { method: "POST", body: JSON.stringify(payload) }),
   actualizarHorario: (id: string, payload: Partial<Pick<HorarioApi, "is_active" | "weekday" | "start_time" | "end_time" | "asignatura" | "grupo" | "docente" | "proyecto_curricular" | "location">>) =>
@@ -79,6 +81,7 @@ export const servicioMonitores = {
   listarNotificaciones: () => solicitarMonitores<DashboardApi["notifications"]>("/api/v1/notifications/"),
   marcarNotificacionLeida: (id: string) => solicitarMonitores<unknown>(`/api/v1/notifications/${id}/mark-read/`, { method: "POST" }),
   listarMemorandos: () => solicitarMonitores<unknown[]>("/api/v1/reports/memorandums/"),
+  listarPaginaMemorandos: (pagina = 1) => solicitarMonitores<PaginaApi<unknown>>(`/api/v1/reports/memorandums/?page=${pagina}&page_size=20`),
   reenviarMemorando: (id: string) => solicitarMonitores<unknown>(`/api/v1/reports/memorandums/${id}/resend/`, { method: "POST" }),
   descargarMemorando: (id: string) => descargarMonitores(`/api/v1/reports/memorandums/${id}/pdf/`),
   listarActasCompromiso: (semester?: string) => solicitarMonitores<unknown[]>(`/api/v1/reports/commitment-acts/${semester ? `?semester=${encodeURIComponent(semester)}` : ""}`),

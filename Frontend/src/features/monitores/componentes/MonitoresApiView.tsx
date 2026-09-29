@@ -10,6 +10,7 @@ import type {
 import estilos from "./SistemaVisualMonitores.module.css";
 import { AvisoTemporal } from "./AvisoTemporal";
 import { SelectorDependenciaAdmin } from "./FiltroDependenciaAdmin";
+import { Paginacion } from "./Paginacion";
 
 type FormMonitor = {
   full_name: string;
@@ -197,28 +198,18 @@ export function MonitoresApiView() {
   const [fechaInicioSemestre, setFechaInicioSemestre] = useState("");
   const [fechaFinSemestre, setFechaFinSemestre] = useState("");
   const [impacto, setImpacto] = useState<Record<string, number> | null>(null);
+  const [pagina, setPagina] = useState(1);
+  const [totalRegistros, setTotalRegistros] = useState(0);
   const fallo = (e: unknown, fallback: string) =>
     setError(e instanceof Error ? e.message : fallback);
-  async function cargar() {
+  async function cargar(paginaSolicitada = pagina) {
     setCargando(true);
     setError("");
     try {
-      const [monitores, dashboard] = await Promise.all([
-        servicioMonitores.listarMonitores(),
-        servicioMonitores.obtenerDashboard(),
-      ]);
-      setRows(monitores);
-      setAlertasPorMonitor(
-        Object.fromEntries(
-          dashboard.monitor_rows.map((fila) => [
-            fila.monitor_id,
-            {
-              late_count: fila.late_count,
-              memorandums_count: fila.memorandums_count,
-            },
-          ]),
-        ),
-      );
+      const respuesta = await servicioMonitores.listarPaginaMonitores(paginaSolicitada);
+      setRows(respuesta.results);
+      setTotalRegistros(respuesta.count);
+      setAlertasPorMonitor({});
     } catch (e) {
       fallo(e, "No fue posible cargar los monitores.");
     } finally {
@@ -226,7 +217,9 @@ export function MonitoresApiView() {
     }
   }
   useEffect(() => {
-    void cargar();
+    void cargar(pagina);
+  }, [pagina]);
+  useEffect(() => {
     void servicioMonitores.obtenerPerfilMonitores().then((perfil) => {
       setPerfilMonitores(perfil);
       const dependencia = perfil.department;
@@ -445,23 +438,23 @@ export function MonitoresApiView() {
       <section className={estilos.metricas}>
         <article className={`${estilos.metrica} ${estilos.violeta}`}>
           <span>Total</span>
-          <strong>{rows.length}</strong>
+          <strong>{totalRegistros}</strong>
           <small>Registros en la API</small>
         </article>
         <article className={`${estilos.metrica} ${estilos.verde}`}>
           <span>Activos</span>
           <strong>{rows.filter((item) => estadoCuenta(item) === "ACTIVE").length}</strong>
-          <small>Cuenta activada</small>
+          <small>En esta página</small>
         </article>
         <article className={`${estilos.metrica} ${estilos.ambar}`}>
           <span>Pendientes</span>
           <strong>{rows.filter((item) => estadoCuenta(item) === "PENDING").length}</strong>
-          <small>Correo enviado; falta activar cuenta</small>
+          <small>En esta página</small>
         </article>
         <article className={`${estilos.metrica} ${estilos.azul}`}>
           <span>Inactivos</span>
           <strong>{rows.filter((item) => estadoCuenta(item) === "INACTIVE").length}</strong>
-          <small>Sin operación vigente</small>
+          <small>En esta página</small>
         </article>
       </section>
       {error && (
@@ -614,6 +607,7 @@ export function MonitoresApiView() {
               </tbody>
             </table>
           </div>
+          <Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil(totalRegistros / 20))} total={totalRegistros} anterior={() => setPagina((actual) => Math.max(1, actual - 1))} siguiente={() => setPagina((actual) => Math.min(Math.max(1, Math.ceil(totalRegistros / 20)), actual + 1))} />
       </section>
       {crearModal && (
         <div className={estilos.fondoModal}>

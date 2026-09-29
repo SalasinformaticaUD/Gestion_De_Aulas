@@ -50,7 +50,9 @@ export class MultasService {
 
   async create(dto: CreateMultaDto, usuarioId?: string) {
     const estudiante = await this.resolveEstudiante(dto);
-    await this.validarPracticaParaMulta(estudiante.id, dto.practicaId);
+    if (dto.practicaId) {
+      await this.validarPracticaParaMulta(estudiante.id, dto.practicaId);
+    }
     const motivo = await this.prisma.motivoMulta.findUnique({
       where: { id: dto.motivoId },
       select: { id: true },
