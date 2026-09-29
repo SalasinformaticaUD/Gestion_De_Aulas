@@ -11,6 +11,8 @@ import {
   NormalizacionSolicitudesService,
   SolicitudNormalizada,
 } from './normalizacion-solicitudes.service';
+import type { ImportarRespuestaFormsDto } from './dto/importar-respuesta-forms.dto';
+import { convertirRespuestaForms } from './respuesta-forms.mapper';
 
 type ArchivoExcel = { buffer: Buffer; originalname: string; mimetype?: string };
 
@@ -20,6 +22,107 @@ export class ImportacionSolicitudesService {
     private readonly prisma: PrismaService,
     private readonly normalizacion: NormalizacionSolicitudesService,
   ) {}
+
+  async importarRespuestaForms(dto: ImportarRespuestaFormsDto) {
+    const hashArchivo = createHash('sha256')
+      .update(`MICROSOFT_FORMS:${dto.responseId.trim()}`)
+      .digest('hex');
+    const existente = await this.buscarImportacionForms(hashArchivo);
+    if (existente) {
+      return {
+        procesada: true,
+        creada: false,
+        motivo: 'RESPUESTA_YA_PROCESADA',
+        importacionId: existente.id,
+        solicitudId: existente.solicitudes[0]?.id ?? null,
+      };
+    }
+
+    const solicitudForms = convertirRespuestaForms(dto);
+    const normalizacion = await this.normalizacion.normalizar({
+      totalFilas: 1,
+      solicitudes: [solicitudForms],
+      errores: [],
+    });
+    const solicitud = normalizacion.solicitudesNormalizadas[0];
+    const esDuplicada = solicitud.duplicados.length > 0;
+    const estado =
+      esDuplicada || solicitud.alertas.length ? 'PARCIAL' : 'COMPLETA';
+
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const importacion = await tx.importacionSolicitudInstalacion.create({
+          data: {
+            nombreArchivo: `Microsoft Forms - respuesta ${dto.responseId.trim()}`,
+            hashArchivo,
+            estado,
+            totalFilas: 1,
+            solicitudesCreadas: esDuplicada ? 0 : 1,
+            filasDuplicadas: esDuplicada ? 1 : 0,
+            filasObservadas: !esDuplicada && solicitud.alertas.length ? 1 : 0,
+            filasRechazadas: 0,
+            errores: [],
+            finalizadoEn: new Date(),
+          },
+        });
+        const creada = esDuplicada
+          ? null
+          : await tx.solicitudInstalacion.create({
+              data: this.datosSolicitud(importacion.id, solicitud),
+              select: { id: true, estado: true, historicaAlImportar: true },
+            });
+        await tx.auditoria.create({
+          data: {
+            entidad: 'ImportacionSolicitudInstalacion',
+            entidadId: importacion.id,
+            accion: 'CREATE_FROM_MICROSOFT_FORMS',
+            datosNuevos: {
+              responseId: dto.responseId,
+              solicitudId: creada?.id ?? null,
+              duplicada: esDuplicada,
+            },
+          },
+        });
+        return {
+          procesada: true,
+          creada: Boolean(creada),
+          motivo: esDuplicada ? 'SOLICITUD_DUPLICADA' : null,
+          importacionId: importacion.id,
+          solicitudId: creada?.id ?? null,
+          estado: creada?.estado ?? null,
+          historica: creada?.historicaAlImportar ?? null,
+        };
+      });
+    } catch (error) {
+      if (!this.esConflictoUnico(error)) throw error;
+      const importacionConcurrente =
+        await this.buscarImportacionForms(hashArchivo);
+      if (importacionConcurrente) {
+        return {
+          procesada: true,
+          creada: false,
+          motivo: 'RESPUESTA_YA_PROCESADA',
+          importacionId: importacionConcurrente.id,
+          solicitudId: importacionConcurrente.solicitudes[0]?.id ?? null,
+        };
+      }
+      const solicitudConcurrente =
+        await this.prisma.solicitudInstalacion.findUnique({
+          where: { hashContenido: solicitud.hashContenido },
+          select: { id: true },
+        });
+      if (solicitudConcurrente) {
+        return {
+          procesada: true,
+          creada: false,
+          motivo: 'SOLICITUD_DUPLICADA',
+          importacionId: null,
+          solicitudId: solicitudConcurrente.id,
+        };
+      }
+      throw error;
+    }
+  }
 
   async previsualizarExcel(archivo: ArchivoExcel | undefined) {
     this.validarArchivo(archivo);
@@ -245,6 +348,25 @@ export class ImportacionSolicitudesService {
           : 'No fue posible leer el archivo Excel.',
       );
     }
+  }
+
+  private buscarImportacionForms(hashArchivo: string) {
+    return this.prisma.importacionSolicitudInstalacion.findUnique({
+      where: { hashArchivo },
+      select: {
+        id: true,
+        solicitudes: { orderBy: { creadoEn: 'asc' }, select: { id: true } },
+      },
+    });
+  }
+
+  private esConflictoUnico(error: unknown): boolean {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === 'P2002'
+    );
   }
 
   private validarArchivo(

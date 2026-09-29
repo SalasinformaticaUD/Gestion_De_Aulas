@@ -4,6 +4,43 @@ import { ImportacionSolicitudesService } from './importacion-solicitudes.service
 import type { NormalizacionSolicitudesService } from './normalizacion-solicitudes.service';
 
 describe('ImportacionSolicitudesService', () => {
+  it('responde de forma idempotente si Power Automate reintenta la respuesta', async () => {
+    const normalizar = jest.fn();
+    const prisma = {
+      importacionSolicitudInstalacion: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'importacion-forms',
+          solicitudes: [{ id: 'solicitud-forms' }],
+        }),
+      },
+    } as unknown as PrismaService;
+    const servicio = new ImportacionSolicitudesService(prisma, {
+      normalizar,
+    } as unknown as NormalizacionSolicitudesService);
+
+    const resultado = await servicio.importarRespuestaForms({
+      responseId: '315',
+      fechaRecepcion: '2026-09-29T16:18:29.3205086Z',
+      correoRespondiente: 'prueba@gmail.com',
+      nombreRespondiente: 'Prueba',
+      docenteNombre: 'Prueba',
+      docenteCorreo: 'prueba@gmail.com',
+      proyectoCurricular: 'Ingeniería Industrial',
+      aulasSeleccionadas: '["Aula 306"]',
+      aulasEscritas: '',
+      software1: 'PRUEBA',
+    });
+
+    expect(resultado).toMatchObject({
+      procesada: true,
+      creada: false,
+      motivo: 'RESPUESTA_YA_PROCESADA',
+      importacionId: 'importacion-forms',
+      solicitudId: 'solicitud-forms',
+    });
+    expect(normalizar).not.toHaveBeenCalled();
+  });
+
   it('rechaza una carga repetida usando la huella del archivo', async () => {
     const prisma = {
       importacionSolicitudInstalacion: {

@@ -6,15 +6,18 @@ import { SolicitudesInstalacionService } from './solicitudes-instalacion.service
 import { NormalizacionSolicitudesService } from './normalizacion-solicitudes.service';
 import { TareasOperativasModule } from '../tareas-operativas/tareas-operativas.module';
 import { GeneracionTareasInstalacionService } from './generacion-tareas-instalacion.service';
+import { FormsSolicitudesController } from './forms-solicitudes.controller';
+import { FormsIntegrationKeyGuard } from './forms-integration-key.guard';
 
 @Module({
   imports: [PrismaModule, TareasOperativasModule],
-  controllers: [SolicitudesInstalacionController],
+  controllers: [SolicitudesInstalacionController, FormsSolicitudesController],
   providers: [
     SolicitudesInstalacionService,
     ImportacionSolicitudesService,
     NormalizacionSolicitudesService,
     GeneracionTareasInstalacionService,
+    FormsIntegrationKeyGuard,
   ],
   exports: [SolicitudesInstalacionService],
 })

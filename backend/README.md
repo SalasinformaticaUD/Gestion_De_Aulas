@@ -135,7 +135,8 @@ inicial está en [docs/operacion-backend.md](docs/operacion-backend.md).
 
 Monitores usa el mismo secreto `JWT_SECRET` bajo el nombre
 `PLATFORM_JWT_SECRET` para validar los JWT HS256 emitidos por Aulas. Configure además
-`MONITORES_API_URL`, `MONITORES_API_TIMEOUT_MS` y `MONITORES_SERVICE_TOKEN`.
+`MONITORES_API_URL`, `MONITORES_API_TIMEOUT_MS`, `MONITORES_SERVICE_TOKEN` y
+`FORMS_INTEGRATION_KEY`.
 
 El endpoint interno `POST /integraciones/monitores/usuarios` solo acepta el header
 `X-Monitores-Service-Token`. Lo consume el backend de Monitores para aprovisionar una
