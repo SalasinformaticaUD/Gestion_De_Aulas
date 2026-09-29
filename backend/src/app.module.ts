@@ -26,6 +26,7 @@ import { IntegracionesModule } from './integraciones/integraciones.module';
 import { DocentesModule } from './docentes/docentes.module';
 import { EstudiantesModule } from './estudiantes/estudiantes.module';
 import { CargosModule } from './cargos/cargos.module';
+import { SolicitudesInstalacionModule } from './solicitudes-instalacion/solicitudes-instalacion.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { CargosModule } from './cargos/cargos.module';
     DocentesModule,
     EstudiantesModule,
     CargosModule,
+    SolicitudesInstalacionModule,
   ],
 })
 export class AppModule {}

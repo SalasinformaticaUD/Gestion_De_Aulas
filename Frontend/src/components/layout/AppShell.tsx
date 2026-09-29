@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { followUpNavigation, operationNavigation } from "@/config/navigation";
 import { UniversityLogo } from "@/components/brand/UniversityLogo";
 import { applyTheme, defaultProfile, getInitials, loadTheme, profileFromSession, type UserProfile } from "@/features/perfil/lib/profile";
@@ -22,6 +22,7 @@ const moduleByRoute: Record<string, string> = {
   "/prestamos-docentes": "PRESTAMOS_DOCENTES",
   "/audiovisuales": "AUDIOVISUALES",
   "/software": "SOFTWARE",
+  "/solicitudes-instalacion": "SOLICITUDES_INSTALACION",
   "/credenciales": "CREDENCIALES",
   "/usuarios": "ADMINISTRACION",
   "/estudiantes": "ESTUDIANTES",
@@ -35,6 +36,7 @@ const SCREEN_SAVER_IDLE_MS = 2.5 * 60 * 1000;
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
+  const navigationRef = useRef<HTMLElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [profileData, setProfileData] = useState<UserProfile>(defaultProfile);
@@ -88,6 +90,10 @@ export function AppShell({ children }: AppShellProps) {
   }, []);
 
   useEffect(() => {
+    navigationRef.current?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView({ block: "nearest" });
+  }, [pathname]);
+
+  useEffect(() => {
     let timeout: number | undefined;
     const resetIdleTimer = () => {
       setIsScreenSaverActive(false);
@@ -126,7 +132,7 @@ export function AppShell({ children }: AppShellProps) {
       {isMenuOpen && <button className="menu-overlay" aria-label="Cerrar menú" onClick={closeMenu} />}
       <aside className={`sidebar ${isMenuOpen ? "is-open" : ""} ${isSidebarCollapsed ? "is-collapsed" : ""}`} aria-label="Navegación principal">
         <Link href="/gestion-aulas" className="brand" aria-label="Ir al dashboard" onClick={closeMenu}><Image className="sidebar-aulas-logo" src="/brand/Logo_Cosmos_Aulas_de_Software.png" alt="COSMOS · Aulas de Software" width={1920} height={1080} priority /></Link>
-        <nav className="nav">
+        <nav ref={navigationRef} className="nav">
           <p className="nav-label">Operación</p>
           {operationNavigation.filter(({ href }) => canAccessRoute(href) && (href !== "/usuarios" || isAdministrator)).map(({ href, label }) => navLink(href, label))}
           <p className="nav-label">Seguimiento</p>

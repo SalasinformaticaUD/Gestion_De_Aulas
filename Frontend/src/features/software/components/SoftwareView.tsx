@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { listarAulas } from "@/features/aulas/api/aulasApi";
 import { actualizarSoftware, asignarSoftware as guardarAsignacion, cargarSoftware, cargarSoftwarePaginado, crearSoftware, eliminarSoftware, importarSoftwareExcel, retirarSoftware, type ResultadoImportacionSoftwareExcel } from "@/features/software/api/softwareApi";
 import type { InstalledSoftware, SoftwareAssignment } from "@/features/software/types";
@@ -189,8 +191,175 @@ function CatalogView({ rooms, software, assignments, searchText, roomFilter, onS
     const itemAssignments = assignments.filter((assignment) => assignment.softwareId === item.id);
     const status = item.status ?? "ACTIVO";
     const aulasVisibles = itemAssignments.slice(0, 4);
-    return <tr key={item.id}><td><strong>{item.name}</strong><small>{item.id.slice(0, 13)}…</small></td><td><code>{item.version}</code></td><td><span className={styles.softwareStatus}>{softwareStatusLabels[status]}</span></td><td><span className={styles.description}>{item.description || "Sin descripción"}</span></td><td><strong>{itemAssignments.length}</strong><small>asociación(es)</small></td><td><div className={styles.roomTags}>{aulasVisibles.map((assignment) => <span key={assignment.roomId}>{rooms.find((room) => room.id === assignment.roomId)?.code}</span>)}{itemAssignments.length > aulasVisibles.length && <details className={styles.roomDistribution}><summary>Ver todas las aulas ({itemAssignments.length})</summary><div>{itemAssignments.map((assignment) => <span key={assignment.roomId}>{rooms.find((room) => room.id === assignment.roomId)?.code ?? "Aula no disponible"}</span>)}</div></details>}{itemAssignments.length === 0 && <em>Sin instalar</em>}</div></td><td><div className={styles.actions}><button type="button" onClick={() => onAssign(item)}>Asignar a aulas</button><button type="button" onClick={() => onEdit(item)}>Editar</button><button type="button" className={styles.deleteButton} onClick={() => void onDelete(item)}>Eliminar</button></div></td></tr>;
+    return <tr key={item.id}><td><strong>{item.name}</strong><small>{item.id.slice(0, 13)}…</small></td><td><code>{item.version}</code></td><td><span className={styles.softwareStatus}>{softwareStatusLabels[status]}</span></td><td><span className={styles.description}>{item.description || "Sin descripción"}</span></td><td><strong>{itemAssignments.length}</strong><small>asociación(es)</small></td><td><div className={styles.roomTags}>{aulasVisibles.map((assignment) => { const roomLabel = getRoomLabel(rooms.find((room) => room.id === assignment.roomId)); return <span className={`${styles.roomTag} ${isSpecializedRoom(roomLabel) ? styles.roomTagSpecialized : ""}`} key={assignment.roomId}><RoomLabel label={roomLabel} /></span>; })}{itemAssignments.length > aulasVisibles.length && <RoomDistribution software={item} assignments={itemAssignments} rooms={rooms} />}{itemAssignments.length === 0 && <em>Sin instalar</em>}</div></td><td><div className={styles.actions}><button type="button" onClick={() => onAssign(item)}>Asignar a aulas</button><button type="button" onClick={() => onEdit(item)}>Editar</button><button type="button" className={styles.deleteButton} onClick={() => void onDelete(item)}>Eliminar</button></div></td></tr>;
   })}{software.length === 0 && <tr><td colSpan={7} className={styles.emptyTable}>No hay software para los filtros seleccionados.</td></tr>}</tbody></table></div><footer className={styles.pagination}><span>Página {meta.page} de {meta.totalPages || 1}</span><div><button type="button" disabled={meta.page <= 1} onClick={() => onPage(meta.page - 1)}>Anterior</button><button type="button" disabled={meta.page >= meta.totalPages} onClick={() => onPage(meta.page + 1)}>Siguiente</button></div></footer></section>;
+}
+
+function RoomDistribution({ software, assignments, rooms }: { software: InstalledSoftware; assignments: SoftwareAssignment[]; rooms: Room[] }) {
+  return (
+    <FloatingDropdown
+      wrapperClassName={styles.roomDistribution}
+      panelClassName={styles.roomDistributionMenu}
+      ariaLabel={`Ver las ${assignments.length} aulas donde está instalado ${software.name}`}
+      panelWidth={260}
+      trigger={(
+        <>
+        <span>Ver todas</span>
+        <span className={styles.roomDistributionCount}>{assignments.length}</span>
+        <i className={styles.roomDistributionChevron} aria-hidden="true" />
+        </>
+      )}
+    >
+        <div className={styles.roomDistributionHeader}>
+          <div>
+            <strong>Aulas instaladas</strong>
+            <small>{software.name} · Versión {software.version}</small>
+          </div>
+          <b>{assignments.length}</b>
+        </div>
+        <div className={styles.roomDistributionList}>
+          {assignments.map((assignment) => {
+            const room = rooms.find((candidate) => candidate.id === assignment.roomId);
+            const location = getUsefulRoomLocation(room);
+            const roomLabel = getRoomLabel(room);
+            return (
+              <div className={`${styles.roomDistributionItem} ${!location ? styles.roomDistributionItemCentered : ""}`} key={assignment.roomId}>
+                <span className={roomLabel.length > 12 ? styles.roomDistributionLongName : ""}><RoomLabel label={roomLabel} /></span>
+                {location && <small>{location}</small>}
+              </div>
+            );
+          })}
+        </div>
+    </FloatingDropdown>
+  );
+}
+
+function InstalledProgramsDropdown({ room, assignments, software, onRemove }: { room: Room; assignments: SoftwareAssignment[]; software: InstalledSoftware[]; onRemove: (assignment: SoftwareAssignment) => Promise<void> }) {
+  const location = getUsefulRoomLocation(room);
+  return (
+    <FloatingDropdown
+      wrapperClassName={styles.installedPrograms}
+      panelClassName={styles.installedProgramsMenu}
+      ariaLabel={`Ver los ${assignments.length} programas instalados en el aula ${room.code}`}
+      panelWidth={360}
+      trigger={(
+        <>
+          <span>Ver programas instalados</span>
+          <span className={styles.installedProgramsCount}>{assignments.length}</span>
+          <i className={styles.roomDistributionChevron} aria-hidden="true" />
+        </>
+      )}
+    >
+      <div className={styles.installedProgramsHeader}>
+        <div><strong>Aula {room.code}</strong>{location && <small>{location}</small>}</div>
+        <b>{assignments.length}</b>
+      </div>
+      <div className={styles.installedProgramsList}>
+        {assignments.map((assignment) => {
+          const item = software.find((softwareItem) => softwareItem.id === assignment.softwareId);
+          return item && (
+            <div className={styles.installedProgramsItem} key={assignment.softwareId}>
+              <i><strong>{item.name}</strong><small>{item.version} · Instalado {assignment.installedAt}</small></i>
+              <button type="button" onClick={() => void onRemove(assignment)} aria-label={`Retirar ${item.name} del aula ${room.code}`}>×</button>
+            </div>
+          );
+        })}
+      </div>
+    </FloatingDropdown>
+  );
+}
+
+function getUsefulRoomLocation(room?: Room) {
+  const location = room?.location?.trim();
+  if (!location || location.toLocaleLowerCase("es") === "sin ubicación registrada") return null;
+  return location;
+}
+
+function getRoomLabel(room?: Room) {
+  const code = room?.code?.trim();
+  return code || "Aula no disponible";
+}
+
+function isSpecializedRoom(label: string) {
+  return /^sala especializada\s+\d+$/i.test(label);
+}
+
+function RoomLabel({ label }: { label: string }) {
+  const specializedRoom = label.match(/^(sala especializada)\s+(\d+)$/i);
+  if (!specializedRoom) return <>{label}</>;
+  const name = label.slice(0, label.length - specializedRoom[2].length).trim();
+  return <>{name}<strong className={styles.specializedRoomNumber}>{specializedRoom[2]}</strong></>;
+}
+
+function FloatingDropdown({ wrapperClassName, panelClassName, ariaLabel, trigger, children, panelWidth = 320 }: { wrapperClassName: string; panelClassName: string; ariaLabel: string; trigger: ReactNode; children: ReactNode; panelWidth?: number }) {
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState<CSSProperties>({});
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const updatePosition = useCallback(() => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const viewportMargin = 12;
+    const width = Math.min(panelWidth, window.innerWidth - viewportMargin * 2);
+    const left = Math.min(Math.max(viewportMargin, rect.right - width), window.innerWidth - width - viewportMargin);
+    const spaceBelow = window.innerHeight - rect.bottom - viewportMargin;
+    const spaceAbove = rect.top - viewportMargin;
+    const openAbove = spaceBelow < 240 && spaceAbove > spaceBelow;
+    const availableHeight = Math.max(160, Math.min(360, (openAbove ? spaceAbove : spaceBelow) - 8));
+
+    setPosition(openAbove
+      ? { width, left, bottom: window.innerHeight - rect.top + 7, maxHeight: availableHeight }
+      : { width, left, top: rect.bottom + 7, maxHeight: availableHeight });
+  }, [panelWidth]);
+
+  const toggle = () => {
+    if (open) {
+      setOpen(false);
+      return;
+    }
+
+    updatePosition();
+    setOpen(true);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const closeFromOutside = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!triggerRef.current?.contains(target) && !panelRef.current?.contains(target)) setOpen(false);
+    };
+    const closeFromKeyboard = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", closeFromOutside);
+    document.addEventListener("keydown", closeFromKeyboard);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      document.removeEventListener("pointerdown", closeFromOutside);
+      document.removeEventListener("keydown", closeFromKeyboard);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, updatePosition]);
+
+  return (
+    <div className={wrapperClassName} data-open={open}>
+      <button ref={triggerRef} type="button" onClick={toggle} aria-label={ariaLabel} aria-expanded={open} aria-haspopup="dialog">
+        {trigger}
+      </button>
+      {open && createPortal(
+        <div ref={panelRef} className={`${styles.floatingDropdownPanel} ${panelClassName}`} style={position} role="dialog" aria-label={ariaLabel}>
+          {children}
+        </div>,
+        document.body,
+      )}
+    </div>
+  );
 }
 
 function RoomsSoftwareView({ software, assignments, selected, matchingRooms, roomSearchText, onRoomSearchText, onToggle, onClear, onRemove }: { software: InstalledSoftware[]; assignments: SoftwareAssignment[]; selected: string[]; matchingRooms: Room[]; roomSearchText: string; onRoomSearchText: (value: string) => void; onToggle: (id: string) => void; onClear: () => void; onRemove: (assignment: SoftwareAssignment) => Promise<void> }) {
@@ -204,7 +373,7 @@ function RoomsSoftwareView({ software, assignments, selected, matchingRooms, roo
   return <section className={styles.roomsLayout}><aside className={styles.requirements}><header><div><span>Búsqueda combinada</span><h2>Aulas por software</h2></div>{selected.length > 0 && <button type="button" onClick={onClear}>Limpiar</button>}</header><p>Seleccione uno o varios programas. Solo aparecerán aulas que tengan instalados todos los seleccionados.</p><label className={styles.requirementSearch}><span aria-hidden="true">⌕</span><input value={softwareSearchText} onChange={(event) => setSoftwareSearchText(event.target.value)} placeholder="Buscar por nombre o versión" aria-label="Filtrar software para búsqueda combinada" /></label><div className={styles.selectionSummary}>{filteredSoftware.length} de {software.length} software(s){selected.length > 0 && <> · {selected.length} seleccionado(s)</>}</div><div className={styles.softwareSelectionList}>{filteredSoftware.map((item) => <label key={item.id} className={selected.includes(item.id) ? styles.selectedRequirement : ""}><input type="checkbox" checked={selected.includes(item.id)} onChange={() => onToggle(item.id)} /><span><strong>{item.name}</strong><small>{item.version}</small></span></label>)}{filteredSoftware.length === 0 && <p className={styles.noSoftwareMatch}>No se encontraron programas con ese nombre o versión.</p>}</div></aside><div className={styles.roomsResult}><header><div><h2>{selected.length ? "Aulas compatibles" : "Inventario por aula"}</h2><p>{selected.length ? matchingRooms.length + " aula(s) contienen los " + selected.length + " programas seleccionados." : "Busque un aula o seleccione programas para cruzar requisitos."}</p></div><span>{matchingRooms.length} resultados</span></header><label className={styles.roomSearch}><span aria-hidden="true">⌕</span><input value={roomSearchText} onChange={(event) => onRoomSearchText(event.target.value)} placeholder="Buscar aula por código o ubicación" aria-label="Buscar aula instalada" /></label><div className={styles.roomGrid}>{matchingRooms.map((room) => {
     const roomAssignments = assignments.filter((assignment) => assignment.roomId === room.id);
     const selectedAssignments = roomAssignments.filter((assignment) => selected.includes(assignment.softwareId));
-    return <article key={room.id}><header><div><strong>Aula {room.code}</strong><small>{room.location}</small></div><b>{roomAssignments.length} programas</b></header><div className={styles.roomPrograms}>{selectedAssignments.length > 0 && <div className={styles.matchingPrograms}><small>Programas buscados</small>{selectedAssignments.map((assignment) => { const item = software.find((softwareItem) => softwareItem.id === assignment.softwareId); return item && <span key={assignment.softwareId}>{item.name}<small>{item.version}</small></span>; })}</div>}{roomAssignments.length > 0 && <details className={styles.installedPrograms}><summary>Ver programas instalados ({roomAssignments.length})</summary><div>{roomAssignments.map((assignment) => { const item = software.find((softwareItem) => softwareItem.id === assignment.softwareId); return item && <span key={assignment.softwareId}><i><strong>{item.name}</strong><small>{item.version} · Instalado {assignment.installedAt}</small></i><button type="button" onClick={() => void onRemove(assignment)} aria-label={"Retirar " + item.name + " del aula " + room.code}>×</button></span>; })}</div></details>}{roomAssignments.length === 0 && <p>Sin software asociado en el inventario.</p>}</div></article>;
+    return <article key={room.id}><header><div><strong>Aula {room.code}</strong><small>{room.location}</small></div><b>{roomAssignments.length} programas</b></header><div className={styles.roomPrograms}>{selectedAssignments.length > 0 && <div className={styles.matchingPrograms}><small>Programas buscados</small>{selectedAssignments.map((assignment) => { const item = software.find((softwareItem) => softwareItem.id === assignment.softwareId); return item && <span key={assignment.softwareId}>{item.name}<small>{item.version}</small></span>; })}</div>}{roomAssignments.length > 0 && <InstalledProgramsDropdown room={room} assignments={roomAssignments} software={software} onRemove={onRemove} />}{roomAssignments.length === 0 && <p>Sin software asociado en el inventario.</p>}</div></article>;
   })}</div></div></section>;
 }
 

@@ -5336,3 +5336,19 @@ Carrera 7 # 40B - 53 Piso 6 Edificio Sabio de Caldas, Bogotá
 Teléfono: 3239300 Ext. 1625
 Página 65 de 65
 ```
+
+---
+
+## Anexo técnico — Módulo de solicitudes de instalación de software
+
+El sistema incorpora un módulo transversal para recibir el archivo Excel del formulario institucional, conservar cada respuesta original y convertir sus bloques repetidos en solicitudes estructuradas. Docente, periodo y aulas se relacionan con los catálogos existentes. Proyecto curricular, asignatura y software se conservan como texto plano para admitir docentes vinculados a varios proyectos y programas nuevos que todavía no existen en el catálogo.
+
+La interfaz separa las peticiones actuales del historial y permite filtrar por fecha, docente, proyecto curricular, asignatura, aula, software, periodo y estado. El detalle muestra los valores originales y normalizados, admite corrección manual, soporta varias asignaturas y programas por respuesta y presenta el avance de las tareas derivadas. Las mismas condiciones de búsqueda se pueden exportar en CSV, al igual que el resultado de cada importación.
+
+Durante la importación, las peticiones anteriores al 15 de julio de 2026 se clasifican directamente como históricas. Desde esa fecha, el sistema revisa el relleno de las celdas de software principal y adicional: una marca verde envía la solicitud al historial y cualquier otro color la mantiene en peticiones actuales. Esta clasificación no altera ni falsea el estado operativo de la solicitud.
+
+Una solicitud puede aprobarse total o parcialmente. Cada combinación aprobada de software y aula crea una tarea operativa idempotente de instalación; su progreso actualiza el estado de la solicitud. Completar la tarea no modifica automáticamente el inventario: la asociación entre aula y software exige una confirmación posterior y explícita.
+
+El tratamiento de datos se considera aceptado por el flujo institucional y no requiere confirmación manual en la revisión. Las aulas se identifican a partir de cualquier secuencia independiente de tres dígitos presente en los campos del formulario. La importación, la normalización, las decisiones, la creación y evolución de tareas, la confirmación de inventario y las exportaciones conservan auditoría de usuario y fecha.
+
+El acceso se divide en permisos de lectura, importación, actualización, aprobación, rechazo y exportación. El diseño contempla modo claro y oscuro, adaptación a pantallas pequeñas y estados de carga, vacío, error y procesamiento parcial.

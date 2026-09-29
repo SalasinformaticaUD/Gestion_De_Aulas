@@ -3,7 +3,8 @@
 ## Instalación nueva
 
 1. Copie `.env.example` a `.env` y complete `DATABASE_URL`, `FRONTEND_URL`,
-   `JWT_SECRET`, `MONITORES_SERVICE_TOKEN` y `ADMIN_INITIAL_PASSWORD`.
+   `JWT_SECRET`, `MONITORES_SERVICE_TOKEN`, `FORMS_INTEGRATION_KEY` y
+   `ADMIN_INITIAL_PASSWORD`.
 2. Instale dependencias con `npm install`.
 3. Genere el cliente de Prisma: `npm run prisma:generate`.
 4. Aplique todas las migraciones existentes: `npm run prisma:deploy`.

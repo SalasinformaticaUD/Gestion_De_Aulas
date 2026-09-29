@@ -5,22 +5,31 @@ import { ObservacionesService } from './observaciones.service';
 
 describe('ObservacionesService', () => {
   const aulaId = '00000000-0000-4000-8000-000000000001';
+  const segundaAulaId = '00000000-0000-4000-8000-000000000004';
   const observacionId = '00000000-0000-4000-8000-000000000002';
   const creadaEn = new Date('2026-08-21T13:00:00.000Z');
   const prisma = {
-    aula: { findUnique: jest.fn() },
+    aula: { findUnique: jest.fn(), findMany: jest.fn() },
     observacion: {
       create: jest.fn(),
       findMany: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn(),
     },
+    $transaction: jest.fn(),
   };
   let service: ObservacionesService;
 
   beforeEach(() => {
     jest.clearAllMocks();
     prisma.aula.findUnique.mockResolvedValue({ id: aulaId });
+    prisma.aula.findMany.mockResolvedValue([
+      { id: aulaId },
+      { id: segundaAulaId },
+    ]);
+    prisma.$transaction.mockImplementation(
+      (operations: Array<Promise<unknown>>) => Promise.all(operations),
+    );
     service = new ObservacionesService(prisma as unknown as PrismaService);
   });
 
@@ -36,7 +45,9 @@ describe('ObservacionesService', () => {
         aulaId,
         tipo: TipoObservacion.RESTRICCION,
         OR: [{ vigenteDesde: null }, { vigenteDesde: { lt: fin } }],
-        AND: [{ OR: [{ vigenteHasta: null }, { vigenteHasta: { gt: inicio } }] }],
+        AND: [
+          { OR: [{ vigenteHasta: null }, { vigenteHasta: { gt: inicio } }] },
+        ],
       },
       orderBy: { creadoEn: 'desc' },
     });
@@ -71,6 +82,7 @@ describe('ObservacionesService', () => {
 
     expect(prisma.observacion.create).toHaveBeenCalledWith(
       expect.objectContaining({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         data: expect.objectContaining({
           autorId: usuarioId,
           vigenteDesde: new Date('2026-09-05T13:00:00.000Z'),
@@ -78,6 +90,47 @@ describe('ObservacionesService', () => {
         }),
       }),
     );
+  });
+
+  it('registra la misma observación para varias aulas en una transacción', async () => {
+    const usuarioId = '00000000-0000-4000-8000-000000000003';
+    prisma.observacion.create
+      .mockResolvedValueOnce({ id: observacionId, aulaId })
+      .mockResolvedValueOnce({
+        id: '00000000-0000-4000-8000-000000000005',
+        aulaId: segundaAulaId,
+      });
+
+    const result = await service.createBatch(
+      {
+        aulaIds: [aulaId, segundaAulaId],
+        tipo: TipoObservacion.NOVEDAD,
+        contenido: 'Novedad compartida',
+      },
+      usuarioId,
+    );
+
+    expect(prisma.aula.findMany).toHaveBeenCalledWith({
+      where: { id: { in: [aulaId, segundaAulaId] } },
+      select: { id: true },
+    });
+    expect(prisma.observacion.create).toHaveBeenCalledTimes(2);
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(result).toHaveLength(2);
+  });
+
+  it('no registra el lote cuando alguna de las aulas no existe', async () => {
+    prisma.aula.findMany.mockResolvedValueOnce([{ id: aulaId }]);
+
+    await expect(
+      service.createBatch({
+        aulaIds: [aulaId, segundaAulaId],
+        contenido: 'Observación general',
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(prisma.observacion.create).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('cierra logicamente una observacion sin borrarla', async () => {

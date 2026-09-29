@@ -16,6 +16,13 @@ ALTER TABLE "ResponsableTareaOperativa" ALTER COLUMN "id" DROP DEFAULT;
 -- AlterTable
 ALTER TABLE "Tarea" ALTER COLUMN "actualizadoEn" DROP DEFAULT;
 
--- AlterTable
-ALTER TABLE "Usuario" ADD COLUMN     "dependenciaMonitores" "DependenciaMonitores",
+-- Store the Monitores access profile on the shared role. This avoids a
+-- temporary user-level representation and makes the migration deterministic.
+ALTER TABLE "Rol" ADD COLUMN     "dependenciaMonitores" "DependenciaMonitores",
 ADD COLUMN     "perfilMonitores" "PerfilMonitores";
+
+-- Preserve access for an administrator role that already exists. Fresh
+-- databases receive the same configuration from prisma/seed.ts.
+UPDATE "Rol"
+SET "perfilMonitores" = 'ADMIN', "dependenciaMonitores" = NULL
+WHERE "nombre" = 'ADMINISTRADOR';

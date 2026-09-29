@@ -13,6 +13,7 @@ describe('environment', () => {
       JWT_SECRET: 'jwt-secret-aleatorio-con-mas-de-32-caracteres',
       MONITORES_SERVICE_TOKEN:
         'service-token-aleatorio-con-mas-de-32-caracteres',
+      FORMS_INTEGRATION_KEY: 'forms-key-aleatoria-con-mas-de-32-caracteres',
       CREDENTIALS_ENCRYPTION_KEY:
         'encryption-key-aleatoria-con-mas-de-32-caracteres',
     };

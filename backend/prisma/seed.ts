@@ -30,6 +30,7 @@ const modulos = [
   ['MONITORES', 'Gestión de Monitores'],
   ['ESTUDIANTES', 'Gestión de estudiantes'],
   ['DOCENTES', 'Gestión de docentes'],
+  ['SOLICITUDES_INSTALACION', 'Solicitudes de instalación'],
 ] as const;
 
 const acciones = [
@@ -40,7 +41,8 @@ const acciones = [
   'APROBAR',
   'EXPORTAR',
 ] as const;
-const accionesPorModulo: Record<string, readonly (typeof acciones)[number][]> = {
+type AccionPermiso = (typeof acciones)[number] | 'IMPORTAR' | 'RECHAZAR';
+const accionesPorModulo: Record<string, readonly AccionPermiso[]> = {
   DASHBOARD: ['LEER'],
   AULAS: ['LEER', 'CREAR', 'ACTUALIZAR', 'ELIMINAR'],
   DISPONIBILIDAD: ['LEER'],
@@ -55,6 +57,7 @@ const accionesPorModulo: Record<string, readonly (typeof acciones)[number][]> = 
   CREDENCIALES: ['LEER', 'CREAR', 'ACTUALIZAR', 'ELIMINAR'],
   REPORTES: ['LEER'],
   ADMINISTRACION: ['LEER', 'CREAR', 'ACTUALIZAR', 'ELIMINAR'],
+  SOLICITUDES_INSTALACION: ['LEER', 'IMPORTAR', 'ACTUALIZAR', 'APROBAR', 'RECHAZAR', 'EXPORTAR'],
 };
 const dependencias = ['Aulas de Software', 'Electrica y Electronica', 'Fisica'];
 const cargos = ['ADMINISTRADOR', 'COORDINADOR', 'DOCENTE', 'MONITOR', 'ESTUDIANTE', 'TÉCNICO', 'AUXILIAR ADMINISTRATIVO'];
@@ -108,10 +111,15 @@ async function main() {
   const permisos = await prisma.permiso.findMany({ select: { id: true } });
   const administrador = await prisma.rol.upsert({
     where: { nombre: 'ADMINISTRADOR' },
-    update: {},
+    update: {
+      perfilMonitores: 'ADMIN',
+      dependenciaMonitores: null,
+    },
     create: {
       nombre: 'ADMINISTRADOR',
       descripcion: 'Acceso administrativo inicial.',
+      perfilMonitores: 'ADMIN',
+      dependenciaMonitores: null,
     },
   });
   await prisma.rolPermiso.deleteMany({ where: { rolId: administrador.id } });
