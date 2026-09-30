@@ -99,6 +99,9 @@ export async function solicitarMonitores<T>(
   const respuesta = await fetch(`${baseMonitores}${ruta}`, {
     ...opciones,
     signal: opciones.signal ?? AbortSignal.timeout(8000),
+    // Los estados de aprobación y los horarios históricos deben reflejar la
+    // respuesta vigente de la API, no una copia almacenada por el navegador.
+    cache: opciones.cache ?? "no-store",
     // La identidad se transmite por Authorization; una cookie de otra pestaña no debe participar.
     credentials: "omit",
     headers: cabeceras,

@@ -10,8 +10,14 @@ import {
 import { TipoObservacion } from '@prisma/client';
 
 export class CreateObservacioneDto {
+  @IsOptional()
   @IsUUID()
-  aulaId!: string;
+  aulaId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  ubicacionTexto?: string | null;
 
   @IsOptional()
   @IsEnum(TipoObservacion)

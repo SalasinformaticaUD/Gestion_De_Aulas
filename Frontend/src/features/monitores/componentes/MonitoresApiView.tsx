@@ -11,6 +11,7 @@ import estilos from "./SistemaVisualMonitores.module.css";
 import { AvisoTemporal } from "./AvisoTemporal";
 import { SelectorDependenciaAdmin } from "./FiltroDependenciaAdmin";
 import { Paginacion } from "./Paginacion";
+import { descargarPlantillaCarga } from "@/features/monitores/lib/plantillasCarga";
 
 type FormMonitor = {
   full_name: string;
@@ -372,6 +373,10 @@ export function MonitoresApiView() {
     }
   }
   async function abrirSemestre() {
+    if (perfilMonitores?.role !== "admin") {
+      setError("Solo el administrador puede iniciar un semestre nuevo.");
+      return;
+    }
     setError("");
     try {
       const datos = await servicioMonitores.previsualizarNuevoSemestre();
@@ -419,13 +424,13 @@ export function MonitoresApiView() {
           >
             Cargar Excel
           </button>
-          <button
+          {perfilMonitores?.role === "admin" && <button
             type="button"
             className={estilos.botonSecundario}
             onClick={() => void abrirSemestre()}
           >
             Iniciar semestre nuevo
-          </button>
+          </button>}
           <button
             type="button"
             className="button-primary"
@@ -439,7 +444,7 @@ export function MonitoresApiView() {
         <article className={`${estilos.metrica} ${estilos.violeta}`}>
           <span>Total</span>
           <strong>{totalRegistros}</strong>
-          <small>Registros en la API</small>
+          <small>Monitores registrados</small>
         </article>
         <article className={`${estilos.metrica} ${estilos.verde}`}>
           <span>Activos</span>
@@ -623,6 +628,7 @@ export function MonitoresApiView() {
             <header><div><h2 id="titulo-carga-monitores">Carga masiva de monitores</h2><p>Seleccione un Excel con los encabezados indicados.</p></div><button type="button" onClick={() => setCargaModal(false)}>×</button></header>
             <form className={estilos.formularioCargaMasiva} onSubmit={importar}>
               <div className={estilos.especificacionArchivo}><p><strong>Datos requeridos:</strong></p><ul><li><strong>email / correo:</strong> correo institucional único.</li><li><strong>full_name / nombre completo:</strong> nombres y apellidos.</li><li><strong>codigo_estudiante / código estudiante:</strong> solo números.</li><li><strong>department / dependencia:</strong> Monitores Aulas de Software, Monitores Laboratorios o Monitores Física.</li></ul><p><strong>Datos opcionales:</strong></p><ul><li>numero_documento / número documento.</li><li>proyecto_curricular / proyecto curricular.</li><li>telefono / phone.</li></ul></div>
+              <div className={estilos.accionesFormulario}><button type="button" className={estilos.botonSecundario} onClick={() => descargarPlantillaCarga("monitores")}>Descargar plantilla</button></div>
               <label className={estilos.archivoCarga}>Archivo Excel (.xlsx)<input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={(e) => setArchivo(e.target.files?.[0] ?? null)} /><small>{archivo?.name ?? "Ningún archivo seleccionado"}</small></label>
               <button className="button-primary" disabled={guardando}>{guardando ? "Procesando…" : "↑ Procesar archivo"}</button>
               {resultadoCarga && <div className={estilos.resultadoImportacion}><span><b>{resultadoCarga.total_rows}</b>Filas</span><span><b>{resultadoCarga.created}</b>Creados</span><span><b>{resultadoCarga.skipped.length}</b>Omitidos</span><span><b>{resultadoCarga.errors.length}</b>Con error</span></div>}

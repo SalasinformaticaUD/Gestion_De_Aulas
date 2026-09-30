@@ -89,7 +89,10 @@ export class CredencialesService {
   }
   listarUsuariosAutorizables() {
     return this.prisma.usuario.findMany({
-      where: { estado: 'ACTIVA' },
+      where: {
+        estado: 'ACTIVA',
+        roles: { none: { rol: { nombre: 'ADMINISTRADOR' } } },
+      },
       select: { id: true, nombreCompleto: true, nombreUsuario: true, correo: true },
       orderBy: { nombreCompleto: 'asc' },
     });

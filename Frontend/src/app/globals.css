@@ -125,7 +125,7 @@ html[data-theme="dark"] { --ink:#f1f3f5; --muted:#aab0ba; --line:#383b43; --surf
 .equipment-picker>div { max-height:216px; display:grid; grid-template-columns:1fr 1fr; gap:6px; overflow-y:auto; }
 .equipment-picker label { min-width:0; display:flex; align-items:center; gap:8px; padding:8px 9px; border:1px solid var(--line); border-radius:6px; background:#fff; cursor:pointer; }
 .equipment-picker label.is-selected { border-color:rgba(165,16,34,.55); background:#fff5f6; }
-.equipment-picker label[data-cooling="true"]{position:relative;opacity:.52;filter:grayscale(.6);cursor:not-allowed}.equipment-picker label[data-cooling="true"]::after{content:"Enfriamiento · disponible a las " attr(data-cooling-until);position:absolute;right:7px;bottom:6px;padding:2px 5px;border-radius:3px;color:#4f5865;background:#e5e7eb;font-size:9px;font-weight:800;white-space:nowrap}.equipment-picker label[data-cooling="true"] input{cursor:not-allowed}
+.equipment-picker label[data-cooling="true"]{position:relative;opacity:1;filter:none;cursor:not-allowed;border-color:#8ca5bb;background:#eaf2f8}.equipment-picker label[data-cooling="true"]>span{color:#405468}.equipment-picker label[data-cooling="true"]>span small{color:#52697e}.equipment-picker label[data-cooling="true"]::after{content:"Enfriamiento · disponible a las " attr(data-cooling-until);position:absolute;right:7px;bottom:6px;padding:2px 5px;border-radius:3px;color:#fff;background:#315a7d;font-size:9px;font-weight:800;white-space:nowrap}.equipment-picker label[data-cooling="true"] input{cursor:not-allowed}
 .equipment-picker input { flex:0 0 auto; accent-color:var(--primary); }
 .equipment-picker label>span { min-width:0; overflow:hidden; font-size:13px; text-overflow:ellipsis; white-space:nowrap; }
 .equipment-picker strong { margin-right:6px; color:var(--primary); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
@@ -378,6 +378,12 @@ html[data-theme="dark"] :is(.room-badge-reservada,.loan-status-solicitado,.loan-
 html[data-theme="dark"] .legend-issue,
 html[data-theme="dark"] :is(.room-badge-mantenimiento,.software-status-inactivo,.workstation-mantenimiento,.workstation-fuera-de-servicio,.equipment-status-mantenimiento,.loan-status-vencido,.auth-feedback-error) { color:#f29aa5; background:#3a1d23; border-color:#71333c; }
 html[data-theme="dark"] :is(.equipment-status-fuera-de-servicio,.loan-status-cancelado) { color:#c2c6ce; background:#30333a; }
+html[data-theme="dark"] .equipment-status-cooling { color:#bfe3ff; background:#163957; }
+html[data-theme="dark"] .equipment-status-cooling small { color:#bfe3ff; }
+html[data-theme="dark"] .equipment-picker label[data-cooling="true"] { border-color:#52718d; background:#1d3042; }
+html[data-theme="dark"] .equipment-picker label[data-cooling="true"]>span { color:#e6f1fb; }
+html[data-theme="dark"] .equipment-picker label[data-cooling="true"]>span small { color:#bfd1e1; }
+html[data-theme="dark"] .equipment-picker label[data-cooling="true"]::after { color:#fff; background:#3174a8; }
 
 /* Contraste reforzado de préstamos audiovisuales en modo claro. */
 .audiovisual-search { border-color:#cbd0d8; }

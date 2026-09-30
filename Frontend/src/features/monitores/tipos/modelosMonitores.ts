@@ -25,6 +25,8 @@ export type SesionMonitor = {
   fecha: string;
   entrada: string;
   salida: string;
+  entradaNormalizada?: string | null;
+  salidaNormalizada?: string | null;
   horasNormales: number;
   horasExtra: number;
   horasRetraso: number;

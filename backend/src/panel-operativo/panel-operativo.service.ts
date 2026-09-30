@@ -224,7 +224,10 @@ export class PanelOperativoService {
       this.horario.findClases({ fecha: query.fecha }),
       this.prisma.observacion.findMany({
         where: { creadoEn: { gte: desdeObservaciones, lte: finDia } },
-        include: {
+        select: {
+          id: true,
+          creadoEn: true,
+          ubicacionTexto: true,
           autor: { select: { nombreCompleto: true } },
           aula: { select: { id: true, codigo: true } },
         },
@@ -306,8 +309,8 @@ export class PanelOperativoService {
         severidad: 'info',
         tipo: 'nueva-observacion',
         mensaje: `${observacion.autor?.nombreCompleto ?? 'Un usuario'} agregó una nueva observación.`,
-        aulaId: observacion.aula.id,
-        aulaCodigo: observacion.aula.codigo,
+        aulaId: observacion.aula?.id,
+        aulaCodigo: observacion.aula?.codigo ?? observacion.ubicacionTexto ?? undefined,
         origenId: observacion.id,
         fechaHora: observacion.creadoEn,
         enlace: '/observaciones',

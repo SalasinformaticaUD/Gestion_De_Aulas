@@ -42,6 +42,7 @@ export function AppShell({ children }: AppShellProps) {
   const [profileData, setProfileData] = useState<UserProfile>(defaultProfile);
   const [currentDate, setCurrentDate] = useState<Date | null>(null);
   const [isAdministrator, setIsAdministrator] = useState(false);
+  const [isMonitor, setIsMonitor] = useState(false);
   const [allowedModules, setAllowedModules] = useState<string[]>([]);
   const [isScreenSaverActive, setIsScreenSaverActive] = useState(false);
   const closeMenu = () => setIsMenuOpen(false);
@@ -74,7 +75,9 @@ export function AppShell({ children }: AppShellProps) {
   useEffect(() => {
     const refreshAccess = () => {
       const session = obtenerSesion();
-      setIsAdministrator(session?.usuario.roles.some((rol) => rol.trim().toUpperCase() === "ADMINISTRADOR") ?? false);
+      const roles = session?.usuario.roles ?? [];
+      setIsAdministrator(roles.some((rol) => rol.trim().toUpperCase() === "ADMINISTRADOR"));
+      setIsMonitor(roles.some((rol) => rol.trim().toLocaleUpperCase("es-CO") === "MONITOR"));
       setAllowedModules(session?.usuario.modulos.map((module) => module.toUpperCase()) ?? []);
     };
     refreshAccess();
@@ -94,6 +97,11 @@ export function AppShell({ children }: AppShellProps) {
   }, [pathname]);
 
   useEffect(() => {
+    if (isMonitor) {
+      setIsScreenSaverActive(false);
+      return;
+    }
+
     let timeout: number | undefined;
     const resetIdleTimer = () => {
       setIsScreenSaverActive(false);
@@ -107,7 +115,7 @@ export function AppShell({ children }: AppShellProps) {
       window.clearTimeout(timeout);
       activityEvents.forEach((eventName) => window.removeEventListener(eventName, resetIdleTimer));
     };
-  }, []);
+  }, [isMonitor]);
 
   const formattedDate = currentDate?.toLocaleDateString("es-CO", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",

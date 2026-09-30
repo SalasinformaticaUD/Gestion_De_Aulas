@@ -783,13 +783,14 @@ model Multa {
 // Operación diaria y credenciales institucionales
 model Observacion {
   id           String          @id @default(uuid()) @db.Uuid
-  aulaId       String          @db.Uuid
+  aulaId       String?         @db.Uuid
+  ubicacionTexto String?
   autorId      String?         @db.Uuid
   tipo         TipoObservacion @default(GENERAL)
   contenido    String
   vigenteDesde DateTime?
   vigenteHasta DateTime?
-  aula         Aula            @relation(fields: [aulaId], references: [id])
+  aula         Aula?           @relation(fields: [aulaId], references: [id])
   autor        Usuario?        @relation("AutorObservacion", fields: [autorId], references: [id], onDelete: SetNull)
   creadoEn     DateTime        @default(now())
 

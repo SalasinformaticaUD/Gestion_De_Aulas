@@ -15,7 +15,7 @@ export class ObservacionesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(input: CreateObservacioneDto, usuarioId?: string) {
-    await this.ensureAulaExists(input.aulaId);
+    if (input.aulaId) await this.ensureAulaExists(input.aulaId);
     const tipo = input.tipo ?? TipoObservacion.GENERAL;
     const vigenteDesde = this.normalizarVigencia(input.vigenteDesde);
     const vigenteHasta = this.normalizarVigencia(input.vigenteHasta);
@@ -23,7 +23,8 @@ export class ObservacionesService {
 
     return this.prisma.observacion.create({
       data: {
-        aulaId: input.aulaId,
+        aulaId: input.aulaId ?? null,
+        ubicacionTexto: input.ubicacionTexto?.trim() || null,
         autorId: usuarioId,
         tipo,
         contenido: input.contenido.trim(),
@@ -114,6 +115,7 @@ export class ObservacionesService {
       where: { id },
       data: {
         ...(input.aulaId !== undefined && { aulaId: input.aulaId }),
+        ...(input.ubicacionTexto !== undefined && { ubicacionTexto: input.ubicacionTexto?.trim() || null }),
         ...(input.tipo !== undefined && { tipo: input.tipo }),
         ...(input.contenido !== undefined && {
           contenido: input.contenido.trim(),

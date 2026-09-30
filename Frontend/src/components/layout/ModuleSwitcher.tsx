@@ -35,5 +35,5 @@ export function ModuleSwitcher({ current, onNavigate }: { current: ApplicationKe
     } else if (!cambiarAplicacionActiva(target.key)) return;
     onNavigate?.(); window.location.assign(target.destination);
   };
-  return <button type="button" className="nav-link nav-module-switcher" onClick={cambiar}><span className="nav-icon" aria-hidden="true">⇄</span>Cambiar a {target.name}</button>;
+  return <button type="button" className="nav-link nav-module-switcher" onClick={cambiar}><span className="nav-icon" aria-hidden="true">⇄</span>{current === "monitores" ? "Volver a Gestión de Aulas" : `Cambiar a ${target.name}`}</button>;
 }

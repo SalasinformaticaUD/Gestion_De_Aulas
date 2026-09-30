@@ -2821,8 +2821,8 @@
   font-style: normal;
 }
 .tramoAsignado {
-  border-inline: 2px solid #d49b10;
-  background: linear-gradient(90deg, #fff2b8, #fff8dc);
+  border-inline: 2px solid #a96808;
+  background: #e6ad2e;
 }
 .tramoNormal {
   background: #30c86a;
@@ -2838,6 +2838,20 @@
 }
 .tramoExtra.extraRechazada {
   background: #ef8b5e;
+}
+.tramoExtra.sinAplica {
+  background: #9b8790;
+}
+.tramoExtra.errorTiempo {
+  background: #e65970;
+}
+.tramoError {
+  z-index: 2;
+  background: #e65970;
+}
+.tramoSinExtra {
+  z-index: 2;
+  background: #9b8790;
 }
 .sinTramo {
   position: absolute;
@@ -2864,14 +2878,14 @@
   height: 0.82rem;
   min-width: 0 !important;
   transform: translate(-50%, -50%);
-  border: 2px solid #0c7040;
+  border: 2px solid #13677a;
   border-radius: 50%;
-  background: #16a35e;
-  box-shadow: 0 1px 4px rgba(22, 128, 60, 0.35);
+  background: #3bc1d0;
+  box-shadow: 0 1px 4px rgba(18, 109, 130, 0.4);
 }
-.marcadorSalida {
-  border-color: #1c5ec2;
-  background: #246bc8;
+.pistaTiempo .marcadorSalida {
+  border-color: #0c465b;
+  background: #16899f;
 }
 .etiquetasEscala {
   display: grid;
@@ -2898,6 +2912,42 @@
   height: 0.45rem;
   background: #9aa4b2;
 }
+
+/* Registros por día: la jornada conserva contraste y referencias visibles en tema oscuro. */
+:global(html[data-theme="dark"]) .lineaTiempoRegistro {
+  border-top-color: #3a4658;
+  background: linear-gradient(180deg, #1d2633 0%, #18212d 100%);
+}
+:global(html[data-theme="dark"]) .escalaGrafica {
+  background-image: linear-gradient(90deg, transparent calc(100% - 1px), rgba(170, 202, 244, 0.18) calc(100% - 1px));
+}
+:global(html[data-theme="dark"]) .escalaGrafica span {
+  background: rgba(170, 202, 244, 0.2);
+}
+:global(html[data-theme="dark"]) .nivelGrafica > strong,
+:global(html[data-theme="dark"]) .etiquetasEscala b {
+  color: #d7e5f7;
+}
+:global(html[data-theme="dark"]) .pistaTiempo {
+  border-color: #4a5a70;
+  background: rgba(13, 20, 30, 0.88);
+}
+:global(html[data-theme="dark"]) .tramoAsignado {
+  border-inline-color: #ffd166;
+  background: #bd8619;
+}
+:global(html[data-theme="dark"]) .pistaMarcaciones {
+  background: linear-gradient(transparent 48%, #52647b 48%, #52647b 53%, transparent 53%);
+}
+:global(html[data-theme="dark"]) .etiquetasEscala b::before {
+  background: #93a9c4;
+}
+:global(html[data-theme="dark"]) .normal { color: #62d890; }
+:global(html[data-theme="dark"]) .extraPendiente { color: #ffd766; }
+:global(html[data-theme="dark"]) .extraAprobada { color: #8bb8ff; }
+:global(html[data-theme="dark"]) .extraRechazada { color: #ffae88; }
+:global(html[data-theme="dark"]) .sinAplica { color: #d3bec4; }
+:global(html[data-theme="dark"]) .errorTiempo { color: #ff8c9a; }
 
 /* Inconsistencias: detalle trazable de horarios, marcaciones y gestión. */
 .gestionInconsistencia {
@@ -3492,6 +3542,8 @@
   gap: 0.45rem;
   flex-wrap: wrap;
 }
+.volverHorarioSemanal { min-height: 2rem; display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .7rem; border: 1px solid color-mix(in srgb, var(--primary) 55%, var(--line)); border-radius: .45rem; color: #fff; background: var(--primary); font-size: .76rem; font-weight: 800; cursor: pointer; white-space: nowrap; }
+.volverHorarioSemanal:hover { background: var(--primary-hover); }
 .leyendaHorario {
   display: flex;
   gap: 0.35rem;
@@ -3560,11 +3612,15 @@
   border-right: 1px solid var(--line);
   font-size: 0.76rem;
 }
-.cabeceraHorario > strong {
+.cabeceraHorario > strong,
+.cabeceraHorario > button {
   gap: 0.25rem;
   letter-spacing: 0.035em;
   text-transform: uppercase;
 }
+.cabeceraHorario > button { padding: 0; border: 0; color: inherit; background: transparent; font: inherit; cursor: pointer; }
+.cabeceraHorario > button:hover { background: color-mix(in srgb, var(--primary) 12%, var(--surface)); }
+.cabeceraHorario > button.diaFiltroActivo { color: #fff; background: var(--primary); }
 .cabeceraHorario small {
   padding: 0.1rem 0.27rem;
   border-radius: 999px;
@@ -5877,10 +5933,6 @@
     display: none;
   }
 }
-
-.marcadorHuella.extraPendiente { border-color: #c78a00; background: #ffd34e; box-shadow: 0 1px 4px rgba(199, 138, 0, 0.35); }
-.marcadorHuella.extraAprobada { border-color: #246bc8; background: #4e88e8; box-shadow: 0 1px 4px rgba(36, 107, 200, 0.35); }
-.marcadorHuella.extraRechazada { border-color: #d95a2a; background: #ef8b5e; box-shadow: 0 1px 4px rgba(217, 90, 42, 0.35); }
 
 .ocultoEnMovil {}
 .vistaDiaria {}

@@ -98,11 +98,11 @@ export function CalendarioHorariosDashboard({ dependencia, horarios }: { depende
   }, [activos]);
   const porDia = useMemo(
     () => dias.slice(0, diasVisibles).map((_, indice) => posicionar(visibles.filter((horario) => horario.weekday === indice))),
-    [visibles],
+    [visibles, diasVisibles],
   );
   const horas = Array.from({ length: horaFinal - horaInicial + 1 }, (_, indice) => horaInicial + indice);
   const diaActual = (ahora.getDay() + 6) % 7;
-  const [diaMovil, setDiaMovil] = useState(diaActual < diasVisibles ? diaActual : 0);
+  const [diaMovil, setDiaMovil] = useState(-1);
   const minutoActual = ahora.getHours() * 60 + ahora.getMinutes();
   const dentroDeJornada = diaActual < diasVisibles && minutoActual >= horaInicial * 60 && minutoActual <= horaFinal * 60;
   const posicionActual = `${((minutoActual - horaInicial * 60) / minutosTotales) * 100}%`;
@@ -119,7 +119,6 @@ export function CalendarioHorariosDashboard({ dependencia, horarios }: { depende
   };
 
   const seleccionarBloque = (horario: HorarioApi) => {
-    if (diaMovil !== -1) return;
     if (bloqueSeleccionado?.id === horario.id) {
       limpiarSeleccion();
       return;
@@ -134,6 +133,11 @@ export function CalendarioHorariosDashboard({ dependencia, horarios }: { depende
     }
   }, [activos, bloqueSeleccionado]);
 
+  const volverHorarioGeneral = () => {
+    setDiaMovil(-1);
+    limpiarSeleccion();
+  };
+
   return <section className={`${estilos.tarjeta} ${estilos.horarioDashboard} ${modoPersonal ? estilos.horarioDashboardPersonal : estilos.horarioDashboardGeneral} ${diaMovil !== -1 ? estilos.vistaDiaria : ""} ${diasVisibles === 5 ? estilos.rejillaDias5 : estilos.rejillaDias6}`} aria-labelledby="titulo-horario-dashboard">
     <header>
       <div>
@@ -142,6 +146,7 @@ export function CalendarioHorariosDashboard({ dependencia, horarios }: { depende
       </div>
       <div className={estilos.accionesHorarioDashboard}>
         {!modoPersonal && monitorSeleccionado && <button type="button" className={estilos.botonSecundario} onClick={limpiarSeleccion}>Ocultar</button>}
+        {!modoPersonal && diaMovil !== -1 && <button type="button" className={estilos.volverHorarioSemanal} onClick={volverHorarioGeneral}>← Ver horario semanal</button>}
         <span className={`${estilos.insignia} ${estilos.neutro}`}>{visibles.length} bloque(s)</span>
       </div>
     </header>
@@ -176,28 +181,9 @@ export function CalendarioHorariosDashboard({ dependencia, horarios }: { depende
           <div><span>Proyecto curricular</span><strong>{bloqueSeleccionado.proyecto_curricular || "Sin proyecto registrado"}</strong></div>
         </div>
       </section>}
-      <div className={estilos.selectorDiaMovil}>
-          <button
-            type="button"
-            className={diaMovil === -1 ? estilos.diaMovilActivo : ""}
-            onClick={() => { setDiaMovil(-1); }}
-          >
-            Semana
-          </button>
-          {dias.slice(0, diasVisibles).map((dia, indice) => (
-            <button
-              key={dia}
-              type="button"
-              className={diaMovil === indice ? estilos.diaMovilActivo : ""}
-              onClick={() => { setDiaMovil(indice); limpiarSeleccion(); }}
-            >
-              {dia}
-            </button>
-          ))}
-        </div>
-        <div className={estilos.desplazamientoHorario} >
+      <div className={estilos.desplazamientoHorario} >
         <div className={estilos.cabeceraHorario}>
-          <span>Hora</span>{dias.slice(0, diasVisibles).map((dia, indice) => <strong key={dia} className={`${diaActual === indice ? estilos.diaHorarioActual : ""} ${diaMovil !== -1 && diaMovil !== indice ? estilos.ocultoEnMovil : ""}`} aria-label={`${dia}${diaActual === indice ? ", hoy" : ""}`}><span className={estilos.nombreDiaCompleto}>{dia}</span><span className={estilos.nombreDiaCorto} aria-hidden="true">{diasCortos[indice]}</span>{diaActual === indice && <small>Hoy</small>}</strong>)}
+          <span>Hora</span>{dias.slice(0, diasVisibles).map((dia, indice) => modoPersonal ? <strong key={dia} className={`${diaActual === indice ? estilos.diaHorarioActual : ""} ${diaMovil !== -1 && diaMovil !== indice ? estilos.ocultoEnMovil : ""}`} aria-label={`${dia}${diaActual === indice ? ", hoy" : ""}`}><span className={estilos.nombreDiaCompleto}>{dia}</span><span className={estilos.nombreDiaCorto} aria-hidden="true">{diasCortos[indice]}</span>{diaActual === indice && <small>Hoy</small>}</strong> : <button key={dia} type="button" className={`${estilos.diaFiltroHorario} ${diaActual === indice ? estilos.diaHorarioActual : ""} ${diaMovil === indice ? estilos.diaFiltroActivo : ""} ${diaMovil !== -1 && diaMovil !== indice ? estilos.ocultoEnMovil : ""}`} aria-pressed={diaMovil === indice} onClick={() => { setDiaMovil(indice); limpiarSeleccion(); }} aria-label={`Filtrar horario por ${dia}`}><span className={estilos.nombreDiaCompleto}>{dia}</span><span className={estilos.nombreDiaCorto} aria-hidden="true">{diasCortos[indice]}</span>{diaActual === indice && <small>Hoy</small>}</button>)}
         </div>
         <div className={estilos.cuerpoHorario}>
           <div className={estilos.escalaHorario}>{horas.map((hora) => <span key={hora} style={{ top: `${((hora - horaInicial) * 60 / minutosTotales) * 100}%` }}>{String(hora).padStart(2, "0")}:00</span>)}</div>

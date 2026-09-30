@@ -137,7 +137,8 @@
 .installedProgramsInline>span strong { overflow:hidden; color:var(--ink); font-size:13px; text-overflow:ellipsis; white-space:nowrap; }
 .installedProgramsInline>span small { margin-top:3px; color:var(--muted); font-size:10px; }
 .installedProgramsInline>span button { width:24px; height:24px; border:0; border-radius:4px; color:#a42121; background:#fee2e2; font-size:18px; }
-.viewRoomLink { justify-self:end; padding:4px 2px; color:var(--primary); font-size:12px; font-weight:800; text-decoration:none; }
+.roomDetailAction { display:flex; justify-content:flex-end; padding:0 9px 9px; }
+.viewRoomLink { padding:4px 2px; color:var(--primary); font-size:12px; font-weight:800; text-decoration:none; }
 .viewRoomLink:hover { text-decoration:underline; }
 .importHeader button { min-height:36px; }
 .importTable { min-width:900px; }

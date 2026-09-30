@@ -151,7 +151,21 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
     const puedeCorregir = String(rows[0]?.status ?? "").toLowerCase() === "rejected";
     if (!archivoActa || (Boolean(rows[0]?.has_signed) && !puedeCorregir)) return;
     await enviarActaPersonal(archivoActa);
-  };  const abrirPdf = async (row: Fila, firmado = false, descargar = false) => {
+  };
+  const descargarPlantillaActa = async () => {
+    try {
+      const blob = await servicioMonitores.descargarMiActaCompromiso();
+      const url = URL.createObjectURL(blob);
+      const enlace = document.createElement("a");
+      enlace.href = url;
+      enlace.download = "plantilla_acta_compromiso.pdf";
+      enlace.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (problema) {
+      setError(problema instanceof Error ? problema.message : "No fue posible descargar la plantilla del acta.");
+    }
+  };
+  const abrirPdf = async (row: Fila, firmado = false, descargar = false) => {
     try {
       const blob =
         tipo === "memorandos"
@@ -297,7 +311,7 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
         {!enviada && <div className={`${estilos.aviso} ${estilos.avisoAdvertencia}`} role="status"><strong>Recordatorio:</strong> debe descargar, firmar y subir el acta correspondiente al periodo académico vigente.</div>}
         {enviada && <div className={`${estilos.aviso} ${estadoPersonal === "accepted" ? estilos.avisoExito : estadoPersonal === "rejected" ? estilos.avisoError : estilos.avisoAdvertencia}`} role="status">Su acta está <strong>{estadoPersonal === "accepted" ? "aprobada" : estadoPersonal === "rejected" ? "rechazada" : "pendiente de revisión"}</strong>{estadoPersonal === "rejected" && miActa?.rejection_reason ? `: ${String(miActa.rejection_reason)}` : "."}</div>}
         <div className={estilos.dashboardConNotificaciones}><section className={estilos.tarjeta}><header><div><h2>Entrega del acta</h2><p>Solo se admite un archivo PDF de máximo 10 MB.</p></div></header><div className={estilos.formulario}>
-          <button type="button" className={estilos.botonSecundario} onClick={async () => { const blob = await servicioMonitores.descargarMiActaCompromiso(); const url=URL.createObjectURL(blob); window.open(url,"_blank","noopener,noreferrer"); window.setTimeout(()=>URL.revokeObjectURL(url),60000); }}>Ver acta para firmar</button>
+          <button type="button" className={estilos.botonSecundario} onClick={() => void descargarPlantillaActa()}>Descargar plantilla de acta</button>
           <form onSubmit={subirActaPersonal}><label className={estilos.zonaCarga}><span><strong>{archivoActa?.name ?? (puedeCorregir ? "Seleccione el acta corregida" : enviada ? String(miActa?.signed_file_name ?? "Acta enviada") : "Seleccione el acta firmada")}</strong>{puedeCorregir ? "Adjunte el PDF corregido para enviarlo nuevamente a revisión." : enviada ? "Ya existe un archivo cargado; no se permiten envíos duplicados." : "Formato PDF · máximo 10 MB"}</span><input ref={selectorArchivoActa} type="file" accept="application/pdf,.pdf" disabled={enviada && !puedeCorregir} onChange={(evento) => { const archivo = evento.target.files?.[0] ?? null; setArchivoActa(archivo); if (puedeCorregir && archivo) void enviarActaPersonal(archivo); }} /></label><div className={estilos.accionesFormulario}>{puedeCorregir ? <button className="button-primary" type="button" disabled={procesando === "subir-acta"} onClick={() => selectorArchivoActa.current?.click()}>{procesando === "subir-acta" ? "Enviando…" : "Corregir acta"}</button> : <button className="button-primary" type="submit" disabled={enviada || !archivoActa || procesando === "subir-acta"}>{procesando === "subir-acta" ? "Subiendo…" : enviada ? "Archivo ya subido" : "Subir archivo"}</button>}</div></form>
         </div></section></div>
       </div>;
