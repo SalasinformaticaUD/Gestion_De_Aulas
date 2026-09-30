@@ -93,6 +93,7 @@
 .roomSuggestions span { margin-top:4px; font-size:13px; font-weight:700; }
 .roomSuggestions small { max-width:100%; margin-top:5px; overflow:hidden; color:var(--muted); font-size:11.7px; text-overflow:ellipsis; white-space:nowrap; }
 .noSuggestions { grid-column:1/-1; margin:0; padding:15px; border:1px dashed #cfd3d9; border-radius:6px; color:var(--muted); background:#fafbfc; font-size:14.3px; text-align:center; }
+.absenceRooms{margin-top:12px}.absenceToggle{min-height:34px;padding:0 11px;border:1px solid var(--primary);border-radius:6px;color:#fff;background:var(--primary);font-size:12px;font-weight:800;cursor:pointer}.absenceToggle:hover:not(:disabled){border-color:#850d1b;background:#850d1b}.absenceToggle:disabled{cursor:not-allowed;opacity:.55}.absenceNotice{margin:0 0 9px;padding:10px 11px;border:1px solid #f1d59e;border-radius:7px;color:#805000;background:#fffbf2;font-size:12px;line-height:1.4}.roomSuggestions button.absenceRoom{border-color:#e9bd70;background:#fff8e8}.roomSuggestions button.absenceRoom strong{color:#9a5b00}.roomSuggestions button.absenceRoom small{color:#9a5b00}
 .validationSummary { display:flex; flex-wrap:wrap; gap:7px; }
 .validationSummary span { padding:6px 9px; border-radius:4px; color:#737984; background:#eceef1; font-size:13px; font-weight:750; }
 .validationSummary span.checkOk { color:#078839; background:#dcfce7; }

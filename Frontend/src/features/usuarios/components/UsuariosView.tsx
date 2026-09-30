@@ -29,6 +29,8 @@ export function UsuariosView() {
   const [rolPermisoIds, setRolPermisoIds] = useState<string[]>([]);
   const [rolPerfilMonitores, setRolPerfilMonitores] = useState<PerfilMonitores>(null);
   const [rolDependenciaMonitores, setRolDependenciaMonitores] = useState<DependenciaMonitores>(null);
+  const [confirmacionCargo, setConfirmacionCargo] = useState<({ estado: "exito"; accion: "creado" | "actualizado"; cargo: string; permisos: number } | { estado: "error"; mensaje: string }) | null>(null);
+  const [guardandoCargo, setGuardandoCargo] = useState(false);
   const [isAdministrator, setIsAdministrator] = useState<boolean | null>(null);
 
   const cargar = async () => {
@@ -64,7 +66,12 @@ export function UsuariosView() {
   if (isAdministrator !== true) return <main className="access-guard-loading">{isAdministrator === false ? "Acceso exclusivo para el administrador." : "Verificando acceso..."}</main>;
 
   const alternarPermiso = (permisoId: string) => setRolPermisoIds((actual) => actual.includes(permisoId) ? actual.filter((id) => id !== permisoId) : [...actual, permisoId]);
+  const limpiarFormularioCargo = () => {
+    setRolSeleccionadoId(""); setRolNombre(""); setRolDescripcion(""); setRolPermisoIds([]);
+    setRolPerfilMonitores(null); setRolDependenciaMonitores(null); setBusquedaPermiso("");
+  };
   const seleccionarRol = (id: string) => {
+    if (!id) { limpiarFormularioCargo(); return; }
     setRolSeleccionadoId(id);
     const rol = roles.find((item) => item.id === id);
     setRolNombre(rol?.nombre ?? "");
@@ -83,11 +90,17 @@ export function UsuariosView() {
       perfilMonitores: rolPerfilMonitores,
       dependenciaMonitores: rolPerfilMonitores === "LIDER" ? rolDependenciaMonitores : null,
     };
+    const accion = rolSeleccionadoId ? "actualizado" : "creado";
+    const cargoConfirmado = rolNombre.trim();
+    setGuardandoCargo(true);
     try {
       if (rolSeleccionadoId) await actualizarRol(rolSeleccionadoId, datos); else await crearRol(datos);
-      await cargar(); seleccionarRol("");
-      setAviso(rolSeleccionadoId ? "Cargo y permisos actualizados." : "Cargo creado correctamente.");
-    } catch (error) { setAviso(error instanceof Error ? error.message : "No fue posible guardar el cargo."); }
+      limpiarFormularioCargo();
+      setConfirmacionCargo({ estado: "exito", accion, cargo: cargoConfirmado, permisos: rolPermisoIds.length });
+      void cargar();
+    } catch (error) {
+      setConfirmacionCargo({ estado: "error", mensaje: error instanceof Error ? error.message : "No fue posible guardar el cargo." });
+    } finally { setGuardandoCargo(false); }
   };
   const guardar = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -142,9 +155,10 @@ export function UsuariosView() {
             </div>}
           </section>
           <fieldset className={permissionStyles.permissionsFieldset}><legend>Permisos asignados</legend><div className={permissionStyles.permissionTools}><input type="search" value={busquedaPermiso} onChange={(event) => setBusquedaPermiso(event.target.value)} placeholder="Buscar permiso..." aria-label="Buscar permiso asignable" /><small>{permisosVisibles.length} de {permisos.length} permisos</small></div><div className={permissionStyles.permissionScroll}>{permisosPorModulo.map(([codigo, grupo]) => <section key={codigo} className={permissionStyles.moduleGroup}><header><strong>{grupo.nombre}</strong><span>{grupo.permisos.length} permiso(s)</span></header><div className={styles.permissionGrid}>{grupo.permisos.map((permiso) => <label key={permiso.id}><input type="checkbox" checked={rolPermisoIds.includes(permiso.id)} onChange={() => alternarPermiso(permiso.id)} /><span>{permiso.codigo}</span></label>)}</div></section>)}{!permisosVisibles.length && <p className={permissionStyles.empty}>No hay permisos que coincidan.</p>}</div></fieldset>
-          <footer><button className="button-primary">{rolSeleccionadoId ? "Guardar cargo" : "Crear cargo"}</button></footer>
+          <footer><button type="submit" className="button-primary" disabled={guardandoCargo}>{guardandoCargo ? "Guardando…" : rolSeleccionadoId ? "Guardar cargo" : "Crear cargo"}</button></footer>
         </form>
       </div>
     </section>
+    {confirmacionCargo && <div className={styles.confirmationBackdrop} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setConfirmacionCargo(null)}><section className={`${styles.confirmationDialog} ${confirmacionCargo.estado === "error" ? styles.confirmationError : ""}`} role="dialog" aria-modal="true" aria-labelledby="cargo-confirmation-title"><span aria-hidden="true">{confirmacionCargo.estado === "exito" ? "✓" : "!"}</span><h2 id="cargo-confirmation-title">{confirmacionCargo.estado === "exito" ? `Cargo ${confirmacionCargo.accion === "creado" ? "creado" : "actualizado"}` : "No fue posible guardar el cargo"}</h2><p>{confirmacionCargo.estado === "exito" ? <>Los permisos del cargo <strong>{confirmacionCargo.cargo}</strong> se guardaron correctamente.</> : confirmacionCargo.mensaje}</p>{confirmacionCargo.estado === "exito" && <small>{confirmacionCargo.permisos} permiso{confirmacionCargo.permisos === 1 ? "" : "s"} asignado{confirmacionCargo.permisos === 1 ? "" : "s"}. El selector de cargo quedó listo para una nueva acción.</small>}<button type="button" className="button-primary" onClick={() => setConfirmacionCargo(null)}>Entendido</button></section></div>}
   </>;
 }

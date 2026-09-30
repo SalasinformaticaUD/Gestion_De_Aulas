@@ -7,7 +7,7 @@ import { consultarResumenPanel, type ResumenPanelOperativo } from "../api/panelO
 import styles from "./DashboardView.module.css";
 
 const alertTypeLabels: Record<string, string> = {
-  "tarea-operativa": "Tarea operativa", "nueva-observacion": "Nueva observación", "devolucion-audiovisual": "Devolución próxima",
+  "nueva-observacion": "Nueva observación", "devolucion-audiovisual": "Devolución próxima",
   "fin-practica-libre": "Práctica por finalizar", "ausencia-docente": "Ausencia docente", "asistencia-pendiente": "Asistencia pendiente",
   mantenimiento: "Mantenimiento", bloqueada: "Aula bloqueada", "prestamo-programado": "Préstamo de aula", "credencial-actualizada": "Credencial actualizada",
 };
@@ -59,16 +59,20 @@ export function DashboardView() {
       controller?.abort();
     };
   }, [version]);
+  const alertasSinTareas = useMemo(
+    () => resumen?.alertas.filter((alerta) => alerta.tipo !== "tarea-operativa") ?? [],
+    [resumen],
+  );
   const conteoAlertas = useMemo(() => ({
-    critica: resumen?.alertas.filter((a) => a.severidad === "critica").length ?? 0,
-    advertencia: resumen?.alertas.filter((a) => a.severidad === "advertencia").length ?? 0,
-    info: resumen?.alertas.filter((a) => a.severidad === "info").length ?? 0,
-  }), [resumen]);
+    critica: alertasSinTareas.filter((a) => a.severidad === "critica").length,
+    advertencia: alertasSinTareas.filter((a) => a.severidad === "advertencia").length,
+    info: alertasSinTareas.filter((a) => a.severidad === "info").length,
+  }), [alertasSinTareas]);
   const bloque = resumen ? `${resumen.bloqueReferencia.horaInicio}–${resumen.bloqueReferencia.horaFin}` : "—";
   const horario = useMemo(() => [...(resumen?.horarioActual ?? [])].sort((a, b) => a.aulaCodigo.localeCompare(b.aulaCodigo, "es", { numeric: true })), [resumen]);
-  const alertas = useMemo(() => [...(resumen?.alertas ?? [])]
+  const alertas = useMemo(() => [...alertasSinTareas]
     .sort((a, b) => ordenSeveridad[a.severidad] - ordenSeveridad[b.severidad])
-    .filter((alerta) => !filtroNotificaciones || alerta.severidad === filtroNotificaciones), [filtroNotificaciones, resumen]);
+    .filter((alerta) => !filtroNotificaciones || alerta.severidad === filtroNotificaciones), [alertasSinTareas, filtroNotificaciones]);
   const guardarAsistencia = async (claseId: string, estado: "ASISTIO" | "AUSENTE") => {
     setGuardandoAsistencia(claseId); setError("");
     try {

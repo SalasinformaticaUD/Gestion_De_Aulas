@@ -212,9 +212,14 @@ export class PrestamosDocentesService {
     bloque: BloqueDisponibilidad,
   ): Promise<void> {
     const resultado = await this.disponibilidad.findOne(aulaId, bloque);
-    if (resultado.fuentes.some((fuente) => fuente.tipo === 'clase-programada')) {
+    if (
+      resultado.fuentes.some(
+        (fuente) =>
+          fuente.tipo === 'clase-programada' && fuente.estado !== 'AUSENTE',
+      )
+    ) {
       throw new ConflictException(
-        'El aula tiene una clase programada para este bloque y no puede prestarse, aunque el docente no haya asistido.',
+        'El aula tiene una clase programada activa para este bloque y no puede prestarse.',
       );
     }
     if (resultado.estadoCalculado !== 'disponible') {

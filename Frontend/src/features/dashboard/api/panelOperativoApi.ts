@@ -21,8 +21,9 @@ function token() {
   return valor;
 }
 
-export function consultarResumenPanel(fecha: string, signal?: AbortSignal, forzarActualizacion = false) {
+export function consultarResumenPanel(fecha: string, signal?: AbortSignal, forzarActualizacion = false, horaInicio?: string) {
   const params = new URLSearchParams({ fecha });
   if (forzarActualizacion) params.set("forzarActualizacion", "true");
+  if (horaInicio) params.set("horaInicio", horaInicio);
   return solicitarAulas<ResumenPanelOperativo>(`/panel-operativo/resumen?${params.toString()}`, token(), { signal });
 }

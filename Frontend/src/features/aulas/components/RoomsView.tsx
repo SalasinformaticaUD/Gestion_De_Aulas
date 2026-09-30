@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import * as XLSX from "xlsx";
 import { tienePermiso } from "@/features/auth/lib/sesion";
 import { actualizarAula, crearAula, eliminarAula, importarAulasExcel, listarAulas, type CrearAulaInput } from "@/features/aulas/api/aulasApi";
@@ -37,6 +38,7 @@ function descargarPlantillaAulas(rooms: Room[]) {
 }
 
 export function RoomsView() {
+  const searchParams = useSearchParams();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [status, setStatus] = useState<"todos" | RoomStatus>("todos");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -65,6 +67,12 @@ export function RoomsView() {
   };
 
   useEffect(() => { void loadRooms(); }, []);
+  useEffect(() => {
+    const aulaId = searchParams.get("aula");
+    if (!aulaId || !rooms.some((room) => room.id === aulaId)) return;
+    setSelectedId(aulaId);
+    setActiveTab(searchParams.get("tab") === "software" ? "Software instalado" : "Información general");
+  }, [rooms, searchParams]);
   useEffect(() => {
     if (!importNotice) return;
     const timer = window.setTimeout(() => setImportNotice(null), 15000);

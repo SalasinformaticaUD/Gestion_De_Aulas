@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   consultarDisponibilidad,
@@ -7,9 +8,10 @@ import {
   type DisponibilidadApi,
   type ResumenDisponibilidadDiaApi,
 } from "@/features/disponibilidad/api/disponibilidadApi";
+import { consultarResumenPanel, type ResumenPanelOperativo } from "@/features/dashboard/api/panelOperativoApi";
 import styles from "./AvailabilityView.module.css";
 
-type View = "bloque" | "dia";
+type View = "bloque" | "dia" | "tareas";
 
 const estados: Record<string, string> = {
   disponible: "Disponible",
@@ -34,74 +36,112 @@ export function AvailabilityView() {
   const [horaInicio, setHoraInicio] = useState(bloqueActualBogota);
   const [resultados, setResultados] = useState<DisponibilidadApi[]>([]);
   const [resumenDia, setResumenDia] = useState<ResumenDisponibilidadDiaApi | null>(null);
+  const [resumenTareas, setResumenTareas] = useState<ResumenPanelOperativo | null>(null);
   const [filtro, setFiltro] = useState("todos");
   const [busquedaDia, setBusquedaDia] = useState("");
   const [filtroDia, setFiltroDia] = useState("todos");
   const [error, setError] = useState<string | null>(null);
-  const [actualizando, setActualizando] = useState(false);
   const horaFin = `${String(Number(horaInicio.slice(0, 2)) + 2).padStart(2, "0")}:00`;
 
   const cargarBloque = useCallback(async () => {
     try {
-      setActualizando(true);
       setError(null);
       setResultados(await consultarDisponibilidad(fecha, horaInicio, horaFin));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No fue posible consultar disponibilidad.");
-    } finally {
-      setActualizando(false);
     }
   }, [fecha, horaInicio, horaFin]);
 
   const cargarDia = useCallback(async () => {
     try {
-      setActualizando(true);
       setError(null);
       setResumenDia(await consultarResumenDia(fecha));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No fue posible consultar la disponibilidad del día.");
-    } finally {
-      setActualizando(false);
     }
   }, [fecha]);
 
+  const cargarTareas = useCallback(async () => {
+    try {
+      setError(null);
+      setResumenTareas(await consultarResumenPanel(fecha, undefined, false, horaInicio));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No fue posible consultar las tareas operativas.");
+    }
+  }, [fecha, horaInicio]);
+
   useEffect(() => {
-    const cargar = view === "bloque" ? cargarBloque : cargarDia;
+    const cargar = view === "bloque" ? cargarBloque : view === "dia" ? cargarDia : cargarTareas;
     void cargar();
     const timer = window.setInterval(() => void cargar(), 60000);
     return () => window.clearInterval(timer);
-  }, [cargarBloque, cargarDia, view]);
+  }, [cargarBloque, cargarDia, cargarTareas, view]);
 
   const visibles = useMemo(
     () => resultados.filter((item) => filtro === "todos" || item.estadoCalculado === filtro),
     [filtro, resultados],
   );
 
-  const actualizar = () => void (view === "bloque" ? cargarBloque() : cargarDia());
-
   return <>
     <section className={`page-heading ${styles.heading}`}>
       <div><h1>Disponibilidad de Aulas</h1><p>Estado calculado con clases, asistencia, reservas y restricciones operativas.</p></div>
-      <div className={styles.calculated}>Actualizado · {fecha}{view === "bloque" ? ` · ${horaInicio}–${horaFin}` : " · Jornada completa"}</div>
+      <div className={styles.calculated}>Actualizado · {fecha}{view === "bloque" || view === "tareas" ? ` · ${horaInicio}–${horaFin}` : " · Jornada completa"}</div>
     </section>
 
     <nav className={styles.viewTabs} aria-label="Vistas de disponibilidad">
       <button type="button" className={view === "bloque" ? styles.active : ""} aria-current={view === "bloque" ? "page" : undefined} onClick={() => setView("bloque")}>Por bloque</button>
       <button type="button" className={view === "dia" ? styles.active : ""} aria-current={view === "dia" ? "page" : undefined} onClick={() => setView("dia")}>Todo el día</button>
+      <button type="button" className={view === "tareas" ? styles.active : ""} aria-current={view === "tareas" ? "page" : undefined} onClick={() => setView("tareas")}>Tareas operativas</button>
     </nav>
 
-    <section className={`${styles.timePanel} ${view === "dia" ? styles.dayTimePanel : ""}`}>
+    <section className={`${styles.timePanel} ${view === "dia" ? styles.dayTimePanel : view === "tareas" ? styles.tasksTimePanel : ""}`}>
       <label className={styles.control}><span>Fecha</span><input type="date" value={fecha} onChange={(event) => setFecha(event.target.value)} /></label>
-      {view === "bloque" && <label className={styles.control}><span>Bloque</span><select value={horaInicio} onChange={(event) => setHoraInicio(event.target.value)}>{bloques.map((bloque) => <option key={bloque} value={bloque}>{bloque}–{String(Number(bloque.slice(0, 2)) + 2).padStart(2, "0")}:00</option>)}</select></label>}
+      {(view === "bloque" || view === "tareas") && <label className={styles.control}><span>Bloque</span><select value={horaInicio} onChange={(event) => setHoraInicio(event.target.value)}>{bloques.map((bloque) => <option key={bloque} value={bloque}>{bloque}–{String(Number(bloque.slice(0, 2)) + 2).padStart(2, "0")}:00</option>)}</select></label>}
       {view === "dia" && <div className={styles.dayRange}><span>Jornada consultada</span><strong>{resumenDia ? `${resumenDia.rangoOperativo.horaInicio}–${resumenDia.rangoOperativo.horaFin}` : "06:00–22:00"}</strong><small>Bloques de dos horas</small></div>}
-      <button type="button" className={styles.refreshButton} onClick={actualizar} disabled={actualizando}>{actualizando ? "Actualizando…" : "Actualizar"}</button>
+      {view === "tareas" && <div className={styles.dayRange}><span>Vista de tareas</span><strong>{resumenTareas?.bloqueReferencia.horaInicio ?? "—"}–{resumenTareas?.bloqueReferencia.horaFin ?? "—"}</strong><small>Recomendaciones de disponibilidad</small></div>}
     </section>
 
     {error && <p className={styles.empty}>{error}</p>}
     {view === "bloque"
       ? <BlockAvailability resultados={resultados} visibles={visibles} filtro={filtro} onFilter={setFiltro} />
-      : <DailyAvailability resumen={resumenDia} query={busquedaDia} filter={filtroDia} onQuery={setBusquedaDia} onFilter={setFiltroDia} />}
+      : view === "dia"
+        ? <DailyAvailability resumen={resumenDia} query={busquedaDia} filter={filtroDia} onQuery={setBusquedaDia} onFilter={setFiltroDia} />
+        : <OperationalTasks resumen={resumenTareas} />}
   </>;
+}
+
+function OperationalTasks({ resumen }: { resumen: ResumenPanelOperativo | null }) {
+  const tareasPorAula = useMemo(
+    () => (resumen?.alertas.filter((alerta) => alerta.tipo === "tarea-operativa") ?? [])
+      .reduce<Array<{ aula: string; tareas: ResumenPanelOperativo["alertas"] }>>((grupos, tarea) => {
+        const aula = tarea.aulaCodigo ?? "Sin aula asignada";
+        const grupo = grupos.find((actual) => actual.aula === aula);
+        if (grupo) grupo.tareas.push(tarea);
+        else grupos.push({ aula, tareas: [tarea] });
+        return grupos;
+      }, [])
+      .sort((a, b) => {
+        if (a.aula === "Sin aula asignada") return 1;
+        if (b.aula === "Sin aula asignada") return -1;
+        return a.aula.localeCompare(b.aula, "es", { numeric: true });
+      }),
+    [resumen],
+  );
+  const totalTareas = tareasPorAula.reduce((total, grupo) => total + grupo.tareas.length, 0);
+
+  return <section className={styles.tasksCard}>
+    <header><div><h2>Tareas operativas por bloque</h2><p>Recomendaciones para el bloque seleccionado, organizadas por aula.</p></div><span>{totalTareas} pendiente{totalTareas === 1 ? "" : "s"}</span></header>
+    <div className={styles.tasksList}>
+      {tareasPorAula.length ? tareasPorAula.map((grupo) => <section className={styles.taskRoom} key={grupo.aula}>
+        <h3>{grupo.aula === "Sin aula asignada" ? grupo.aula : `Aula ${grupo.aula}`}</h3>
+        {grupo.tareas.map((tarea) => <article key={tarea.id} className={styles[`task_${tarea.severidad}`]}>
+          <header><span>{tarea.severidad}</span></header>
+          <p>{tarea.mensaje}</p>
+          <Link href={tarea.enlace ?? "/tareas"}>{tarea.accion ?? "Revisar tarea"} →</Link>
+        </article>)}
+      </section>) : <div className={styles.empty}>No hay tareas operativas pendientes para este bloque.</div>}
+    </div>
+  </section>;
 }
 
 function BlockAvailability({ resultados, visibles, filtro, onFilter }: { resultados: DisponibilidadApi[]; visibles: DisponibilidadApi[]; filtro: string; onFilter: (value: string) => void }) {

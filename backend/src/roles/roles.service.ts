@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { EstadoCuenta } from '../../generated/prisma/enums.js';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import { MonitoresClientService } from '../integraciones/monitores-client.service';
@@ -24,6 +24,8 @@ const selectUsuarioMonitores = {
 
 @Injectable()
 export class RolesService {
+  private readonly logger = new Logger(RolesService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     @Optional() private readonly auditoria?: AuditoriaService,
@@ -79,7 +81,10 @@ export class RolesService {
       },
       include: includeRol,
     });
-    await this.sincronizarUsuariosDelRol(id, Boolean(previo.perfilMonitores || rol.perfilMonitores));
+    await this.sincronizarSinBloquearGuardado(
+      () => this.sincronizarUsuariosDelRol(id, Boolean(previo.perfilMonitores || rol.perfilMonitores)),
+      `actualizar el cargo "${rol.nombre}"`,
+    );
     await this.auditoria?.registrar({ usuarioId, entidad: 'Rol', entidadId: id, accion: 'UPDATE', datosPrevios: previo, datosNuevos: rol });
     return rol;
   }
@@ -88,7 +93,10 @@ export class RolesService {
     const previo = await this.findOne(id);
     const usuarioIds = await this.prisma.usuarioRol.findMany({ where: { rolId: id }, select: { usuarioId: true } });
     const rol = await this.prisma.rol.delete({ where: { id } });
-    await this.sincronizarUsuarios(usuarioIds.map(({ usuarioId: idUsuario }) => idUsuario), Boolean(previo.perfilMonitores));
+    await this.sincronizarSinBloquearGuardado(
+      () => this.sincronizarUsuarios(usuarioIds.map(({ usuarioId: idUsuario }) => idUsuario), Boolean(previo.perfilMonitores)),
+      `eliminar el cargo "${previo.nombre}"`,
+    );
     await this.auditoria?.registrar({ usuarioId, entidad: 'Rol', entidadId: id, accion: 'DELETE', datosPrevios: previo });
     return rol;
   }
@@ -118,6 +126,20 @@ export class RolesService {
     if (!sincronizar || !ids.length) return;
     const usuarios = await this.prisma.usuario.findMany({ where: { id: { in: ids } }, select: selectUsuarioMonitores });
     await Promise.all(usuarios.map((usuario) => this.sincronizarUsuarioMonitores(usuario)));
+  }
+
+  /**
+   * El cargo y sus permisos se guardan en la base principal antes de llamar a
+   * Monitores. Una caída de ese servicio externo no debe convertir un cambio
+   * ya persistido en un error aparente para la persona que lo realizó.
+   */
+  private async sincronizarSinBloquearGuardado(sincronizar: () => Promise<void>, accion: string) {
+    try {
+      await sincronizar();
+    } catch (error) {
+      const detalle = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Se completó ${accion}, pero quedó pendiente la sincronización con Monitores: ${detalle}`);
+    }
   }
 
   private async sincronizarUsuarioMonitores(usuario: {

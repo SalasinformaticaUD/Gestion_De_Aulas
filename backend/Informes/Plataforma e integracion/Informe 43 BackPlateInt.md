@@ -3,7 +3,7 @@
 ## Datos generales
 
 - **Fecha:** 29/09/2026
-- **Autor:** Ivan Felipe Prado Blanco
+- **Autor:** Esteban Bautista
 - **Tipo de jornada:** Ajustes funcionales, validación técnica y documentación de pendientes.
 
 ## Objetivo
