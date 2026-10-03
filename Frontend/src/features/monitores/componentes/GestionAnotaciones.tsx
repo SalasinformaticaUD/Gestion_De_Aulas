@@ -249,7 +249,7 @@ export function GestionAnotaciones() {
         </header>
         <div className={`${estilos.barraHerramientas} ${estilos.filtrosAnotaciones}`}>
           {puedeGestionar && (
-            <label className={estilos.campoAncho}>
+            <label className={`${estilos.campoAncho} ${estilos.buscadorRegistros}`}>
               <span>Buscar monitor</span>
               <input
                 value={buscar}

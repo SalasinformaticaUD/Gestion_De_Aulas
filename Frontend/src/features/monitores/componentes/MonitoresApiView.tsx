@@ -35,6 +35,20 @@ const vacio: FormMonitor = {
 };
 const soloNumeros = (valor: string) => valor.replace(/\D/g, "");
 const nombresDependencia: Record<string, string> = { informatics_labs: "Monitores Aulas de Software", electrical: "Monitores Laboratorios", physics: "Monitores Física" };
+const impactoSemestre = [
+  ["monitors", "Monitores activos que pasan a histórico"],
+  ["monitor_users", "Cuentas de monitor conservadas"],
+  ["schedules", "Horarios archivados"],
+  ["schedule_exceptions", "Excepciones conservadas"],
+  ["attendance_import_jobs", "Cargas de asistencia conservadas"],
+  ["attendance_raw_records", "Registros importados conservados"],
+  ["work_sessions", "Registros procesados y horas extra conservados"],
+  ["attendance_inconsistencies", "Inconsistencias conservadas"],
+  ["annotations", "Anotaciones conservadas"],
+  ["report_snapshots", "Reportes generados conservados"],
+  ["memorandums", "Memorandos conservados"],
+  ["notifications", "Notificaciones que se limpiarán"],
+] as const;
 const estadoCuenta = (monitor: MonitorApi) =>
   monitor.account_status ?? (monitor.is_active ? "ACTIVE" : "INACTIVE");
 const etiquetaEstado = (monitor: MonitorApi) =>
@@ -194,10 +208,14 @@ export function MonitoresApiView() {
   const [formEdicion, setFormEdicion] = useState(vacio);
   const [eliminando, setEliminando] = useState<MonitorApi | null>(null);
   const [contrasena, setContrasena] = useState("");
+  const [errorEliminacion, setErrorEliminacion] = useState("");
   const [semestreModal, setSemestreModal] = useState(false);
   const [nuevoSemestre, setNuevoSemestre] = useState("");
   const [fechaInicioSemestre, setFechaInicioSemestre] = useState("");
   const [fechaFinSemestre, setFechaFinSemestre] = useState("");
+  const [contrasenaSemestre, setContrasenaSemestre] = useState("");
+  const [confirmarFechasSemestre, setConfirmarFechasSemestre] = useState(false);
+  const [errorSemestre, setErrorSemestre] = useState("");
   const [impacto, setImpacto] = useState<Record<string, number> | null>(null);
   const [pagina, setPagina] = useState(1);
   const [totalRegistros, setTotalRegistros] = useState(0);
@@ -353,12 +371,13 @@ export function MonitoresApiView() {
   async function confirmarEliminacion(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     if (!eliminando) return;
+    setErrorEliminacion("");
     setGuardando(true);
     try {
       const validacion =
         await servicioMonitores.verificarContrasenaActual(contrasena);
       if (!validacion.valido) {
-        setError("La contraseña no es válida.");
+        setErrorEliminacion("La contraseña no coincide. Verifícala e inténtalo nuevamente.");
         return;
       }
       await servicioMonitores.eliminarMonitor(eliminando.id);
@@ -367,7 +386,9 @@ export function MonitoresApiView() {
       setContrasena("");
       setAviso("Monitor eliminado correctamente.");
     } catch (e) {
-      fallo(e, "No fue posible eliminar el monitor.");
+      setErrorEliminacion(
+        e instanceof Error ? e.message : "No fue posible validar la contraseña.",
+      );
     } finally {
       setGuardando(false);
     }
@@ -378,6 +399,9 @@ export function MonitoresApiView() {
       return;
     }
     setError("");
+    setErrorSemestre("");
+    setConfirmarFechasSemestre(false);
+    setContrasenaSemestre("");
     try {
       const datos = await servicioMonitores.previsualizarNuevoSemestre();
       setImpacto(datos.preview);
@@ -388,20 +412,29 @@ export function MonitoresApiView() {
   }
   async function iniciarSemestre(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
+    if (!fechaInicioSemestre || !fechaFinSemestre || fechaFinSemestre < fechaInicioSemestre) {
+      setErrorSemestre("Ingresa fechas válidas para el nuevo semestre.");
+      return;
+    }
     setGuardando(true);
+    setErrorSemestre("");
     try {
       const resultado =
-        await servicioMonitores.iniciarNuevoSemestre(nuevoSemestre, fechaInicioSemestre, fechaFinSemestre);
+        await servicioMonitores.iniciarNuevoSemestre(nuevoSemestre.trim(), fechaInicioSemestre, fechaFinSemestre, contrasenaSemestre);
         setSemestreModal(false);
+        setConfirmarFechasSemestre(false);
         setNuevoSemestre("");
         setFechaInicioSemestre("");
         setFechaFinSemestre("");
+        setContrasenaSemestre("");
       setAviso(
         `Se inició el semestre ${resultado.new_semester}. Los registros históricos se conservaron.`,
       );
       await cargar();
     } catch (e) {
-      fallo(e, "No fue posible iniciar el semestre.");
+      const mensaje = e instanceof Error ? e.message : "No fue posible iniciar el semestre.";
+      setErrorSemestre(mensaje);
+      if (mensaje.toLocaleLowerCase("es").includes("contraseña")) setConfirmarFechasSemestre(false);
     } finally {
       setGuardando(false);
     }
@@ -482,17 +515,9 @@ export function MonitoresApiView() {
               <h2>Directorio de monitores</h2>
               <p>Gestione cada cuenta y su activación.</p>
             </div>
-            <button
-              type="button"
-              className={estilos.botonSecundario}
-              onClick={() => void cargar()}
-              disabled={cargando}
-            >
-              Actualizar
-            </button>
           </header>
-          <div className={estilos.barraHerramientas}><SelectorDependenciaAdmin visible={perfilMonitores?.role === "admin"} value={dependenciaFiltro} onChange={setDependenciaFiltro} />
-            <label className={estilos.campoAncho}>
+          <div className={`${estilos.barraHerramientas} ${estilos.filtrosRegistros}`}><SelectorDependenciaAdmin visible={perfilMonitores?.role === "admin"} value={dependenciaFiltro} onChange={setDependenciaFiltro} />
+            <label className={`${estilos.campoAncho} ${estilos.buscadorRegistros}`}>
               <span>Buscar</span>
               <input
                 value={buscar}
@@ -592,7 +617,11 @@ export function MonitoresApiView() {
                               type="button"
                               className={`${estilos.eliminar} ${estilos.eliminarMonitor}`}
                               aria-label={`Eliminar a ${item.full_name}`}
-                              onClick={() => setEliminando(item)}
+                              onClick={() => {
+                                setContrasena("");
+                                setErrorEliminacion("");
+                                setEliminando(item);
+                              }}
                             >
                               🗑 Eliminar
                             </button>
@@ -667,7 +696,10 @@ export function MonitoresApiView() {
                 <h2>Eliminar monitor</h2>
                 <p>Esta acción elimina la cuenta de {eliminando.full_name}.</p>
               </div>
-              <button type="button" onClick={() => setEliminando(null)}>
+              <button type="button" onClick={() => {
+                setErrorEliminacion("");
+                setEliminando(null);
+              }}>
                 ×
               </button>
             </header>
@@ -676,6 +708,11 @@ export function MonitoresApiView() {
               onSubmit={confirmarEliminacion}
             >
               <p>Escribe tu contraseña actual para confirmar la eliminación.</p>
+              {errorEliminacion && (
+                <p id="error-confirmacion-eliminacion" className={estilos.errorConfirmacionEliminacion} role="alert">
+                  {errorEliminacion}
+                </p>
+              )}
               <label className={estilos.campo}>
                 <span>Contraseña</span>
                 <input
@@ -683,7 +720,12 @@ export function MonitoresApiView() {
                   type="password"
                   autoComplete="current-password"
                   value={contrasena}
-                  onChange={(e) => setContrasena(e.target.value)}
+                  aria-invalid={Boolean(errorEliminacion)}
+                  aria-describedby={errorEliminacion ? "error-confirmacion-eliminacion" : undefined}
+                  onChange={(e) => {
+                    setContrasena(e.target.value);
+                    setErrorEliminacion("");
+                  }}
                 />
               </label>
               <button
@@ -698,48 +740,56 @@ export function MonitoresApiView() {
       )}
       {semestreModal && (
         <div className={estilos.fondoModal}>
-          <section className={estilos.modal} role="dialog" aria-modal="true">
+          <section className={`${estilos.modal} ${estilos.modalSemestre}`} role="dialog" aria-modal="true" aria-labelledby="titulo-semestre">
             <header>
               <div>
-                <h2>Iniciar semestre nuevo</h2>
+                <span>Administración / Iniciar semestre nuevo</span>
+                <h2 id="titulo-semestre">Iniciar semestre nuevo</h2>
                 <p>
-                  Esta operación archiva el semestre actual y desactiva
-                  monitores y horarios vigentes.
+                  Esta acción archiva el semestre actual y abre uno nuevo para registrar monitores, horarios y marcaciones nuevas.
                 </p>
               </div>
-              <button type="button" onClick={() => setSemestreModal(false)}>
+              <button type="button" aria-label="Cerrar" onClick={() => { setSemestreModal(false); setContrasenaSemestre(""); }}>
                 ×
               </button>
             </header>
-            <form className={estilos.formulario} onSubmit={iniciarSemestre}>
-              {impacto && (
-                <div className={estilos.resultadoImportacion}>
-                  {Object.entries(impacto)
-                    .slice(0, 4)
-                    .map(([clave, valor]) => (
-                      <span key={clave}>
-                        <b>{valor}</b>
-                        {clave.replaceAll("_", " ")}
-                      </span>
-                    ))}
+            <div className={estilos.semestreContenido}>
+              <p className={estilos.semestreAviso}>Mensaje importante: los registros del semestre actual se conservan como histórico. Los monitores actuales quedarán inactivos para que el nuevo semestre empiece sin conflictos.</p>
+              <div className={estilos.semestreColumnas}>
+                <div>
+                  <h3>Qué se va a archivar</h3>
+                  <p>Se conservarán monitores, horarios, registros importados, jornadas procesadas, horas extra, anotaciones, inconsistencias, memorandos y reportes para consulta histórica.</p>
+                  <p>Las cuentas de monitor se conservan. Si un monitor repite, podrá tener un nuevo registro activo sin perder el semestre anterior.</p>
+                  <div className={estilos.semestreImpacto}>
+                    {impactoSemestre.map(([clave, etiqueta]) => <div key={clave}><strong>{impacto?.[clave] ?? 0}</strong><span>{etiqueta}</span></div>)}
+                  </div>
                 </div>
-              )}
-              <label className={estilos.campo}>
-                <span>Nombre del nuevo semestre</span>
-                <input
-                  required
-                  placeholder="Ej.: 2026-3"
-                  value={nuevoSemestre}
-                  onChange={(e) => setNuevoSemestre(e.target.value)}
-                />
-              </label>
+                <form className={estilos.semestreConfirmacion} onSubmit={(evento) => { evento.preventDefault(); setErrorSemestre(""); setConfirmarFechasSemestre(true); }}>
+                  <h3>Confirmación obligatoria</h3>
+                  <p>Ingresa el semestre que empieza y confirma con tu contraseña de administrador.</p>
+                  <label><span>Nuevo semestre académico</span><input required maxLength={20} placeholder="2026-3" value={nuevoSemestre} onChange={(e) => setNuevoSemestre(e.target.value)} /><small>Ejemplo: 2026-3</small></label>
+                  <label><span>Contraseña del administrador</span><input required type="password" autoComplete="current-password" value={contrasenaSemestre} onChange={(e) => setContrasenaSemestre(e.target.value)} /></label>
+                  {errorSemestre && <p role="alert" className={estilos.semestreError}>{errorSemestre}</p>}
+                  <button type="submit" className="button-primary">Archivar e iniciar semestre nuevo</button>
+                  <button type="button" className={estilos.botonSecundario} onClick={() => { setSemestreModal(false); setContrasenaSemestre(""); }}>Cancelar</button>
+                </form>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+      {semestreModal && confirmarFechasSemestre && (
+        <div className={`${estilos.fondoModal} ${estilos.fondoFechasSemestre}`}>
+          <section className={`${estilos.modal} ${estilos.modalFechasSemestre}`} role="dialog" aria-modal="true" aria-labelledby="titulo-fechas-semestre">
+            <header><div><h2 id="titulo-fechas-semestre">Fechas del nuevo semestre</h2><p>Confirma el periodo académico antes de archivar el semestre actual.</p></div><button type="button" aria-label="Volver" disabled={guardando} onClick={() => setConfirmarFechasSemestre(false)}>×</button></header>
+            <form className={estilos.formulario} onSubmit={iniciarSemestre}>
               <div className={estilos.formularioDoble}>
                 <label className={estilos.campo}><span>Fecha de inicio</span><input required type="date" value={fechaInicioSemestre} onChange={(e) => setFechaInicioSemestre(e.target.value)} /></label>
                 <label className={estilos.campo}><span>Fecha de finalización</span><input required type="date" min={fechaInicioSemestre || undefined} value={fechaFinSemestre} onChange={(e) => setFechaFinSemestre(e.target.value)} /></label>
               </div>
-              <button className="button-primary" disabled={guardando}>
-                Confirmar inicio de semestre
-              </button>
+              {errorSemestre && <p role="alert" className={estilos.semestreError}>{errorSemestre}</p>}
+              <button className="button-primary" disabled={guardando}>{guardando ? "Iniciando semestre…" : `Confirmar inicio de ${nuevoSemestre}`}</button>
+              <button type="button" className={estilos.botonSecundario} disabled={guardando} onClick={() => setConfirmarFechasSemestre(false)}>Volver</button>
             </form>
           </section>
         </div>

@@ -8,6 +8,7 @@ import { LoginDto } from './dto/login.dto';
 import { VerifyPasswordDto } from './dto/verify-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdateProfilePhotoDto } from './dto/update-profile-photo.dto';
+import { ChangeUsernameDto } from './dto/change-username.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -31,7 +32,12 @@ export class AuthController {
     @Body() dto: VerifyPasswordDto,
     @CurrentUser() usuario: UsuarioAutenticado,
   ) {
-    return { valido: await this.authService.verifyCurrentPassword(usuario.id, dto.password) };
+    return {
+      valido: await this.authService.verifyCurrentPassword(
+        usuario.id,
+        dto.password,
+      ),
+    };
   }
 
   @RequireAuth()
@@ -56,6 +62,19 @@ export class AuthController {
       usuario.id,
       dto.contrasenaActual,
       dto.nuevaContrasena,
+    );
+  }
+
+  @RequireAuth()
+  @Post('cambiar-nombre-usuario')
+  cambiarNombreUsuario(
+    @Body() dto: ChangeUsernameDto,
+    @CurrentUser() usuario: UsuarioAutenticado,
+  ) {
+    return this.authService.cambiarNombreUsuario(
+      usuario.id,
+      dto.nombreUsuario,
+      dto.contrasenaActual,
     );
   }
 

@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsDateString,
   IsIn,
   IsOptional,
@@ -28,4 +29,8 @@ export class CreateLimpiezaAulaDto {
   @MinLength(1)
   @MaxLength(2000)
   observacion?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  confirmarLimpiezaReciente?: boolean;
 }

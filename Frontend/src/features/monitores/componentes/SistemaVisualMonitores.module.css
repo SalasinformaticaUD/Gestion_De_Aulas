@@ -1413,6 +1413,34 @@
   display: grid;
   gap: 1rem;
 }
+.selectorMonitoriaPersonal {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+}
+.selectorMonitoriaPersonal h2,
+.selectorMonitoriaPersonal p {
+  margin: 0;
+}
+.selectorMonitoriaPersonal p {
+  margin-top: 0.3rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.selectorMonitoriaPersonal .campo {
+  min-width: 15rem;
+}
+@media (max-width: 680px) {
+  .selectorMonitoriaPersonal {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .selectorMonitoriaPersonal .campo {
+    min-width: 0;
+  }
+}
 .fichaMonitor {
   display: flex;
   align-items: flex-start;
@@ -1564,6 +1592,16 @@
   background: #303238;
   font-size: 24.7px;
 }
+.modalSemestre{width:min(1380px,100%)}
+.modalSemestre>header{background:#8f171b}.modalSemestre>header span{display:block;margin-bottom:8px;color:#f3c6c9;font-size:.8rem;font-weight:750}.modalSemestre>header p{color:#fff}.modalSemestre>header button{background:#741216;color:#fff}
+.semestreContenido{padding:24px;background:var(--surface)}.semestreAviso{margin:0 0 24px;padding:17px;border-left:5px solid #8f171b;background:var(--surface-soft);color:var(--ink);font-weight:750;line-height:1.5}
+.semestreColumnas{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,.95fr);gap:24px;align-items:start}.semestreColumnas h3{margin:0 0 9px;color:var(--ink);font-size:1.25rem}.semestreColumnas>div>p{margin:0 0 14px;color:var(--muted);line-height:1.55}
+.semestreImpacto{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:10px;margin-top:18px}.semestreImpacto>div{min-height:86px;padding:12px;border:1px solid color-mix(in srgb,#8f171b 25%,var(--line));border-radius:7px;background:var(--surface)}.semestreImpacto strong,.semestreImpacto span{display:block}.semestreImpacto strong{margin-bottom:5px;color:#a31920;font-size:1.35rem}.semestreImpacto span{color:var(--ink);font-size:.87rem;line-height:1.35}
+.semestreConfirmacion{display:grid;gap:15px;padding:24px;border:1px solid var(--line);border-radius:16px;background:var(--surface);box-shadow:0 14px 34px rgba(70,18,20,.12)}.semestreConfirmacion h3{margin:0;color:#8f171b}.semestreConfirmacion>p{margin:-6px 0 2px;color:var(--muted);font-size:.9rem;line-height:1.4}.semestreConfirmacion label{display:grid;gap:7px;color:#8f171b;font-size:.9rem;font-weight:800}.semestreConfirmacion input{width:100%;min-height:46px;padding:10px 14px;border:1px solid var(--line);border-radius:9px;color:var(--ink);background:var(--surface);font:inherit;font-weight:500}.semestreConfirmacion small{color:var(--muted);font-size:.75rem;font-weight:500}.semestreConfirmacion button,.modalFechasSemestre form>button{min-height:44px}.semestreConfirmacion button[type="submit"],.modalFechasSemestre form>button[type="submit"]{background:#db3048;border-color:#db3048}.semestreError{margin:0;padding:10px 12px;border:1px solid #eeb0b6;border-radius:7px;color:#9e1525;background:#fff0f2;font-size:.9rem}
+.fondoFechasSemestre{z-index:100}.modalFechasSemestre{width:min(560px,100%)}.modalFechasSemestre form{gap:15px}.modalFechasSemestre form>button{width:100%}
+@media(max-width:900px){.semestreColumnas{grid-template-columns:1fr}.semestreContenido{padding:16px}.semestreConfirmacion{padding:18px}}
+:global(html[data-theme="dark"]) .semestreImpacto strong,:global(html[data-theme="dark"]) .semestreConfirmacion h3,:global(html[data-theme="dark"]) .semestreConfirmacion label{color:#ff9da5}
+:global(html[data-theme="dark"]) .semestreError{color:#ffbdc4;background:#3b1d24;border-color:#91434f}
 .vacio {
   padding: 24px;
   color: var(--muted);
@@ -1957,6 +1995,18 @@
     transform 0.16s ease,
     box-shadow 0.16s ease,
     background 0.16s ease;
+}
+.errorConfirmacionEliminacion {
+  margin: 0;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid #efb2bb;
+  border-left: 4px solid #b51e30;
+  border-radius: 6px;
+  color: #9d1526;
+  background: #fff1f3;
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.4;
 }
 .botonConfirmarEliminacion:hover:not(:disabled) {
   transform: translateY(-2px);
@@ -3184,6 +3234,16 @@
   font-size: 14px;
   line-height: 1.45;
 }
+.referenciaFechasSemestre {
+  margin: -0.25rem 0 0;
+  padding: 0.65rem 0.75rem;
+  border-left: 3px solid var(--primary);
+  border-radius: 5px;
+  color: var(--muted);
+  background: var(--surface-soft);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
 .modalInconsistencia .formulario {
   padding: 18px;
 }
@@ -3211,6 +3271,64 @@
   }
 }
 /* Modo oscuro: superficies, formularios, tablas y selectores de Gestión de Monitores. */
+:global(html:not([data-theme="dark"])) .tarjeta,
+:global(html:not([data-theme="dark"])) .barraNotificacionesDashboard,
+:global(html:not([data-theme="dark"])) .bloqueDetalleInconsistencia,
+:global(html:not([data-theme="dark"])) .selectorMultiple,
+:global(html:not([data-theme="dark"])) .listaDesplegable,
+:global(html:not([data-theme="dark"])) .modal {
+  border-color: #d6dae1;
+  background: #fff;
+  box-shadow: 0 7px 18px rgba(18, 24, 40, 0.06);
+}
+:global(html:not([data-theme="dark"])) .tarjeta > header,
+:global(html:not([data-theme="dark"])) .selectorMultiple > header,
+:global(html:not([data-theme="dark"])) .bloqueDetalleInconsistencia > h3 {
+  border-color: #e0e3e8;
+}
+:global(html:not([data-theme="dark"])) .tarjeta > .contenido,
+:global(html:not([data-theme="dark"])) .tarjeta > .formulario,
+:global(html:not([data-theme="dark"])) .tarjeta > .listaLateral,
+:global(html:not([data-theme="dark"])) .tarjeta > .calendario,
+:global(html:not([data-theme="dark"])) .tarjeta > .tablaContenedor {
+  background: #f8f9fb;
+}
+:global(html:not([data-theme="dark"])) .barraHerramientas,
+:global(html:not([data-theme="dark"])) .listaLateral article,
+:global(html:not([data-theme="dark"])) .verificacion,
+:global(html:not([data-theme="dark"])) .zonaCarga,
+:global(html:not([data-theme="dark"])) .resultadoImportacion span,
+:global(html:not([data-theme="dark"])) .listaNotificacionesDashboard article,
+:global(html:not([data-theme="dark"])) .detalleHoraExtra article,
+:global(html:not([data-theme="dark"])) .selectorPenalizacion {
+  border-color: #dde1e7;
+  background: #f6f7f9;
+}
+:global(html:not([data-theme="dark"])) .campo input,
+:global(html:not([data-theme="dark"])) .campo select,
+:global(html:not([data-theme="dark"])) .campo textarea,
+:global(html:not([data-theme="dark"])) .campoAncho input,
+:global(html:not([data-theme="dark"])) .campoAncho select,
+:global(html:not([data-theme="dark"])) .campoAncho textarea,
+:global(html:not([data-theme="dark"])) .activadorSelector,
+:global(html:not([data-theme="dark"])) .listaDesplegable label {
+  border-color: #cbd1da;
+  background: #fff;
+}
+:global(html:not([data-theme="dark"])) .tabla tbody tr:nth-child(odd) {
+  background: #fff;
+}
+:global(html:not([data-theme="dark"])) .tabla tbody tr:nth-child(even) {
+  background: #f6f7f9;
+}
+:global(html:not([data-theme="dark"])) .tabla tbody tr:hover {
+  background: #eef1f5;
+}
+:global(html:not([data-theme="dark"])) .filtrosNotificacionesDashboard,
+:global(html:not([data-theme="dark"])) .resumenNotificacionesDashboard,
+:global(html:not([data-theme="dark"])) .barraNotificacionesDashboard > footer {
+  background: #fafbfc;
+}
 :global(html[data-theme="dark"]) .tarjeta,
 :global(html[data-theme="dark"]) .formularioFijo,
 :global(html[data-theme="dark"]) .selectorMultiple,
@@ -3922,6 +4040,59 @@
   border-color: var(--line);
 }
 
+/* Tema claro: conserva la jerarquía visual del calendario oscuro sin perder luminosidad. */
+:global(html:not([data-theme="dark"])) .horarioDashboard {
+  border-color: #cbd2dc;
+  box-shadow: 0 8px 22px rgba(27, 36, 52, 0.08);
+}
+:global(html:not([data-theme="dark"])) .horarioDashboard > header,
+:global(html:not([data-theme="dark"])) .cabeceraHorario,
+:global(html:not([data-theme="dark"])) .escalaHorario {
+  background: #f7f9fc;
+  border-color: #cfd6e0;
+}
+:global(html:not([data-theme="dark"])) .cabeceraHorario > span,
+:global(html:not([data-theme="dark"])) .cabeceraHorario > strong,
+:global(html:not([data-theme="dark"])) .columnaDiaHorario,
+:global(html:not([data-theme="dark"])) .escalaHorario {
+  border-color: #d7dde6;
+}
+:global(html:not([data-theme="dark"])) .columnaDiaHorario {
+  background: #fcfdff;
+}
+:global(html:not([data-theme="dark"])) .columnaDiaHorario:nth-child(odd) {
+  background: #f6f8fb;
+}
+:global(html:not([data-theme="dark"])) .columnaDiaActual,
+:global(html:not([data-theme="dark"])) .diaHorarioActual {
+  background: #fff1f3;
+}
+:global(html:not([data-theme="dark"])) .lineaHora {
+  background: #dce2ea;
+}
+:global(html:not([data-theme="dark"])) .leyendaHorario button {
+  border-color: #cbd3de;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(20, 32, 49, 0.05);
+}
+:global(html:not([data-theme="dark"])) .bloqueHorarioDashboard {
+  border-color: color-mix(in srgb, var(--color-monitor) 68%, #fff);
+  background: color-mix(in srgb, var(--fondo-monitor) 78%, var(--color-monitor) 22%);
+  box-shadow: 0 2px 5px color-mix(in srgb, var(--color-monitor) 22%, transparent);
+}
+:global(html:not([data-theme="dark"])) .bloqueHorarioDashboard:hover {
+  box-shadow: 0 6px 14px color-mix(in srgb, var(--color-monitor) 32%, transparent);
+}
+:global(html:not([data-theme="dark"])) .horariosApi .metrica {
+  border-width: 1px;
+  border-top-width: 4px;
+  box-shadow: 0 6px 16px rgba(24, 35, 52, 0.075);
+}
+:global(html:not([data-theme="dark"])) .horariosApi .metrica.violeta { --fondo-metrica: #eee6ff; border-color: #c8b1f3; }
+:global(html:not([data-theme="dark"])) .horariosApi .metrica.verde { --fondo-metrica: #e3f8eb; border-color: #93d9ad; }
+:global(html:not([data-theme="dark"])) .horariosApi .metrica.ambar { --fondo-metrica: #fff0cf; border-color: #e8bd62; }
+:global(html:not([data-theme="dark"])) .horariosApi .metrica.azul { --fondo-metrica: #e3efff; border-color: #9cc2fa; }
+
 /* La hora vuelve a mostrarse debajo del nombre sin ampliar el calendario. */
 .horarioDashboard .bloqueHorarioDashboard span {
   display: block;
@@ -4285,6 +4456,61 @@
 .historicosApi .tablaHistoricos td:last-child {
   width: 130px;
   text-align: center;
+}
+.filtrosRegistros {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  align-items: end;
+}
+.filtrosRegistros .buscadorRegistros {
+  width: min(100%, 260px);
+  min-width: 190px;
+  justify-self: start;
+}
+.filtrosRegistros .buscadorInconsistencias {
+  width: min(100%, 360px);
+  min-width: 280px;
+}
+.filtrosRegistros :global(.campo-filtro-dependencia),
+.filtrosRegistros .campo {
+  width: 100%;
+  min-width: 180px;
+}
+.accionFiltroRegistros {
+  width: fit-content;
+  min-width: 140px;
+  justify-self: end;
+}
+.controlesPeriodoActual {
+  grid-template-columns: minmax(220px, 320px) max-content;
+  justify-content: start;
+}
+.controlesPeriodoActual .accionFiltroRegistros {
+  justify-self: start;
+}
+@media (max-width: 820px) {
+  .filtrosRegistros {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .filtrosRegistros .buscadorRegistros {
+    width: 100%;
+    min-width: 0;
+  }
+  .controlesPeriodoActual {
+    grid-template-columns: minmax(200px, 1fr) max-content;
+  }
+}
+@media (max-width: 560px) {
+  .filtrosRegistros {
+    grid-template-columns: 1fr;
+  }
+  .accionFiltroRegistros {
+    width: 100%;
+    justify-self: stretch;
+  }
+  .controlesPeriodoActual {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Memorandos: los tres indicadores superiores usan todo el ancho y el filtro conserva ancho natural. */
@@ -5643,12 +5869,13 @@
 .accionesMenuNotificaciones { display: flex; gap: .35rem; }
 .menuNotificaciones header button { width: 1.7rem; height: 1.7rem; padding: 0; border: 1px solid var(--line); border-radius: 5px; color: var(--muted); background: var(--surface-soft); font-size: 1.1rem; line-height: 1; }
 .listaMenuNotificaciones { max-height: min(25rem, 65vh); overflow-y: auto; padding: .5rem; }
-.listaMenuNotificaciones > button { width: 100%; display: grid; gap: .25rem; padding: .72rem .75rem; border: 1px solid transparent; border-bottom-color: var(--line); border-radius: 5px; color: var(--ink); background: transparent; text-align: left; }
-.listaMenuNotificaciones > button:last-child { border-bottom-color: transparent; }
-.listaMenuNotificaciones > button:hover { border-color: var(--line); background: var(--surface-soft); }
-.listaMenuNotificaciones > button span { color: var(--primary); font-size: .63rem; font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
-.listaMenuNotificaciones > button strong { font-size: .83rem; }
-.listaMenuNotificaciones > button p { overflow: hidden; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: .77rem; line-height: 1.36; }
+.listaMenuNotificaciones > article { position:relative; border-bottom:1px solid var(--line); border-radius:5px; }
+.listaMenuNotificaciones > article:last-child { border-bottom-color:transparent; }
+.contenidoNotificacion { width:100%; display:grid; gap:.25rem; padding:.72rem 2.75rem .72rem .75rem; border:1px solid transparent; border-radius:5px; color:var(--ink); background:transparent; text-align:left; }
+.contenidoNotificacion:hover { border-color:var(--line); background:var(--surface-soft); }
+.contenidoNotificacion span { color:var(--primary); font-size:.63rem; font-weight:850; letter-spacing:.06em; text-transform:uppercase; }
+.contenidoNotificacion strong { font-size:.83rem; }.contenidoNotificacion p { overflow:hidden; color:var(--muted); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; font-size:.77rem; line-height:1.36; }
+.descartarNotificacion { position:absolute; top:.55rem; right:.5rem; width:1.5rem; height:1.5rem; padding:0; border:0; border-radius:4px; color:var(--muted); background:transparent; font-size:1.15rem; line-height:1; }.descartarNotificacion:hover { color:#a42121; background:#fff1f2; }
 .itemNotificacionNueva { border-left: 3px solid var(--primary) !important; background: color-mix(in srgb, var(--primary) 4%, var(--surface)) !important; }
 @media (max-width: 820px) { .menuNotificaciones { position: fixed; top: 3.7rem; right: .75rem; width: min(28rem, calc(100vw - 1.5rem)); max-height: calc(100dvh - 4.5rem); } }/* Actas: carga de archivo compacta y legible en móvil. */
 .actasApi .formulario {

@@ -21,6 +21,11 @@ export class CreatePrestamosDocenteDto {
   @MaxLength(50)
   docenteNuevoDocumento?: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  docenteNuevoProyecto?: string;
+
   @IsUUID()
   aulaId!: string;
 

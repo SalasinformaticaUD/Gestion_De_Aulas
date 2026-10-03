@@ -27,6 +27,20 @@ export const cambiarContrasenaActual = (contrasenaActual: string, nuevaContrasen
     },
   );
 
+export async function cambiarNombreUsuario(nombreUsuario: string, contrasenaActual: string) {
+  const respuesta = await solicitarAulas<{ nombreUsuario: string }>(
+    "/auth/cambiar-nombre-usuario",
+    token(),
+    {
+      method: "POST",
+      body: JSON.stringify({ nombreUsuario, contrasenaActual }),
+      notificarAutorizacion: false,
+    },
+  );
+  actualizarUsuarioSesion(respuesta);
+  return respuesta;
+}
+
 export async function actualizarFotoPerfil(fotoPerfil: string | null) {
   const respuesta = await solicitarAulas<{ fotoPerfil: string | null }>(
     "/auth/foto-perfil",

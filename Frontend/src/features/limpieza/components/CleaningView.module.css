@@ -180,6 +180,15 @@ html[data-theme="dark"] .downloadButton:hover { color:#fff; background:#a51022; 
 .occupancyConfirmation { display:grid; gap:8px; padding:12px; border:1px solid #efc06a; border-radius:7px; color:#78460a; background:#fff8e8; }
 .occupancyConfirmation span { color:#5e4a2f; font-size:13px; line-height:1.45; }
 .occupancyConfirmation>div { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:8px; }
+.confirmationModalBody { display:grid; gap:13px; padding:20px; }
+.confirmationModalBody>p { margin:0; color:var(--ink); font-size:14.3px; line-height:1.5; }
+.confirmationModalBody>footer { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:8px; margin-top:3px; }
+.confirmationModalBody>footer button { min-height:38px; padding:0 14px; }
+.confirmationWarning { display:grid; gap:5px; padding:12px 13px; border:1px solid #efc06a; border-radius:7px; color:#78460a; background:#fff8e8; }
+.confirmationWarning strong,.confirmationWarning p { margin:0; }
+.confirmationWarning p { color:#5e4a2f; font-size:13px; line-height:1.45; }
+:global(html[data-theme="dark"]) .confirmationWarning { border-color:#805f28; color:#ffd38a; background:#332812; }
+:global(html[data-theme="dark"]) .confirmationWarning p { color:#e7d1aa; }
 .removeButton { min-height:38px; padding:0 14px; border:1px solid #e99ca7; border-radius:7px; color:#a51022; background:#fff5f6; font-size:14px; font-weight:750; }
 .removeButton:hover { color:#fff; background:#a51022; }
 @media (max-width:1080px) {

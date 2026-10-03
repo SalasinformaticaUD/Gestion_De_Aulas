@@ -27,7 +27,10 @@ export function ModuleSwitcher({ current, onNavigate }: { current: ApplicationKe
   const tieneTokenCentral = sesion?.origen !== "monitores-local" && Boolean(sesion?.tokenAcceso);
   const tieneAccesoDestino = tieneAccesoAplicacion(target.key, sesion) || (current === "monitores" && puedeCambiarAAulas && tieneTokenCentral);
   // Hasta cargar la sesión no se presenta un destino por defecto.
-  if (sesion === undefined || sesion === null || !tieneAccesoDestino || !puedeCambiarAAulas) return null;
+  // Una sesión autorizada en ambos aplicativos siempre puede alternar entre ellos.
+  // La validación especial solo conserva el acceso de respaldo desde Monitores
+  // cuando la autorización de Aulas aún no quedó registrada en la sesión.
+  if (sesion === undefined || sesion === null || !tieneAccesoDestino) return null;
   const sesionActual = sesion;
   const cambiar = () => {
     if (!tieneAccesoAplicacion(target.key, sesionActual)) {

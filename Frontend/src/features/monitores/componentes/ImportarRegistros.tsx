@@ -266,7 +266,7 @@ export function ImportarRegistros() {
           <h1>Registros</h1>
           <p>
             Consulte los monitores del periodo actual, sus registros y los
-            históricos académicos.
+            históricos académicos. El formato de carga corresponde al archivo generado por Croschex.
           </p>
         </div>
         <div className={estilos.encabezadoAcciones}>
@@ -358,15 +358,21 @@ export function ImportarRegistros() {
               <h2>Monitores del periodo actual</h2>
               <p>Solo se muestran cuentas activas del semestre vigente.</p>
             </div>
-            <SelectorDependenciaAdmin visible={perfil.datos.role === "admin"} value={dependenciaActual} onChange={setDependenciaActual} />
+          </header>
+          <div className={`${estilos.barraHerramientas} ${estilos.filtrosRegistros} ${estilos.controlesPeriodoActual}`}>
+            <SelectorDependenciaAdmin
+              visible={perfil.datos.role === "admin"}
+              value={dependenciaActual}
+              onChange={setDependenciaActual}
+            />
             <button
               type="button"
-              className={estilos.botonSecundario}
+              className={`${estilos.botonSecundario} ${estilos.accionFiltroRegistros}`}
               onClick={exportarActuales}
             >
               Generar Excel
             </button>
-          </header>
+          </div>
           <div className={estilos.tablaContenedor}>
             <table
               className={`${estilos.tabla} ${estilos.tablaRegistrosPrincipal}`}
@@ -456,8 +462,8 @@ export function ImportarRegistros() {
       )}{" "}
       {vista === "HISTORICO" && (
         <section className={estilos.tarjeta}>
-          <div className={estilos.barraHerramientas}>
-            <label className={estilos.campoAncho}>
+          <div className={`${estilos.barraHerramientas} ${estilos.filtrosRegistros}`}>
+            <label className={`${estilos.campoAncho} ${estilos.buscadorRegistros}`}>
               <span>Monitor</span>
               <input
                 value={buscar}
@@ -576,7 +582,7 @@ export function ImportarRegistros() {
               <div>
                 <span className={estilos.etiqueta}>Carga Excel</span>
                 <h2 id="titulo-carga-registros">Cargar registros</h2>
-                <p>Seleccione un archivo .xlsx de máximo 10 MB.</p>
+                <p>Seleccione un archivo .xlsx de máximo 10 MB. El formato requerido corresponde al archivo generado por Croschex.</p>
               </div>
               <button
                 type="button"

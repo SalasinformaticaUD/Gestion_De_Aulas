@@ -66,6 +66,7 @@ export type SesionApi = {
   id: string;
   monitor: string;
   monitor_name: string;
+  semester?: string | null;
   work_day: string;
   actual_start: string | null;
   actual_end: string | null;
@@ -249,6 +250,13 @@ export type PanelMonitorApi = {
   late_count: number;
 };
 export type RegistrosPersonalesApi = {
+  monitorings: Array<{
+    id: string;
+    semester: string | null;
+    semester_is_active: boolean | null;
+    is_active: boolean;
+    department: string;
+  }>;
   monitor: Pick<MonitorApi, "id" | "full_name" | "codigo_estudiante" | "numero_documento" | "proyecto_curricular" | "telefono" | "semester" | "semester_is_active" | "department" | "is_active"> & { proyecto_curricular_label: string };
   sessions: SesionApi[];
   schedules: HorarioApi[];

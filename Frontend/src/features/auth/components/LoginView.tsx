@@ -51,15 +51,22 @@ export function LoginView() {
     setIsValidating(true);
 
     try {
+      const identificador = username.trim();
       const iniciarSesionCentral = async () => {
         const central = await solicitarAulas<RespuestaLoginCentral>("/auth/login", undefined, {
           method: "POST",
-          body: JSON.stringify({ identificador: username.trim(), password }),
+          body: JSON.stringify({ identificador, password }),
         });
         const permitido = application.key === "monitores"
           ? central.aplicaciones.puedeAccederMonitores
           : central.aplicaciones.puedeAccederAulas;
         if (!permitido) throw new Error(`Su usuario no tiene permisos para ${application.name}.`);
+        if (
+          application.key === "monitores"
+          && central.usuario.nombreUsuario.toLocaleLowerCase() !== identificador.toLocaleLowerCase()
+        ) {
+          throw new Error("Los líderes deben ingresar con su nombre de usuario.");
+        }
         const aplicacionesAutorizadas = [
           ...(central.aplicaciones.puedeAccederAulas ? ["aulas" as const] : []),
           ...(central.aplicaciones.puedeAccederMonitores ? ["monitores" as const] : []),
@@ -67,18 +74,10 @@ export function LoginView() {
         guardarSesion({ aplicacion: application.key, tokenAcceso: central.accessToken, origen: "central", expiraEn: Date.now() + central.expiresIn * 1000, usuario: central.usuario, aplicacionesAutorizadas });
       };
 
-      try {
-        // La cuenta central es la fuente de identidad para ambos aplicativos.
-        // Así, ingresar desde Monitores funciona igual que ingresar desde Aulas.
-        await iniciarSesionCentral();
-      } catch (problemaCentral) {
-        // Se conserva el acceso de las cuentas históricas que únicamente
-        // existen en Monitores. Otros errores (incluido 429) no deben generar
-        // un segundo intento ni ocultar el diagnóstico recibido.
-        if (application.key !== "monitores" || !(problemaCentral instanceof ErrorApi) || problemaCentral.estado !== 401) throw problemaCentral;
+      const iniciarSesionLocalMonitores = async () => {
         const local = await solicitarMonitores<RespuestaLoginMonitores>("/api/v1/auth/login/", {
           method: "POST",
-          body: JSON.stringify({ username: username.trim(), password }),
+          body: JSON.stringify({ username: identificador, password }),
         });
         const nombreCompleto = `${local.first_name} ${local.last_name}`.trim() || local.username;
         guardarSesion({
@@ -100,6 +99,20 @@ export function LoginView() {
           },
           aplicacionesAutorizadas: ["monitores"],
         });
+      };
+
+      if (application.key === "monitores") {
+        try {
+          await iniciarSesionLocalMonitores();
+        } catch (problemaLocal) {
+          const credencialesLocalesInvalidas = problemaLocal instanceof ErrorApi
+            && [400, 401].includes(problemaLocal.estado);
+          const puedeSerUsuarioCentral = !identificador.includes("@") && !/^\d+$/.test(identificador);
+          if (!credencialesLocalesInvalidas || !puedeSerUsuarioCentral) throw problemaLocal;
+          await iniciarSesionCentral();
+        }
+      } else {
+        await iniciarSesionCentral();
       }
       setFeedback("success");
       const destino = nextPath?.startsWith("/") ? nextPath : application.destination;
@@ -126,12 +139,12 @@ export function LoginView() {
           <p>{isValidating ? "Validando su información..." : "Por favor, introduzca sus credenciales de acceso institucional."}</p>
 
           <label className="login-field">
-            <span>Usuario</span>
+            <span>{application.key === "monitores" ? "Código o usuario" : "Usuario"}</span>
             <input
               autoComplete="username"
               disabled={isValidating}
               onChange={(event) => setUsername(event.target.value)}
-              placeholder="Ingrese su correo o código"
+              placeholder={application.key === "monitores" ? "Código estudiantil o usuario de líder" : "Ingrese su usuario o correo"}
               type="text"
               value={username}
             />

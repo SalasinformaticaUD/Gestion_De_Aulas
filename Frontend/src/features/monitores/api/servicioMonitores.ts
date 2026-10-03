@@ -17,8 +17,8 @@ export const servicioMonitores = {
     const datos = new FormData(); datos.append("file", archivo); datos.append("confirm_repeating_monitors", String(confirm_repeating_monitors));
     return solicitarMonitores<{ total_rows: number; created: number; skipped: Array<{ row_number: number; email: string; reason: string }>; errors: Array<{ row_number: number; email: string; reason: string }> }>("/api/v1/monitors/import/", { method: "POST", body: datos });
   },
-  previsualizarNuevoSemestre: () => solicitarMonitores<{ preview: Record<string, number> }>("/api/v1/monitors/new-semester/"),
-  iniciarNuevoSemestre: (new_semester_name: string, starts_on: string, ends_on: string) => solicitarMonitores<{ archived_semester: string; new_semester: string; starts_on: string; ends_on: string; affected: Record<string, number> }>("/api/v1/monitors/new-semester/", { method: "POST", body: JSON.stringify({ new_semester_name, starts_on, ends_on, confirm: true }) }),
+  previsualizarNuevoSemestre: () => solicitarMonitores<{ preview: Record<string, number> }>("/api/v1/monitors/new-semester/", { signal: AbortSignal.timeout(30000) }),
+  iniciarNuevoSemestre: (new_semester_name: string, starts_on: string, ends_on: string, password: string) => solicitarMonitores<{ archived_semester: string; new_semester: string; starts_on: string; ends_on: string; affected: Record<string, number> }>("/api/v1/monitors/new-semester/", { method: "POST", body: JSON.stringify({ new_semester_name, starts_on, ends_on, password, confirm: true }), signal: AbortSignal.timeout(60000) }),
   verificarContrasenaActual: (password: string) => solicitarAulas<{ valido: boolean }>("/auth/verificar-contrasena", obtenerSesion()?.tokenAcceso, { method: "POST", body: JSON.stringify({ password }) }),
   obtenerPerfilMonitores: async () => {
     const perfil = await solicitarMonitores<{ role: string; department?: string | null }>("/api/v1/auth/me/");
@@ -30,7 +30,7 @@ export const servicioMonitores = {
   restablecerClaveUsuarioGestion: (id:string, password:string) => solicitarMonitores(`/api/v1/auth/users/${id}/password/`, { method:"POST", body:JSON.stringify({ password }) }),
   obtenerDashboard: (department?: string) => solicitarMonitores<DashboardApi>(`/api/v1/reports/dashboard/${department ? `?department=${encodeURIComponent(department)}` : ""}`),
   obtenerMiDashboardMonitor: () => solicitarMonitores<PanelMonitorApi>("/api/v1/reports/dashboard/me/"),
-  obtenerMisRegistros: () => solicitarMonitores<RegistrosPersonalesApi>("/api/v1/reports/monitor-records/me/"),
+  obtenerMisRegistros: (monitorId?: string) => solicitarMonitores<RegistrosPersonalesApi>(`/api/v1/reports/monitor-records/me/${monitorId ? `?monitor_id=${encodeURIComponent(monitorId)}` : ""}`),
   listarHorarios: () => solicitarMonitores<HorarioApi[]>("/api/v1/schedules/"),
   listarPaginaHorarios: (pagina = 1) => solicitarMonitores<PaginaApi<HorarioApi>>(`/api/v1/schedules/?page=${pagina}&page_size=20`),
   crearHorario: (payload: Pick<HorarioApi, "monitor" | "weekday" | "start_time" | "end_time" | "asignatura" | "grupo" | "docente" | "proyecto_curricular" | "location" | "is_active">) =>
@@ -40,6 +40,7 @@ export const servicioMonitores = {
   eliminarHorario: (id: string) => solicitarMonitores<void>(`/api/v1/schedules/${id}/`, { method: "DELETE" }),
   importarHorarios: (archivo: File) => { const datos = new FormData(); datos.append("file", archivo); return solicitarMonitores<{ total_rows: number; created: number; skipped: Array<{ row_number: number; monitor_email: string; reason: string }>; errors: Array<{ row_number: number; monitor_email: string; reason: string }> }>("/api/v1/schedules/import/", { method: "POST", body: datos }); },
   listarExcepciones: () => solicitarMonitores<ExcepcionApi[]>("/api/v1/schedules/exceptions/"),
+  obtenerSemestreActivo: () => solicitarMonitores<{ name: string; starts_on: string | null; ends_on: string | null }>("/api/v1/schedules/exceptions/active-semester/"),
   crearExcepcion: (payload: Omit<ExcepcionApi, "id" | "department_label" | "semester">) =>
     solicitarMonitores<ExcepcionApi>("/api/v1/schedules/exceptions/", { method: "POST", body: JSON.stringify(payload) }),
   actualizarExcepcion: (id: string, payload: Partial<Omit<ExcepcionApi, "id" | "department_label" | "semester">>) =>
@@ -52,6 +53,15 @@ export const servicioMonitores = {
     solicitarMonitores<AnotacionApi>(`/api/v1/annotations/${id}/`, { method: "PATCH", body: JSON.stringify(payload) }),
   eliminarAnotacion: (id: string) => solicitarMonitores<void>(`/api/v1/annotations/${id}/`, { method: "DELETE" }),
   listarSesiones: () => solicitarMonitores<SesionApi[]>("/api/v1/sessions/"),
+  listarHistorialHorasExtra: (pagina: number, filtros: { monitor: string; fecha: string; estado: string; semestre: string }) => {
+    const parametros = new URLSearchParams({ page: String(pagina), page_size: "8" });
+    if (filtros.monitor.trim()) parametros.set("monitor", filtros.monitor.trim());
+    if (filtros.fecha) parametros.set("work_day", filtros.fecha);
+    if (filtros.estado !== "TODOS") parametros.set("status", filtros.estado);
+    if (filtros.semestre) parametros.set("semester", filtros.semestre);
+    return solicitarMonitores<PaginaApi<SesionApi>>(`/api/v1/sessions/overtime-history/?${parametros.toString()}`);
+  },
+  listarSemestresHorasExtra: () => solicitarMonitores<string[]>("/api/v1/sessions/overtime-semesters/"),
   revisarHorasExtra: async (id: string, payload: { decision: "approve" | "reject"; note?: string; penalize_on_reject?: boolean }) => {
     return solicitarMonitores<SesionApi>(`/api/v1/sessions/${id}/review-overtime/`, { method: "POST", body: JSON.stringify(payload) });
   },
@@ -80,8 +90,14 @@ export const servicioMonitores = {
   listarReportes: () => solicitarMonitores<unknown[]>("/api/v1/reports/snapshots/"),
   listarNotificaciones: () => solicitarMonitores<DashboardApi["notifications"]>("/api/v1/notifications/"),
   marcarNotificacionLeida: (id: string) => solicitarMonitores<unknown>(`/api/v1/notifications/${id}/mark-read/`, { method: "POST" }),
+  descartarNotificacion: (id: string) => solicitarMonitores<unknown>(`/api/v1/notifications/${id}/dismiss/`, { method: "POST" }),
   listarMemorandos: () => solicitarMonitores<unknown[]>("/api/v1/reports/memorandums/"),
-  listarPaginaMemorandos: (pagina = 1) => solicitarMonitores<PaginaApi<unknown>>(`/api/v1/reports/memorandums/?page=${pagina}&page_size=20`),
+  listarPaginaMemorandos: (pagina = 1, vista: "current" | "historical" = "current", semestre = "") => {
+    const parametros = new URLSearchParams({ page: String(pagina), page_size: "20", scope: vista });
+    if (vista === "historical" && semestre) parametros.set("semester", semestre);
+    return solicitarMonitores<PaginaApi<unknown>>(`/api/v1/reports/memorandums/?${parametros.toString()}`);
+  },
+  listarSemestresMemorandos: () => solicitarMonitores<string[]>("/api/v1/reports/memorandums/semesters/"),
   reenviarMemorando: (id: string) => solicitarMonitores<unknown>(`/api/v1/reports/memorandums/${id}/resend/`, { method: "POST" }),
   descargarMemorando: (id: string) => descargarMonitores(`/api/v1/reports/memorandums/${id}/pdf/`),
   listarActasCompromiso: (semester?: string) => solicitarMonitores<unknown[]>(`/api/v1/reports/commitment-acts/${semester ? `?semester=${encodeURIComponent(semester)}` : ""}`),

@@ -85,7 +85,6 @@ export class PanelOperativoService {
     const alertas = [
       ...(await this.construirAlertasTareas(
         contexto.tareas,
-        contexto.aulas,
         query.fecha,
         contexto.bloque,
       )),
@@ -151,7 +150,6 @@ export class PanelOperativoService {
     return [
       ...(await this.construirAlertasTareas(
         contexto.tareas,
-        contexto.aulas,
         query.fecha,
         contexto.bloque,
       )),
@@ -165,6 +163,30 @@ export class PanelOperativoService {
         contexto.prestamos,
       ),
     ];
+  }
+
+  async tareasOperativas() {
+    const ahora = new Date();
+    const fecha = new Date(ahora.getTime() - 5 * 60 * 60 * 1000)
+      .toISOString().slice(0, 10);
+    const horaActual = Number(new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'America/Bogota', hour: '2-digit', hour12: false,
+    }).format(ahora));
+    const horaInicio = Math.min(20, Math.max(6, Math.floor(horaActual / 2) * 2));
+    const bloque = {
+      horaInicio: `${String(horaInicio).padStart(2, '0')}:00`,
+      horaFin: `${String(horaInicio + 2).padStart(2, '0')}:00`,
+    };
+    const tareas = await this.prisma.tarea.findMany({
+      where: { estado: EstadoTarea.PENDIENTE },
+      include: { aula: { select: { id: true, codigo: true } } },
+      orderBy: [{ prioridad: 'asc' }, { creadoEn: 'asc' }],
+    });
+    return {
+      fecha,
+      bloqueReferencia: bloque,
+      alertas: await this.construirAlertasTareas(tareas, fecha, bloque, ahora),
+    };
   }
 
   private async construirContexto(query: ConsultarPanelOperativoDto) {
@@ -463,9 +485,9 @@ export class PanelOperativoService {
       aulaId: string | null;
       aula: { id: string; codigo: string } | null;
     }>,
-    aulasActuales: DisponibilidadAula[],
     fecha: string,
     bloqueActual: { horaInicio: string; horaFin: string },
+    desde?: Date,
   ): Promise<AlertaOperativa[]> {
     if (!tareas.length) return [];
 
@@ -473,9 +495,6 @@ export class PanelOperativoService {
       string,
       { fecha: string; horaInicio: string; horaFin: string }
     >();
-    const disponibilidadActual = new Map(
-      aulasActuales.map((aula) => [aula.aula.id, aula.estadoCalculado]),
-    );
     const aulaIds = [
       ...new Set(
         tareas
@@ -484,18 +503,12 @@ export class PanelOperativoService {
       ),
     ];
 
-    for (const aulaId of aulaIds) {
-      if (disponibilidadActual.get(aulaId) === 'disponible') {
-        recomendaciones.set(aulaId, { fecha, ...bloqueActual });
-      }
-    }
-
-    const pendientes = aulaIds.filter((aulaId) => !recomendaciones.has(aulaId));
-    if (pendientes.length) {
+    if (aulaIds.length) {
       const futuras = await this.buscarBloquesDisponiblesEnLote(
-        pendientes,
+        aulaIds,
         fecha,
         bloqueActual,
+        desde,
       );
       for (const [aulaId, bloque] of futuras) {
         recomendaciones.set(aulaId, bloque);
@@ -512,7 +525,9 @@ export class PanelOperativoService {
         tipo: 'tarea-operativa',
         mensaje: bloque
           ? `“${tarea.titulo}” puede realizarse en ${tarea.aula?.codigo ?? 'el aula'} el ${this.fechaLegible(bloque.fecha)}, de ${bloque.horaInicio} a ${bloque.horaFin}.`
-          : `“${tarea.titulo}” sigue pendiente; no se encontró disponibilidad cercana para ${tarea.aula?.codigo ?? 'el aula'}.`,
+          : !tarea.aulaId
+            ? `“${tarea.titulo}”: No es posible calcular la disponibilidad porque no hay un aula asignada.`
+            : `“${tarea.titulo}” sigue pendiente; no se encontró un bloque disponible para ${tarea.aula?.codigo ?? 'el aula'} en los próximos 30 días de la consulta.`,
         aulaId: tarea.aulaId ?? undefined,
         aulaCodigo: tarea.aula?.codigo,
         origenId: tarea.id,
@@ -526,8 +541,9 @@ export class PanelOperativoService {
     aulaIds: string[],
     fecha: string,
     bloqueActual: { horaInicio: string; horaFin: string },
+    desde?: Date,
   ) {
-    const bloques = this.construirBloquesFuturos(fecha, bloqueActual);
+    const bloques = this.construirBloquesFuturos(fecha, bloqueActual, desde);
     const recomendaciones = new Map<
       string,
       { fecha: string; horaInicio: string; horaFin: string }
@@ -548,7 +564,6 @@ export class PanelOperativoService {
       restricciones,
       clases,
       prestamos,
-      practicas,
       tareas,
       limpiezas,
     ] = await Promise.all([
@@ -583,12 +598,20 @@ export class PanelOperativoService {
           },
         },
         select: {
+          id: true,
           aulaId: true,
           diaSemana: true,
           horaInicio: true,
           horaFin: true,
           periodo: {
             select: { fechaInicio: true, fechaFin: true },
+          },
+          asistencias: {
+            where: { fecha: {
+              gte: new Date(`${bloques[0].fecha}T00:00:00.000Z`),
+              lte: new Date(`${bloques[bloques.length - 1].fecha}T00:00:00.000Z`),
+            } },
+            select: { fecha: true, estado: true },
           },
         },
       }),
@@ -600,26 +623,6 @@ export class PanelOperativoService {
           fin: { gt: rangoInicio },
         },
         select: { aulaId: true, inicio: true, fin: true },
-      }),
-      this.prisma.practicaLibre.findMany({
-        where: {
-          aulaId: { in: aulaIds },
-          estado: EstadoPrestamo.ACTIVO,
-          inicio: { lt: rangoFin },
-          OR: [
-            { finReal: { gt: rangoInicio } },
-            {
-              finReal: null,
-              OR: [{ finEstimada: null }, { finEstimada: { gt: rangoInicio } }],
-            },
-          ],
-        },
-        select: {
-          aulaId: true,
-          inicio: true,
-          finEstimada: true,
-          finReal: true,
-        },
       }),
       this.prisma.tarea.findMany({
         where: {
@@ -672,17 +675,20 @@ export class PanelOperativoService {
             item.horaInicio.getUTCMinutes();
           const fin =
             item.horaFin.getUTCHours() * 60 + item.horaFin.getUTCMinutes();
+          const asistencia = item.asistencias?.find(
+            (registro) => registro.fecha.toISOString().slice(0, 10) === candidato.fecha,
+          )?.estado;
+          if (asistencia === EstadoAsistencia.AUSENTE) return false;
+          if (asistencia !== EstadoAsistencia.ASISTIO && desde && candidato.fecha === fecha) {
+            const inicioClase = new Date(`${candidato.fecha}T${String(Math.floor(inicio / 60)).padStart(2, '0')}:${String(inicio % 60).padStart(2, '0')}:00.000-05:00`);
+            if (desde.getTime() >= inicioClase.getTime() + 20 * 60 * 1000) return false;
+          }
           return inicio < candidato.minutoFin && fin > candidato.minutoInicio;
         });
         const conPrestamo = prestamos.some(
           (item) =>
             item.aulaId === aulaId && seSuperpone(item.inicio, item.fin),
         );
-        const conPractica = practicas.some((item) => {
-          if (item.aulaId !== aulaId) return false;
-          const fin = item.finReal ?? item.finEstimada;
-          return seSuperpone(item.inicio, fin);
-        });
         const conTarea = tareas.some((item) => {
           if (item.aulaId !== aulaId) return false;
           const inicio = item.inicio ?? rangoInicio;
@@ -698,7 +704,6 @@ export class PanelOperativoService {
           restringida ||
           conClase ||
           conPrestamo ||
-          conPractica ||
           conTarea ||
           conLimpieza
         );
@@ -717,6 +722,7 @@ export class PanelOperativoService {
   private construirBloquesFuturos(
     fecha: string,
     bloqueActual: { horaInicio: string; horaFin: string },
+    desde?: Date,
   ) {
     const bloques: Array<{
       fecha: string;
@@ -729,16 +735,16 @@ export class PanelOperativoService {
       minutoFin: number;
     }> = [];
     const base = new Date(`${fecha}T12:00:00.000-05:00`);
-    for (let dia = 0; dia < 4; dia += 1) {
+    for (let dia = 0; dia < 30; dia += 1) {
       const fechaCandidata = new Date(base.getTime() + dia * 86_400_000)
         .toISOString()
         .slice(0, 10);
       const primeraHora =
-        dia === 0 ? Number(bloqueActual.horaFin.slice(0, 2)) : 6;
+        dia === 0 ? Number(bloqueActual.horaInicio.slice(0, 2)) : 6;
       for (let hora = primeraHora; hora <= 20; hora += 2) {
         const horaInicio = `${String(hora).padStart(2, '0')}:00`;
         const horaFin = `${String(hora + 2).padStart(2, '0')}:00`;
-        bloques.push({
+        const candidato = {
           fecha: fechaCandidata,
           horaInicio,
           horaFin,
@@ -749,7 +755,8 @@ export class PanelOperativoService {
           ).getUTCDay(),
           minutoInicio: hora * 60,
           minutoFin: (hora + 2) * 60,
-        });
+        };
+        if (!desde || candidato.fin > desde) bloques.push(candidato);
       }
     }
     return bloques;

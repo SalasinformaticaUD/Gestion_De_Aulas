@@ -34,6 +34,13 @@ const moduleByRoute: Record<string, string> = {
 };
 const SCREEN_SAVER_IDLE_MS = 2.5 * 60 * 1000;
 
+function isMonitorProfile() {
+  const user = obtenerSesion()?.usuario;
+  return [...(user?.roles ?? []), user?.cargo ?? ""].some(
+    (value) => value.trim().toLocaleUpperCase("es-CO") === "MONITOR",
+  );
+}
+
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
   const navigationRef = useRef<HTMLElement>(null);
@@ -77,7 +84,7 @@ export function AppShell({ children }: AppShellProps) {
       const session = obtenerSesion();
       const roles = session?.usuario.roles ?? [];
       setIsAdministrator(roles.some((rol) => rol.trim().toUpperCase() === "ADMINISTRADOR"));
-      setIsMonitor(roles.some((rol) => rol.trim().toLocaleUpperCase("es-CO") === "MONITOR"));
+      setIsMonitor(isMonitorProfile());
       setAllowedModules(session?.usuario.modulos.map((module) => module.toUpperCase()) ?? []);
     };
     refreshAccess();

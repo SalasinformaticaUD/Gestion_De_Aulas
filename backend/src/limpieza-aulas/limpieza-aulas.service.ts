@@ -4,9 +4,7 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
-import {
-  EstadoAula,
-} from '../../generated/prisma/enums.js';
+import { EstadoAula } from '../../generated/prisma/enums.js';
 import type { Prisma } from '@prisma/client';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -39,9 +37,13 @@ export class LimpiezaAulasService {
 
   async create(input: CreateLimpiezaAulaDto, usuarioId?: string) {
     await this.ensureAulaExists(input.aulaId);
-    const realizadaEn = input.realizadaEn ? this.toDate(input.realizadaEn) : new Date();
+    const realizadaEn = input.realizadaEn
+      ? this.toDate(input.realizadaEn)
+      : new Date();
     this.asegurarFechaEditable(realizadaEn);
-    await this.asegurarIntervaloEntreLimpiezas(input.aulaId, realizadaEn);
+    if (!input.confirmarLimpiezaReciente) {
+      await this.asegurarIntervaloEntreLimpiezas(input.aulaId, realizadaEn);
+    }
     const limpieza = await this.prisma.limpieza.create({
       data: {
         aulaId: input.aulaId,
@@ -97,11 +99,13 @@ export class LimpiezaAulasService {
     if (input.aulaId && input.aulaId !== previa.aulaId) {
       await this.ensureAulaExists(input.aulaId);
     }
-    await this.asegurarIntervaloEntreLimpiezas(
-      input.aulaId ?? previa.aulaId,
-      realizadaEn,
-      id,
-    );
+    if (!input.confirmarLimpiezaReciente) {
+      await this.asegurarIntervaloEntreLimpiezas(
+        input.aulaId ?? previa.aulaId,
+        realizadaEn,
+        id,
+      );
+    }
     const limpieza = await this.prisma.limpieza.update({
       where: { id },
       data: {
@@ -109,9 +113,10 @@ export class LimpiezaAulasService {
         ...(input.realizadaEn !== undefined && { realizadaEn }),
         ...(input.estado !== undefined && { estado: input.estado }),
         ...(input.limpiarObservacion && { observacion: null }),
-        ...(!input.limpiarObservacion && input.observacion !== undefined && {
-          observacion: this.normalizarObservacion(input.observacion),
-        }),
+        ...(!input.limpiarObservacion &&
+          input.observacion !== undefined && {
+            observacion: this.normalizarObservacion(input.observacion),
+          }),
       },
       include: limpiezaInclude,
     });
@@ -129,7 +134,7 @@ export class LimpiezaAulasService {
 
   async findSugerencias(query: ConsultarSugerenciasLimpiezaDto) {
     const { inicio } = this.rangoDiaBogota(this.toDate(query.fecha));
-    const bloque = this.bloqueActualParaSugerencias(query.fecha);
+    const bloque = this.bloqueActualParaSugerencias();
     const disponibilidad = this.disponibilidad
       ? await this.disponibilidad.findAll({ fecha: query.fecha, ...bloque })
       : [];
@@ -144,23 +149,23 @@ export class LimpiezaAulasService {
       )
       .map((aula) => aula.aula.id);
     const aulas = await this.prisma.aula.findMany({
-        where: {
-          estado: EstadoAula.OPERATIVA,
-          eliminadoEn: null,
-          ...(this.disponibilidad && { id: { in: aulasRecomendables } }),
+      where: {
+        estado: EstadoAula.OPERATIVA,
+        eliminadoEn: null,
+        ...(this.disponibilidad && { id: { in: aulasRecomendables } }),
+      },
+      select: {
+        id: true,
+        codigo: true,
+        ubicacion: true,
+        limpiezas: {
+          select: { realizadaEn: true },
+          orderBy: { realizadaEn: 'desc' },
+          take: 1,
         },
-        select: {
-          id: true,
-          codigo: true,
-          ubicacion: true,
-          limpiezas: {
-            select: { realizadaEn: true },
-            orderBy: { realizadaEn: 'desc' },
-            take: 1,
-          },
-        },
-        orderBy: { codigo: 'asc' },
-      });
+      },
+      orderBy: { codigo: 'asc' },
+    });
     const sugerencias = aulas
       .map((aula) => {
         const ultimaLimpieza = aula.limpiezas[0]?.realizadaEn ?? null;
@@ -185,9 +190,6 @@ export class LimpiezaAulasService {
             : 'Sin historial de limpieza registrado.',
         };
       })
-      .filter(({ diasSinLimpieza }) =>
-        diasSinLimpieza === null || diasSinLimpieza >= 2,
-      )
       .sort((a, b) => {
         const prioridadA = a.diasSinLimpieza ?? Number.MAX_SAFE_INTEGER;
         const prioridadB = b.diasSinLimpieza ?? Number.MAX_SAFE_INTEGER;
@@ -199,8 +201,7 @@ export class LimpiezaAulasService {
 
     return {
       fecha: query.fecha,
-      criterio:
-        `Aulas operativas con dos o más días sin limpieza, ordenadas desde la que lleva más tiempo sin atención. Si están ocupadas en el bloque ${bloque.horaInicio}-${bloque.horaFin}, permanecen en la prioridad y se identifican como en clase.`,
+      criterio: `Aulas operativas ordenadas desde la que lleva más tiempo sin atención. Las atendidas hace menos de dos días requieren confirmación al registrar. Si están ocupadas en el bloque ${bloque.horaInicio}-${bloque.horaFin}, permanecen en la prioridad y se identifican como en clase.`,
       sugerencias,
     };
   }
@@ -374,7 +375,10 @@ export class LimpiezaAulasService {
         'No se permite registrar ni modificar una limpieza con fecha futura.',
       );
     }
-    if (fechaRegistro !== hoy && fechaRegistro !== ayer.toISOString().slice(0, 10)) {
+    if (
+      fechaRegistro !== hoy &&
+      fechaRegistro !== ayer.toISOString().slice(0, 10)
+    ) {
       throw new BadRequestException(
         'Solo se pueden registrar o modificar limpiezas del día actual o del día anterior.',
       );
@@ -392,7 +396,7 @@ export class LimpiezaAulasService {
         aulaId,
         ...(excluirId && { id: { not: excluirId } }),
         realizadaEn: {
-          gte: this.inicioDiasAntes(inicio, 2),
+          gte: this.inicioDiasAntes(inicio, 1),
           lt: fin,
         },
       },
@@ -400,7 +404,7 @@ export class LimpiezaAulasService {
     });
     if (registroReciente) {
       throw new BadRequestException(
-        'No se permite registrar limpieza: el aula ya fue atendida hoy o durante los dos días anteriores.',
+        'El aula fue atendida hace menos de dos días. Confirme si desea enviarla a limpieza otra vez.',
       );
     }
   }
@@ -418,13 +422,15 @@ export class LimpiezaAulasService {
     return { inicio, fin, diaSemana: inicio.getUTCDay() };
   }
 
-  private bloqueActualParaSugerencias(fecha: string) {
+  private bloqueActualParaSugerencias() {
     const partes = new Intl.DateTimeFormat('en-GB', {
       timeZone: 'America/Bogota',
       hour: '2-digit',
       hourCycle: 'h23',
     }).formatToParts(new Date());
-    const horaActual = Number(partes.find((parte) => parte.type === 'hour')?.value ?? 6);
+    const horaActual = Number(
+      partes.find((parte) => parte.type === 'hour')?.value ?? 6,
+    );
     const inicio = Math.min(20, Math.max(6, horaActual - (horaActual % 2)));
     return {
       horaInicio: `${String(inicio).padStart(2, '0')}:00`,

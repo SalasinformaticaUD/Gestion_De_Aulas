@@ -80,3 +80,8 @@
 .headingActions :global(.button-secondary:hover) { border-color:var(--primary)!important; color:var(--primary)!important; background:#fff!important; }
 :global(html[data-theme="dark"]) .headingActions :global(.button-secondary) { border-color:#50545e!important; color:#f1f3f5!important; background:#343841!important; }
 :global(html[data-theme="dark"]) .headingActions :global(.button-secondary:hover) { border-color:#ff7180!important; color:#ffb5be!important; background:#351f24!important; }
+.roomSuggestions button.selectedRoom { border:2px solid var(--primary); color:#7f1020; background:#ffe8eb; box-shadow:0 0 0 3px rgba(165,16,34,.16),0 5px 14px rgba(92,10,22,.12); transform:translateY(-1px); }
+.selectionBadge { display:inline-flex!important; align-items:center; margin-top:8px!important; padding:3px 7px; border-radius:999px; color:#fff!important; background:var(--primary); font-size:10.5px!important; font-weight:850!important; line-height:1.2; }
+.selectedRoomSummary { margin:10px 0 0; padding:9px 11px; border:1px solid #b6e9d1; border-radius:7px; color:#07684f; background:#eafaf2; font-size:13px; font-weight:750; }
+:global(html[data-theme="dark"]) .roomSuggestions button.selectedRoom { border-color:#ff7180; color:#fff; background:#48232a; box-shadow:0 0 0 3px rgba(255,113,128,.2); }
+:global(html[data-theme="dark"]) .selectedRoomSummary { border-color:#376750; color:#9ee2bd; background:#183328; }

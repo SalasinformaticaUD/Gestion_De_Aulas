@@ -8,7 +8,7 @@ import {
   type DisponibilidadApi,
   type ResumenDisponibilidadDiaApi,
 } from "@/features/disponibilidad/api/disponibilidadApi";
-import { consultarResumenPanel, type ResumenPanelOperativo } from "@/features/dashboard/api/panelOperativoApi";
+import { consultarTareasOperativas, type ResumenTareasOperativas } from "@/features/dashboard/api/panelOperativoApi";
 import styles from "./AvailabilityView.module.css";
 
 type View = "bloque" | "dia" | "tareas";
@@ -36,7 +36,9 @@ export function AvailabilityView() {
   const [horaInicio, setHoraInicio] = useState(bloqueActualBogota);
   const [resultados, setResultados] = useState<DisponibilidadApi[]>([]);
   const [resumenDia, setResumenDia] = useState<ResumenDisponibilidadDiaApi | null>(null);
-  const [resumenTareas, setResumenTareas] = useState<ResumenPanelOperativo | null>(null);
+  const [resumenTareas, setResumenTareas] = useState<ResumenTareasOperativas | null>(null);
+  const [cargandoTareas, setCargandoTareas] = useState(true);
+  const [busquedaAulaTareas, setBusquedaAulaTareas] = useState("");
   const [filtro, setFiltro] = useState("todos");
   const [busquedaDia, setBusquedaDia] = useState("");
   const [filtroDia, setFiltroDia] = useState("todos");
@@ -63,19 +65,34 @@ export function AvailabilityView() {
 
   const cargarTareas = useCallback(async () => {
     try {
+      setCargandoTareas(true);
       setError(null);
-      setResumenTareas(await consultarResumenPanel(fecha, undefined, false, horaInicio));
+      setResumenTareas(await consultarTareasOperativas());
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No fue posible consultar las tareas operativas.");
+    } finally {
+      setCargandoTareas(false);
     }
-  }, [fecha, horaInicio]);
+  }, []);
 
   useEffect(() => {
-    const cargar = view === "bloque" ? cargarBloque : view === "dia" ? cargarDia : cargarTareas;
+    void cargarTareas();
+  }, [cargarTareas]);
+
+  useEffect(() => {
+    if (view !== "tareas") return;
+    void cargarTareas();
+    const timer = window.setInterval(() => void cargarTareas(), 60000);
+    return () => window.clearInterval(timer);
+  }, [cargarTareas, view]);
+
+  useEffect(() => {
+    if (view === "tareas") return;
+    const cargar = view === "bloque" ? cargarBloque : cargarDia;
     void cargar();
     const timer = window.setInterval(() => void cargar(), 60000);
     return () => window.clearInterval(timer);
-  }, [cargarBloque, cargarDia, cargarTareas, view]);
+  }, [cargarBloque, cargarDia, view]);
 
   const visibles = useMemo(
     () => resultados.filter((item) => filtro === "todos" || item.estadoCalculado === filtro),
@@ -85,7 +102,6 @@ export function AvailabilityView() {
   return <>
     <section className={`page-heading ${styles.heading}`}>
       <div><h1>Disponibilidad de Aulas</h1><p>Estado calculado con clases, asistencia, reservas y restricciones operativas.</p></div>
-      <div className={styles.calculated}>Actualizado · {fecha}{view === "bloque" || view === "tareas" ? ` · ${horaInicio}–${horaFin}` : " · Jornada completa"}</div>
     </section>
 
     <nav className={styles.viewTabs} aria-label="Vistas de disponibilidad">
@@ -94,52 +110,54 @@ export function AvailabilityView() {
       <button type="button" className={view === "tareas" ? styles.active : ""} aria-current={view === "tareas" ? "page" : undefined} onClick={() => setView("tareas")}>Tareas operativas</button>
     </nav>
 
-    <section className={`${styles.timePanel} ${view === "dia" ? styles.dayTimePanel : view === "tareas" ? styles.tasksTimePanel : ""}`}>
+    {view !== "tareas" && <section className={`${styles.timePanel} ${view === "dia" ? styles.dayTimePanel : ""}`}>
       <label className={styles.control}><span>Fecha</span><input type="date" value={fecha} onChange={(event) => setFecha(event.target.value)} /></label>
-      {(view === "bloque" || view === "tareas") && <label className={styles.control}><span>Bloque</span><select value={horaInicio} onChange={(event) => setHoraInicio(event.target.value)}>{bloques.map((bloque) => <option key={bloque} value={bloque}>{bloque}–{String(Number(bloque.slice(0, 2)) + 2).padStart(2, "0")}:00</option>)}</select></label>}
+      {view === "bloque" && <label className={styles.control}><span>Bloque</span><select value={horaInicio} onChange={(event) => setHoraInicio(event.target.value)}>{bloques.map((bloque) => <option key={bloque} value={bloque}>{bloque}–{String(Number(bloque.slice(0, 2)) + 2).padStart(2, "0")}:00</option>)}</select></label>}
       {view === "dia" && <div className={styles.dayRange}><span>Jornada consultada</span><strong>{resumenDia ? `${resumenDia.rangoOperativo.horaInicio}–${resumenDia.rangoOperativo.horaFin}` : "06:00–22:00"}</strong><small>Bloques de dos horas</small></div>}
-      {view === "tareas" && <div className={styles.dayRange}><span>Vista de tareas</span><strong>{resumenTareas?.bloqueReferencia.horaInicio ?? "—"}–{resumenTareas?.bloqueReferencia.horaFin ?? "—"}</strong><small>Recomendaciones de disponibilidad</small></div>}
-    </section>
+    </section>}
+
+    {view === "tareas" && <div className={styles.tasksSearch}><label className={styles.control}><span>Buscar por aula</span><input type="search" value={busquedaAulaTareas} onChange={(event) => setBusquedaAulaTareas(event.target.value)} placeholder="Código del aula" /></label><p>Se calcula automáticamente la oportunidad más cercana para cada aula.</p></div>}
 
     {error && <p className={styles.empty}>{error}</p>}
     {view === "bloque"
       ? <BlockAvailability resultados={resultados} visibles={visibles} filtro={filtro} onFilter={setFiltro} />
       : view === "dia"
         ? <DailyAvailability resumen={resumenDia} query={busquedaDia} filter={filtroDia} onQuery={setBusquedaDia} onFilter={setFiltroDia} />
-        : <OperationalTasks resumen={resumenTareas} />}
+        : <OperationalTasks resumen={resumenTareas} cargando={cargandoTareas} busquedaAula={busquedaAulaTareas} />}
   </>;
 }
 
-function OperationalTasks({ resumen }: { resumen: ResumenPanelOperativo | null }) {
+function OperationalTasks({ resumen, cargando, busquedaAula }: { resumen: ResumenTareasOperativas | null; cargando: boolean; busquedaAula: string }) {
   const tareasPorAula = useMemo(
     () => (resumen?.alertas.filter((alerta) => alerta.tipo === "tarea-operativa") ?? [])
-      .reduce<Array<{ aula: string; tareas: ResumenPanelOperativo["alertas"] }>>((grupos, tarea) => {
+      .reduce<Array<{ aula: string; tareas: ResumenTareasOperativas["alertas"] }>>((grupos, tarea) => {
         const aula = tarea.aulaCodigo ?? "Sin aula asignada";
         const grupo = grupos.find((actual) => actual.aula === aula);
         if (grupo) grupo.tareas.push(tarea);
         else grupos.push({ aula, tareas: [tarea] });
         return grupos;
       }, [])
+      .filter((grupo) => grupo.aula.toLocaleLowerCase("es").includes(busquedaAula.trim().toLocaleLowerCase("es")))
       .sort((a, b) => {
         if (a.aula === "Sin aula asignada") return 1;
         if (b.aula === "Sin aula asignada") return -1;
         return a.aula.localeCompare(b.aula, "es", { numeric: true });
       }),
-    [resumen],
+    [resumen, busquedaAula],
   );
   const totalTareas = tareasPorAula.reduce((total, grupo) => total + grupo.tareas.length, 0);
 
   return <section className={styles.tasksCard}>
-    <header><div><h2>Tareas operativas por bloque</h2><p>Recomendaciones para el bloque seleccionado, organizadas por aula.</p></div><span>{totalTareas} pendiente{totalTareas === 1 ? "" : "s"}</span></header>
+    <header><div><h2>Tareas operativas</h2><p>Primera oportunidad disponible para cada aula, organizada por aula.</p></div><span>{totalTareas} pendiente{totalTareas === 1 ? "" : "s"}</span></header>
     <div className={styles.tasksList}>
-      {tareasPorAula.length ? tareasPorAula.map((grupo) => <section className={styles.taskRoom} key={grupo.aula}>
+      {cargando && !resumen ? <div className={styles.tasksEmpty}>Calculando la primera disponibilidad de cada tarea…</div> : tareasPorAula.length ? tareasPorAula.map((grupo) => <section className={styles.taskRoom} key={grupo.aula}>
         <h3>{grupo.aula === "Sin aula asignada" ? grupo.aula : `Aula ${grupo.aula}`}</h3>
-        {grupo.tareas.map((tarea) => <article key={tarea.id} className={styles[`task_${tarea.severidad}`]}>
+        {grupo.tareas.map((tarea) => <article key={tarea.id} className={`${styles[`task_${tarea.severidad}`]} ${tarea.mensaje.length > 120 ? styles.taskLong : ""}`}>
           <header><span>{tarea.severidad}</span></header>
           <p>{tarea.mensaje}</p>
           <Link href={tarea.enlace ?? "/tareas"}>{tarea.accion ?? "Revisar tarea"} →</Link>
         </article>)}
-      </section>) : <div className={styles.empty}>No hay tareas operativas pendientes para este bloque.</div>}
+      </section>) : <div className={styles.tasksEmpty}>{busquedaAula ? "No hay tareas para el aula buscada." : "No hay tareas operativas pendientes."}</div>}
     </div>
   </section>;
 }

@@ -26,6 +26,8 @@ describe('PanelOperativoService', () => {
   };
   let service: PanelOperativoService;
 
+  afterEach(() => jest.useRealTimers());
+
   beforeEach(() => {
     jest.clearAllMocks();
     disponibilidad.findAll.mockResolvedValue([
@@ -211,7 +213,7 @@ describe('PanelOperativoService', () => {
     );
   });
 
-  it('omite un bloque futuro ocupado y recomienda el siguiente', async () => {
+  it('recomienda el bloque actual si está libre, aunque haya clases después', async () => {
     prisma.tarea.findMany
       .mockResolvedValueOnce([
         {
@@ -249,7 +251,59 @@ describe('PanelOperativoService', () => {
       (item) => item.tipo === 'tarea-operativa',
     );
     expect(alerta).toMatchObject({ severidad: 'info' });
-    expect(alerta?.mensaje).toContain('de 12:00 a 14:00');
+    expect(alerta?.mensaje).toContain('de 08:00 a 10:00');
+  });
+
+  it('consulta todas las tareas, incluidas las que no tienen aula, sin cargar el resumen', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-08-20T13:30:00.000Z'));
+    prisma.tarea.findMany.mockResolvedValueOnce([
+      { id: 'sin-aula', titulo: 'Inventariar', aulaId: null, aula: null },
+      ...Array.from({ length: 13 }, (_, index) => ({
+        id: `tarea-${index}`,
+        titulo: `Revisión ${index}`,
+        aulaId: 'aula-2',
+        aula: { id: 'aula-2', codigo: 'LAB-02' },
+      })),
+    ]);
+
+    const resultado = await service.tareasOperativas();
+
+    expect(resultado.alertas).toHaveLength(14);
+    expect(resultado.alertas[0].mensaje).toContain('No es posible calcular la disponibilidad porque no hay un aula asignada.');
+    expect(resultado.alertas[1].mensaje).toContain('de 08:00 a 10:00');
+    expect(disponibilidad.findAll).not.toHaveBeenCalled();
+    expect(prisma.practicaLibre.findMany).not.toHaveBeenCalled();
+    expect(prisma.tarea.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { estado: 'PENDIENTE' },
+    }));
+    jest.useRealTimers();
+  });
+
+  it('libera el bloque actual para tareas cuando el docente está ausente', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-08-20T13:30:00.000Z'));
+    prisma.tarea.findMany.mockResolvedValueOnce([{ id: 'tarea-1', titulo: 'Revisar red', aulaId: 'aula-1', aula: { id: 'aula-1', codigo: 'LAB-01' } }]);
+    prisma.claseProgramada.findMany.mockResolvedValue([{
+      id: 'clase-1', aulaId: 'aula-1', diaSemana: 4,
+      horaInicio: new Date(Date.UTC(1970, 0, 1, 8)),
+      horaFin: new Date(Date.UTC(1970, 0, 1, 10)),
+      periodo: { fechaInicio: new Date('2026-01-01'), fechaFin: new Date('2026-12-31') },
+      asistencias: [{ fecha: new Date('2026-08-20T00:00:00.000Z'), estado: 'ASISTIO' }],
+    }]);
+
+    const ocupada = await service.tareasOperativas();
+    expect(ocupada.alertas[0].mensaje).toContain('de 10:00 a 12:00');
+
+    prisma.tarea.findMany.mockResolvedValueOnce([{ id: 'tarea-1', titulo: 'Revisar red', aulaId: 'aula-1', aula: { id: 'aula-1', codigo: 'LAB-01' } }]);
+    prisma.claseProgramada.findMany.mockResolvedValue([{
+      id: 'clase-1', aulaId: 'aula-1', diaSemana: 4,
+      horaInicio: new Date(Date.UTC(1970, 0, 1, 8)),
+      horaFin: new Date(Date.UTC(1970, 0, 1, 10)),
+      periodo: { fechaInicio: new Date('2026-01-01'), fechaFin: new Date('2026-12-31') },
+      asistencias: [{ fecha: new Date('2026-08-20T00:00:00.000Z'), estado: 'AUSENTE' }],
+    }]);
+    const liberada = await service.tareasOperativas();
+
+    expect(liberada.alertas[0].mensaje).toContain('de 08:00 a 10:00');
   });
 
   it('mantiene como advertencia una tarea sin aula operativa disponible', async () => {
@@ -274,7 +328,7 @@ describe('PanelOperativoService', () => {
         tipo: 'tarea-operativa',
         severidad: 'advertencia',
         mensaje:
-          '“Revisar cableado” sigue pendiente; no se encontró disponibilidad cercana para LAB-03.',
+          '“Revisar cableado” sigue pendiente; no se encontró un bloque disponible para LAB-03 en los próximos 30 días de la consulta.',
       }),
     );
   });

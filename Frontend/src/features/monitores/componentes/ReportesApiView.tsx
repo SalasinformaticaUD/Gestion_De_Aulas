@@ -51,6 +51,10 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
   const [archivoActa, setArchivoActa] = useState<File | null>(null);
   const [paginaMemorandos, setPaginaMemorandos] = useState(1);
   const [totalMemorandos, setTotalMemorandos] = useState(0);
+  const [vistaMemorandos, setVistaMemorandos] = useState<"ACTUAL" | "HISTORICO">("ACTUAL");
+  const [semestreMemorandos, setSemestreMemorandos] = useState("");
+  const [semestresMemorandos, setSemestresMemorandos] = useState<string[]>([]);
+  const solicitudMemorandos = useRef(0);
   const selectorArchivoActa = useRef<HTMLInputElement>(null);
   const cargarDocumentos = useCallback(async () => {
     if (perfil.cargando) return;
@@ -61,9 +65,19 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
         return;
       }
       if (tipo === "memorandos") {
-        const documentos = await servicioMonitores.listarPaginaMemorandos(paginaMemorandos);
+        const solicitud = ++solicitudMemorandos.current;
+        const [documentos, semestres] = await Promise.all([
+          servicioMonitores.listarPaginaMemorandos(
+            paginaMemorandos,
+            vistaMemorandos === "HISTORICO" ? "historical" : "current",
+            semestreMemorandos,
+          ),
+          servicioMonitores.listarSemestresMemorandos(),
+        ]);
+        if (solicitud !== solicitudMemorandos.current) return;
         setRows(documentos.results as Fila[]);
         setTotalMemorandos(documentos.count);
+        setSemestresMemorandos([...new Set(semestres)]);
         setMonitores([]);
         return;
       }
@@ -88,7 +102,7 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
           : "No fue posible cargar los documentos.",
       );
     }
-  }, [tipo, vistaActas, semestreHistorico, paginaMemorandos, perfil.cargando, perfil.datos.role]);
+  }, [tipo, vistaActas, semestreHistorico, paginaMemorandos, vistaMemorandos, semestreMemorandos, perfil.cargando, perfil.datos.role]);
   useEffect(() => {
     void cargarDocumentos();
     const actualizarAlVolver = () => void cargarDocumentos();
@@ -408,8 +422,8 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
             </label>
             {!semestreHistorico && <p className={estilos.vacio}>Seleccione un periodo académico archivado para consultar sus actas.</p>}
           </div>}
-          <div className={estilos.barraHerramientas}>
-            <label className={estilos.campoAncho}>
+          <div className={`${estilos.barraHerramientas} ${estilos.filtrosRegistros}`}>
+            <label className={`${estilos.campoAncho} ${estilos.buscadorRegistros}`}>
               <span>Buscar</span>
               <input
                 value={buscar}
@@ -638,6 +652,17 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
           alCerrar={() => setAviso("")}
         />
       )}
+      <section className={estilosPestanas.cabeceraPestanas}>
+        <div className={estilosPestanas.pestanas} role="tablist" aria-label="Periodo de memorandos">
+          <button type="button" role="tab" aria-selected={vistaMemorandos === "ACTUAL"} className={vistaMemorandos === "ACTUAL" ? estilosPestanas.pestanaActiva : ""} onClick={() => { setRows([]); setTotalMemorandos(0); setVistaMemorandos("ACTUAL"); setPaginaMemorandos(1); }}>
+            Semestre actual
+          </button>
+          <button type="button" role="tab" aria-selected={vistaMemorandos === "HISTORICO"} className={vistaMemorandos === "HISTORICO" ? estilosPestanas.pestanaActiva : ""} onClick={() => { setRows([]); setTotalMemorandos(0); setVistaMemorandos("HISTORICO"); setPaginaMemorandos(1); }}>
+            Historial
+          </button>
+        </div>
+        <div className={estilosPestanas.indicadorVista}><i />{vistaMemorandos === "ACTUAL" ? "Memorandos del semestre vigente" : "Memorandos de semestres anteriores"}</div>
+      </section>
       <section className={estilos.metricas}>
         <article className={`${estilos.metrica} ${estilos.violeta}`}>
           <span>Generados</span>
@@ -663,6 +688,13 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
           </div>
         </header>
         <div className={estilos.barraHerramientas}>
+          {vistaMemorandos === "HISTORICO" && <label className={estilos.campo}>
+            <span>Semestre</span>
+            <select value={semestreMemorandos} onChange={(evento) => { setRows([]); setTotalMemorandos(0); setSemestreMemorandos(evento.target.value); setPaginaMemorandos(1); }}>
+              <option value="">Todos los semestres anteriores</option>
+              {semestresMemorandos.map((semestre) => <option key={semestre} value={semestre}>{semestre === "__unassigned__" ? "Sin semestre asignado" : semestre}</option>)}
+            </select>
+          </label>}
           <label className={estilos.campo}>
             <span>Estado</span>
             <select
@@ -718,6 +750,7 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
                       <small>
                         {String(row.codigo_estudiante ?? "Sin código")}
                       </small>
+                      {vistaMemorandos === "HISTORICO" && <small>Semestre {String(row.semester ?? "sin asignar")}</small>}
                     </td>
                     <td>{String(row.late_count_threshold ?? 0)}</td>
                     <td>{String(row.sent_to ?? "Sin correo")}</td>
@@ -753,6 +786,7 @@ export function ReportesApiView({ tipo }: { tipo: Tipo }) {
             </tbody>
           </table>
         </div>
+        {filas.length === 0 && <p className={estilos.vacio}>{vistaMemorandos === "HISTORICO" ? "No hay memorandos en los semestres anteriores para este filtro." : "No hay memorandos en el semestre actual para este filtro."}</p>}
         <Paginacion pagina={paginaMemorandos} totalPaginas={Math.max(1, Math.ceil(totalMemorandos / 20))} total={totalMemorandos} anterior={() => setPaginaMemorandos((actual) => Math.max(1, actual - 1))} siguiente={() => setPaginaMemorandos((actual) => Math.min(Math.max(1, Math.ceil(totalMemorandos / 20)), actual + 1))} />
       </section>
     </div>

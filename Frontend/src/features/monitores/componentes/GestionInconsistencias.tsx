@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useState } from "react";
 import { obtenerSesion } from "@/features/auth/lib/sesion";
 import type {
   DetalleInconsistenciaApi,
@@ -19,19 +19,17 @@ type ModalAccion = {
   modo: "solucion" | "invalidacion";
   item: InconsistenciaApi;
 } | null;
-const tipos = [
-  ["odd_mark", "Marcación impar"],
-  ["short_pair", "Par corto"],
-  ["out_of_day_window", "Fuera de jornada"],
-  ["duplicate_mark", "Duplicado"],
-  ["end_of_day", "Final de jornada"],
+const categorias = [
+  ["missing_mark", "Falta de marcación", ["odd_mark", "end_of_day"]],
+  [
+    "other_inconsistencies",
+    "Otras inconsistencias",
+    ["short_pair", "out_of_day_window"],
+  ],
 ] as const;
-const claseMetricaTipo = {
-  odd_mark: estilos.metricaInconsistenciaAmbar,
-  short_pair: estilos.metricaInconsistenciaAzul,
-  out_of_day_window: estilos.metricaInconsistenciaVioleta,
-  duplicate_mark: estilos.metricaInconsistenciaRoja,
-  end_of_day: estilos.metricaInconsistenciaNeutra,
+const claseMetricaCategoria = {
+  missing_mark: estilos.metricaInconsistenciaAmbar,
+  other_inconsistencies: estilos.metricaInconsistenciaAzul,
 } as const;
 const dependencias = [
   ["physics", "Monitores Física"],
@@ -61,6 +59,12 @@ function relacionMarcacion(marca: MarcacionCercanaInconsistenciaApi) {
     : marca.paired_record
       ? `Emparejado con ${marca.paired_record.slice(0, 8)}`
       : "Sin relación";
+}
+
+function etiquetaTipoInconsistencia(item: InconsistenciaApi) {
+  return ["odd_mark", "end_of_day"].includes(item.inconsistency_type)
+    ? "Falta de marcación"
+    : item.inconsistency_type_label;
 }
 
 function DetalleInconsistencia({
@@ -142,7 +146,7 @@ function DetalleInconsistencia({
           <h3>Información y gestión</h3>
           <div className={estilos.filaDetalleInconsistencia}>
             <strong>
-              {detalle.inconsistency_type_label} · {detalle.status_label}
+              {etiquetaTipoInconsistencia(detalle)} · {detalle.status_label}
             </strong>
             <span>{detalle.department_label || detalle.raw_department}</span>
             <small>{detalle.message}</small>
@@ -206,26 +210,25 @@ export function GestionInconsistencias() {
   const [horas, setHoras] = useState("0");
   const [motivo, setMotivo] = useState("");
   const [confirmoInvalidacion, setConfirmoInvalidacion] = useState(false);
+  const pendientesAccionables = pendientes.datos.filter(
+    (item) => item.inconsistency_type !== "duplicate_mark",
+  );
   const datosVista =
     vista === "PENDIENTES"
-      ? pendientes.datos
+      ? pendientesAccionables
       : vista === "HISTORIAL"
         ? historial.datos
         : duplicados.datos;
-  const filtradas = useMemo(
-    () =>
-      datosVista.filter((item) => {
-        const texto = buscar.trim().toLocaleLowerCase("es");
-        return (
-          (!texto ||
-            `${item.monitor_name || item.raw_full_name} ${item.monitor_code || ""}`
-              .toLocaleLowerCase("es")
-              .includes(texto)) &&
-          (!dependencia || item.department === dependencia)
-        );
-      }),
-    [buscar, datosVista, dependencia],
-  );
+  const filtradas = datosVista.filter((item) => {
+    const texto = buscar.trim().toLocaleLowerCase("es");
+    return (
+      (!texto ||
+        `${item.monitor_name || item.raw_full_name} ${item.monitor_code || ""}`
+          .toLocaleLowerCase("es")
+          .includes(texto)) &&
+      (!dependencia || item.department === dependencia)
+    );
+  });
   const paginacion = usarPaginacion(filtradas, 8);
   const recargarTodo = async () => {
     await Promise.all([
@@ -253,29 +256,12 @@ export function GestionInconsistencias() {
     setAviso("");
     try {
       setDetalle(await servicioMonitores.obtenerDetalleInconsistencia(item.id));
-          } catch (error) {
-        if (error instanceof Error && error.message.includes("sesion procesada")) {
-             try {
-                 const dt = await servicioMonitores.obtenerInconsistencia(item.id);
-                 if (dt.work_session) {
-                     await servicioMonitores.invalidarSesion(dt.work_session.id, descripcion);
-                     setAviso("Se invalidó automáticamente la sesión derivada.");
-                     setModalAccion(null);
-                     setDetalle(null);
-                     await recargarTodo();
-                     return;
-                 }
-             } catch (e) {
-                 console.error("Error al invalidar sesión derivada", e);
-             }
-             setAviso("La marcación ya generó una sesión. Debe invalidar la sesión derivada manualmente.");
-        } else {
-             setAviso(
-               error instanceof Error
-                 ? error.message
-                 : "No fue posible actualizar la inconsistencia.",
-             );
-        }
+    } catch (error) {
+      setAviso(
+        error instanceof Error
+          ? error.message
+          : "No fue posible consultar la inconsistencia.",
+      );
       } finally {
       setCargandoDetalle("");
     }
@@ -332,7 +318,7 @@ export function GestionInconsistencias() {
           } catch (error) {
         if (error instanceof Error && error.message.includes("sesion procesada")) {
              try {
-                 const dt = await servicioMonitores.obtenerInconsistencia(item.id);
+                 const dt = await servicioMonitores.obtenerDetalleInconsistencia(item.id);
                  if (dt.work_session) {
                      await servicioMonitores.invalidarSesion(dt.work_session.id, descripcion);
                      setAviso("Se invalidó automáticamente la sesión derivada.");
@@ -356,7 +342,7 @@ export function GestionInconsistencias() {
       setProcesando("");
     }
   };
-  const resumenPendiente = pendientes.datos.filter(
+  const resumenPendiente = pendientesAccionables.filter(
     (item) => !dependencia || item.department === dependencia,
   );
 
@@ -383,20 +369,20 @@ export function GestionInconsistencias() {
           <strong>{resumenPendiente.length}</strong>
           <small>Requieren revisión o resolución</small>
         </article>
-        {tipos.map(([tipo, etiqueta]) => (
+        {categorias.map(([categoria, etiqueta, tipos]) => (
           <article
-            className={`${estilos.metrica} ${estilos.metricaInconsistencia} ${claseMetricaTipo[tipo]}`}
-            key={tipo}
+            className={`${estilos.metrica} ${estilos.metricaInconsistencia} ${claseMetricaCategoria[categoria]}`}
+            key={categoria}
           >
             <span>{etiqueta}</span>
             <strong>
               {
                 resumenPendiente.filter(
-                  (item) => item.inconsistency_type === tipo,
+                  (item) => tipos.some((tipo) => tipo === item.inconsistency_type),
                 ).length
               }
             </strong>
-            <small>Pendiente(s) de este tipo</small>
+            <small>Pendiente(s) de esta categoría</small>
           </article>
         ))}
       </section>
@@ -447,7 +433,7 @@ export function GestionInconsistencias() {
             className={vista === "PENDIENTES" ? estilos.pestanaActiva : ""}
             onClick={() => cambiarVista("PENDIENTES")}
           >
-            Pendientes <small>{pendientes.datos.length}</small>
+            Pendientes <small>{pendientesAccionables.length}</small>
           </button>
           <button
             type="button"
@@ -464,8 +450,8 @@ export function GestionInconsistencias() {
             Duplicados <small>{duplicados.datos.length}</small>
           </button>
         </div>
-        <div className={estilos.barraHerramientas}>
-          <label className={estilos.campoAncho}>
+        <div className={`${estilos.barraHerramientas} ${estilos.filtrosRegistros}`}>
+          <label className={`${estilos.campoAncho} ${estilos.buscadorRegistros} ${estilos.buscadorInconsistencias}`}>
             <span>Buscar inconsistencia</span>
             <input
               value={buscar}
@@ -521,7 +507,7 @@ export function GestionInconsistencias() {
                       </small>
                     </td>
                     <td>
-                      <strong>{item.inconsistency_type_label}</strong>
+                      <strong>{etiquetaTipoInconsistencia(item)}</strong>
                       <small>{item.message}</small>
                     </td>
                     <td>

@@ -71,6 +71,12 @@ export function CampanaNotificaciones() {
     setAbierta(false);
     router.push(destino(notificacion));
   };
+  const descartarNotificacion = async (notificacion: Notificacion) => {
+    try {
+      await servicioMonitores.descartarNotificacion(notificacion.id);
+      setNotificaciones((actual) => actual.filter((item) => item.id !== notificacion.id));
+    } catch { setError("No fue posible quitar la notificación."); }
+  };
 
   return <div className={estilos.campanaNotificaciones}>
     <button type="button" className={estilos.botonCampana} aria-label={`Notificaciones${nuevas ? `, ${nuevas} nuevas` : ""}`} aria-expanded={abierta} onClick={() => setAbierta((actual) => { const siguiente = !actual; if (siguiente) void cargar(); return siguiente; })}>
@@ -78,7 +84,7 @@ export function CampanaNotificaciones() {
     </button>
     {abierta && <section className={estilos.menuNotificaciones} aria-label="Lista de notificaciones">
       <header><div><h2>Notificaciones</h2><p>{nuevas ? `${nuevas} nueva${nuevas === 1 ? "" : "s"}` : "Todo al día"}</p></div><button type="button" aria-label="Cerrar notificaciones" onClick={() => setAbierta(false)}>×</button></header>
-      <div className={estilos.listaMenuNotificaciones}>{ordenadas.map((notificacion) => <button key={notificacion.id} type="button" className={!notificacion.is_read ? estilos.itemNotificacionNueva : undefined} onClick={() => void abrirNotificacion(notificacion)}><span>{notificacion.is_read ? "Leída" : "Nueva"}</span><strong>{notificacion.title}</strong><p>{notificacion.body}</p></button>)}{!ordenadas.length && <p className={estilos.notificacionesVaciasDashboard}>{error || "No tiene notificaciones recientes."}</p>}</div>
+      <div className={estilos.listaMenuNotificaciones}>{ordenadas.map((notificacion) => <article key={notificacion.id} className={!notificacion.is_read ? estilos.itemNotificacionNueva : undefined}><button type="button" className={estilos.contenidoNotificacion} onClick={() => void abrirNotificacion(notificacion)}><span>{notificacion.is_read ? "Leída" : "Nueva"}</span><strong>{notificacion.title}</strong><p>{notificacion.body}</p></button><button type="button" className={estilos.descartarNotificacion} aria-label={`Quitar: ${notificacion.title}`} onClick={() => void descartarNotificacion(notificacion)}>×</button></article>)}{!ordenadas.length && <p className={estilos.notificacionesVaciasDashboard}>{error || "No tiene notificaciones recientes."}</p>}</div>
     </section>}
   </div>;
 }

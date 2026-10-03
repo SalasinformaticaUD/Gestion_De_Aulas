@@ -117,4 +117,33 @@ describe('CredencialesService', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(prisma.credencialOperativa.delete).not.toHaveBeenCalled();
   });
+
+  it('permite al administrador eliminar una credencial creada por otra cuenta', async () => {
+    prisma.credencialOperativa.findUnique.mockResolvedValue({
+      ...credencial(),
+      creadorId: otroId,
+    });
+    prisma.usuario.findUnique
+      .mockResolvedValueOnce({ roles: [{ rol: { nombre: 'ADMINISTRADOR' } }] })
+      .mockResolvedValueOnce({ roles: [{ rol: { nombre: 'ADMINISTRADOR' } }] });
+    prisma.credencialOperativa.delete.mockResolvedValue({ id: credencial().id });
+
+    await expect(service.remove(credencial().id, 'clave-de-cuenta', usuarioId))
+      .resolves.toMatchObject({ eliminado: true });
+    expect(prisma.credencialOperativa.delete).toHaveBeenCalledWith({
+      where: { id: credencial().id },
+    });
+  });
+
+  it('impide que otro usuario elimine una credencial ajena', async () => {
+    prisma.credencialOperativa.findUnique.mockResolvedValue({
+      ...credencial(),
+      creadorId: otroId,
+    });
+
+    await expect(
+      service.remove(credencial().id, 'clave-de-cuenta', usuarioId),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.credencialOperativa.delete).not.toHaveBeenCalled();
+  });
 });

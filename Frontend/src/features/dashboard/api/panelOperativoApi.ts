@@ -27,3 +27,9 @@ export function consultarResumenPanel(fecha: string, signal?: AbortSignal, forza
   if (horaInicio) params.set("horaInicio", horaInicio);
   return solicitarAulas<ResumenPanelOperativo>(`/panel-operativo/resumen?${params.toString()}`, token(), { signal });
 }
+
+export type ResumenTareasOperativas = Pick<ResumenPanelOperativo, "fecha" | "bloqueReferencia" | "alertas">;
+
+export function consultarTareasOperativas() {
+  return solicitarAulas<ResumenTareasOperativas>("/panel-operativo/tareas-operativas", token());
+}

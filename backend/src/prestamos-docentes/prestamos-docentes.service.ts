@@ -233,10 +233,11 @@ export class PrestamosDocentesService {
     if (dto.docenteId) { await this.validarDocente(dto.docenteId); return dto.docenteId; }
     const documento = dto.docenteNuevoDocumento?.trim();
     const nombre = dto.docenteNuevoNombre?.trim();
-    if (!documento || !nombre || !/^\d+$/.test(documento)) throw new BadRequestException('Para otro profesor, ingrese nombre y cédula numérica.');
+    const proyecto = dto.docenteNuevoProyecto?.trim();
+    if (!documento || !nombre || !proyecto || !/^\d+$/.test(documento)) throw new BadRequestException('Para registrar otro profesor, ingrese nombre, cédula numérica y proyecto.');
     const existente = await this.prisma.docente.findUnique({ where: { documento }, select: { id: true } });
     if (existente) return existente.id;
-    return (await this.prisma.docente.create({ data: { documento, nombre }, select: { id: true } })).id;
+    return (await this.prisma.docente.create({ data: { documento, nombre, proyecto }, select: { id: true } })).id;
   }
 
   private async validarSoftwareParaPrestamo(

@@ -32,21 +32,22 @@ export class DocentesService {
     if (!filas.length) throw new BadRequestException('El Excel debe contener al menos un docente.');
     const normalizar = (valor: string) => valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase();
     const valor = (fila: Record<string, unknown>, encabezado: string) => { const clave = Object.keys(fila).find((item) => normalizar(item) === encabezado); return String(clave ? fila[clave] ?? '' : '').trim(); };
-    const encabezados = Object.keys(filas[0].datos).map(normalizar); const faltantes = ['ID', 'NOMBRE'].filter((item) => !encabezados.includes(item));
+    const encabezados = Object.keys(filas[0].datos).map(normalizar); const faltantes = ['CEDULA', 'NOMBRE', 'PROYECTO'].filter((item) => !encabezados.includes(item));
     if (faltantes.length) throw new BadRequestException(`Faltan columnas requeridas: ${faltantes.join(', ')}.`);
     const documentos = new Set<string>(); let omitidasDuplicadas = 0;
     const datos = filas.flatMap(({ datos: fila, filaExcel }) => {
-      const documento = valor(fila, 'ID'); const nombre = valor(fila, 'NOMBRE');
-      if (!/^\d{3,50}$/.test(documento)) throw new BadRequestException(`Fila ${filaExcel}: el ID debe contener solo números.`);
+      const documento = valor(fila, 'CEDULA'); const nombre = valor(fila, 'NOMBRE'); const proyecto = valor(fila, 'PROYECTO');
+      if (!/^\d{3,50}$/.test(documento)) throw new BadRequestException(`Fila ${filaExcel}: la cédula debe contener solo números.`);
       if (!nombre || nombre.length > 160) throw new BadRequestException(`Fila ${filaExcel}: el nombre es obligatorio y no puede superar 160 caracteres.`);
+      if (!proyecto || proyecto.length > 160) throw new BadRequestException(`Fila ${filaExcel}: el proyecto es obligatorio y no puede superar 160 caracteres.`);
       if (documentos.has(documento)) { omitidasDuplicadas++; return []; }
-      documentos.add(documento); return [{ documento, nombre }];
+      documentos.add(documento); return [{ documento, nombre, proyecto }];
     });
     const resultado = await this.prisma.$transaction(async (tx) => {
       let creados = 0; let actualizados = 0;
       for (const dato of datos) {
         const existe = await tx.docente.findUnique({ where: { documento: dato.documento }, select: { id: true } });
-        await tx.docente.upsert({ where: { documento: dato.documento }, update: { nombre: dato.nombre }, create: dato });
+        await tx.docente.upsert({ where: { documento: dato.documento }, update: { nombre: dato.nombre, proyecto: dato.proyecto }, create: dato });
         existe ? actualizados++ : creados++;
       }
       const anteriores = await tx.docente.findMany({ where: { OR: [{ documento: { notIn: datos.map((dato) => dato.documento) } }, { documento: null }] }, select: { id: true, _count: { select: { clases: true, prestamos: true, prestamosAudiovisuales: true, practicasLibres: true } } } });

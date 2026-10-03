@@ -172,12 +172,12 @@ export class PracticasLibresService {
               where: { documento: responsable.documento },
               update: {
                 nombre: responsable.nombre,
-                ...(responsable.correo && { correo: responsable.correo }),
+                proyecto: responsable.proyecto,
               },
               create: {
                 documento: responsable.documento,
                 nombre: responsable.nombre,
-                correo: responsable.correo,
+                proyecto: responsable.proyecto,
               },
             });
             await this.validarResponsableSinPracticaActiva(tx, {

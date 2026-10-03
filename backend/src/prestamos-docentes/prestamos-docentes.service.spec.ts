@@ -130,6 +130,7 @@ describe('PrestamosDocentesService', () => {
       softwareId: dto.softwareId,
       docenteNuevoNombre: 'Profesora invitada',
       docenteNuevoDocumento: '90000001',
+      docenteNuevoProyecto: 'Ingeniería de Sistemas',
       inicio: dto.inicio,
       fin: dto.fin,
     };

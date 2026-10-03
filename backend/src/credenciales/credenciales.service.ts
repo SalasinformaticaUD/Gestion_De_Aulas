@@ -176,8 +176,8 @@ export class CredencialesService {
   async remove(id: string, contrasenaUsuario: string, usuarioId: string) {
     await this.verificarContrasenaUsuario(usuarioId, contrasenaUsuario);
     const previo = await this.access(id, usuarioId);
-    if (previo.creadorId !== usuarioId)
-      throw new ForbiddenException('Solo quien creó la credencial puede eliminarla.');
+    if (previo.creadorId !== usuarioId && !(await this.esAdministrador(usuarioId)))
+      throw new ForbiddenException('Solo quien creó la credencial o un administrador puede eliminarla.');
     const eliminado = await this.prisma.credencialOperativa.delete({ where: { id } });
     await this.audit(usuarioId, id, 'DELETE', previo, undefined);
     return { id: eliminado.id, eliminado: true };

@@ -38,4 +38,10 @@ export class PanelOperativoController {
   ) {
     return this.panelOperativoService.alertas(query, usuario.id);
   }
+
+  @Get('tareas-operativas')
+  @RequirePermissions('DASHBOARD_LEER')
+  tareasOperativas() {
+    return this.panelOperativoService.tareasOperativas();
+  }
 }

@@ -103,4 +103,15 @@ describe('AuthService', () => {
   it('rechaza una foto que no sea una data URL de imagen', async () => {
     await expect(service.actualizarFotoPerfil(usuario.id, 'https://ejemplo.test/foto.png')).rejects.toBeInstanceOf(BadRequestException);
   });
+
+  it('cambia el nombre de usuario solo después de validar la contraseña actual', async () => {
+    prisma.usuario.findUnique
+      .mockResolvedValueOnce({ estado: EstadoCuenta.ACTIVA, passwordHash: usuario.passwordHash })
+      .mockResolvedValueOnce(usuario)
+      .mockResolvedValueOnce(null);
+    prisma.usuario.update.mockResolvedValue({ nombreUsuario: 'prueba.nueva' });
+
+    await expect(service.cambiarNombreUsuario(usuario.id, 'prueba.nueva', password)).resolves.toEqual({ nombreUsuario: 'prueba.nueva' });
+    expect(prisma.usuario.update).toHaveBeenCalledWith(expect.objectContaining({ data: { nombreUsuario: 'prueba.nueva' } }));
+  });
 });

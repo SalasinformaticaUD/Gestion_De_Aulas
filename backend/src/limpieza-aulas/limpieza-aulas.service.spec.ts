@@ -92,7 +92,7 @@ describe('LimpiezaAulasService', () => {
     });
   });
 
-  it('impide registrar un aula que ya tuvo limpieza hoy o durante los dos días anteriores', async () => {
+  it('impide registrar sin confirmación un aula atendida hace menos de dos días', async () => {
     const hoy = new Intl.DateTimeFormat('en-CA', {
       timeZone: 'America/Bogota',
     }).format(new Date());
@@ -102,6 +102,23 @@ describe('LimpiezaAulasService', () => {
       service.create({ aulaId, realizadaEn: `${hoy}T08:00:00-05:00` }),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.limpieza.create).not.toHaveBeenCalled();
+  });
+
+  it('permite registrar un aula atendida hace menos de dos días después de confirmar', async () => {
+    const hoy = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Bogota',
+    }).format(new Date());
+    prisma.limpieza.findFirst.mockResolvedValue({ id: limpiezaId } as never);
+    prisma.limpieza.create.mockResolvedValue({ id: limpiezaId } as never);
+
+    await expect(
+      service.create({
+        aulaId,
+        realizadaEn: `${hoy}T08:00:00-05:00`,
+        confirmarLimpiezaReciente: true,
+      }),
+    ).resolves.toMatchObject({ id: limpiezaId });
+    expect(prisma.limpieza.create).toHaveBeenCalled();
   });
 
   it('permite retirar un registro de limpieza del día editable y conserva la auditoría', async () => {
@@ -119,7 +136,9 @@ describe('LimpiezaAulasService', () => {
     await expect(service.remove(limpiezaId)).resolves.toMatchObject({
       id: limpiezaId,
     });
-    expect(prisma.limpieza.delete).toHaveBeenCalledWith({ where: { id: limpiezaId } });
+    expect(prisma.limpieza.delete).toHaveBeenCalledWith({
+      where: { id: limpiezaId },
+    });
   });
 
   it('propone primero el aula disponible con mayor tiempo sin limpieza', async () => {
@@ -146,11 +165,13 @@ describe('LimpiezaAulasService', () => {
       otraAulaId,
     ]);
     expect(prisma.aula.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { estado: EstadoAula.OPERATIVA, eliminadoEn: null } }),
+      expect.objectContaining({
+        where: { estado: EstadoAula.OPERATIVA, eliminadoEn: null },
+      }),
     );
   });
 
-  it('excluye de recomendaciones las aulas limpiadas hace menos de dos días', async () => {
+  it('incluye en recomendaciones las aulas limpiadas hace menos de dos días', async () => {
     prisma.aula.findMany.mockResolvedValue([
       { id: aulaId, codigo: 'A-101', ubicacion: 'Piso 1', limpiezas: [] },
       {
@@ -162,7 +183,10 @@ describe('LimpiezaAulasService', () => {
     ] as never);
     const resultado = await service.findSugerencias({ fecha: '2026-08-26' });
 
-    expect(resultado.sugerencias.map(({ aula }) => aula.id)).toEqual([aulaId]);
+    expect(resultado.sugerencias.map(({ aula }) => aula.id)).toEqual([
+      aulaId,
+      otraAulaId,
+    ]);
   });
 
   it('mantiene en la prioridad un aula ocupada y la identifica como en clase', async () => {

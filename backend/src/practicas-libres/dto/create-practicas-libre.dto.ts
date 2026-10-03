@@ -4,11 +4,13 @@ import {
   IsEmail,
   IsEnum,
   IsISO8601,
+  IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
   Length,
   MaxLength,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -28,7 +30,10 @@ export class ResponsableSolicitudPracticaDto {
   @IsEnum(TipoSolicitantePracticaLibre) tipo!: TipoSolicitantePracticaLibre;
   @IsString() @Length(3, 50) documento!: string;
   @IsString() @Length(3, 160) nombre!: string;
-  @IsOptional() @IsEmail() @MaxLength(160) correo?: string;
+  @ValidateIf((item: ResponsableSolicitudPracticaDto) => item.tipo === TipoSolicitantePracticaLibre.ESTUDIANTE)
+  @IsEmail() @IsNotEmpty() @MaxLength(160) correo?: string;
+  @ValidateIf((item: ResponsableSolicitudPracticaDto) => item.tipo === TipoSolicitantePracticaLibre.DOCENTE)
+  @IsString() @IsNotEmpty() @MaxLength(160) proyecto?: string;
 }
 
 export class CreatePracticasLibreDto {
@@ -46,8 +51,9 @@ export class CreatePracticasLibreDto {
   @Length(3, 120)
   nombreEstudiante!: string;
 
-  @IsOptional()
+  @ValidateIf((item: CreatePracticasLibreDto) => !item.responsables?.length)
   @IsEmail()
+  @IsNotEmpty()
   @MaxLength(160)
   correoEstudiante?: string;
 
