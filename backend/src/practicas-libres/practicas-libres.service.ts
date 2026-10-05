@@ -114,6 +114,11 @@ export class PracticasLibresService {
       }
     }
     const estadoAula = await this.disponibilidad.findOne(dto.aulaId, bloque);
+    if (this.esAulaExcluida(estadoAula.aula?.codigo)) {
+      throw new ConflictException(
+        'El aula 508 no está disponible para prácticas libres.',
+      );
+    }
     const claseEnCurso = estadoAula.fuentes.some(
       (fuente) =>
         fuente.tipo === 'clase-programada' &&
@@ -363,6 +368,11 @@ export class PracticasLibresService {
     throw new ConflictException(
       mensajes[software.estado as keyof typeof mensajes],
     );
+  }
+
+  private esAulaExcluida(codigo?: string) {
+    const normalizado = codigo?.replace(/\s+/g, '').toUpperCase();
+    return normalizado === '508' || normalizado === 'AULA508';
   }
 
   private validarTiempoMinimoParaPrestamo(inicioIso: string, finIso: string) {

@@ -244,6 +244,14 @@ export type DashboardApi = {
 
 export type PanelMonitorApi = {
   monitor: Pick<MonitorApi, "id" | "full_name" | "codigo_estudiante">;
+  monitorings: Array<{
+    id: string;
+    semester: string | null;
+    semester_is_active: boolean | null;
+    is_active: boolean;
+    department: string;
+  }>;
+  schedule_monitoring_id: string;
   schedules: HorarioApi[];
   recent_sessions: SesionApi[];
   recent_annotations: AnotacionApi[];

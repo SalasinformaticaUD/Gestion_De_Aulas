@@ -26,6 +26,7 @@ export type Room = {
   software: RoomSoftware[];
   workstations: Workstation[];
   location: string;
+  responsible: { id: string; name: string; username: string } | null;
   hardware: string;
   brandModel: string;
   curriculumProject: string;

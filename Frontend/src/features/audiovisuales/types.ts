@@ -30,6 +30,7 @@ export type AudiovisualEquipment = {
 export type AudiovisualLoan = {
   id: string;
   teacher: string;
+  borrowerType: "DOCENTE" | "OTRO";
   room: string;
   checkoutAt: string;
   dueAt: string;

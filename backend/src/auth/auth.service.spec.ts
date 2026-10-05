@@ -21,6 +21,8 @@ describe('AuthService', () => {
     fotoPerfil: null,
     passwordHash: passwords.hash(password),
     cargo: null,
+    perfilMonitores: null,
+    dependenciaMonitores: null,
     estado: EstadoCuenta.ACTIVA,
     dependencia: null,
     roles: [{ rol: { nombre: 'OPERADOR', permisos: [] } }],
@@ -50,23 +52,17 @@ describe('AuthService', () => {
   it('autoriza a un monitor en los aplicativos definidos por sus permisos', async () => {
     prisma.usuario.findFirst.mockResolvedValue({
       ...usuario,
+      perfilMonitores: 'LIDER',
+      dependenciaMonitores: 'INFORMATICS_LABS',
       roles: [
         {
           rol: {
             nombre: 'MONITOR',
-            perfilMonitores: 'LIDER',
-            dependenciaMonitores: 'INFORMATICS_LABS',
             permisos: [
               {
                 permiso: {
                   codigo: 'AULAS_LEER',
                   modulo: { codigo: 'AULAS', activo: true },
-                },
-              },
-              {
-                permiso: {
-                  codigo: 'MONITORES_LEER',
-                  modulo: { codigo: 'MONITORES', activo: true },
                 },
               },
             ],
@@ -79,8 +75,8 @@ describe('AuthService', () => {
 
     expect(result.aplicaciones.puedeAccederAulas).toBe(true);
     expect(result.aplicaciones.puedeAccederMonitores).toBe(true);
-    expect(result.usuario.modulos).toEqual(expect.arrayContaining(['AULAS', 'MONITORES']));
-    expect(result.usuario.permisos).toEqual(expect.arrayContaining(['AULAS_LEER', 'MONITORES_LEER']));
+    expect(result.usuario.modulos).toEqual(['AULAS']);
+    expect(result.usuario.permisos).toEqual(['AULAS_LEER']);
   });
 
   it('guarda una foto de perfil válida como data URL', async () => {

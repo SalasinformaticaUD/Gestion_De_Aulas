@@ -17,6 +17,7 @@ listado y detalle de aulas se obtienen mediante `GET /aulas` y `GET /aulas/:id`.
 | `piso`               | `Room.floor`                          | Se deriva de `ubicacion`; puede ser `null` si no contiene el texto `Piso N`.   |
 | `capacidad`          | `Room.capacity`                       | Cantidad total de puestos.                                                     |
 | `estado`             | Estado fisico                         | `OPERATIVA`, `MANTENIMIENTO` o `FUERA_DE_SERVICIO`.                            |
+| `responsable`        | `Room.responsible`                    | Cuenta activa responsable del aula; puede ser `null` únicamente en aulas históricas aún no editadas. |
 | `caracteristicas`    | Hardware, puestos y datos adicionales | JSON controlado por el modulo de aulas.                                        |
 | `proyectoCurricular` | `Room.curriculumProject`              | Proyecto asociado, cuando exista.                                              |
 | `software`           | `Room.software`                       | Lista normalizada con id, nombre, version, descripcion y fecha de instalacion. |
@@ -37,3 +38,10 @@ del aula, sin inferir disponibilidad a partir del estado fisico.
 Los campos de demostracion `licenses` y `status` de cada software no forman parte del
 modelo persistente actual. Deben tratarse como opcionales en el adaptador del frontend
 hasta que exista una regla de negocio y persistencia aprobadas para licenciamiento.
+
+## Responsable del aula
+
+`POST /aulas` exige `responsableId`. `PATCH /aulas/:id` permite asignarlo o cambiarlo,
+y el servidor valida que corresponda a una cuenta activa que no tenga el rol o cargo
+de administrador. El catálogo para los
+selectores se consulta con `GET /aulas/catalogos/responsables`.

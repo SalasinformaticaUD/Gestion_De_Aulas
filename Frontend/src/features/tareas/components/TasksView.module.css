@@ -353,8 +353,16 @@ html[data-theme="dark"] .historyExportButton:hover { color:#fff; background:#a51
 .cancellationDetail strong,.cancellationDetail small { display:block; }
 .cancellationDetail p { margin:6px 0; color:#5e343a; line-height:1.45; }
 .cancellationDetail small { color:#8a5a61; }
-.detailsFooter { display:flex; justify-content:flex-end; }
+.detailsFooter { display:flex; justify-content:flex-end; gap:8px; }
 .detailsFooter button { min-height:38px; padding:0 14px; }
+.editingReportLabel { color:var(--primary) !important; font-weight:800; }
+.reportConfirmationBody { display:grid; gap:14px; padding:16px 18px 18px; }
+.reportConfirmationFooter { gap:8px; }
+.reportConfirmationFooter button { min-height:34px; padding:0 12px; border-radius:6px; font-size:13px; white-space:nowrap; transition:border-color .16s ease,color .16s ease,background .16s ease,box-shadow .16s ease,transform .08s ease; }
+.reportConfirmationFooter .dialogCancel:hover { border-color:#c9939c; color:#8f1828; background:#fff1f3; box-shadow:0 2px 7px rgba(143,24,40,.1); }
+.reportConfirmationFooter button:active { transform:translateY(1px); }
+.reportConfirmationFooter button:focus-visible { outline:3px solid color-mix(in srgb,var(--primary) 22%,transparent); outline-offset:2px; }
+:global(html[data-theme="dark"]) .reportConfirmationFooter .dialogCancel:hover { border-color:#8f4c57; color:#ffd0d6; background:#382126; }
 .impactSwitch { display:flex; align-items:flex-start; gap:9px; padding:11px 12px; border:1px solid #f1d492; border-radius:7px; color:#805000; background:#fffaeb; cursor:pointer; }
 .impactSwitch input { margin-top:2px; accent-color:var(--primary); }
 .impactSwitch span,.impactSwitch strong,.impactSwitch small { display:block; }
@@ -417,4 +425,7 @@ html[data-theme="dark"] .historyExportButton:hover { color:#fff; background:#a51
   .singlePersonNote span { text-align:left; }
   .dialog form>footer { align-items:stretch; flex-direction:column-reverse; }
   .dialog form>footer button { width:100%; }
+  .reportConfirmationBody { padding:14px; }
+  .reportConfirmationFooter { align-items:stretch; flex-direction:column-reverse; }
+  .reportConfirmationFooter button { width:100%; min-height:36px; white-space:normal; }
 }

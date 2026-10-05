@@ -15,6 +15,11 @@ const aulaPublicaMock = {
   modelo: null,
   renovacionTecnologica: false,
   pendienteIntervencion: false,
+  responsable: {
+    id: '00000000-0000-4000-8000-000000000010',
+    nombreCompleto: 'Responsable Aula',
+    nombreUsuario: 'responsable.aula',
+  },
   proyectoCurricular: null,
   proyectosCurriculares: [],
   softwares: [],
@@ -41,6 +46,10 @@ describe('AulasService', () => {
     proyectoCurricular: {
       findUnique: jest.Mock;
     };
+    usuario: {
+      findFirst: jest.Mock;
+      findMany: jest.Mock;
+    };
   };
 
   beforeEach(() => {
@@ -56,6 +65,12 @@ describe('AulasService', () => {
       proyectoCurricular: {
         findUnique: jest.fn(),
       },
+      usuario: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ id: '00000000-0000-4000-8000-000000000010' }),
+        findMany: jest.fn(),
+      },
     };
 
     service = new AulasService(prisma as unknown as PrismaService);
@@ -66,6 +81,7 @@ describe('AulasService', () => {
     prisma.aula.findFirst.mockResolvedValue(aulaPublicaMock);
 
     await service.create({
+      responsableId: '00000000-0000-4000-8000-000000000010',
       codigo: ' LAB-01 ',
       ubicacion: ' Edificio Sabio Caldas, piso 2 ',
       capacidad: 25,
@@ -76,6 +92,9 @@ describe('AulasService', () => {
         codigo: 'LAB-01',
         ubicacion: 'Edificio Sabio Caldas, piso 2',
         capacidad: 25,
+        responsable: {
+          connect: { id: '00000000-0000-4000-8000-000000000010' },
+        },
       },
     });
   });
@@ -85,11 +104,49 @@ describe('AulasService', () => {
 
     await expect(
       service.create({
+        responsableId: '00000000-0000-4000-8000-000000000010',
         codigo: 'LAB-01',
         ubicacion: 'Piso 2',
         capacidad: 25,
       }),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('rechaza un responsable que no corresponda a una cuenta activa', async () => {
+    prisma.usuario.findFirst.mockResolvedValue(null);
+
+    await expect(
+      service.create({
+        responsableId: '00000000-0000-4000-8000-000000000099',
+        codigo: 'LAB-02',
+        ubicacion: 'Piso 2',
+        capacidad: 20,
+      }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.aula.create).not.toHaveBeenCalled();
+  });
+
+  it('lista únicamente cuentas activas que no sean administradoras', async () => {
+    prisma.usuario.findMany.mockResolvedValue([]);
+
+    await service.findResponsables();
+
+    expect(prisma.usuario.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          estado: 'ACTIVA',
+          OR: [{ cargo: null }, { cargo: { not: 'ADMINISTRADOR' } }],
+          roles: {
+            none: {
+              rol: {
+                nombre: { equals: 'ADMINISTRADOR', mode: 'insensitive' },
+              },
+            },
+          },
+        },
+        orderBy: { nombreCompleto: 'asc' },
+      }),
+    );
   });
 
   it('aplica filtros compatibles de estado, ubicación, proyecto, código y capacidad', async () => {
@@ -133,6 +190,7 @@ describe('AulasService', () => {
       capacidad: 40,
       caracteristicas: { hardware: '40 equipos de cómputo' },
       estado: EstadoAula.OPERATIVA,
+      responsable: aulaPublicaMock.responsable,
       proyectoCurricular: { id: 'proyecto-id', nombre: 'Sistemas' },
       softwares: [
         {

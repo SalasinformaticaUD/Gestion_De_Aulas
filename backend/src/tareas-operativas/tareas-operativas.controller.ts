@@ -113,4 +113,14 @@ export class TareasOperativasController {
   crearInforme(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CrearInformeSeguimientoDto, @CurrentUser() usuario?: UsuarioAutenticado) {
     return this.tareasOperativasService.crearInforme(id, dto, usuario?.id);
   }
+
+  @Patch(':id/informes-seguimiento/:informeId')
+  editarInforme(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('informeId', ParseUUIDPipe) informeId: string,
+    @Body() dto: CrearInformeSeguimientoDto,
+    @CurrentUser() usuario?: UsuarioAutenticado,
+  ) {
+    return this.tareasOperativasService.editarInforme(id, informeId, dto, usuario?.id);
+  }
 }

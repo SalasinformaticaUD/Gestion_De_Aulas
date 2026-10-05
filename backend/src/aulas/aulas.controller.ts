@@ -55,6 +55,12 @@ export class AulasController {
     return this.aulasService.findAll(filters);
   }
 
+  @Get('catalogos/responsables')
+  @RequirePermissions('AULAS_LEER')
+  findResponsables() {
+    return this.aulasService.findResponsables();
+  }
+
   @Get(':id')
   @RequirePermissions('AULAS_LEER')
   findOne(@Param('id', ParseUUIDPipe) id: string) {

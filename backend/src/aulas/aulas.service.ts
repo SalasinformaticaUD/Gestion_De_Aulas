@@ -13,6 +13,7 @@ import { FindAulasDto } from './dto/find-aulas.dto';
 import { PrismaService } from '../prisma/prisma.service';
 import { Aula, HistorialAula } from './entities/aula.entity';
 import { AuditoriaService } from '../auditoria/auditoria.service';
+import { EstadoCuenta } from '../../generated/prisma/enums.js';
 
 type PrismaError = { code?: unknown };
 
@@ -33,6 +34,9 @@ const aulaPublicaSelect = {
   pendienteIntervencion: true,
   caracteristicas: true,
   estado: true,
+  responsable: {
+    select: { id: true, nombreCompleto: true, nombreUsuario: true },
+  },
   proyectoCurricular: { select: { id: true, nombre: true } },
   proyectosCurriculares: {
     select: { proyectoCurricular: { select: { id: true, nombre: true } } },
@@ -110,6 +114,7 @@ export class AulasService {
   ) {}
 
   async create(createAulaDto: CreateAulaDto, usuarioId?: string) {
+    await this.ensureResponsableExists(createAulaDto.responsableId);
     if (createAulaDto.proyecto) {
       const proyecto = await this.prisma.proyectoCurricular.upsert({
         where: { nombre: createAulaDto.proyecto },
@@ -187,6 +192,29 @@ export class AulasService {
     return aulas.map((aula) => this.toPublicResponse(aula));
   }
 
+  findResponsables() {
+    return this.prisma.usuario.findMany({
+      where: {
+        estado: EstadoCuenta.ACTIVA,
+        OR: [{ cargo: null }, { cargo: { not: 'ADMINISTRADOR' } }],
+        roles: {
+          none: {
+            rol: {
+              nombre: { equals: 'ADMINISTRADOR', mode: 'insensitive' },
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+        nombreCompleto: true,
+        nombreUsuario: true,
+        cargo: true,
+      },
+      orderBy: { nombreCompleto: 'asc' },
+    });
+  }
+
   async findOne(id: string) {
     const aula = await this.prisma.aula.findFirst({
       where: { id, eliminadoEn: null },
@@ -204,6 +232,10 @@ export class AulasService {
     const previa = await this.prisma.aula.findUnique({ where: { id } });
     if (!previa) {
       throw new NotFoundException(`No existe aula con id ${id}.`);
+    }
+
+    if (updateAulaDto.responsableId !== undefined) {
+      await this.ensureResponsableExists(updateAulaDto.responsableId);
     }
 
     await this.ensureProyectosCurricularesExist(
@@ -291,6 +323,29 @@ export class AulasService {
     }
   }
 
+  private async ensureResponsableExists(id: string): Promise<void> {
+    const responsable = await this.prisma.usuario.findFirst({
+      where: {
+        id,
+        estado: EstadoCuenta.ACTIVA,
+        OR: [{ cargo: null }, { cargo: { not: 'ADMINISTRADOR' } }],
+        roles: {
+          none: {
+            rol: {
+              nombre: { equals: 'ADMINISTRADOR', mode: 'insensitive' },
+            },
+          },
+        },
+      },
+      select: { id: true },
+    });
+    if (!responsable) {
+      throw new NotFoundException(
+        'El responsable seleccionado no existe, su cuenta no está activa o es administrador.',
+      );
+    }
+  }
+
   private throwKnownPersistenceError(error: unknown): void {
     if (hasPrismaCode(error, 'P2002')) {
       throw new ConflictException('Ya existe un aula con el mismo código.');
@@ -301,17 +356,22 @@ export class AulasService {
     }
   }
 
-  private normalizeCreateInput(input: CreateAulaDto): Prisma.AulaCreateInput {
+  private normalizeCreateInput(
+    input: Omit<CreateAulaDto, 'responsableId'> & { responsableId?: string },
+  ): Prisma.AulaCreateInput {
     const caracteristicas = input.caracteristicas
       ? { ...input.caracteristicas }
       : {};
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     if (input.hardware) caracteristicas.hardware = input.hardware.trim();
-    if (input.caracteristica) caracteristicas.descripcion = input.caracteristica.trim();
+    if (input.caracteristica)
+      caracteristicas.descripcion = input.caracteristica.trim();
     return {
       codigo: input.codigo.trim(),
       ubicacion: input.ubicacion.trim(),
       capacidad: input.capacidad,
+      ...(input.responsableId !== undefined && {
+        responsable: { connect: { id: input.responsableId } },
+      }),
       ...(input.anioAdquisicion !== undefined && {
         anioAdquisicion: input.anioAdquisicion,
       }),
@@ -386,6 +446,9 @@ export class AulasService {
         caracteristicas: input.caracteristicas as Prisma.InputJsonValue,
       }),
       ...(input.estado !== undefined && { estado: input.estado }),
+      ...(input.responsableId !== undefined && {
+        responsable: { connect: { id: input.responsableId } },
+      }),
       ...(input.proyectoCurricularId !== undefined && {
         proyectoCurricular: { connect: { id: input.proyectoCurricularId } },
       }),
@@ -661,6 +724,7 @@ export class AulasService {
       renovacionTecnologica: aula.renovacionTecnologica,
       pendienteIntervencion: aula.pendienteIntervencion,
       caracteristicas: aula.caracteristicas,
+      responsable: aula.responsable,
       proyectoCurricular: aula.proyectoCurricular,
       proyectosCurriculares: (aula.proyectosCurriculares ?? []).map(
         ({ proyectoCurricular }) => proyectoCurricular,
@@ -712,7 +776,6 @@ export class AulasService {
         descripcion: limpieza.observacion
           ? `Limpieza: ${limpieza.observacion}`
           : 'Limpieza registrada.',
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         responsable: limpieza.responsable?.nombreCompleto ?? null,
       })),
       ...aula.practicasLibres.map((practica) => ({
@@ -720,7 +783,9 @@ export class AulasService {
         fecha: practica.inicio,
         tipo: 'PRACTICA_LIBRE' as const,
         descripcion: `Práctica libre (${practica.estado}).`,
-        responsable: practica.estudiante ? `${practica.estudiante.nombre} (${practica.estudiante.codigo})` : 'Docente responsable',
+        responsable: practica.estudiante
+          ? `${practica.estudiante.nombre} (${practica.estudiante.codigo})`
+          : 'Docente responsable',
       })),
       ...aula.prestamosDocentes.map((prestamo) => ({
         id: `prestamo:${prestamo.id}`,
@@ -737,5 +802,4 @@ export class AulasService {
       .sort((a, b) => b.fecha.getTime() - a.fecha.getTime())
       .slice(0, 10);
   }
-
 }

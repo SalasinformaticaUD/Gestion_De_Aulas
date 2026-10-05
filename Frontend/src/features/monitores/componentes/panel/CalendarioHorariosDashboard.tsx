@@ -67,7 +67,7 @@ function posicionar(horarios: HorarioApi[]): HorarioPosicionado[] {
   return resultado;
 }
 
-export function CalendarioHorariosDashboard({ dependencia, horarios }: { dependencia?: string; horarios?: HorarioApi[] }) {
+export function CalendarioHorariosDashboard({ dependencia, horarios, periodo }: { dependencia?: string; horarios?: HorarioApi[]; periodo?: string }) {
   const modoPersonal = horarios !== undefined;
   const cargarHorarios = useCallback(() => horarios ? Promise.resolve(horarios) : servicioMonitores.listarHorarios(), [horarios]);
   const cargarMonitores = useCallback(() => horarios ? Promise.resolve([] as { id: string; department?: string; is_active?: boolean }[]) : servicioMonitores.listarMonitores(), [horarios]);
@@ -83,7 +83,7 @@ export function CalendarioHorariosDashboard({ dependencia, horarios }: { depende
   }, []);
 
   const idsDependencia = useMemo(() => new Set(modoPersonal ? recurso.datos.map((horario) => horario.monitor) : recursoMonitores.datos.filter((monitor) => monitor.is_active && (!dependencia || monitor.department === dependencia)).map((monitor) => monitor.id)), [modoPersonal, recurso.datos, recursoMonitores.datos, dependencia]);
-  const activos = useMemo(() => recurso.datos.filter((horario) => horario.is_active && idsDependencia.has(horario.monitor)), [recurso.datos, idsDependencia]);
+  const activos = useMemo(() => recurso.datos.filter((horario) => (modoPersonal || horario.is_active) && idsDependencia.has(horario.monitor)), [modoPersonal, recurso.datos, idsDependencia]);
     const tieneSabado = useMemo(() => activos.some((horario) => horario.weekday === 5), [activos]);
     const diasVisibles = tieneSabado ? 6 : 5;
   const visibles = useMemo(
@@ -142,7 +142,7 @@ export function CalendarioHorariosDashboard({ dependencia, horarios }: { depende
     <header>
       <div>
         <h2 id="titulo-horario-dashboard">{modoPersonal ? "Mi horario semanal" : "Horario semanal"}</h2>
-        <p>{modoPersonal ? "Sus turnos asignados para el periodo académico actual." : monitorSeleccionado ? `Vista individual de ${nombreSeleccionado}.` : "Monitores distribuidos por día y franja horaria."}</p>
+        <p>{modoPersonal ? `Sus turnos asignados${periodo ? ` para ${periodo}` : " para el periodo seleccionado"}.` : monitorSeleccionado ? `Vista individual de ${nombreSeleccionado}.` : "Monitores distribuidos por día y franja horaria."}</p>
       </div>
       <div className={estilos.accionesHorarioDashboard}>
         {!modoPersonal && monitorSeleccionado && <button type="button" className={estilos.botonSecundario} onClick={limpiarSeleccion}>Ocultar</button>}
@@ -216,7 +216,7 @@ export function CalendarioHorariosDashboard({ dependencia, horarios }: { depende
           </div>)}
         </div>
       </div>
-      {!recurso.cargando && !activos.length && <p className={estilos.vacio}>No hay horarios activos para mostrar.</p>}
+      {!recurso.cargando && !activos.length && <p className={estilos.vacio}>{modoPersonal ? "No hay horarios guardados para esta monitoría." : "No hay horarios activos para mostrar."}</p>}
       {recurso.cargando && <p className={estilos.vacio}>Cargando horario semanal…</p>}
     </>}
   </section>;

@@ -326,13 +326,15 @@ export class TareasOperativasService {
     const tarea = await this.findOne(id);
     if (
       tarea.estado !== EstadoTarea.PENDIENTE &&
-      tarea.estado !== EstadoTarea.EN_PROCESO
+      tarea.estado !== EstadoTarea.EN_PROCESO &&
+      tarea.estado !== EstadoTarea.COMPLETADA
     )
       throw new ConflictException(
-        'Solo se pueden aceptar tareas pendientes o en proceso con acciones pendientes.',
+        'Solo se pueden aceptar tareas pendientes o retomar tareas con acciones pendientes.',
       );
     if (
-      tarea.estado === EstadoTarea.EN_PROCESO &&
+      (tarea.estado === EstadoTarea.EN_PROCESO ||
+        tarea.estado === EstadoTarea.COMPLETADA) &&
       !tarea.informes[0]?.accionesPendientes?.trim()
     )
       throw new ConflictException(
@@ -371,6 +373,9 @@ export class TareasOperativasService {
         where: { id },
         data: {
           estado: EstadoTarea.EN_PROCESO,
+          ...(tarea.estado === EstadoTarea.COMPLETADA && {
+            completadaEn: null,
+          }),
           ...(tarea.estado === EstadoTarea.PENDIENTE && {
             responsableId: usuarioId,
             inicio: tarea.inicio ?? new Date(),
@@ -439,6 +444,57 @@ export class TareasOperativasService {
       datosNuevos: informe,
     });
     return informe;
+  }
+
+  async editarInforme(
+    tareaId: string,
+    informeId: string,
+    dto: CrearInformeSeguimientoDto,
+    usuarioId?: string,
+  ) {
+    if (!usuarioId)
+      throw new BadRequestException(
+        'Se requiere un usuario autenticado para editar el informe.',
+      );
+    const informe = await this.prisma.informeSeguimientoTarea.findUnique({
+      where: { id: informeId },
+      include: { autor: { select: { id: true, nombreCompleto: true } } },
+    });
+    if (!informe || informe.tareaId !== tareaId)
+      throw new NotFoundException('El informe de seguimiento no existe.');
+    if (informe.autorId !== usuarioId)
+      throw new ConflictException(
+        'Solo el usuario que creó el informe puede editarlo.',
+      );
+    const tarea = await this.findOne(tareaId);
+    if (
+      tarea.estado !== EstadoTarea.EN_PROCESO &&
+      tarea.estado !== EstadoTarea.COMPLETADA
+    )
+      throw new ConflictException(
+        'Solo se pueden editar informes de tareas en proceso o completadas.',
+      );
+    if (tarea.informes[0]?.id !== informeId)
+      throw new ConflictException(
+        'Solo se puede editar el informe más reciente de la tarea.',
+      );
+    const actualizado = await this.prisma.informeSeguimientoTarea.update({
+      where: { id: informeId },
+      data: {
+        actividadesRealizadas: dto.actividadesRealizadas.trim(),
+        accionesPendientes: dto.accionesPendientes?.trim() || null,
+      },
+      include: { autor: { select: { id: true, nombreCompleto: true } } },
+    });
+    await this.auditoria.registrar({
+      usuarioId,
+      entidad: 'InformeSeguimientoTarea',
+      entidadId: informeId,
+      accion: 'UPDATE',
+      datosPrevios: informe,
+      datosNuevos: actualizado,
+    });
+    return actualizado;
   }
 
   historial(id: string) {

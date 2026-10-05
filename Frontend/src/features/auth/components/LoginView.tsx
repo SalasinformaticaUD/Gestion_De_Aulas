@@ -10,6 +10,8 @@ import { CosmosLogo } from "@/components/brand/CosmosLogo";
 import { UniversityLogo } from "@/components/brand/UniversityLogo";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
+type AuthMode = "login" | "request-recovery" | "reset-password";
+
 export function LoginView() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -18,8 +20,14 @@ export function LoginView() {
     [searchParams],
   );
   const nextPath = searchParams.get("next");
+  const resetUid = searchParams.get("reset_uid") ?? "";
+  const resetToken = searchParams.get("reset_token") ?? "";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [authMode, setAuthMode] = useState<AuthMode>("login");
+  const [studentCode, setStudentCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isValidating, setIsValidating] = useState(false);
   const [feedback, setFeedback] = useState<"success" | "error" | null>(null);
   const [mensajeError, setMensajeError] = useState("");
@@ -27,9 +35,18 @@ export function LoginView() {
   useEffect(() => {
     setUsername("");
     setPassword("");
+    setStudentCode("");
+    setNewPassword("");
+    setConfirmPassword("");
     setFeedback(null);
+    setMensajeError("");
     setIsValidating(false);
-  }, [application.key]);
+    setAuthMode(
+      application.key === "monitores" && resetUid && resetToken
+        ? "reset-password"
+        : "login",
+    );
+  }, [application.key, resetToken, resetUid]);
 
   useEffect(() => {
     const sesion = obtenerSesion();
@@ -48,6 +65,7 @@ export function LoginView() {
     }
 
     setFeedback(null);
+    setMensajeError("");
     setIsValidating(true);
 
     try {
@@ -66,6 +84,9 @@ export function LoginView() {
           && central.usuario.nombreUsuario.toLocaleLowerCase() !== identificador.toLocaleLowerCase()
         ) {
           throw new Error("Los líderes deben ingresar con su nombre de usuario.");
+        }
+        if (application.key === "monitores") {
+          await solicitarAulas("/integraciones/monitores/sesion", central.accessToken, { method: "POST" });
         }
         const aplicacionesAutorizadas = [
           ...(central.aplicaciones.puedeAccederAulas ? ["aulas" as const] : []),
@@ -125,6 +146,93 @@ export function LoginView() {
     }
   }
 
+  async function requestPasswordRecovery(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!/^\d{3,20}$/.test(studentCode.trim())) {
+      setFeedback("error");
+      setMensajeError("Ingrese un código estudiantil válido, usando solo números.");
+      return;
+    }
+    setFeedback(null);
+    setIsValidating(true);
+    try {
+      const result = await solicitarMonitores<{ detail: string; correo_destino?: string }>(
+        "/api/v1/auth/password-recovery/request/",
+        {
+          method: "POST",
+          body: JSON.stringify({ codigo_estudiante: studentCode.trim() }),
+          notificarAutorizacion: false,
+        },
+      );
+      setFeedback("success");
+      setMensajeError(
+        result.correo_destino
+          ? `Enviamos las instrucciones a ${result.correo_destino}. Revisa también la carpeta de correo no deseado.`
+          : result.detail,
+      );
+    } catch (problema) {
+      setFeedback("error");
+      setMensajeError(problema instanceof Error ? problema.message : "No fue posible solicitar la recuperación.");
+    } finally {
+      setIsValidating(false);
+    }
+  }
+
+  async function resetPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (newPassword.length < 10) {
+      setFeedback("error");
+      setMensajeError("La nueva contraseña debe tener al menos 10 caracteres.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setFeedback("error");
+      setMensajeError("Las contraseñas no coinciden.");
+      return;
+    }
+    setFeedback(null);
+    setIsValidating(true);
+    try {
+      await solicitarMonitores<{ detail: string }>(
+        "/api/v1/auth/password-recovery/confirm/",
+        {
+          method: "POST",
+          body: JSON.stringify({ uid: resetUid, token: resetToken, nueva_contrasena: newPassword }),
+          notificarAutorizacion: false,
+        },
+      );
+      setNewPassword("");
+      setConfirmPassword("");
+      setAuthMode("login");
+      setFeedback("success");
+      setMensajeError("Contraseña actualizada. Ya puede ingresar con su código estudiantil.");
+      router.replace("/login?app=monitores");
+    } catch (problema) {
+      setFeedback("error");
+      setMensajeError(problema instanceof Error ? problema.message : "No fue posible cambiar la contraseña.");
+    } finally {
+      setIsValidating(false);
+    }
+  }
+
+  const formSubmit = authMode === "login"
+    ? submitLogin
+    : authMode === "request-recovery"
+      ? requestPasswordRecovery
+      : resetPassword;
+  const title = authMode === "login"
+    ? `Ingresar a ${application.name}`
+    : authMode === "request-recovery"
+      ? "Recuperar contraseña"
+      : "Crear nueva contraseña";
+  const description = isValidating
+    ? "Procesando su solicitud..."
+    : authMode === "login"
+      ? "Por favor, introduzca sus credenciales de acceso institucional."
+      : authMode === "request-recovery"
+        ? "Confirme su código estudiantil. Enviaremos las instrucciones al correo registrado."
+        : "Ingrese y confirme la nueva contraseña para su cuenta de monitor.";
+
   return (
     <main className="auth-page">
       <ThemeToggle />
@@ -134,11 +242,11 @@ export function LoginView() {
           <CosmosLogo className="auth-cosmos-logo auth-cosmos-logo-dark" variant="light" priority />
         </header>
 
-        <form className="login-card" onSubmit={submitLogin}>
-          <h1 id="login-title">Ingresar a {application.name}</h1>
-          <p>{isValidating ? "Validando su información..." : "Por favor, introduzca sus credenciales de acceso institucional."}</p>
+        <form className="login-card" onSubmit={formSubmit}>
+          <h1 id="login-title">{title}</h1>
+          <p>{description}</p>
 
-          <label className="login-field">
+          {authMode === "login" && <label className="login-field">
             <span>{application.key === "monitores" ? "Código o usuario" : "Usuario"}</span>
             <input
               autoComplete="username"
@@ -148,9 +256,9 @@ export function LoginView() {
               type="text"
               value={username}
             />
-          </label>
+          </label>}
 
-          {!isValidating && (
+          {authMode === "login" && !isValidating && (
             <label className="login-field">
               <span>Contraseña</span>
               <input
@@ -163,13 +271,49 @@ export function LoginView() {
             </label>
           )}
 
-          {!isValidating && <button className="login-recovery" type="button">Olvidé mi contraseña</button>}
+          {authMode === "request-recovery" && (
+            <label className="login-field">
+              <span>Código estudiantil</span>
+              <input
+                autoComplete="username"
+                autoFocus
+                disabled={isValidating}
+                inputMode="numeric"
+                onChange={(event) => setStudentCode(event.target.value.replace(/\D/g, ""))}
+                placeholder="Ej. 20211001001"
+                value={studentCode}
+              />
+            </label>
+          )}
+
+          {authMode === "reset-password" && !isValidating && <>
+            <label className="login-field">
+              <span>Nueva contraseña</span>
+              <input autoComplete="new-password" autoFocus minLength={10} onChange={(event) => setNewPassword(event.target.value)} type="password" value={newPassword} />
+            </label>
+            <label className="login-field">
+              <span>Confirmar nueva contraseña</span>
+              <input autoComplete="new-password" minLength={10} onChange={(event) => setConfirmPassword(event.target.value)} type="password" value={confirmPassword} />
+            </label>
+          </>}
+
+          {authMode === "login" && application.key === "monitores" && !isValidating && <button className="login-recovery" type="button" onClick={() => { setAuthMode("request-recovery"); setFeedback(null); setMensajeError(""); }}>Olvidé mi contraseña</button>}
 
           <button className="login-submit" disabled={isValidating} type="submit">
-            {isValidating ? "◌  Validando..." : "Iniciar sesión"}
+            {isValidating
+              ? "◌  Procesando..."
+              : authMode === "login"
+                ? "Iniciar sesión"
+                : authMode === "request-recovery"
+                  ? "Enviar instrucciones"
+                  : "Cambiar contraseña"}
           </button>
 
-          {!isValidating && (
+          {authMode !== "login" && !isValidating && (
+            <button className="login-back login-back-button" type="button" onClick={() => { setAuthMode("login"); setFeedback(null); setMensajeError(""); router.replace("/login?app=monitores"); }}>←&nbsp; Volver al inicio de sesión</button>
+          )}
+
+          {authMode === "login" && !isValidating && (
             <Link className="login-back" href="/">←&nbsp; Atrás — Selector de Aplicativo</Link>
           )}
 
@@ -178,7 +322,7 @@ export function LoginView() {
 
         {feedback === "success" && (
           <p className="auth-feedback auth-feedback-success" role="status">
-            ✓&nbsp;&nbsp; Acceso concedido — Redirigiendo al sistema...
+            ✓&nbsp;&nbsp; {mensajeError || "Acceso concedido — Redirigiendo al sistema..."}
           </p>
         )}
         {feedback === "error" && (

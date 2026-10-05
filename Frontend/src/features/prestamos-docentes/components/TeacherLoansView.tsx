@@ -24,6 +24,11 @@ const statusLabels: Record<TeacherLoanStatus, string> = {
 const currentStatuses: TeacherLoanStatus[] = ["SOLICITADO", "APROBADO", "ACTIVO"];
 const historyStatuses: TeacherLoanStatus[] = ["DEVUELTO", "CANCELADO", "VENCIDO"];
 
+function esAula508(item: DisponibilidadApi) {
+  const codigo = item.aula.codigo.replace(/\s+/g, "").toLocaleUpperCase("es");
+  return codigo === "508" || codigo === "AULA508";
+}
+
 export function TeacherLoansView() {
   const [loans, setLoans] = useState<TeacherLoan[]>([]);
   const [teachers, setTeachers] = useState<DocenteCatalogo[]>([]);
@@ -42,11 +47,14 @@ export function TeacherLoansView() {
   const visibleLoans = useMemo(() => {
     const source = view === "gestion" ? currentLoans : historicalLoans;
     const normalized = query.trim().toLocaleLowerCase("es");
-    return source.filter((loan) =>
+    const filtrados = source.filter((loan) =>
       (statusFilter === "todos" || loan.status === statusFilter) &&
       (!dateFilter || loan.start.slice(0, 10) === dateFilter) &&
       (!normalized || `${loan.id} ${loan.teacher.name} ${loan.teacher.document} ${loan.roomCode} ${loan.reason ?? ""}`.toLocaleLowerCase("es").includes(normalized)),
     );
+    return view === "historial"
+      ? [...filtrados].sort((a, b) => b.start.localeCompare(a.start))
+      : filtrados;
   }, [currentLoans, dateFilter, historicalLoans, query, statusFilter, view]);
 
   const changeView = (next: LoanView) => {
@@ -187,8 +195,9 @@ function RequestLoanDialog({ teachers, software, onClose, onSubmit }: { teachers
       if (!active) return;
       const ordenar = (a: DisponibilidadApi, b: DisponibilidadApi) => a.aula.capacidad - b.aula.capacidad || a.aula.codigo.localeCompare(b.aula.codigo, "es", { numeric: true });
       const aulasDisponibles = result.filter((item) => item.estadoCalculado.toLocaleLowerCase("es") === "disponible");
-      setSuggestions(aulasDisponibles.filter((item) => !item.fuentes.some((fuente) => fuente.tipo === "clase-programada")).sort(ordenar));
-      setAbsenceSuggestions(aulasDisponibles.filter((item) => item.fuentes.some((fuente) => fuente.tipo === "clase-programada" && fuente.estado === "AUSENTE")).sort(ordenar));
+      const aulasPermitidas = aulasDisponibles.filter((item) => !esAula508(item));
+      setSuggestions(aulasPermitidas.filter((item) => !item.fuentes.some((fuente) => fuente.tipo === "clase-programada")).sort(ordenar));
+      setAbsenceSuggestions(aulasPermitidas.filter((item) => item.fuentes.some((fuente) => fuente.tipo === "clase-programada" && fuente.estado === "AUSENTE")).sort(ordenar));
     }).catch((error) => {
       if (active) setRoomsError(error instanceof Error ? error.message : "No fue posible consultar la disponibilidad de aulas.");
     }).finally(() => { if (active) setLoadingRooms(false); });

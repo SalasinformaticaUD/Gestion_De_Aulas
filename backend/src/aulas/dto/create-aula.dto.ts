@@ -18,6 +18,9 @@ const trim = ({ value }: { value: unknown }): unknown =>
   typeof value === 'string' ? value.trim() : value;
 
 export class CreateAulaDto {
+  @IsUUID()
+  responsableId!: string;
+
   @Transform(trim)
   @IsString()
   @IsNotEmpty()

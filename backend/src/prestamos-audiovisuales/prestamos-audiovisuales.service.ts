@@ -378,6 +378,17 @@ export class PrestamosAudiovisualesService {
   }
 
   async create(dto: CreatePrestamoAudiovisualDto, usuarioId?: string) {
+    const esOtroSolicitante = dto.solicitanteTipo === 'OTRO';
+    if (esOtroSolicitante && dto.docenteId) {
+      throw new BadRequestException(
+        'Un préstamo de otro solicitante no puede asociarse a un docente.',
+      );
+    }
+    if (!esOtroSolicitante && !dto.docenteDocumento?.trim()) {
+      throw new BadRequestException(
+        'La identificación del docente es obligatoria.',
+      );
+    }
     const salidaEn = dto.salidaEn ? new Date(dto.salidaEn) : new Date();
     const devolucionEstimada = new Date(dto.devolucionEstimada);
     this.validarRangoFechas(salidaEn, devolucionEstimada);
@@ -397,8 +408,11 @@ export class PrestamosAudiovisualesService {
             entregadoPorId: dto.entregadoPorId || usuarioId,
           }),
           responsableTipo: dto.responsableTipo ?? 'MONITOR',
+          solicitanteTipo: esOtroSolicitante ? 'OTRO' : 'DOCENTE',
           docenteNombre: dto.docenteNombre?.trim() ?? 'Sin información',
-          docenteDocumento: dto.docenteDocumento?.trim() ?? 'Sin información',
+          docenteDocumento: esOtroSolicitante
+            ? 'NO APLICA'
+            : dto.docenteDocumento!.trim(),
           salonTexto: dto.salonTexto?.trim() ?? 'Sin ubicación registrada',
           ...(dto.elementosAdicionales && {
             elementosAdicionales: dto.elementosAdicionales.map((item) =>
@@ -795,24 +809,37 @@ export class PrestamosAudiovisualesService {
     tx: Prisma.TransactionClient,
     dto: CreatePrestamoAudiovisualDto,
   ) {
+    const esOtroSolicitante = dto.solicitanteTipo === 'OTRO';
     const prestamoActivo = await tx.prestamoAudiovisual.findFirst({
       where: {
         estado: { in: [EstadoPrestamo.ACTIVO, EstadoPrestamo.VENCIDO] },
-        OR: [
-          ...(dto.docenteId ? [{ docenteId: dto.docenteId }] : []),
-          {
-            docenteDocumento: {
-              equals: dto.docenteDocumento.trim(),
-              mode: 'insensitive',
-            },
-          },
-        ],
+        ...(esOtroSolicitante
+          ? {
+              solicitanteTipo: 'OTRO',
+              docenteNombre: {
+                equals: dto.docenteNombre.trim(),
+                mode: 'insensitive' as const,
+              },
+            }
+          : {
+              OR: [
+                ...(dto.docenteId ? [{ docenteId: dto.docenteId }] : []),
+                {
+                  docenteDocumento: {
+                    equals: dto.docenteDocumento!.trim(),
+                    mode: 'insensitive' as const,
+                  },
+                },
+              ],
+            }),
       },
       select: { id: true },
     });
     if (prestamoActivo) {
       throw new ConflictException(
-        'El profesor ya tiene un préstamo audiovisual activo o pendiente de devolución.',
+        esOtroSolicitante
+          ? 'Este responsable ya tiene un préstamo audiovisual activo o pendiente de devolución.'
+          : 'El profesor ya tiene un préstamo audiovisual activo o pendiente de devolución.',
       );
     }
   }

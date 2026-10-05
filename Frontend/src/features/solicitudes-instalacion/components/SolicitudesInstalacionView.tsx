@@ -87,6 +87,16 @@ export function SolicitudesInstalacionView() {
     void cargar();
   }, [cargar]);
 
+  useEffect(() => {
+    if (vista === "importar") return;
+
+    const temporizador = window.setTimeout(() => {
+      setFiltros(borrador);
+    }, 300);
+
+    return () => window.clearTimeout(temporizador);
+  }, [borrador, vista]);
+
   const cambiarVista = (nueva: typeof vista) => {
     setVista(nueva);
     if (nueva !== "importar") {
@@ -207,7 +217,6 @@ export function SolicitudesInstalacionView() {
           <Filtros
             borrador={borrador}
             onChange={setBorrador}
-            onApply={() => setFiltros({ ...borrador, vista, pagina: 1 })}
             onClear={() => {
               const limpios = { vista, pagina: 1 } as FiltrosSolicitudes;
               setBorrador(limpios);
@@ -396,23 +405,18 @@ export function SolicitudesInstalacionView() {
 function Filtros({
   borrador,
   onChange,
-  onApply,
   onClear,
 }: {
   borrador: FiltrosSolicitudes;
   onChange: (value: FiltrosSolicitudes) => void;
-  onApply: () => void;
   onClear: () => void;
 }) {
   const campo = (nombre: keyof FiltrosSolicitudes, valor: string) =>
-    onChange({ ...borrador, [nombre]: valor });
+    onChange({ ...borrador, [nombre]: valor, pagina: 1 });
   return (
-    <form
+    <section
       className={styles.filters}
-      onSubmit={(evento) => {
-        evento.preventDefault();
-        onApply();
-      }}
+      aria-label="Filtros de solicitudes"
     >
       <label className={styles.search}>
         <span>Buscar</span>
@@ -468,13 +472,10 @@ function Filtros({
       </label>
       <div className={styles.filterActions}>
         <button type="button" onClick={onClear}>
-          Limpiar
-        </button>
-        <button type="submit" className="button-primary">
-          Aplicar filtros
+          Limpiar filtros
         </button>
       </div>
-    </form>
+    </section>
   );
 }
 

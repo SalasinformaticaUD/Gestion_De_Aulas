@@ -2,7 +2,6 @@ import { Transform } from 'class-transformer';
 import {
   ArrayUnique,
   IsArray,
-  IsIn,
   IsOptional,
   IsString,
   IsUUID,
@@ -30,11 +29,4 @@ export class CreateRoleDto {
   @IsUUID('4', { each: true })
   permisoIds?: string[];
 
-  @IsOptional()
-  @IsIn(['ADMIN', 'LIDER'])
-  perfilMonitores?: 'ADMIN' | 'LIDER' | null;
-
-  @IsOptional()
-  @IsIn(['PHYSICS', 'INFORMATICS_LABS', 'ELECTRICAL'])
-  dependenciaMonitores?: 'PHYSICS' | 'INFORMATICS_LABS' | 'ELECTRICAL' | null;
 }

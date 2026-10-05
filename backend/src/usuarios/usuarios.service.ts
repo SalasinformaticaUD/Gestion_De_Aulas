@@ -13,7 +13,8 @@ type DependenciaMonitores = 'PHYSICS' | 'INFORMATICS_LABS' | 'ELECTRICAL' | null
 
 const select = {
   id: true, nombreCompleto: true, nombreUsuario: true, correo: true, cargo: true,
-  estado: true, creadoEn: true, actualizadoEn: true, dependencia: true,
+  estado: true, perfilMonitores: true, dependenciaMonitores: true,
+  creadoEn: true, actualizadoEn: true, dependencia: true,
   roles: { include: { rol: true } },
 } as const;
 
@@ -27,10 +28,13 @@ export class UsuariosService {
   ) {}
 
   async create(dto: CreateUsuarioDto, usuarioId?: string) {
-    const { password, rolIds = [], ...data } = dto;
+    const { password, rolIds = [], perfilMonitores = null, dependenciaMonitores = null, ...data } = dto;
+    this.validarConfiguracionMonitores(perfilMonitores, dependenciaMonitores);
     const usuario = await this.prisma.usuario.create({
       data: {
         ...data,
+        perfilMonitores,
+        dependenciaMonitores: perfilMonitores === 'LIDER' ? dependenciaMonitores : null,
         passwordHash: this.passwords.hash(password),
         roles: { create: rolIds.map((rolId) => ({ rolId })) },
       },
@@ -61,11 +65,20 @@ export class UsuariosService {
 
   async update(id: string, dto: UpdateUsuarioDto, usuarioId?: string) {
     const previo = await this.findOne(id);
-    const { password, rolIds, ...data } = dto;
+    const { password, rolIds, perfilMonitores, dependenciaMonitores, ...data } = dto;
+    const siguientePerfil = perfilMonitores === undefined ? previo.perfilMonitores : perfilMonitores;
+    const siguienteDependencia = dependenciaMonitores === undefined
+      ? (siguientePerfil === 'LIDER' ? previo.dependenciaMonitores : null)
+      : dependenciaMonitores;
+    this.validarConfiguracionMonitores(siguientePerfil, siguienteDependencia);
     const usuario = await this.prisma.usuario.update({
       where: { id },
       data: {
         ...data,
+        ...(perfilMonitores === undefined ? {} : { perfilMonitores }),
+        ...(dependenciaMonitores === undefined && siguientePerfil === 'LIDER'
+          ? {}
+          : { dependenciaMonitores: siguientePerfil === 'LIDER' ? siguienteDependencia : null }),
         ...(password ? { passwordHash: this.passwords.hash(password) } : {}),
         ...(rolIds === undefined ? {} : {
           roles: { deleteMany: {}, create: rolIds.map((rolId) => ({ rolId })) },
@@ -73,7 +86,7 @@ export class UsuariosService {
       },
       select,
     });
-    await this.sincronizarMonitores(usuario, this.tienePerfilMonitores(previo));
+    await this.sincronizarMonitores(usuario, Boolean(previo.perfilMonitores));
     await this.auditoria?.registrar({ usuarioId, entidad: 'Usuario', entidadId: id, accion: 'UPDATE', datosPrevios: previo, datosNuevos: usuario });
     return usuario;
   }
@@ -85,33 +98,37 @@ export class UsuariosService {
       data: { estado: EstadoCuenta.INACTIVA },
       select,
     });
-    await this.sincronizarMonitores(usuario, this.tienePerfilMonitores(previo));
+    await this.sincronizarMonitores(usuario, Boolean(previo.perfilMonitores));
     await this.auditoria?.registrar({ usuarioId, entidad: 'Usuario', entidadId: id, accion: 'DISABLE', datosPrevios: previo, datosNuevos: usuario });
     return usuario;
   }
 
-  private tienePerfilMonitores(usuario: { roles: Array<{ rol: { perfilMonitores: PerfilMonitores } }> }) {
-    return usuario.roles.some(({ rol }) => Boolean(rol.perfilMonitores));
+  private validarConfiguracionMonitores(perfil: PerfilMonitores, dependencia: DependenciaMonitores) {
+    if (!perfil) {
+      if (dependencia) throw new BadRequestException('La dependencia de Monitores requiere habilitar el acceso del usuario.');
+      return;
+    }
+    if (perfil === 'LIDER' && !dependencia) throw new BadRequestException('Un líder de Monitores debe tener una dependencia.');
+    if (perfil === 'ADMIN' && dependencia) throw new BadRequestException('Un administrador de Monitores no debe tener dependencia.');
   }
 
   private async sincronizarMonitores(
     usuario: {
       id: string; nombreCompleto: string; nombreUsuario: string; correo: string; estado: EstadoCuenta;
-      roles: Array<{ rol: { perfilMonitores: PerfilMonitores; dependenciaMonitores: DependenciaMonitores } }>;
+      perfilMonitores: PerfilMonitores; dependenciaMonitores: DependenciaMonitores;
     },
     forzar = false,
   ) {
-    const perfil = usuario.roles.map(({ rol }) => rol).find((rol) => rol.perfilMonitores);
-    if (!perfil && !forzar) return;
+    if (!usuario.perfilMonitores && !forzar) return;
     if (!this.monitores) throw new BadRequestException('La integración de Monitores no está disponible.');
     await this.monitores.sincronizarUsuario({
       externalUserId: usuario.id,
       username: usuario.nombreUsuario,
       email: usuario.correo,
       fullName: usuario.nombreCompleto,
-      role: perfil?.perfilMonitores ?? null,
-      department: perfil?.dependenciaMonitores ?? undefined,
-      isActive: usuario.estado === EstadoCuenta.ACTIVA && Boolean(perfil),
+      role: usuario.perfilMonitores,
+      department: usuario.dependenciaMonitores ?? undefined,
+      isActive: usuario.estado === EstadoCuenta.ACTIVA && Boolean(usuario.perfilMonitores),
     });
   }
 }

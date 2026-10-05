@@ -14,6 +14,7 @@ export class PrestamoAudiovisualEntity implements PrismaPrestamoAudiovisual {
   declare docenteId: string | null;
   declare aulaId: string | null;
   declare responsableTipo: string;
+  declare solicitanteTipo: 'DOCENTE' | 'OTRO';
   declare docenteNombre: string;
   declare docenteDocumento: string;
   declare salonTexto: string;

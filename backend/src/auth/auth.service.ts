@@ -59,14 +59,11 @@ export class AuthService {
     }
 
     const usuarioAutenticado = this.toAuthenticatedUser(usuario);
-    const perfilMonitores = usuario.roles
-      .map(({ rol }) => rol)
-      .find((rol) => rol.perfilMonitores);
-    const puedeAccederMonitores = Boolean(perfilMonitores?.perfilMonitores);
+    const puedeAccederMonitores = Boolean(usuario.perfilMonitores);
     const puedeCambiarAAulasDesdeMonitores =
-      perfilMonitores?.perfilMonitores === 'ADMIN' ||
-      (perfilMonitores?.perfilMonitores === 'LIDER' &&
-        perfilMonitores.dependenciaMonitores === 'INFORMATICS_LABS');
+      usuario.perfilMonitores === 'ADMIN' ||
+      (usuario.perfilMonitores === 'LIDER' &&
+        usuario.dependenciaMonitores === 'INFORMATICS_LABS');
     const token = this.tokens.sign({
       sub: usuarioAutenticado.id,
       nombreUsuario: usuarioAutenticado.nombreUsuario,
@@ -82,9 +79,7 @@ export class AuthService {
         puedeAccederAulas:
           puedeCambiarAAulasDesdeMonitores ||
           usuarioAutenticado.modulos.some((codigo) => codigo !== 'MONITORES'),
-        puedeAccederMonitores:
-          puedeAccederMonitores &&
-          usuarioAutenticado.modulos.includes('MONITORES'),
+        puedeAccederMonitores,
         urlMonitores: process.env.MONITORES_API_URL?.trim() || null,
       },
     };
@@ -158,18 +153,15 @@ export class AuthService {
       data: { nombreUsuario: nuevoNombre },
       select: { nombreUsuario: true },
     });
-    const perfil = usuario.roles
-      .map(({ rol }) => rol)
-      .find((rol) => rol.perfilMonitores);
-    if (perfil) {
+    if (usuario.perfilMonitores) {
       try {
         await this.sincronizarNombreUsuarioEnMonitores({
           externalUserId: usuario.id,
           username: actualizado.nombreUsuario,
           email: usuario.correo,
           fullName: usuario.nombreCompleto,
-          role: perfil.perfilMonitores,
-          department: perfil.dependenciaMonitores,
+          role: usuario.perfilMonitores,
+          department: usuario.dependenciaMonitores,
           isActive: usuario.estado === EstadoCuenta.ACTIVA,
         });
       } catch (error) {
@@ -222,11 +214,12 @@ export class AuthService {
     correo: string;
     fotoPerfil: string | null;
     cargo: string | null;
+    perfilMonitores: 'ADMIN' | 'LIDER' | null;
+    dependenciaMonitores: 'PHYSICS' | 'INFORMATICS_LABS' | 'ELECTRICAL' | null;
     dependencia: { id: string; nombre: string } | null;
     roles: Array<{
       rol: {
         nombre: string;
-        perfilMonitores: 'ADMIN' | 'LIDER' | null;
         permisos: Array<{
           permiso: {
             codigo: string;

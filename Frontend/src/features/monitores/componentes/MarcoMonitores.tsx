@@ -34,6 +34,7 @@ export function MarcoMonitores({ children }: { children:React.ReactNode }) {
   const [perfil, setPerfil] = useState<UserProfile>(defaultProfile);
   const [ahora, setAhora] = useState<Date | null>(null);
   const [puedeGestionarUsuarios, setPuedeGestionarUsuarios] = useState(false);
+  const [esMonitorActual, setEsMonitorActual] = useState(false);
   const [esMonitor, setEsMonitor] = useState(() =>
     (obtenerSesion()?.usuario.roles ?? []).some((rol) => rol.trim().toLowerCase() === "monitor"),
   );
@@ -50,13 +51,14 @@ export function MarcoMonitores({ children }: { children:React.ReactNode }) {
   }, []);
   useEffect(() => {
     let vigente = true;
-    void solicitarMonitores<{ role: string }>("/api/v1/auth/me/")
-      .then((usuario) => { if (vigente) { const rol = usuario.role.trim().toLowerCase(); setPuedeGestionarUsuarios(rol === "admin"); setEsMonitor(rol === "monitor"); } })
+    void solicitarMonitores<{ role: string; monitor_is_current: boolean | null }>("/api/v1/auth/me/")
+      .then((usuario) => { if (vigente) { const rol = usuario.role.trim().toLowerCase(); setPuedeGestionarUsuarios(rol === "admin"); setEsMonitor(rol === "monitor"); setEsMonitorActual(rol === "monitor" && usuario.monitor_is_current === true); } })
       .catch(() => {
         if (vigente) {
           const rolesSesion = obtenerSesion()?.usuario.roles ?? [];
           setPuedeGestionarUsuarios(false);
           setEsMonitor(rolesSesion.some((rol) => rol.trim().toLowerCase() === "monitor"));
+          setEsMonitorActual(false);
         }
       });
     return () => { vigente = false; };
@@ -65,8 +67,8 @@ export function MarcoMonitores({ children }: { children:React.ReactNode }) {
     "/gestion-monitores",
     "/gestion-monitores/anotaciones",
     "/gestion-monitores/registros",
-    "/gestion-monitores/actas",
   ]);
+  if (esMonitorActual) rutasMonitor.add("/gestion-monitores/actas");
   const navegacionVisible = navegacion.filter((item) =>
     esMonitor ? rutasMonitor.has(item.href) : item.href !== "/gestion-monitores/usuarios" || puedeGestionarUsuarios,
   );

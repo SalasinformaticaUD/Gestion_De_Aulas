@@ -21,7 +21,7 @@ export const servicioMonitores = {
   iniciarNuevoSemestre: (new_semester_name: string, starts_on: string, ends_on: string, password: string) => solicitarMonitores<{ archived_semester: string; new_semester: string; starts_on: string; ends_on: string; affected: Record<string, number> }>("/api/v1/monitors/new-semester/", { method: "POST", body: JSON.stringify({ new_semester_name, starts_on, ends_on, password, confirm: true }), signal: AbortSignal.timeout(60000) }),
   verificarContrasenaActual: (password: string) => solicitarAulas<{ valido: boolean }>("/auth/verificar-contrasena", obtenerSesion()?.tokenAcceso, { method: "POST", body: JSON.stringify({ password }) }),
   obtenerPerfilMonitores: async () => {
-    const perfil = await solicitarMonitores<{ role: string; department?: string | null }>("/api/v1/auth/me/");
+    const perfil = await solicitarMonitores<{ role: string; department?: string | null; monitor_is_current?: boolean | null }>("/api/v1/auth/me/");
     return { ...perfil, role: perfil.role.trim().toLowerCase() };
   },
   listarUsuariosGestion: () => solicitarMonitores<Array<{ id:string; username:string; email:string; first_name:string; last_name:string; full_name:string; role:"admin"|"leader"; department:"physics"|"informatics_labs"|"electrical"|null; is_active:boolean; source:"AULAS"|"MONITORES"; usuario_externo_id:string|null }>>("/api/v1/auth/users/"),
@@ -29,7 +29,7 @@ export const servicioMonitores = {
   actualizarUsuarioGestion: (id:string, payload: { username:string; email:string; first_name:string; last_name:string; password?:undefined; role:"admin"|"leader"; department:"physics"|"informatics_labs"|"electrical"|null; is_active:boolean }) => solicitarMonitores(`/api/v1/auth/users/${id}/`, { method:"PATCH", body:JSON.stringify(payload) }),
   restablecerClaveUsuarioGestion: (id:string, password:string) => solicitarMonitores(`/api/v1/auth/users/${id}/password/`, { method:"POST", body:JSON.stringify({ password }) }),
   obtenerDashboard: (department?: string) => solicitarMonitores<DashboardApi>(`/api/v1/reports/dashboard/${department ? `?department=${encodeURIComponent(department)}` : ""}`),
-  obtenerMiDashboardMonitor: () => solicitarMonitores<PanelMonitorApi>("/api/v1/reports/dashboard/me/"),
+  obtenerMiDashboardMonitor: (monitorId?: string) => solicitarMonitores<PanelMonitorApi>(`/api/v1/reports/dashboard/me/${monitorId ? `?monitor_id=${encodeURIComponent(monitorId)}` : ""}`),
   obtenerMisRegistros: (monitorId?: string) => solicitarMonitores<RegistrosPersonalesApi>(`/api/v1/reports/monitor-records/me/${monitorId ? `?monitor_id=${encodeURIComponent(monitorId)}` : ""}`),
   listarHorarios: () => solicitarMonitores<HorarioApi[]>("/api/v1/schedules/"),
   listarPaginaHorarios: (pagina = 1) => solicitarMonitores<PaginaApi<HorarioApi>>(`/api/v1/schedules/?page=${pagina}&page_size=20`),

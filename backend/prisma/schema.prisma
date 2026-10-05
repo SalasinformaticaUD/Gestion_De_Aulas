@@ -159,6 +159,8 @@ model Usuario {
   fotoPerfil                        String?                           @db.Text
   cargo                             String?
   estado                            EstadoCuenta                      @default(ACTIVA)
+  perfilMonitores                   PerfilMonitores?
+  dependenciaMonitores              DependenciaMonitores?
   dependenciaId                     String?                           @db.Uuid
   dependencia                       Dependencia?                      @relation(fields: [dependenciaId], references: [id])
   roles                             UsuarioRol[]
@@ -189,6 +191,7 @@ model Usuario {
   prestamosDocentesCreados          PrestamoDocente[]                 @relation("PrestamoDocenteEncargado")
   practicasLibresAtendidas          PracticaLibre[]                   @relation("AtencionPracticaLibre")
   limpiezasRegistradas              Limpieza[]                        @relation("RegistroLimpieza")
+  aulasResponsable                  Aula[]                            @relation("ResponsableAula")
   creadoEn                          DateTime                          @default(now())
   actualizadoEn                     DateTime                          @updatedAt
 }
@@ -283,7 +286,9 @@ model Aula {
   renovacionTecnologica  Boolean                  @default(false)
   pendienteIntervencion  Boolean                  @default(false)
   proyectoCurricularId   String?                  @db.Uuid
+  responsableId          String?                  @db.Uuid
   proyectoCurricular     ProyectoCurricular?      @relation(fields: [proyectoCurricularId], references: [id])
+  responsable            Usuario?                 @relation("ResponsableAula", fields: [responsableId], references: [id], onDelete: SetNull)
   proyectosCurriculares  AulaProyectoCurricular[]
   softwares              AulaSoftware[]
   clases                 ClaseProgramada[]
@@ -298,6 +303,8 @@ model Aula {
   eliminadoEn            DateTime?
   creadoEn               DateTime                 @default(now())
   actualizadoEn          DateTime                 @updatedAt
+
+  @@index([responsableId])
 }
 
 model PeriodoAcademico {
@@ -684,6 +691,7 @@ model PrestamoAudiovisual {
   docenteId               String?                      @db.Uuid
   aulaId                  String?                      @db.Uuid
   responsableTipo         String
+  solicitanteTipo         String                       @default("DOCENTE")
   docenteNombre           String
   docenteDocumento        String
   salonTexto              String

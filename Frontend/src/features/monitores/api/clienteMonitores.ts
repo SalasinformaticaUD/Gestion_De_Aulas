@@ -156,4 +156,5 @@ export type RespuestaLoginMonitores = {
   last_name: string;
   role: string;
   department: string | null;
+  monitor_is_current: boolean | null;
 };

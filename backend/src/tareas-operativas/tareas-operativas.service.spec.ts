@@ -17,7 +17,7 @@ describe('TareasOperativasService', () => {
   };
   const prisma = {
     tarea: { findUnique: jest.fn(), findFirst: jest.fn(), update: jest.fn(), create: jest.fn() },
-    informeSeguimientoTarea: { create: jest.fn() },
+    informeSeguimientoTarea: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
     aula: { findUnique: jest.fn() },
     prestamoDocente: { findFirst: jest.fn() },
     practicaLibre: { findFirst: jest.fn() },
@@ -154,5 +154,28 @@ describe('TareasOperativasService', () => {
     await expect(
       service.crearInforme(tarea.id, { actividadesRealizadas: 'Se revisó el aula' }, 'usuario-ajeno'),
     ).rejects.toThrow('Solo un responsable asignado a la tarea puede registrar el informe de seguimiento.');
+  });
+
+  it('permite editar el último informe únicamente a su autor', async () => {
+    const informe = { id: 'informe-1', tareaId: tarea.id, autorId: 'autor-1', actividadesRealizadas: 'Inicial', accionesPendientes: null, autor: { id: 'autor-1', nombreCompleto: 'Autor' } };
+    (prisma.informeSeguimientoTarea.findUnique as jest.Mock<any>).mockResolvedValue(informe);
+    (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValue({ ...tarea, estado: EstadoTarea.EN_PROCESO, informes: [informe] });
+    (prisma.informeSeguimientoTarea.update as jest.Mock<any>).mockResolvedValue({ ...informe, accionesPendientes: 'Revisar cableado' });
+
+    await expect(service.editarInforme(tarea.id, informe.id, { actividadesRealizadas: 'Inicial', accionesPendientes: 'Revisar cableado' }, 'autor-1')).resolves.toEqual(expect.objectContaining({ accionesPendientes: 'Revisar cableado' }));
+    await expect(service.editarInforme(tarea.id, informe.id, { actividadesRealizadas: 'Cambio ajeno' }, 'otro-usuario')).rejects.toThrow('Solo el usuario que creó el informe puede editarlo.');
+  });
+
+  it('permite retomar una tarea completada cuando el informe vuelve a tener pendientes', async () => {
+    const completada = { ...tarea, estado: EstadoTarea.COMPLETADA, completadaEn: new Date(), informes: [{ accionesPendientes: 'Terminar configuración' }] };
+    const retomada = { ...completada, estado: EstadoTarea.EN_PROCESO, completadaEn: null };
+    (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValueOnce(completada).mockResolvedValueOnce(retomada);
+    (prisma.usuario.findMany as jest.Mock<any>).mockResolvedValue([{ id: 'autor-1', nombreCompleto: 'Autor' }]);
+    const tx = { decisionTareaOperativa: { create: jest.fn() }, responsableTareaOperativa: { upsert: jest.fn() }, tarea: { update: jest.fn() } };
+    (prisma.$transaction as jest.Mock<any>).mockImplementation((callback) => callback(tx));
+
+    await service.decidir(tarea.id, 'ACEPTADA' as never, 'autor-1');
+
+    expect(tx.tarea.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ estado: EstadoTarea.EN_PROCESO, completadaEn: null }) }));
   });
 });

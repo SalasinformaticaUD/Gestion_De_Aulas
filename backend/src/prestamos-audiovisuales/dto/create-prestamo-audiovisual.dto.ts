@@ -45,6 +45,10 @@ export class CreatePrestamoAudiovisualDto {
   responsableTipo?: 'MONITOR' | 'TECNICO' | 'ASISTENCIAL';
 
   @IsOptional()
+  @IsEnum(['DOCENTE', 'OTRO'])
+  solicitanteTipo?: 'DOCENTE' | 'OTRO';
+
+  @IsOptional()
   @IsUUID()
   entregadoPorId?: string;
 
@@ -53,10 +57,11 @@ export class CreatePrestamoAudiovisualDto {
   @MaxLength(160)
   docenteNombre!: string;
 
+  @IsOptional()
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
-  docenteDocumento!: string;
+  docenteDocumento?: string;
 
   @IsString()
   @IsNotEmpty()

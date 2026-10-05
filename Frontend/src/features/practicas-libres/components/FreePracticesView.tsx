@@ -16,6 +16,7 @@ const historyStatuses: FreePractice["status"][] = ["DEVUELTO", "CANCELADO"];
 type ResponsibleType = keyof typeof responsibleLabels;
 
 function aulaAdmiteOtraPractica(item: DisponibilidadApi) {
+  if (esAula508(item)) return false;
   const tienePractica = item.fuentes.some((fuente) => fuente.tipo === "practica-libre");
   const tieneOtraRestriccion = item.fuentes.some(
     (fuente) =>
@@ -23,6 +24,10 @@ function aulaAdmiteOtraPractica(item: DisponibilidadApi) {
       !(fuente.tipo === "clase-programada" && fuente.estado === "AUSENTE"),
   );
   return !tieneOtraRestriccion && (item.estadoCalculado === "disponible" || tienePractica);
+}
+
+function esAula508(item: DisponibilidadApi) {
+  return item.aula.codigo.replace(/\s+/g, "").toLocaleUpperCase("es") === "508" || item.aula.codigo.replace(/\s+/g, "").toLocaleUpperCase("es") === "AULA508";
 }
 
 function responsibleTypeFor(person: PracticeResponsible): ResponsibleType {

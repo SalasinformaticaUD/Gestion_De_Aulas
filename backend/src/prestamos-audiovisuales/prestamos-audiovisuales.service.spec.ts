@@ -160,6 +160,40 @@ describe('PrestamosAudiovisualesService', () => {
     expect(tx.equipoAudiovisual.updateMany).not.toHaveBeenCalled();
   });
 
+  it('registra un préstamo para una persona o dependencia que no es docente', async () => {
+    await service.create(
+      {
+        ...dto,
+        solicitanteTipo: 'OTRO',
+        docenteId: undefined,
+        docenteNombre: 'Decanatura Facultad de Ingeniería',
+        docenteDocumento: undefined,
+      },
+      ids.usuario,
+    );
+
+    expect(tx.docente.findUnique).not.toHaveBeenCalled();
+    expect(tx.prestamoAudiovisual.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          solicitanteTipo: 'OTRO',
+          docenteNombre: expect.objectContaining({
+            equals: 'Decanatura Facultad de Ingeniería',
+          }),
+        }),
+      }),
+    );
+    expect(tx.prestamoAudiovisual.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          solicitanteTipo: 'OTRO',
+          docenteNombre: 'Decanatura Facultad de Ingeniería',
+          docenteDocumento: 'NO APLICA',
+        }),
+      }),
+    );
+  });
+
   it('bloquea durante 20 minutos un videobeam recién devuelto', async () => {
     tx.equipoAudiovisual.findMany.mockResolvedValue([
       {

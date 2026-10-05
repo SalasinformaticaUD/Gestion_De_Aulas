@@ -111,15 +111,10 @@ async function main() {
   const permisos = await prisma.permiso.findMany({ select: { id: true } });
   const administrador = await prisma.rol.upsert({
     where: { nombre: 'ADMINISTRADOR' },
-    update: {
-      perfilMonitores: 'ADMIN',
-      dependenciaMonitores: null,
-    },
+    update: {},
     create: {
       nombre: 'ADMINISTRADOR',
       descripcion: 'Acceso administrativo inicial.',
-      perfilMonitores: 'ADMIN',
-      dependenciaMonitores: null,
     },
   });
   await prisma.rolPermiso.deleteMany({ where: { rolId: administrador.id } });
@@ -135,12 +130,16 @@ async function main() {
     update: {
       passwordHash: bcrypt.hashSync(password, 12),
       estado: 'ACTIVA',
+      perfilMonitores: 'ADMIN',
+      dependenciaMonitores: null,
     },
     create: {
       nombreCompleto: 'Administrador inicial',
       nombreUsuario: 'admin',
       correo: 'admin@localhost',
       passwordHash: bcrypt.hashSync(password, 12),
+      perfilMonitores: 'ADMIN',
+      dependenciaMonitores: null,
       roles: { create: { rolId: administrador.id } },
     },
   });

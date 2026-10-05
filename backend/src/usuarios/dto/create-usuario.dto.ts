@@ -3,6 +3,7 @@ import {
   ArrayUnique,
   IsArray,
   IsEmail,
+  IsIn,
   IsOptional,
   IsString,
   IsUUID,
@@ -53,5 +54,13 @@ export class CreateUsuarioDto {
   @ArrayUnique()
   @IsUUID('4', { each: true })
   rolIds?: string[];
+
+  @IsOptional()
+  @IsIn(['ADMIN', 'LIDER'])
+  perfilMonitores?: 'ADMIN' | 'LIDER' | null;
+
+  @IsOptional()
+  @IsIn(['PHYSICS', 'INFORMATICS_LABS', 'ELECTRICAL'])
+  dependenciaMonitores?: 'PHYSICS' | 'INFORMATICS_LABS' | 'ELECTRICAL' | null;
 
 }

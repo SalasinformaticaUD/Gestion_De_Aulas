@@ -13,6 +13,8 @@ describe('UsuariosService', () => {
   };
   const passwords = new PasswordHashService();
   const service = new UsuariosService(prisma as never, passwords);
+  const monitores = { sincronizarUsuario: jest.fn() };
+  const synchronizedService = new UsuariosService(prisma as never, passwords, undefined, monitores as never);
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -51,6 +53,36 @@ describe('UsuariosService', () => {
     expect(prisma.usuario.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: { estado: EstadoCuenta.INACTIVA } }),
     );
+  });
+
+  it('sincroniza Monitores por la configuración individual y no por el cargo', async () => {
+    prisma.usuario.create.mockResolvedValue({
+      id: 'usuario-id',
+      nombreCompleto: 'Líder individual',
+      nombreUsuario: 'lider.individual',
+      correo: 'lider@example.test',
+      estado: EstadoCuenta.ACTIVA,
+      perfilMonitores: 'LIDER',
+      dependenciaMonitores: 'INFORMATICS_LABS',
+      roles: [{ rol: { nombre: 'ASISTENCIAL', perfilMonitores: null } }],
+    });
+
+    await synchronizedService.create({
+      nombreCompleto: 'Líder individual',
+      nombreUsuario: 'lider.individual',
+      correo: 'lider@example.test',
+      password: 'Clave-segura-2026',
+      cargo: 'ASISTENCIAL',
+      perfilMonitores: 'LIDER',
+      dependenciaMonitores: 'INFORMATICS_LABS',
+    });
+
+    expect(monitores.sincronizarUsuario).toHaveBeenCalledWith(expect.objectContaining({
+      externalUserId: 'usuario-id',
+      role: 'LIDER',
+      department: 'INFORMATICS_LABS',
+      isActive: true,
+    }));
   });
 });
 

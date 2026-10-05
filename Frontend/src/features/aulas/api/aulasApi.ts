@@ -10,6 +10,7 @@ type AulaApi = {
   ubicacion: string;
   capacidad: number;
   estado: EstadoAulaApi;
+  responsable: { id: string; nombreCompleto: string; nombreUsuario: string } | null;
   anioAdquisicion: number | null;
   marca: string | null;
   modelo: string | null;
@@ -21,6 +22,7 @@ type AulaApi = {
 };
 
 export type CrearAulaInput = {
+  responsableId: string;
   codigo: string;
   ubicacion: string;
   capacidad: number;
@@ -35,6 +37,8 @@ export type CrearAulaInput = {
   caracteristica?: string;
   renovacionTecnologica?: boolean;
 };
+
+export type ResponsableAula = { id: string; nombreCompleto: string; nombreUsuario: string; cargo: string | null };
 
 function estadoInterfaz(estado: EstadoAulaApi): RoomStatus {
   if (estado === "MANTENIMIENTO") return "mantenimiento";
@@ -51,6 +55,7 @@ function aRoom(aula: AulaApi): Room {
     software: (aula.software ?? []).map((item) => ({ name: item.nombre, version: item.version, licenses: 0, status: "activo" })),
     workstations: [],
     location: aula.ubicacion,
+    responsible: aula.responsable ? { id: aula.responsable.id, name: aula.responsable.nombreCompleto, username: aula.responsable.nombreUsuario } : null,
     hardware: typeof aula.caracteristicas === "object" && aula.caracteristicas !== null ? String((aula.caracteristicas as { hardware?: unknown }).hardware ?? "") || "Sin información" : "Sin información",
     brandModel: [aula.marca, aula.modelo].filter(Boolean).join(" ") || "Sin información",
     curriculumProject: aula.proyectoCurricular?.nombre ?? "Sin asignar",
@@ -70,6 +75,10 @@ function tokenActual() {
 export async function listarAulas() {
   const aulas = await solicitarAulas<AulaApi[]>("/aulas", tokenActual());
   return aulas.map(aRoom);
+}
+
+export async function listarResponsablesAula() {
+  return solicitarAulas<ResponsableAula[]>("/aulas/catalogos/responsables", tokenActual());
 }
 
 export async function crearAula(input: CrearAulaInput) {

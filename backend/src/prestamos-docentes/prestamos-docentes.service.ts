@@ -212,6 +212,11 @@ export class PrestamosDocentesService {
     bloque: BloqueDisponibilidad,
   ): Promise<void> {
     const resultado = await this.disponibilidad.findOne(aulaId, bloque);
+    if (this.esAulaExcluida(resultado.aula?.codigo)) {
+      throw new ConflictException(
+        'El aula 508 no está disponible para préstamos docentes.',
+      );
+    }
     if (
       resultado.fuentes.some(
         (fuente) =>
@@ -227,6 +232,11 @@ export class PrestamosDocentesService {
         `El aula no está disponible: ${resultado.motivo}`,
       );
     }
+  }
+
+  private esAulaExcluida(codigo?: string) {
+    const normalizado = codigo?.replace(/\s+/g, '').toUpperCase();
+    return normalizado === '508' || normalizado === 'AULA508';
   }
 
   private async resolverDocente(dto: CreatePrestamosDocenteDto): Promise<string> {

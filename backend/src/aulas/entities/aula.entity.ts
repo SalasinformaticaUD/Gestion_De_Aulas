@@ -26,6 +26,11 @@ export class Aula {
   declare renovacionTecnologica: boolean;
   declare pendienteIntervencion: boolean;
   declare caracteristicas: unknown;
+  declare responsable: {
+    id: string;
+    nombreCompleto: string;
+    nombreUsuario: string;
+  } | null;
   declare proyectoCurricular: { id: string; nombre: string } | null;
   declare proyectosCurriculares: Array<{ id: string; nombre: string }>;
   declare software: Array<{

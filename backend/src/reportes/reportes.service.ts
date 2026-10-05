@@ -161,7 +161,7 @@ export class ReportesService {
         F6: fecha.anio,
         C8: equipos.map((equipo) => equipo.codigoInventario).join(', '),
         F8: [...new Set(equipos.map((equipo) => equipo.tipo))].join(', '),
-        C9: prestamo.docente?.nombre ?? 'No disponible',
+        C9: prestamo.docente?.nombre ?? prestamo.docenteNombre,
         C10: 'No aplica',
         C11: prestamo.aula?.proyectoCurricular?.nombre ?? 'No aplica',
         C13: prestamo.aula?.codigo ?? prestamo.salonTexto,

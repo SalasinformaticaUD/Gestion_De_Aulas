@@ -12,13 +12,24 @@ import { attachTestAdministrator } from './helpers/authenticated-user';
 describe('AulasController (e2e)', () => {
   const aulaId = '00000000-0000-4000-8000-000000000001';
   const missingId = '00000000-0000-4000-8000-000000000002';
+  const responsableId = '00000000-0000-4000-8000-000000000003';
+  const responsable = {
+    id: responsableId,
+    nombreCompleto: 'Ana Responsable',
+    nombreUsuario: 'ana.responsable',
+  };
   let app: INestApplication<App>;
   let aulas: AulaMock[];
 
   const prisma = {
     aula: {
       create: jest.fn(({ data }: { data: Record<string, unknown> }) => {
-        const aula = { id: aulaId, estado: EstadoAula.OPERATIVA, ...data };
+        const aula = {
+          id: aulaId,
+          estado: EstadoAula.OPERATIVA,
+          ...data,
+          responsable,
+        };
         aulas.push(aula);
         return aula;
       }),
@@ -45,6 +56,10 @@ describe('AulasController (e2e)', () => {
       delete: jest.fn(),
     },
     proyectoCurricular: { findUnique: jest.fn() },
+    usuario: {
+      findFirst: jest.fn(() => ({ id: responsableId })),
+      findMany: jest.fn(() => [responsable]),
+    },
   };
 
   beforeAll(async () => {
@@ -71,12 +86,23 @@ describe('AulasController (e2e)', () => {
   it('crea, lista, consulta y actualiza un aula', async () => {
     await request(app.getHttpServer())
       .post('/aulas')
-      .send({ codigo: 'LAB-01', ubicacion: 'Piso 2', capacidad: 25 })
+      .send({
+        responsableId,
+        codigo: 'LAB-01',
+        ubicacion: 'Piso 2',
+        capacidad: 25,
+      })
       .expect(201)
       .expect(({ body }: { body: AulaResponse }) => {
         expect(body.id).toBe(aulaId);
         expect(body.codigo).toBe('LAB-01');
+        expect(body.responsable.id).toBe(responsableId);
       });
+
+    await request(app.getHttpServer())
+      .get('/aulas/catalogos/responsables')
+      .expect(200)
+      .expect([responsable]);
 
     await request(app.getHttpServer())
       .get('/aulas')
@@ -135,6 +161,7 @@ type AulaMock = {
   codigo?: unknown;
   ubicacion?: unknown;
   capacidad?: unknown;
+  responsable?: unknown;
 };
 
 function toPublicSource(aula?: AulaMock) {
@@ -165,4 +192,9 @@ type AulaResponse = {
   caracteristicas: unknown;
   software: unknown[];
   historial: unknown[];
+  responsable: {
+    id: string;
+    nombreCompleto: string;
+    nombreUsuario: string;
+  };
 };
