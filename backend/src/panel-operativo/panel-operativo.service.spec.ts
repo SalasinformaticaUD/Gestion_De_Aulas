@@ -23,6 +23,10 @@ describe('PanelOperativoService', () => {
     usuario: { findUnique: jest.fn() },
     credencialOperativa: { findMany: jest.fn() },
     auditoria: { findMany: jest.fn() },
+    notificacionPanelDescartada: {
+      findMany: jest.fn(),
+      upsert: jest.fn(),
+    },
   };
   let service: PanelOperativoService;
 
@@ -86,6 +90,8 @@ describe('PanelOperativoService', () => {
     prisma.usuario.findUnique.mockResolvedValue({ roles: [] });
     prisma.credencialOperativa.findMany.mockResolvedValue([]);
     prisma.auditoria.findMany.mockResolvedValue([]);
+    prisma.notificacionPanelDescartada.findMany.mockResolvedValue([]);
+    prisma.notificacionPanelDescartada.upsert.mockResolvedValue({});
     service = new PanelOperativoService(
       disponibilidad as unknown as DisponibilidadAulasService,
       prestamos as unknown as PrestamosDocentesService,
@@ -161,6 +167,56 @@ describe('PanelOperativoService', () => {
         enlace: '/credenciales',
       }),
     );
+  });
+
+  it('oculta una notificación solo cuando el usuario la descartó para ese bloque', async () => {
+    prisma.notificacionPanelDescartada.findMany.mockResolvedValue([
+      { alertaId: 'ausencias-docentes' },
+    ]);
+
+    const resultado = await service.resumen(
+      { fecha: '2026-08-20', horaInicio: '08:00' },
+      'usuario-1',
+    );
+
+    expect(resultado.alertas).not.toContainEqual(
+      expect.objectContaining({ id: 'ausencias-docentes' }),
+    );
+    expect(prisma.notificacionPanelDescartada.findMany).toHaveBeenCalledWith({
+      where: {
+        usuarioId: 'usuario-1',
+        fecha: '2026-08-20',
+        horaInicio: '08:00',
+        alertaId: { in: expect.any(Array) },
+      },
+      select: { alertaId: true },
+    });
+  });
+
+  it('registra el descarte con alcance de usuario, fecha y bloque', async () => {
+    await service.descartarAlerta(
+      'ausencias-docentes',
+      { fecha: '2026-08-20', horaInicio: '08:00' },
+      'usuario-1',
+    );
+
+    expect(prisma.notificacionPanelDescartada.upsert).toHaveBeenCalledWith({
+      where: {
+        usuarioId_alertaId_fecha_horaInicio: {
+          usuarioId: 'usuario-1',
+          alertaId: 'ausencias-docentes',
+          fecha: '2026-08-20',
+          horaInicio: '08:00',
+        },
+      },
+      update: {},
+      create: {
+        usuarioId: 'usuario-1',
+        alertaId: 'ausencias-docentes',
+        fecha: '2026-08-20',
+        horaInicio: '08:00',
+      },
+    });
   });
 
   it('comparte el cálculo entre solicitudes simultáneas del mismo bloque', async () => {

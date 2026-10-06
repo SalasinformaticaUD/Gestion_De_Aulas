@@ -46,7 +46,7 @@ export const servicioMonitores = {
   actualizarExcepcion: (id: string, payload: Partial<Omit<ExcepcionApi, "id" | "department_label" | "semester">>) =>
     solicitarMonitores<ExcepcionApi>(`/api/v1/schedules/exceptions/${id}/`, { method: "PATCH", body: JSON.stringify(payload) }),
   eliminarExcepcion: (id: string) => solicitarMonitores<void>(`/api/v1/schedules/exceptions/${id}/`, { method: "DELETE" }),
-  listarAnotaciones: () => solicitarMonitores<AnotacionApi[]>("/api/v1/annotations/"),
+  listarAnotaciones: (monitorId?: string) => solicitarMonitores<AnotacionApi[]>(`/api/v1/annotations/${monitorId ? `?monitor=${encodeURIComponent(monitorId)}` : ""}`),
   crearAnotacion: (payload: Omit<AnotacionApi, "id" | "leader" | "department" | "created_at">) =>
     solicitarMonitores<AnotacionApi>("/api/v1/annotations/", { method: "POST", body: JSON.stringify(payload) }),
   actualizarAnotacion: (id: string, payload: Partial<Omit<AnotacionApi, "id" | "leader" | "department" | "created_at">>) =>

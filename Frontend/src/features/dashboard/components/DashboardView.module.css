@@ -61,3 +61,10 @@
 .operationalPanel{height:calc(100dvh - 28px);min-height:0;display:flex;flex-direction:column}
 .alertList{min-height:0;flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
 @media(max-width:1120px){.operationalPanel{height:auto;display:block}.alertList{max-height:360px}}
+
+/* El descarte es personal: la X conserva el lenguaje compacto del panel. */
+.alertList article>header b{flex:1}
+.dismissAlert{display:grid;place-items:center;flex:0 0 22px;width:22px;height:22px;padding:0;border:1px solid transparent;border-radius:50%;color:var(--muted);background:transparent;font:inherit;font-size:16px;font-weight:800;line-height:1;cursor:pointer}
+.dismissAlert:hover{color:#9f1d28;border-color:#fecdd3;background:#fff1f2}
+.dismissAlert:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.dismissAlert:disabled{opacity:.45;cursor:wait}

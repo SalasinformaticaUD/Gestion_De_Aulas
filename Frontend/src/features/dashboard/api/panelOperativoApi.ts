@@ -28,6 +28,15 @@ export function consultarResumenPanel(fecha: string, signal?: AbortSignal, forza
   return solicitarAulas<ResumenPanelOperativo>(`/panel-operativo/resumen?${params.toString()}`, token(), { signal });
 }
 
+export function descartarNotificacionPanel(alertaId: string, fecha: string, horaInicio: string) {
+  const params = new URLSearchParams({ fecha, horaInicio });
+  return solicitarAulas<{ descartada: boolean }>(
+    `/panel-operativo/alertas/${encodeURIComponent(alertaId)}?${params.toString()}`,
+    token(),
+    { method: "DELETE" },
+  );
+}
+
 export type ResumenTareasOperativas = Pick<ResumenPanelOperativo, "fecha" | "bloqueReferencia" | "alertas">;
 
 export function consultarTareasOperativas() {

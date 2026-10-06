@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Delete, Get, Param, Query } from '@nestjs/common';
 import { PanelOperativoService } from './panel-operativo.service';
 import { MODULOS } from '../auth/auth.constants';
 import { RequireModule } from '../auth/decorators/require-module.decorator';
@@ -37,6 +37,20 @@ export class PanelOperativoController {
     @CurrentUser() usuario: UsuarioAutenticado,
   ) {
     return this.panelOperativoService.alertas(query, usuario.id);
+  }
+
+  @Delete('alertas/:alertaId')
+  @RequirePermissions('DASHBOARD_LEER')
+  descartarAlerta(
+    @Param('alertaId') alertaId: string,
+    @Query() query: ConsultarPanelOperativoDto,
+    @CurrentUser() usuario: UsuarioAutenticado,
+  ) {
+    return this.panelOperativoService.descartarAlerta(
+      alertaId,
+      query,
+      usuario.id,
+    );
   }
 
   @Get('tareas-operativas')

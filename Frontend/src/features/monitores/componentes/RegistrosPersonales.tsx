@@ -15,21 +15,11 @@ const registrosVacios: RegistrosPersonalesApi = {
   sessions: [], schedules: [], annotations: [], inconsistencies: [], memorandums: [],
 };
 
-const tiposAnotacion: Record<string, string> = {
-  missing_punch: "Olvido de registro",
-  virtual_hours: "Horas virtuales",
-  permission: "Permiso",
-  novelty: "Novedad",
-};
-const accionesAnotacion: Record<string, string> = { add: "Suma", deduct: "Descuento", note: "Informativa" };
-
 export function RegistrosPersonales() {
   const [monitoriaSeleccionada, setMonitoriaSeleccionada] = useState("");
-  const [anotacionDestacada, setAnotacionDestacada] = useState("");
   useEffect(() => {
     const parametros = new URLSearchParams(window.location.search);
     setMonitoriaSeleccionada(parametros.get("monitoria") ?? "");
-    setAnotacionDestacada(parametros.get("anotacion") ?? "");
   }, []);
   const cargarRegistros = useCallback(
     () => servicioMonitores.obtenerMisRegistros(monitoriaSeleccionada || undefined),
@@ -52,17 +42,12 @@ export function RegistrosPersonales() {
   }, [recurso.datos]);
 
   const monitor = recurso.datos.monitor;
-  useEffect(() => {
-    if (recurso.cargando || !anotacionDestacada) return;
-    const elemento = document.getElementById(`anotacion-${anotacionDestacada}`);
-    elemento?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [anotacionDestacada, recurso.cargando, recurso.datos.annotations]);
   return <div className={estilos.detalleRegistros}>
     <section className={`page-heading ${estilos.encabezado}`}>
       <div>
         <span className={estilos.etiqueta}>Mis monitorías</span>
         <h1>Mis registros</h1>
-        <p>Consulte sus marcaciones, horas procesadas, anotaciones e inconsistencias.</p>
+        <p>Consulte sus marcaciones, horas procesadas e inconsistencias.</p>
       </div>
     </section>
     {recurso.error && <div className={`${estilos.aviso} ${estilos.avisoError}`}>{recurso.error}</div>}
@@ -70,7 +55,7 @@ export function RegistrosPersonales() {
       {recurso.datos.monitorings.length > 1 && <section className={`${estilos.tarjeta} ${estilos.selectorMonitoriaPersonal}`}>
         <div><span className={estilos.etiqueta}>Historial académico</span><h2>Monitoría consultada</h2><p>Seleccione un semestre para ver sus registros y novedades de ese periodo.</p></div>
         <div className={estilos.opcionesMonitoriaPersonal} role="group" aria-label="Escoger semestre de monitoría">
-          {recurso.datos.monitorings.map((item) => { const seleccionada = (monitoriaSeleccionada || monitor.id) === item.id; return <button type="button" key={item.id} aria-pressed={seleccionada} className={seleccionada ? estilos.opcionMonitoriaActiva : ""} onClick={() => { setMonitoriaSeleccionada(item.id); setAnotacionDestacada(""); }}>{item.semester || "Sin semestre"}<small>{item.semester_is_active && item.is_active ? "Monitoría actual" : "Monitoría anterior"}</small></button>; })}
+          {recurso.datos.monitorings.map((item) => { const seleccionada = (monitoriaSeleccionada || monitor.id) === item.id; return <button type="button" key={item.id} aria-pressed={seleccionada} className={seleccionada ? estilos.opcionMonitoriaActiva : ""} onClick={() => setMonitoriaSeleccionada(item.id)}>{item.semester || "Sin semestre"}<small>{item.semester_is_active && item.is_active ? "Monitoría actual" : "Monitoría anterior"}</small></button>; })}
         </div>
       </section>}
       <section className={`${estilos.tarjeta} ${estilos.fichaMonitor}`}>
@@ -80,13 +65,6 @@ export function RegistrosPersonales() {
       <ResumenHoras resumen={resumen} incluirAlertas detalle memorandums={recurso.datos.memorandums.length} />
 
       <RegistrosPorDia sesiones={sesiones} horarios={horarios} />
-      <section className={estilos.tarjeta}>
-        <header><div><h2>Anotaciones del periodo</h2><p>{recurso.datos.annotations.length} anotación(es) asociada(s) a esta monitoría.</p></div></header>
-        <div className={estilos.tablaContenedor}><table className={estilos.tabla}><thead><tr><th>Fecha</th><th>Tipo</th><th>Acción</th><th>Ajuste</th><th>Detalle</th></tr></thead><tbody>
-          {recurso.datos.annotations.map((item) => <tr id={`anotacion-${item.id}`} className={anotacionDestacada === item.id ? estilos.filaDestacada : ""} key={item.id}><td>{item.occurred_on}</td><td>{tiposAnotacion[item.annotation_type] ?? item.annotation_type}</td><td>{accionesAnotacion[item.action] ?? item.action}</td><td>{item.delta_minutes ? `${item.delta_minutes > 0 ? "+" : ""}${item.delta_minutes} min` : "Sin ajuste"}</td><td>{item.description}</td></tr>)}
-          {!recurso.datos.annotations.length && <tr><td colSpan={5} className={estilos.vacio}>No hay anotaciones en esta monitoría.</td></tr>}
-        </tbody></table></div>
-      </section>
       <section className={estilos.tarjeta}>
         <header><div><h2>Inconsistencias relacionadas</h2><p>{recurso.datos.inconsistencies.length} inconsistencia(s) asociada(s) a sus registros.</p></div></header>
         <div className={estilos.tablaContenedor}><table className={`${estilos.tabla} ${estilos.tablaInconsistenciasRelacionadas}`}><thead><tr><th>Fecha</th><th>Tipo</th><th>Estado</th><th>Detalle</th></tr></thead><tbody>

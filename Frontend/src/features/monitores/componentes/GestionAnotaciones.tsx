@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { obtenerSesion } from "@/features/auth/lib/sesion";
 import {
   adaptarAnotacion,
@@ -10,6 +10,7 @@ import {
 import type {
   AnotacionApi,
   MonitorApi,
+  PanelMonitorApi,
 } from "@/features/monitores/api/contratosMonitores";
 import { servicioMonitores } from "@/features/monitores/api/servicioMonitores";
 import { usarPaginacion } from "@/features/monitores/ganchos/usarPaginacion";
@@ -38,6 +39,15 @@ const tiposApi: Record<
 };
 const accionesApi: Record<AnotacionMonitor["accion"], AnotacionApi["action"]> =
   { SUMAR: "add", DESCONTAR: "deduct", ANOTAR: "note" };
+const panelMonitorVacio: PanelMonitorApi = {
+  monitor: { id: "", full_name: "", codigo_estudiante: "" },
+  monitorings: [],
+  schedule_monitoring_id: "",
+  schedules: [],
+  recent_sessions: [],
+  recent_annotations: [],
+  late_count: 0,
+};
 
 export function GestionAnotaciones() {
   const esMonitor = (obtenerSesion()?.usuario.roles ?? []).some(
@@ -45,10 +55,20 @@ export function GestionAnotaciones() {
   );
   const puedeGestionar = !esMonitor;
   const { esAdministrador, dependencia, setDependencia } = useFiltroDependenciaAdmin();
+  const [monitoriaSeleccionada, setMonitoriaSeleccionada] = useState("");
+  const cargarAnotaciones = useCallback(
+    () => servicioMonitores.listarAnotaciones(esMonitor ? monitoriaSeleccionada || undefined : undefined),
+    [esMonitor, monitoriaSeleccionada],
+  );
   const recurso = usarRecursoApi(
-    servicioMonitores.listarAnotaciones,
+    cargarAnotaciones,
     [] as AnotacionApi[],
   );
+  const cargarMonitorias = useCallback(
+    () => esMonitor ? servicioMonitores.obtenerMiDashboardMonitor() : Promise.resolve(panelMonitorVacio),
+    [esMonitor],
+  );
+  const recursoMonitorias = usarRecursoApi(cargarMonitorias, panelMonitorVacio);
   const cargarMonitores = useCallback(
     () => puedeGestionar ? servicioMonitores.listarMonitores() : Promise.resolve([] as MonitorApi[]),
     [puedeGestionar],
@@ -62,6 +82,18 @@ export function GestionAnotaciones() {
   const [buscar, setBuscar] = useState("");
   const [tipoFiltro, setTipoFiltro] = useState("TODOS");
   const [accionFiltro, setAccionFiltro] = useState("TODAS");
+  const [anotacionDestacada, setAnotacionDestacada] = useState("");
+  useEffect(() => {
+    const parametros = new URLSearchParams(window.location.search);
+    setAnotacionDestacada(parametros.get("anotacion") ?? "");
+    setMonitoriaSeleccionada(parametros.get("monitoria") ?? "");
+  }, []);
+  useEffect(() => {
+    if (!esMonitor || recursoMonitorias.cargando) return;
+    const monitorias = recursoMonitorias.datos.monitorings;
+    if (monitorias.some((item) => item.id === monitoriaSeleccionada)) return;
+    if (recursoMonitorias.datos.monitor.id) setMonitoriaSeleccionada(recursoMonitorias.datos.monitor.id);
+  }, [esMonitor, monitoriaSeleccionada, recursoMonitorias.cargando, recursoMonitorias.datos.monitor.id, recursoMonitorias.datos.monitorings]);
   const monitores = useMemo(
     () => recursoMonitores.datos.map(adaptarMonitor),
     [recursoMonitores.datos],
@@ -89,9 +121,22 @@ export function GestionAnotaciones() {
             (!puedeGestionar || !dependencia || monitor?.dependencia === nombreDependencia(dependencia))
           );
         }),
-    [accionFiltro, anotaciones, buscar, monitores, tipoFiltro, dependencia],
+    [accionFiltro, anotaciones, buscar, monitores, tipoFiltro, dependencia, puedeGestionar],
   );
   const paginacion = usarPaginacion(filtradas, 8);
+  const irAPagina = paginacion.irA;
+  useEffect(() => {
+    if (recurso.cargando || !anotacionDestacada) return;
+    const indice = filtradas.findIndex((item) => item.id === anotacionDestacada);
+    if (indice >= 0) irAPagina(Math.floor(indice / 8) + 1);
+  }, [anotacionDestacada, filtradas, irAPagina, recurso.cargando]);
+  useEffect(() => {
+    if (!anotacionDestacada || !paginacion.visibles.some((item) => item.id === anotacionDestacada)) return;
+    const fotograma = window.requestAnimationFrame(() => {
+      document.getElementById(`anotacion-${anotacionDestacada}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    return () => window.cancelAnimationFrame(fotograma);
+  }, [anotacionDestacada, paginacion.pagina, paginacion.visibles]);
   const cerrarFormulario = () => {
     setModalFormulario(false);
     setEdicion(null);
@@ -225,9 +270,9 @@ export function GestionAnotaciones() {
           consulta pública.
         </div>
       )}
-      {(recurso.error || recursoMonitores.error) && (
+      {(recurso.error || recursoMonitores.error || recursoMonitorias.error) && (
         <div className={`${estilos.aviso} ${estilos.avisoError}`}>
-          {recurso.error || recursoMonitores.error}
+          {recurso.error || recursoMonitores.error || recursoMonitorias.error}
         </div>
       )}
       {aviso && (
@@ -237,6 +282,39 @@ export function GestionAnotaciones() {
         >
           {aviso}
         </div>
+      )}
+      {esMonitor && !recursoMonitorias.cargando && recursoMonitorias.datos.monitorings.length > 0 && (
+        <section className={`${estilos.tarjeta} ${estilos.selectorMonitoriaPersonal}`}>
+          <div>
+            <span className={estilos.etiqueta}>Historial académico</span>
+            <h2>Monitoría consultada</h2>
+            <p>
+              {recursoMonitorias.datos.monitorings.length > 1
+                ? "Seleccione el semestre cuyas anotaciones desea consultar."
+                : "Consulte las anotaciones que recibió durante su monitoría."}
+            </p>
+          </div>
+          <div className={estilos.opcionesMonitoriaPersonal} role="group" aria-label="Escoger semestre de las anotaciones">
+            {recursoMonitorias.datos.monitorings.map((item) => {
+              const seleccionada = (monitoriaSeleccionada || recursoMonitorias.datos.monitor.id) === item.id;
+              return (
+                <button
+                  type="button"
+                  key={item.id}
+                  aria-pressed={seleccionada}
+                  className={seleccionada ? estilos.opcionMonitoriaActiva : ""}
+                  onClick={() => {
+                    setMonitoriaSeleccionada(item.id);
+                    paginacion.reiniciar();
+                  }}
+                >
+                  {item.semester || "Sin semestre"}
+                  <small>{item.semester_is_active && item.is_active ? "Monitoría actual" : "Monitoría anterior"}</small>
+                </button>
+              );
+            })}
+          </div>
+        </section>
       )}
       <section className={estilos.tarjeta}>
         <header>
@@ -309,7 +387,7 @@ export function GestionAnotaciones() {
               {paginacion.visibles.map((item) => {
                 const monitor = nombreMonitor(item.monitorId);
                 return (
-                  <tr key={item.id}>
+                  <tr id={`anotacion-${item.id}`} className={anotacionDestacada === item.id ? estilos.filaDestacada : ""} key={item.id}>
                     <td>{item.fecha}</td>
                     {puedeGestionar && (
                       <td>

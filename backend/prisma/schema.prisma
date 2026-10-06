@@ -192,6 +192,7 @@ model Usuario {
   practicasLibresAtendidas          PracticaLibre[]                   @relation("AtencionPracticaLibre")
   limpiezasRegistradas              Limpieza[]                        @relation("RegistroLimpieza")
   aulasResponsable                  Aula[]                            @relation("ResponsableAula")
+  notificacionesPanelDescartadas    NotificacionPanelDescartada[]
   creadoEn                          DateTime                          @default(now())
   actualizadoEn                     DateTime                          @updatedAt
 }
@@ -213,8 +214,8 @@ model Cargo {
 }
 
 model Rol {
-  id                      String          @id @default(uuid()) @db.Uuid
-  nombre                  String          @unique
+  id                      String                @id @default(uuid()) @db.Uuid
+  nombre                  String                @unique
   descripcion             String?
   perfilMonitores         PerfilMonitores?
   dependenciaMonitores    DependenciaMonitores?
@@ -270,6 +271,19 @@ model Auditoria {
   creadoEn     DateTime @default(now())
 
   @@index([entidad, entidadId])
+}
+
+model NotificacionPanelDescartada {
+  id         String   @id @default(uuid()) @db.Uuid
+  usuarioId  String   @db.Uuid
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  alertaId   String   @db.VarChar(200)
+  fecha      String   @db.VarChar(10)
+  horaInicio String   @db.VarChar(5)
+  creadoEn   DateTime @default(now())
+
+  @@unique([usuarioId, alertaId, fecha, horaInicio])
+  @@index([usuarioId, fecha, horaInicio])
 }
 
 // Catálogos académicos y aulas
@@ -790,17 +804,17 @@ model Multa {
 
 // Operación diaria y credenciales institucionales
 model Observacion {
-  id           String          @id @default(uuid()) @db.Uuid
-  aulaId       String?         @db.Uuid
+  id             String          @id @default(uuid()) @db.Uuid
+  aulaId         String?         @db.Uuid
   ubicacionTexto String?
-  autorId      String?         @db.Uuid
-  tipo         TipoObservacion @default(GENERAL)
-  contenido    String
-  vigenteDesde DateTime?
-  vigenteHasta DateTime?
-  aula         Aula?           @relation(fields: [aulaId], references: [id])
-  autor        Usuario?        @relation("AutorObservacion", fields: [autorId], references: [id], onDelete: SetNull)
-  creadoEn     DateTime        @default(now())
+  autorId        String?         @db.Uuid
+  tipo           TipoObservacion @default(GENERAL)
+  contenido      String
+  vigenteDesde   DateTime?
+  vigenteHasta   DateTime?
+  aula           Aula?           @relation(fields: [aulaId], references: [id])
+  autor          Usuario?        @relation("AutorObservacion", fields: [autorId], references: [id], onDelete: SetNull)
+  creadoEn       DateTime        @default(now())
 
   @@index([autorId, creadoEn])
   @@index([aulaId, tipo, vigenteDesde, vigenteHasta])

@@ -82,7 +82,7 @@ export class PanelOperativoService {
       contexto.asistencias,
       contexto.prestamos,
     );
-    const alertas = [
+    const alertasCalculadas = [
       ...(await this.construirAlertasTareas(
         contexto.tareas,
         query.fecha,
@@ -92,6 +92,12 @@ export class PanelOperativoService {
       ...alertasCredenciales,
       ...alertasBase,
     ];
+    const alertas = await this.filtrarAlertasDescartadas(
+      alertasCalculadas,
+      usuarioId,
+      query.fecha,
+      contexto.bloque.horaInicio,
+    );
     const contar = (estado: DisponibilidadAula['estadoCalculado']) =>
       contexto.aulas.filter((aula) => aula.estadoCalculado === estado).length;
 
@@ -147,7 +153,7 @@ export class PanelOperativoService {
     usuarioId?: string,
   ): Promise<AlertaOperativa[]> {
     const contexto = await this.construirContexto(query);
-    return [
+    const alertas = [
       ...(await this.construirAlertasTareas(
         contexto.tareas,
         query.fecha,
@@ -163,6 +169,46 @@ export class PanelOperativoService {
         contexto.prestamos,
       ),
     ];
+    return this.filtrarAlertasDescartadas(
+      alertas,
+      usuarioId,
+      query.fecha,
+      contexto.bloque.horaInicio,
+    );
+  }
+
+  async descartarAlerta(
+    alertaId: string,
+    query: ConsultarPanelOperativoDto,
+    usuarioId: string,
+  ) {
+    const id = alertaId.trim();
+    if (!id || id.length > 200) {
+      return { descartada: false };
+    }
+    const bloque = this.resolverBloque(query);
+    await this.prisma.notificacionPanelDescartada.upsert({
+      where: {
+        usuarioId_alertaId_fecha_horaInicio: {
+          usuarioId,
+          alertaId: id,
+          fecha: query.fecha,
+          horaInicio: bloque.horaInicio,
+        },
+      },
+      update: {},
+      create: {
+        usuarioId,
+        alertaId: id,
+        fecha: query.fecha,
+        horaInicio: bloque.horaInicio,
+      },
+    });
+    const prefijoCache = `${usuarioId}:${query.fecha}:${bloque.horaInicio}:`;
+    for (const clave of this.resumenCache.keys()) {
+      if (clave.startsWith(prefijoCache)) this.resumenCache.delete(clave);
+    }
+    return { descartada: true };
   }
 
   async tareasOperativas() {
@@ -187,6 +233,26 @@ export class PanelOperativoService {
       bloqueReferencia: bloque,
       alertas: await this.construirAlertasTareas(tareas, fecha, bloque, ahora),
     };
+  }
+
+  private async filtrarAlertasDescartadas(
+    alertas: AlertaOperativa[],
+    usuarioId: string | undefined,
+    fecha: string,
+    horaInicio: string,
+  ) {
+    if (!usuarioId || !alertas.length) return alertas;
+    const descartadas = await this.prisma.notificacionPanelDescartada.findMany({
+      where: {
+        usuarioId,
+        fecha,
+        horaInicio,
+        alertaId: { in: alertas.map((alerta) => alerta.id) },
+      },
+      select: { alertaId: true },
+    });
+    const ids = new Set(descartadas.map((item) => item.alertaId));
+    return alertas.filter((alerta) => !ids.has(alerta.id));
   }
 
   private async construirContexto(query: ConsultarPanelOperativoDto) {

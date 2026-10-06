@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { registrarAsistencia } from "@/features/horarios/api/horariosApi";
-import { consultarResumenPanel, type ResumenPanelOperativo } from "../api/panelOperativoApi";
+import { consultarResumenPanel, descartarNotificacionPanel, type ResumenPanelOperativo } from "../api/panelOperativoApi";
 import styles from "./DashboardView.module.css";
 
 const alertTypeLabels: Record<string, string> = {
@@ -24,6 +24,7 @@ export function DashboardView() {
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(true);
   const [guardandoAsistencia, setGuardandoAsistencia] = useState<string | null>(null);
+  const [descartandoAlerta, setDescartandoAlerta] = useState<string | null>(null);
   const [version, setVersion] = useState(0);
   const [filtroNotificaciones, setFiltroNotificaciones] = useState<"critica" | "advertencia" | "info" | null>(null);
   useEffect(() => {
@@ -88,6 +89,20 @@ export function DashboardView() {
     catch (reason) { setError(reason instanceof Error ? reason.message : "No fue posible registrar la asistencia."); }
     finally { setGuardandoAsistencia(null); }
   };
+  const quitarNotificacion = async (alertaId: string) => {
+    if (!resumen) return;
+    setDescartandoAlerta(alertaId); setError("");
+    try {
+      await descartarNotificacionPanel(alertaId, resumen.fecha, resumen.bloqueReferencia.horaInicio);
+      setResumen((actual) => actual ? {
+        ...actual,
+        alertas: actual.alertas.filter((alerta) => alerta.id !== alertaId),
+        metricas: { ...actual.metricas, alertas: Math.max(0, actual.metricas.alertas - 1) },
+      } : actual);
+    }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "No fue posible quitar la notificación."); }
+    finally { setDescartandoAlerta(null); }
+  };
   return <>
     <section className={`page-heading ${styles.heading}`}><div><h1>Panel de Control Operativo</h1><p>Resumen en tiempo real del bloque en curso o del siguiente, desde 15 minutos antes de iniciar.</p></div><span className={styles.live}><i />{cargando ? "Actualizando…" : `Bloque ${bloque}`}</span></section>
     {error && <p className={styles.error} role="alert">{error}</p>}
@@ -101,7 +116,7 @@ export function DashboardView() {
         </section>
         <section className={styles.scheduleCard}><header><div><h2>Horario del bloque</h2><p>Las aulas se ordenan de forma ascendente. El siguiente bloque se habilita 15 minutos antes.</p></div><span>{bloque}</span></header><div className={`table-wrap ${styles.scheduleTableWrap}`}><table className="schedule schedule-list"><thead><tr><th>Hora</th><th>Aula</th><th>Asignatura</th><th>Docente</th><th>Grupo</th><th>Asistencia</th></tr></thead><tbody>{horario.length ? horario.map((item) => { const estadoAsistencia = item.estado === "EN_CLASE" ? "ASISTIO" : item.estado; return <tr key={item.id}><td data-label="Hora"><code>{item.horaInicio}–{item.horaFin}</code></td><td data-label="Aula"><Link href={`/aulas?aula=${encodeURIComponent(item.aulaCodigo)}`}>{item.aulaCodigo}</Link></td><td data-label="Asignatura"><strong>{item.asignatura}</strong>{item.proyecto && <small className={styles.project}>{item.proyecto}</small>}</td><td data-label="Docente">{item.docente}</td><td data-label="Grupo"><span>{item.grupo}</span></td><td data-label="Asistencia"><span className={`attendance-state attendance-${estadoAsistencia.toLowerCase()}`}>{estadoAsistencia === "ASISTIO" ? "Asistió" : estadoAsistencia === "AUSENTE" ? "No asistió" : "Pendiente"}</span><small className="attendance-help">Fecha: {resumen?.fecha ?? fechaBogota()}</small><div className="attendance-actions"><button type="button" className="attendance-check" aria-label="Asistió" disabled={guardandoAsistencia === item.id} onClick={() => void guardarAsistencia(item.id, "ASISTIO")}>✓</button><button type="button" className="attendance-cross" aria-label="No asistió" disabled={guardandoAsistencia === item.id} onClick={() => void guardarAsistencia(item.id, "AUSENTE")}>✕</button></div></td></tr>; }) : <tr><td colSpan={6}>No hay clases programadas en este bloque.</td></tr>}</tbody></table></div><footer><span>{horario.length} clases en el bloque</span><Link href="/horarios">Ver otros horarios →</Link></footer></section>
       </div>
-      <aside className={styles.operationalPanel}><header><div><h2>Notificaciones</h2><p>{alertas.length} novedades calculadas</p></div></header><div className={styles.alertStats}><span><strong>{conteoAlertas.critica}</strong>Críticas</span><span><strong>{conteoAlertas.advertencia}</strong>Advertencias</span><span><strong>{conteoAlertas.info}</strong>Informativas</span></div><div className={styles.alertFilters} aria-label="Filtrar notificaciones"><button type="button" aria-pressed={!filtroNotificaciones} className={!filtroNotificaciones ? styles.activeAlertFilter : ""} onClick={() => setFiltroNotificaciones(null)}>Todas</button>{([["critica", "Críticas"], ["advertencia", "Advertencias"], ["info", "Informativas"]] as const).map(([valor, etiqueta]) => <button type="button" key={valor} aria-pressed={filtroNotificaciones === valor} className={filtroNotificaciones === valor ? styles.activeAlertFilter : ""} onClick={() => setFiltroNotificaciones((actual) => actual === valor ? null : valor)}>{etiqueta}</button>)}</div><div className={styles.alertList}>{alertas.length ? alertas.map((alerta) => <article key={alerta.id} className={styles[`alert_${alerta.severidad}`]}><header><span>{alerta.severidad}</span><b>{alertTypeLabels[alerta.tipo] ?? alerta.tipo.replaceAll("-", " ")}</b></header><p>{alerta.mensaje}</p>{alerta.aulaCodigo && <small>Aula {alerta.aulaCodigo}</small>}{alerta.enlace && <Link href={alerta.enlace}>{alerta.accion ?? "Ver detalle"} →</Link>}</article>) : <p className={styles.emptyAlerts}>No hay notificaciones para el bloque actual.</p>}</div><footer><span>Actualización automática cada minuto</span><b>En línea</b></footer></aside>
+      <aside className={styles.operationalPanel}><header><div><h2>Notificaciones</h2><p>{alertas.length} novedades calculadas</p></div></header><div className={styles.alertStats}><span><strong>{conteoAlertas.critica}</strong>Críticas</span><span><strong>{conteoAlertas.advertencia}</strong>Advertencias</span><span><strong>{conteoAlertas.info}</strong>Informativas</span></div><div className={styles.alertFilters} aria-label="Filtrar notificaciones"><button type="button" aria-pressed={!filtroNotificaciones} className={!filtroNotificaciones ? styles.activeAlertFilter : ""} onClick={() => setFiltroNotificaciones(null)}>Todas</button>{([["critica", "Críticas"], ["advertencia", "Advertencias"], ["info", "Informativas"]] as const).map(([valor, etiqueta]) => <button type="button" key={valor} aria-pressed={filtroNotificaciones === valor} className={filtroNotificaciones === valor ? styles.activeAlertFilter : ""} onClick={() => setFiltroNotificaciones((actual) => actual === valor ? null : valor)}>{etiqueta}</button>)}</div><div className={styles.alertList}>{alertas.length ? alertas.map((alerta) => <article key={alerta.id} className={styles[`alert_${alerta.severidad}`]}><header><span>{alerta.severidad}</span><b>{alertTypeLabels[alerta.tipo] ?? alerta.tipo.replaceAll("-", " ")}</b><button type="button" className={styles.dismissAlert} aria-label={`Quitar notificación: ${alertTypeLabels[alerta.tipo] ?? alerta.tipo}`} title="Quitar para mi usuario" disabled={descartandoAlerta === alerta.id} onClick={() => void quitarNotificacion(alerta.id)}>×</button></header><p>{alerta.mensaje}</p>{alerta.aulaCodigo && <small>Aula {alerta.aulaCodigo}</small>}{alerta.enlace && <Link href={alerta.enlace}>{alerta.accion ?? "Ver detalle"} →</Link>}</article>) : <p className={styles.emptyAlerts}>No hay notificaciones para el bloque actual.</p>}</div><footer><span>Actualización automática cada minuto</span><b>En línea</b></footer></aside>
     </div>
   </>;
 }
