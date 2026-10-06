@@ -94,7 +94,7 @@ export function MarcoMonitores({ children }: { children:React.ReactNode }) {
   return <div className={`app-shell ${panelContraido ? "sidebar-collapsed" : ""}`}><SelectoresNativosPersonalizados />
     {menuAbierto && <button className="menu-overlay" aria-label="Cerrar menú" onClick={() => setMenuAbierto(false)} />}
     <aside className={`sidebar ${menuAbierto ? "is-open" : ""}`} aria-label="Navegación de gestión de monitores">
-      <Link href="/gestion-monitores" className="brand" aria-label="Ir al panel de monitores" onClick={() => setMenuAbierto(false)}><Image className="sidebar-monitores-logo" src="/brand/Logo_Cosmos_Monitores.png" alt="Monitores · Laboratorios de Ingeniería" width={608} height={322} priority /></Link>
+      <Link href="/gestion-monitores" className="brand" aria-label="Ir al panel de monitores" onClick={() => setMenuAbierto(false)}><Image className="sidebar-monitores-logo" src="/brand/Logo_Monitores_Universidad_Distrital.png" alt="Monitores · Laboratorios de Ingeniería · Universidad Distrital" width={614} height={407} priority /></Link>
       <nav className="nav"><p className="nav-label">Monitores</p>{navegacionVisible.map((item) => <Link key={item.href} href={item.href} className="nav-link" aria-current={ruta === item.href ? "page" : undefined} onClick={() => setMenuAbierto(false)}><span className="nav-icon" aria-hidden="true">•</span>{item.label}</Link>)}</nav>
       <footer className="sidebar-footer"><ModuleSwitcher current="monitores" onNavigate={() => setMenuAbierto(false)} /><button type="button" className="nav-link nav-logout" onClick={salir}><span className="nav-icon" aria-hidden="true">↪</span>Salir</button></footer>
     </aside>
