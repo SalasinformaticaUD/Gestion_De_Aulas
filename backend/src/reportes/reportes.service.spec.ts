@@ -10,10 +10,15 @@ describe('ReportesService', () => {
       findUnique: jest.fn(),
     },
     prestamoDocente: { findMany: jest.fn() },
-    prestamoAudiovisual: { count: jest.fn(), findMany: jest.fn() },
+    prestamoAudiovisual: {
+      count: jest.fn(),
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+    },
     asistenciaDocente: { count: jest.fn(), findMany: jest.fn() },
     multa: { count: jest.fn(), findMany: jest.fn() },
     limpieza: { count: jest.fn(), findMany: jest.fn() },
+    configuracionDistribucionPdf: { findUnique: jest.fn() },
   };
   const service = new ReportesService(prisma as never);
 
@@ -167,6 +172,161 @@ describe('ReportesService', () => {
     expect(contenido).toContain(
       `Ana Pérez/Ficha_PracticaLibre_${registros[1].id}.pdf`,
     );
+    jest.useRealTimers();
+  });
+
+  it('reparte equitativamente los responsables solo en las fichas PDF mensuales', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-09-09T17:00:00.000Z'));
+    const generar = jest.fn(
+      (
+        _plantilla: string,
+        _valores: Record<string, string>,
+        _nombre: string,
+      ) => {
+        void _plantilla;
+        void _valores;
+        void _nombre;
+        return Promise.resolve(Buffer.from('%PDF'));
+      },
+    );
+    const reportes = new ReportesService(
+      prisma as never,
+      {
+        generar,
+      } as never,
+    );
+    const registros = Array.from({ length: 5 }, (_, indice) => ({
+      id: `${indice + 1}`.repeat(8) + '-1111-4111-8111-111111111111',
+      atendidoPor: {
+        nombreCompleto: `Responsable original ${indice + 1}`,
+        nombreUsuario: null,
+      },
+    }));
+    prisma.configuracionDistribucionPdf.findUnique.mockResolvedValue({
+      activa: true,
+      usuarios: [
+        {
+          usuario: { nombreCompleto: 'Ana Pérez', nombreUsuario: 'aperez' },
+        },
+        {
+          usuario: { nombreCompleto: 'Luis Mora', nombreUsuario: 'lmora' },
+        },
+      ],
+    });
+    prisma.practicaLibre.findMany.mockResolvedValue(registros);
+    prisma.practicaLibre.findUnique.mockImplementation(
+      ({ where }: { where: { id: string } }) =>
+        Promise.resolve({
+          id: where.id,
+          inicio: new Date('2026-09-08T13:00:00.000Z'),
+          finEstimada: new Date('2026-09-08T15:00:00.000Z'),
+          finReal: new Date('2026-09-08T14:50:00.000Z'),
+          estado: 'DEVUELTO',
+          estudiante: { nombre: 'Persona atendida', codigo: '20260001' },
+          docente: null,
+          aula: { codigo: '500', ubicacion: '' },
+          atendidoPor: {
+            nombreCompleto: 'Responsable original',
+            nombreUsuario: null,
+          },
+        }),
+    );
+
+    const zip = await reportes.generarPracticasLibresMesPdf('2026-09');
+    const responsables = generar.mock.calls.map((llamada) => llamada[1].B26);
+
+    expect(responsables).toEqual([
+      'ATENDIDO POR: Ana Pérez',
+      'ATENDIDO POR: Luis Mora',
+      'ATENDIDO POR: Ana Pérez',
+      'ATENDIDO POR: Luis Mora',
+      'ATENDIDO POR: Ana Pérez',
+    ]);
+    expect(zip.toString('utf8')).toContain('Ana Pérez/');
+    expect(zip.toString('utf8')).toContain('Luis Mora/');
+    jest.useRealTimers();
+  });
+
+  it('aplica el mismo reparto temporal a los préstamos de videobeam', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-09-09T17:00:00.000Z'));
+    const generar = jest.fn(
+      (
+        _plantilla: string,
+        _valores: Record<string, string>,
+        _nombre: string,
+      ) => {
+        void _plantilla;
+        void _valores;
+        void _nombre;
+        return Promise.resolve(Buffer.from('%PDF'));
+      },
+    );
+    const reportes = new ReportesService(
+      prisma as never,
+      {
+        generar,
+      } as never,
+    );
+    const registros = Array.from({ length: 3 }, (_, indice) => ({
+      id: `${indice + 6}`.repeat(8) + '-1111-4111-8111-111111111111',
+      entregadoPor: {
+        nombreCompleto: `Responsable original ${indice + 1}`,
+        nombreUsuario: null,
+      },
+    }));
+    prisma.configuracionDistribucionPdf.findUnique.mockResolvedValue({
+      activa: true,
+      usuarios: [
+        {
+          usuario: { nombreCompleto: 'Ana Pérez', nombreUsuario: 'aperez' },
+        },
+        {
+          usuario: { nombreCompleto: 'Luis Mora', nombreUsuario: 'lmora' },
+        },
+      ],
+    });
+    prisma.prestamoAudiovisual.findMany.mockResolvedValue(registros);
+    prisma.prestamoAudiovisual.findUnique.mockImplementation(
+      ({ where }: { where: { id: string } }) =>
+        Promise.resolve({
+          id: where.id,
+          salidaEn: new Date('2026-09-08T13:00:00.000Z'),
+          devolucionEstimada: new Date('2026-09-08T15:00:00.000Z'),
+          estado: 'DEVUELTO',
+          docente: { nombre: 'Docente', documento: '123' },
+          docenteNombre: 'Docente',
+          aula: {
+            codigo: 'Aula 306',
+            proyectoCurricular: { nombre: 'Sistemas' },
+          },
+          salonTexto: '306',
+          entregadoPor: {
+            nombreCompleto: 'Responsable original',
+            nombreUsuario: null,
+          },
+          detalles: [
+            {
+              equipo: {
+                codigoInventario: 'VB-01',
+                nombre: 'Videobeam',
+                tipo: 'Videobeam',
+                observacion: null,
+              },
+            },
+          ],
+          elementosAdicionales: [],
+          motivoCancelacion: null,
+          observacionesPrestamo: null,
+        }),
+    );
+
+    await reportes.generarPrestamosAudiovisualesMesPdf('2026-09');
+
+    expect(generar.mock.calls.map((llamada) => llamada[1].C21)).toEqual([
+      'Ana Pérez',
+      'Luis Mora',
+      'Ana Pérez',
+    ]);
     jest.useRealTimers();
   });
 

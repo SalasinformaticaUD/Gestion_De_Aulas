@@ -8,6 +8,7 @@ import {
 import * as XLSX from 'xlsx';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConsultarReporteDto } from './dto/consultar-reporte.dto';
+import { UpdateConfiguracionDistribucionPdfDto } from './dto/update-configuracion-distribucion-pdf.dto';
 import { PlantillasPdfService } from './plantillas-pdf.service';
 
 export const REPORTES = [
@@ -27,7 +28,111 @@ export class ReportesService {
     @Optional() private readonly plantillasPdf?: PlantillasPdfService,
   ) {}
 
-  async generarPracticaLibrePdf(id: string): Promise<Buffer> {
+  async obtenerConfiguracionDistribucionPdf() {
+    const [configuracion, usuariosDisponibles] = await Promise.all([
+      this.prisma.configuracionDistribucionPdf.findUnique({
+        where: { id: 1 },
+        include: {
+          usuarios: {
+            include: {
+              usuario: {
+                select: {
+                  id: true,
+                  nombreCompleto: true,
+                  nombreUsuario: true,
+                  cargo: true,
+                  estado: true,
+                  roles: { select: { rol: { select: { nombre: true } } } },
+                },
+              },
+            },
+            orderBy: { orden: 'asc' },
+          },
+        },
+      }),
+      this.prisma.usuario.findMany({
+        where: this.filtroUsuariosDistribucionPdf(),
+        select: {
+          id: true,
+          nombreCompleto: true,
+          nombreUsuario: true,
+          cargo: true,
+        },
+        orderBy: { nombreCompleto: 'asc' },
+      }),
+    ]);
+    const idsDisponibles = new Set(
+      usuariosDisponibles.map((usuario) => usuario.id),
+    );
+    return {
+      activa: configuracion?.activa ?? false,
+      usuarioIds:
+        configuracion?.usuarios
+          .map((seleccion) => seleccion.usuarioId)
+          .filter((id) => idsDisponibles.has(id)) ?? [],
+      usuariosDisponibles,
+    };
+  }
+
+  async actualizarConfiguracionDistribucionPdf(
+    dto: UpdateConfiguracionDistribucionPdfDto,
+    usuarioId: string,
+  ) {
+    const usuarioIds = [...new Set(dto.usuarioIds)];
+    if (dto.activa && !usuarioIds.length) {
+      throw new BadRequestException(
+        'Seleccione al menos un usuario para activar la distribución.',
+      );
+    }
+    if (usuarioIds.length) {
+      const totalValidos = await this.prisma.usuario.count({
+        where: {
+          ...this.filtroUsuariosDistribucionPdf(),
+          id: { in: usuarioIds },
+        },
+      });
+      if (totalValidos !== usuarioIds.length) {
+        throw new BadRequestException(
+          'La selección contiene usuarios inactivos, inexistentes o administradores.',
+        );
+      }
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.configuracionDistribucionPdf.upsert({
+        where: { id: 1 },
+        create: { id: 1, activa: dto.activa },
+        update: { activa: dto.activa },
+      });
+      await tx.configuracionDistribucionPdfUsuario.deleteMany({
+        where: { configuracionId: 1 },
+      });
+      if (usuarioIds.length) {
+        await tx.configuracionDistribucionPdfUsuario.createMany({
+          data: usuarioIds.map((seleccionadoId, orden) => ({
+            configuracionId: 1,
+            usuarioId: seleccionadoId,
+            orden,
+          })),
+        });
+      }
+      await tx.auditoria.create({
+        data: {
+          usuarioId,
+          entidad: 'ConfiguracionDistribucionPdf',
+          entidadId: '1',
+          accion: 'ACTUALIZAR',
+          datosNuevos: { activa: dto.activa, usuarioIds },
+        },
+      });
+    });
+    return this.obtenerConfiguracionDistribucionPdf();
+  }
+
+  async generarPracticaLibrePdf(
+    id: string,
+    responsableSoloPdf?: string,
+  ): Promise<Buffer> {
     const practica = await this.prisma.practicaLibre.findUnique({
       where: { id },
       include: {
@@ -56,6 +161,7 @@ export class ReportesService {
       'Registro generado desde el Sistema de Gestión Operativa de Aulas de Software.',
     ].join(' ');
     const atendidoPor =
+      responsableSoloPdf ??
       practica.atendidoPor?.nombreCompleto ??
       practica.atendidoPor?.nombreUsuario ??
       'Sin responsable registrado';
@@ -97,7 +203,10 @@ export class ReportesService {
     );
   }
 
-  async generarPrestamoAudiovisualPdf(id: string): Promise<Buffer> {
+  async generarPrestamoAudiovisualPdf(
+    id: string,
+    responsableSoloPdf?: string,
+  ): Promise<Buffer> {
     const prestamo = await this.prisma.prestamoAudiovisual.findUnique({
       where: { id },
       include: {
@@ -119,6 +228,7 @@ export class ReportesService {
     const fecha = this.partesBogota(salida);
     const equipos = prestamo.detalles.map((detalle) => detalle.equipo);
     const responsable =
+      responsableSoloPdf ??
       prestamo.entregadoPor?.nombreCompleto ??
       prestamo.entregadoPor?.nombreUsuario ??
       'Sistema';
@@ -292,16 +402,24 @@ export class ReportesService {
       throw new BadRequestException(
         'No hay prácticas libres para el mes seleccionado.',
       );
+    const responsablesDistribucion =
+      await this.obtenerUsuariosDistribucionPdfActiva();
     const archivos = await this.generarEnParalelo(
       practicas,
-      async (practica) => {
-        const responsable =
+      async (practica, indice) => {
+        const responsableOriginal =
           practica.atendidoPor?.nombreCompleto ??
           practica.atendidoPor?.nombreUsuario ??
           'Sin responsable registrado';
+        const responsable = responsablesDistribucion.length
+          ? responsablesDistribucion[indice % responsablesDistribucion.length]
+          : responsableOriginal;
         return {
           nombre: `${this.nombreSeguroCarpeta(responsable)}/Ficha_PracticaLibre_${practica.id}.pdf`,
-          contenido: await this.generarPracticaLibrePdf(practica.id),
+          contenido: await this.generarPracticaLibrePdf(
+            practica.id,
+            responsablesDistribucion.length ? responsable : undefined,
+          ),
         };
       },
     );
@@ -422,16 +540,24 @@ export class ReportesService {
       throw new BadRequestException(
         'No hay préstamos audiovisuales para el mes seleccionado.',
       );
+    const responsablesDistribucion =
+      await this.obtenerUsuariosDistribucionPdfActiva();
     const archivos = await this.generarEnParalelo(
       prestamos,
-      async (prestamo) => {
-        const responsable =
+      async (prestamo, indice) => {
+        const responsableOriginal =
           prestamo.entregadoPor?.nombreCompleto ??
           prestamo.entregadoPor?.nombreUsuario ??
           'Sin responsable registrado';
+        const responsable = responsablesDistribucion.length
+          ? responsablesDistribucion[indice % responsablesDistribucion.length]
+          : responsableOriginal;
         return {
           nombre: `${this.nombreSeguroCarpeta(responsable)}/Prestamo_Audiovisual_${prestamo.id}.pdf`,
-          contenido: await this.generarPrestamoAudiovisualPdf(prestamo.id),
+          contenido: await this.generarPrestamoAudiovisualPdf(
+            prestamo.id,
+            responsablesDistribucion.length ? responsable : undefined,
+          ),
         };
       },
     );
@@ -831,16 +957,62 @@ export class ReportesService {
    * Cuatro conversiones simultáneas reducen el tiempo de forma suficiente para
    * los meses con muchas fichas, sin lanzar todas las conversiones a la vez.
    */
+  private filtroUsuariosDistribucionPdf() {
+    return {
+      estado: 'ACTIVA' as const,
+      OR: [{ cargo: null }, { cargo: { not: 'ADMINISTRADOR' } }],
+      roles: {
+        none: {
+          rol: {
+            nombre: { equals: 'ADMINISTRADOR', mode: 'insensitive' as const },
+          },
+        },
+      },
+    };
+  }
+
+  private async obtenerUsuariosDistribucionPdfActiva(): Promise<string[]> {
+    const configuracion =
+      await this.prisma.configuracionDistribucionPdf.findUnique({
+        where: { id: 1 },
+        include: {
+          usuarios: {
+            where: { usuario: this.filtroUsuariosDistribucionPdf() },
+            include: {
+              usuario: {
+                select: { nombreCompleto: true, nombreUsuario: true },
+              },
+            },
+            orderBy: { orden: 'asc' },
+          },
+        },
+      });
+    if (!configuracion?.activa) return [];
+    const responsables = configuracion.usuarios.map(
+      ({ usuario }) => usuario.nombreCompleto || usuario.nombreUsuario,
+    );
+    if (!responsables.length) {
+      throw new BadRequestException(
+        'La distribución de PDFs está activa, pero no tiene usuarios activos seleccionados.',
+      );
+    }
+    return responsables;
+  }
+
   private async generarEnParalelo<T, R>(
     elementos: T[],
-    generar: (elemento: T) => Promise<R>,
+    generar: (elemento: T, indice: number) => Promise<R>,
     concurrencia = 4,
   ): Promise<R[]> {
     const resultados: R[] = [];
     for (let indice = 0; indice < elementos.length; indice += concurrencia) {
       resultados.push(
         ...(await Promise.all(
-          elementos.slice(indice, indice + concurrencia).map(generar),
+          elementos
+            .slice(indice, indice + concurrencia)
+            .map((elemento, desplazamiento) =>
+              generar(elemento, indice + desplazamiento),
+            ),
         )),
       );
     }
