@@ -2,6 +2,9 @@ import { obtenerSesion } from "@/features/auth/lib/sesion";
 
 const baseMonitores = "/api/monitores";
 const baseAulas = "/api/aulas";
+const tiempoEsperaConsultaMs = 30_000;
+const tiempoEsperaDescargaMs = 180_000;
+const estadosTransitorios = new Set([502, 503, 504]);
 export const eventoErrorAutorizacion = "sgoas:authorization-error";
 
 export class ErrorApi extends Error {
@@ -27,6 +30,55 @@ function leerCookie(nombre: string) {
 function notificarErrorAutorizacion(estado: number) {
   if (typeof window === "undefined" || (estado !== 401 && estado !== 403)) return;
   window.dispatchEvent(new CustomEvent(eventoErrorAutorizacion, { detail: { estado } }));
+}
+
+const esperar = (milisegundos: number) => new Promise((resolve) => window.setTimeout(resolve, milisegundos));
+
+function errorDeConexion(error: unknown, tiempoEspera: number) {
+  const nombre = error instanceof Error ? error.name : "";
+  if (nombre === "TimeoutError" || nombre === "AbortError") {
+    return new ErrorApi(
+      `La consulta tardó más de ${Math.round(tiempoEspera / 1000)} segundos. Intente nuevamente.`,
+      0,
+      error,
+    );
+  }
+  return new ErrorApi(
+    "No fue posible conectar con el servidor. La aplicación volverá a intentarlo automáticamente cuando sea una consulta.",
+    0,
+    error,
+  );
+}
+
+async function solicitarConRecuperacion(
+  url: string,
+  opciones: RequestInit,
+  tiempoEspera = tiempoEsperaConsultaMs,
+) {
+  const metodo = (opciones.method ?? "GET").toUpperCase();
+  const consultaSegura = ["GET", "HEAD", "OPTIONS"].includes(metodo);
+  // Las escrituras nunca se reintentan: si la respuesta se pierde, repetirlas
+  // podría crear o modificar el mismo registro dos veces.
+  const intentos = consultaSegura && !opciones.signal ? 3 : 1;
+
+  for (let intento = 0; intento < intentos; intento += 1) {
+    try {
+      const respuesta = await fetch(url, {
+        ...opciones,
+        signal: opciones.signal ?? AbortSignal.timeout(tiempoEspera),
+      });
+      if (estadosTransitorios.has(respuesta.status) && intento + 1 < intentos) {
+        await esperar(400 * (intento + 1));
+        continue;
+      }
+      return respuesta;
+    } catch (error) {
+      if (intento + 1 >= intentos || opciones.signal) throw errorDeConexion(error, tiempoEspera);
+      await esperar(400 * (intento + 1));
+    }
+  }
+
+  throw new ErrorApi("No fue posible conectar con el servidor.", 0);
 }
 
 async function interpretarRespuesta<T>(respuesta: Response, notificarAutorizacion = false): Promise<T> {
@@ -60,7 +112,7 @@ export async function solicitarAulas<T>(ruta: string, token?: string, opciones: 
   const cabeceras = new Headers(opciones.headers);
   if (!(opciones.body instanceof FormData)) cabeceras.set("Content-Type", "application/json");
   if (token) cabeceras.set("Authorization", `Bearer ${token}`);
-  const respuesta = await fetch(`${baseAulas}${ruta}`, { ...opciones, headers: cabeceras });
+  const respuesta = await solicitarConRecuperacion(`${baseAulas}${ruta}`, { ...opciones, headers: cabeceras });
   return interpretarRespuesta<T>(respuesta, Boolean(token) && opciones.notificarAutorizacion !== false);
 }
 
@@ -68,7 +120,11 @@ export async function solicitarAulas<T>(ruta: string, token?: string, opciones: 
 export async function descargarAulas(ruta: string, token?: string, opciones: RequestInit = {}) {
   const cabeceras = new Headers(opciones.headers);
   if (token) cabeceras.set("Authorization", `Bearer ${token}`);
-  const respuesta = await fetch(`${baseAulas}${ruta}`, { ...opciones, headers: cabeceras });
+  const respuesta = await solicitarConRecuperacion(
+    `${baseAulas}${ruta}`,
+    { ...opciones, headers: cabeceras, signal: opciones.signal ?? AbortSignal.timeout(tiempoEsperaDescargaMs) },
+    tiempoEsperaDescargaMs,
+  );
   if (!respuesta.ok) {
     notificarErrorAutorizacion(respuesta.status);
     const tipo = respuesta.headers.get("content-type") ?? "";
@@ -96,9 +152,8 @@ export async function solicitarMonitores<T>(
     const csrf = decodeURIComponent(leerCookie("monitores_csrftoken"));
     if (csrf) cabeceras.set("X-CSRFToken", csrf);
   }
-  const respuesta = await fetch(`${baseMonitores}${ruta}`, {
+  const respuesta = await solicitarConRecuperacion(`${baseMonitores}${ruta}`, {
     ...opciones,
-    signal: opciones.signal ?? AbortSignal.timeout(8000),
     // Los estados de aprobación y los horarios históricos deben reflejar la
     // respuesta vigente de la API, no una copia almacenada por el navegador.
     cache: opciones.cache ?? "no-store",
@@ -113,7 +168,11 @@ export async function descargarMonitores(ruta: string, opciones: RequestInit = {
   const cabeceras = new Headers(opciones.headers);
   const token = obtenerSesion()?.tokenAcceso;
   if (token) cabeceras.set("Authorization", `Bearer ${token}`);
-  const respuesta = await fetch(`${baseMonitores}${ruta}`, { ...opciones, credentials: "omit", headers: cabeceras });
+  const respuesta = await solicitarConRecuperacion(
+    `${baseMonitores}${ruta}`,
+    { ...opciones, credentials: "omit", headers: cabeceras, signal: opciones.signal ?? AbortSignal.timeout(tiempoEsperaDescargaMs) },
+    tiempoEsperaDescargaMs,
+  );
   if (!respuesta.ok) {
     notificarErrorAutorizacion(respuesta.status);
     throw new ErrorApi("No fue posible descargar el documento.", respuesta.status);
