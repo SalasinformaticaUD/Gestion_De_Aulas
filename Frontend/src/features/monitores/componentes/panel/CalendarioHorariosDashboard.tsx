@@ -67,10 +67,10 @@ function posicionar(horarios: HorarioApi[]): HorarioPosicionado[] {
   return resultado;
 }
 
-export function CalendarioHorariosDashboard({ dependencia, horarios, periodo }: { dependencia?: string; horarios?: HorarioApi[]; periodo?: string }) {
-  const modoPersonal = horarios !== undefined;
+export function CalendarioHorariosDashboard({ dependencia, horarios, periodo, monitores: monitoresDisponibles }: { dependencia?: string; horarios?: HorarioApi[]; periodo?: string; monitores?: Array<{ id: string; department?: string; is_active?: boolean }> }) {
+  const modoPersonal = horarios !== undefined && monitoresDisponibles === undefined;
   const cargarHorarios = useCallback(() => horarios ? Promise.resolve(horarios) : servicioMonitores.listarHorarios(), [horarios]);
-  const cargarMonitores = useCallback(() => horarios ? Promise.resolve([] as { id: string; department?: string; is_active?: boolean }[]) : servicioMonitores.listarMonitores(), [horarios]);
+  const cargarMonitores = useCallback(() => monitoresDisponibles ? Promise.resolve(monitoresDisponibles) : horarios ? Promise.resolve([] as { id: string; department?: string; is_active?: boolean }[]) : servicioMonitores.listarMonitores(), [horarios, monitoresDisponibles]);
   const recurso = usarRecursoApi(cargarHorarios, [] as HorarioApi[]);
   const recursoMonitores = usarRecursoApi(cargarMonitores, [] as { id: string; department?: string; is_active?: boolean }[]);
   const [monitorSeleccionado, setMonitorSeleccionado] = useState<string | null>(null);

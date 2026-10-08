@@ -11,6 +11,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { UsuarioAutenticado } from '../auth/auth.types';
 import { MonitoresClientService } from './monitores-client.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 
 @Controller('integraciones/monitores')
 export class IntegracionesController {
@@ -18,6 +19,12 @@ export class IntegracionesController {
     private readonly monitores: MonitoresClientService,
     private readonly prisma: PrismaService,
   ) {}
+
+  @Get('previsualizacion-horario-aulas')
+  @RequirePermissions('DASHBOARD_VER_HORARIO_MONITORES')
+  previsualizacionHorarioAulas() {
+    return this.monitores.previsualizacionHorarioAulas();
+  }
 
   @Post('sesion')
   async prepararSesion(@CurrentUser() usuario: UsuarioAutenticado) {

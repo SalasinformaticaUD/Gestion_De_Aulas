@@ -3,7 +3,10 @@ import { EstadoPrestamo } from '../../generated/prisma/enums.js';
 import { DisponibilidadAulasService } from '../disponibilidad-aulas/disponibilidad-aulas.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PracticasLibresService } from './practicas-libres.service';
-import { ResponsablePracticaLibre } from './dto/create-practicas-libre.dto';
+import {
+  ResponsablePracticaLibre,
+  TipoSolicitantePracticaLibre,
+} from './dto/create-practicas-libre.dto';
 
 describe('PracticasLibresService', () => {
   const dto = {
@@ -117,6 +120,33 @@ describe('PracticasLibresService', () => {
     const llamada: unknown = tx.practicaLibre.create.mock.calls[0]?.[0];
     expect(llamada).toMatchObject({
       data: { atendidoPorId: 'usuario-atencion-id' },
+    });
+  });
+
+  it('registra una práctica docente sin exigir proyecto curricular', async () => {
+    tx.docente.upsert.mockResolvedValue({ id: 'docente-id' });
+
+    await expect(
+      service.create({
+        ...dto,
+        responsables: [
+          {
+            tipo: TipoSolicitantePracticaLibre.DOCENTE,
+            documento: '90000003',
+            nombre: 'Docente invitado',
+          },
+        ],
+      }),
+    ).resolves.toBeDefined();
+
+    expect(tx.docente.upsert).toHaveBeenCalledWith({
+      where: { documento: '90000003' },
+      update: { nombre: 'Docente invitado', proyecto: undefined },
+      create: {
+        documento: '90000003',
+        nombre: 'Docente invitado',
+        proyecto: undefined,
+      },
     });
   });
 

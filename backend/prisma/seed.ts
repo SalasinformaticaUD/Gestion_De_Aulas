@@ -42,9 +42,9 @@ const acciones = [
   'APROBAR',
   'EXPORTAR',
 ] as const;
-type AccionPermiso = (typeof acciones)[number] | 'IMPORTAR' | 'RECHAZAR';
+type AccionPermiso = (typeof acciones)[number] | 'IMPORTAR' | 'RECHAZAR' | 'VER_HORARIO_MONITORES';
 const accionesPorModulo: Record<string, readonly AccionPermiso[]> = {
-  DASHBOARD: ['LEER'],
+  DASHBOARD: ['LEER', 'VER_HORARIO_MONITORES'],
   AULAS: ['LEER', 'CREAR', 'ACTUALIZAR', 'ELIMINAR'],
   DISPONIBILIDAD: ['LEER'],
   PRACTICAS_LIBRES: ['LEER', 'CREAR', 'ACTUALIZAR'],

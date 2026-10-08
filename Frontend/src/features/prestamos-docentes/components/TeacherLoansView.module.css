@@ -96,6 +96,9 @@
 .roomSuggestions strong { display:block; width:100%; overflow-wrap:normal; word-break:normal; color:var(--primary); font-size:12px; line-height:1.3; white-space:normal; }
 .roomSuggestions span { margin-top:4px; font-size:13px; font-weight:700; }
 .roomSuggestions small { max-width:100%; margin-top:5px; overflow:hidden; color:var(--muted); font-size:11.7px; text-overflow:ellipsis; white-space:nowrap; }
+.roomSuggestions button.requestedRoom,.roomSuggestions button.requestedRoom:hover { border-color:#dfb12f; background:#fff5c2; box-shadow:0 0 0 2px rgba(193,135,0,.1); }
+.roomSuggestions button.requestedRoom strong { color:#855600; }
+.roomSuggestions small.requestedLabel { margin-top:auto; padding-top:7px; color:#855600; font-weight:850; }
 .noSuggestions { grid-column:1/-1; margin:0; padding:15px; border:1px dashed #cfd3d9; border-radius:6px; color:var(--muted); background:#fafbfc; font-size:14.3px; text-align:center; }
 .absenceRooms{margin-top:12px}.absenceToggle{min-height:34px;padding:0 11px;border:1px solid var(--primary);border-radius:6px;color:#fff;background:var(--primary);font-size:12px;font-weight:800;cursor:pointer}.absenceToggle:hover:not(:disabled){border-color:#850d1b;background:#850d1b}.absenceToggle:disabled{cursor:not-allowed;opacity:.55}.absenceNotice{margin:0 0 9px;padding:10px 11px;border:1px solid #f1d59e;border-radius:7px;color:#805000;background:#fffbf2;font-size:12px;line-height:1.4}.roomSuggestions button.absenceRoom{border-color:#e9bd70;background:#fff8e8}.roomSuggestions button.absenceRoom strong{color:#9a5b00}.roomSuggestions button.absenceRoom small{color:#9a5b00}
 .validationSummary { display:flex; flex-wrap:wrap; gap:7px; }
@@ -179,4 +182,6 @@
 .selectionBadge { display:inline-flex!important; align-items:center; margin-top:8px!important; padding:3px 7px; border-radius:999px; color:#fff!important; background:var(--primary); font-size:10.5px!important; font-weight:850!important; line-height:1.2; }
 .selectedRoomSummary { margin:10px 0 0; padding:9px 11px; border:1px solid #b6e9d1; border-radius:7px; color:#07684f; background:#eafaf2; font-size:13px; font-weight:750; }
 :global(html[data-theme="dark"]) .roomSuggestions button.selectedRoom { border-color:#ff7180; color:#fff; background:#48232a; box-shadow:0 0 0 3px rgba(255,113,128,.2); }
+:global(html[data-theme="dark"]) .roomSuggestions button.requestedRoom:not(.selectedRoom) { border-color:#b88a28; color:#f8e4ae; background:#493a18; box-shadow:0 0 0 2px rgba(223,177,47,.12); }
+:global(html[data-theme="dark"]) .roomSuggestions button.requestedRoom:not(.selectedRoom) strong,:global(html[data-theme="dark"]) .roomSuggestions button.requestedRoom:not(.selectedRoom) .requestedLabel { color:#f3cf70; }
 :global(html[data-theme="dark"]) .selectedRoomSummary { border-color:#376750; color:#9ee2bd; background:#183328; }

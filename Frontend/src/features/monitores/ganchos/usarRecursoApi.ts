@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-function useRecursoApi<T>(cargar: () => Promise<T>, valorInicial: T) {
+function useRecursoApi<T>(cargar: () => Promise<T>, valorInicial: T, habilitado = true) {
   const [datos, setDatos] = useState<T>(valorInicial);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
@@ -19,7 +19,10 @@ function useRecursoApi<T>(cargar: () => Promise<T>, valorInicial: T) {
     }
   }, [cargar]);
 
-  useEffect(() => { void recargar(); }, [recargar]);
+  useEffect(() => {
+    if (habilitado) void recargar();
+    else setCargando(false);
+  }, [habilitado, recargar]);
   return { datos, setDatos, cargando, error, recargar };
 }
 

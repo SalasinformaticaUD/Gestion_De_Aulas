@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { registrarAsistencia } from "@/features/horarios/api/horariosApi";
+import { actualizarUsuarioSesion, eventoSesion, obtenerSesion, tienePermiso } from "@/features/auth/lib/sesion";
+import { solicitarAulas, type UsuarioCentral } from "@/features/monitores/api/clienteMonitores";
 import { consultarResumenPanel, descartarNotificacionPanel, type ResumenPanelOperativo } from "../api/panelOperativoApi";
 import styles from "./DashboardView.module.css";
 
@@ -25,8 +27,41 @@ export function DashboardView() {
   const [cargando, setCargando] = useState(true);
   const [guardandoAsistencia, setGuardandoAsistencia] = useState<string | null>(null);
   const [descartandoAlerta, setDescartandoAlerta] = useState<string | null>(null);
+  const [puedeVerHorarioMonitores, setPuedeVerHorarioMonitores] = useState(false);
   const [version, setVersion] = useState(0);
-  const [filtroNotificaciones, setFiltroNotificaciones] = useState<"critica" | "advertencia" | "info" | null>(null);
+  const [filtroNotificaciones, setFiltroNotificaciones] = useState<"critica" | "advertencia" | "info" | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const guardado = JSON.parse(window.sessionStorage.getItem("dashboard-aulas:estado-retorno") ?? "null") as { filtroNotificaciones?: "critica" | "advertencia" | "info" | null } | null;
+      return guardado?.filtroNotificaciones ?? null;
+    } catch { return null; }
+  });
+  useEffect(() => {
+    try {
+      const guardado = JSON.parse(window.sessionStorage.getItem("dashboard-aulas:estado-retorno") ?? "null") as { scrollY?: number } | null;
+      if (!guardado) return;
+      window.sessionStorage.removeItem("dashboard-aulas:estado-retorno");
+      window.requestAnimationFrame(() => window.scrollTo({ top: guardado.scrollY ?? 0, behavior: "instant" }));
+    } catch { window.sessionStorage.removeItem("dashboard-aulas:estado-retorno"); }
+  }, []);
+  const guardarEstadoAntesDeVerMonitores = () => {
+    window.sessionStorage.setItem("dashboard-aulas:estado-retorno", JSON.stringify({ filtroNotificaciones, scrollY: window.scrollY }));
+  };
+  useEffect(() => {
+    const actualizarAcceso = () => {
+      const sesion = obtenerSesion();
+      setPuedeVerHorarioMonitores(tienePermiso("DASHBOARD_VER_HORARIO_MONITORES", sesion));
+    };
+    actualizarAcceso();
+    const sesion = obtenerSesion();
+    if (sesion?.tokenAcceso && sesion.origen !== "monitores-local") {
+      void solicitarAulas<UsuarioCentral>("/auth/me", sesion.tokenAcceso, { notificarAutorizacion: false })
+        .then((usuario) => actualizarUsuarioSesion(usuario))
+        .catch(() => undefined);
+    }
+    window.addEventListener(eventoSesion, actualizarAcceso);
+    return () => window.removeEventListener(eventoSesion, actualizarAcceso);
+  }, []);
   useEffect(() => {
     let controller: AbortController | null = null;
     let cargandoPeticion = false;
@@ -104,7 +139,7 @@ export function DashboardView() {
     finally { setDescartandoAlerta(null); }
   };
   return <>
-    <section className={`page-heading ${styles.heading}`}><div><h1>Panel de Control Operativo</h1><p>Resumen en tiempo real del bloque en curso o del siguiente, desde 15 minutos antes de iniciar.</p></div><span className={styles.live}><i />{cargando ? "Actualizando…" : `Bloque ${bloque}`}</span></section>
+    <section className={`page-heading ${styles.heading}`}><div><h1>Panel de Control Operativo</h1><p>Resumen en tiempo real del bloque en curso o del siguiente, desde 15 minutos antes de iniciar.</p></div><div className={styles.headingActions}>{puedeVerHorarioMonitores && <Link className={styles.monitorScheduleButton} href="/horario-monitores" onClick={guardarEstadoAntesDeVerMonitores}>Ver horario monitores</Link>}<span className={styles.live}><i />{cargando ? "Actualizando…" : `Bloque ${bloque}`}</span></div></section>
     {error && <p className={styles.error} role="alert">{error}</p>}
     <div className={styles.dashboardLayout}>
       <div className={styles.mainColumn}>

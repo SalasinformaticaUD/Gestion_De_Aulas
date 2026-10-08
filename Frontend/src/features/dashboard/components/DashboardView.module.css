@@ -68,3 +68,7 @@
 .dismissAlert:hover{color:#9f1d28;border-color:#fecdd3;background:#fff1f2}
 .dismissAlert:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 .dismissAlert:disabled{opacity:.45;cursor:wait}
+.headingActions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:9px}
+.monitorScheduleButton{min-height:37px;display:inline-flex;align-items:center;padding:0 14px;border-radius:7px;color:#fff;background:var(--primary);font-size:14.3px;font-weight:800;text-decoration:none}
+.monitorScheduleButton:hover{background:var(--primary-hover)}
+@media(max-width:560px){.headingActions{width:100%;justify-content:stretch}.headingActions>*{flex:1}.monitorScheduleButton,.headingActions .live{justify-content:center}}

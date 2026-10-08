@@ -3,6 +3,7 @@ import { obtenerSesion } from "@/features/auth/lib/sesion";
 import type { AnotacionApi, ConciliacionApi, ConsultaPublicaApi, DashboardApi, DetalleInconsistenciaApi, PanelMonitorApi, RegistrosPersonalesApi, ExcepcionApi, HorarioApi, ImportacionAsistenciaApi, IndicadoresInconsistenciasApi, InconsistenciaApi, MonitorApi, PaginaApi, SesionApi } from "./contratosMonitores";
 
 export const servicioMonitores = {
+  obtenerPrevisualizacionHorarioAulas: () => solicitarAulas<{ dashboard: DashboardApi; schedules: HorarioApi[]; monitors: Array<{ id: string; department?: string; is_active?: boolean }> }>("/integraciones/monitores/previsualizacion-horario-aulas", obtenerSesion()?.tokenAcceso),
   listarMonitores: () => solicitarMonitores<MonitorApi[]>("/api/v1/monitors/"),
   listarPaginaMonitores: (pagina = 1) => solicitarMonitores<PaginaApi<MonitorApi>>(`/api/v1/monitors/?page=${pagina}&page_size=20`),
   provisionarMonitor: (payload: { full_name: string; codigo_estudiante: string; email: string; username?: string; department: string; numero_documento?: string; proyecto_curricular?: string; telefono?: string; confirm_repeating_monitor: boolean }) =>

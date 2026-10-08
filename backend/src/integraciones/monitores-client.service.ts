@@ -37,6 +37,13 @@ const departamentosRemotos = {
 
 @Injectable()
 export class MonitoresClientService {
+  async previsualizacionHorarioAulas(): Promise<unknown> {
+    const response = await this.request('/api/v1/platform/aulas-schedule-preview/', {
+      headers: { 'X-Monitores-Service-Token': this.serviceToken() },
+    });
+    return this.json<unknown>(response);
+  }
+
   async estado(): Promise<MonitoresEstadoDto> {
     const response = await this.request('/health');
     const data = await this.json<EstadoRemoto>(response);

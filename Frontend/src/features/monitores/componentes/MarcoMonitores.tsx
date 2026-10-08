@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { applyTheme, defaultProfile, getInitials, loadTheme, profileFromSession, type UserProfile } from "@/features/perfil/lib/profile";
 import { cerrarSesion, eventoSesion, obtenerSesion } from "@/features/auth/lib/sesion";
@@ -11,6 +11,7 @@ import { ModuleSwitcher } from "@/components/layout/ModuleSwitcher";
 import { solicitarMonitores } from "@/features/monitores/api/clienteMonitores";
 import { SelectoresNativosPersonalizados } from "./SelectoresNativosPersonalizados";
 import { CampanaNotificaciones } from "./CampanaNotificaciones";
+import estilos from "./SistemaVisualMonitores.module.css";
 
 const navegacion = [
   { href:"/gestion-monitores", label:"Dashboard" },
@@ -29,6 +30,8 @@ const navegacion = [
 
 export function MarcoMonitores({ children }: { children:React.ReactNode }) {
   const ruta = usePathname();
+  const router = useRouter();
+  const modoHorarioAulas = ruta === "/horario-monitores";
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [panelContraido, setPanelContraido] = useState(false);
   const [perfil, setPerfil] = useState<UserProfile>(defaultProfile);
@@ -69,9 +72,9 @@ export function MarcoMonitores({ children }: { children:React.ReactNode }) {
     "/gestion-monitores/registros",
   ]);
   if (esMonitorActual) rutasMonitor.add("/gestion-monitores/actas");
-  const navegacionVisible = navegacion.filter((item) =>
-    esMonitor ? rutasMonitor.has(item.href) : item.href !== "/gestion-monitores/usuarios" || puedeGestionarUsuarios,
-  );
+  const navegacionVisible = modoHorarioAulas
+    ? [{ href: "/horario-monitores", label: "Dashboard" }]
+    : navegacion.filter((item) => esMonitor ? rutasMonitor.has(item.href) : item.href !== "/gestion-monitores/usuarios" || puedeGestionarUsuarios);
   useEffect(() => {
     const actualizar = () => setAhora(new Date());
     actualizar(); const reloj = window.setInterval(actualizar, 1000);
@@ -94,11 +97,11 @@ export function MarcoMonitores({ children }: { children:React.ReactNode }) {
   return <div className={`app-shell ${panelContraido ? "sidebar-collapsed" : ""}`}><SelectoresNativosPersonalizados />
     {menuAbierto && <button className="menu-overlay" aria-label="Cerrar menú" onClick={() => setMenuAbierto(false)} />}
     <aside className={`sidebar ${menuAbierto ? "is-open" : ""}`} aria-label="Navegación de gestión de monitores">
-      <Link href="/gestion-monitores" className="brand" aria-label="Ir al panel de monitores" onClick={() => setMenuAbierto(false)}><Image className="sidebar-monitores-logo" src="/brand/Logo_Monitores_Universidad_Distrital.png" alt="Monitores · Laboratorios de Ingeniería · Universidad Distrital" width={614} height={407} priority /></Link>
+      <Link href={modoHorarioAulas ? "/horario-monitores" : "/gestion-monitores"} className="brand" aria-label="Ir al panel de monitores" onClick={() => setMenuAbierto(false)}><Image className="sidebar-monitores-logo" src="/brand/Logo_Monitores_Universidad_Distrital.png" alt="Monitores · Laboratorios de Ingeniería · Universidad Distrital" width={614} height={407} priority /></Link>
       <nav className="nav"><p className="nav-label">Monitores</p>{navegacionVisible.map((item) => <Link key={item.href} href={item.href} className="nav-link" aria-current={ruta === item.href ? "page" : undefined} onClick={() => setMenuAbierto(false)}><span className="nav-icon" aria-hidden="true">•</span>{item.label}</Link>)}</nav>
-      <footer className="sidebar-footer"><ModuleSwitcher current="monitores" onNavigate={() => setMenuAbierto(false)} /><button type="button" className="nav-link nav-logout" onClick={salir}><span className="nav-icon" aria-hidden="true">↪</span>Salir</button></footer>
+      <footer className="sidebar-footer">{!modoHorarioAulas && <ModuleSwitcher current="monitores" onNavigate={() => setMenuAbierto(false)} />}<button type="button" className="nav-link nav-logout" onClick={salir}><span className="nav-icon" aria-hidden="true">↪</span>Salir</button></footer>
     </aside>
-    <section className="workspace"><header className="topbar"><button className="menu-button" type="button" aria-label={panelContraido ? "Mostrar menú" : "Ocultar menú"} aria-expanded={menuAbierto || !panelContraido} onClick={alternarMenu}>☰</button><span className="period">SEMESTRE 2026-3</span><div className="date-time"><span>{fecha}</span><time dateTime={ahora?.toISOString()}>{hora}</time></div><span className="topbar-spacer" /><CampanaNotificaciones /><ThemeToggle /><Link href="/gestion-monitores/perfil" className="profile"><span className={`avatar ${perfil.photo ? "avatar-has-photo" : ""}`}>{perfil.photo ? <img src={perfil.photo} alt="" /> : getInitials(perfil.fullName)}</span><span className="profile-copy"><strong>{perfil.fullName}</strong><small>{perfil.role}</small></span></Link></header><main>{children}</main></section>
+    <section className="workspace"><header className="topbar"><button className="menu-button" type="button" aria-label={panelContraido ? "Mostrar menú" : "Ocultar menú"} aria-expanded={menuAbierto || !panelContraido} onClick={alternarMenu}>☰</button><span className="period">SEMESTRE 2026-3</span><div className="date-time"><span>{fecha}</span><time dateTime={ahora?.toISOString()}>{hora}</time></div><span className="topbar-spacer" />{modoHorarioAulas && <button type="button" className={estilos.volverAulasButton} onClick={() => router.push("/gestion-aulas")}>Volver</button>}{!modoHorarioAulas && <CampanaNotificaciones />}<ThemeToggle />{modoHorarioAulas ? <div className="profile"><span className={`avatar ${perfil.photo ? "avatar-has-photo" : ""}`}>{perfil.photo ? <img src={perfil.photo} alt="" /> : getInitials(perfil.fullName)}</span><span className="profile-copy"><strong>{perfil.fullName}</strong><small>{perfil.role}</small></span></div> : <Link href="/gestion-monitores/perfil" className="profile"><span className={`avatar ${perfil.photo ? "avatar-has-photo" : ""}`}>{perfil.photo ? <img src={perfil.photo} alt="" /> : getInitials(perfil.fullName)}</span><span className="profile-copy"><strong>{perfil.fullName}</strong><small>{perfil.role}</small></span></Link>}</header><main>{children}</main></section>
   </div>;
 }
 

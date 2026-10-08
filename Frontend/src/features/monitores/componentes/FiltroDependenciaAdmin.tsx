@@ -9,9 +9,9 @@ export const dependenciasMonitores = [
   ["physics", "Monitores Física"],
 ] as const;
 
-export function useFiltroDependenciaAdmin() {
+export function useFiltroDependenciaAdmin(dependenciaInicial = "") {
   const [rol, setRol] = useState<string | null>(null);
-  const [dependencia, setDependencia] = useState("");
+  const [dependencia, setDependencia] = useState(dependenciaInicial);
   useEffect(() => {
     let vigente = true;
     void servicioMonitores.obtenerPerfilMonitores().then((perfil) => {

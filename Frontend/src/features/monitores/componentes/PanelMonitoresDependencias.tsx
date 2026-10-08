@@ -40,19 +40,24 @@ function PanelPersonalMonitor() {
   </div>;
 }
 
-function PanelGestionMonitores() {
-  const { esAdministrador, dependencia, setDependencia } = useFiltroDependenciaAdmin();
+function PanelGestionMonitores({ modoHorarioAulas = false }: { modoHorarioAulas?: boolean }) {
+  const { esAdministrador, dependencia, setDependencia } = useFiltroDependenciaAdmin(modoHorarioAulas ? "informatics_labs" : "");
   const cargarDashboard = useCallback(() => servicioMonitores.obtenerDashboard(dependencia || undefined), [dependencia]);
-  const tablero = usarRecursoApi(cargarDashboard, { monitor_rows: [], pending_overtime: [], recent_annotations: [], notifications: [] } as DashboardApi);
+  const tablero = usarRecursoApi(cargarDashboard, { monitor_rows: [], pending_overtime: [], recent_annotations: [], notifications: [] } as DashboardApi, !modoHorarioAulas);
+  const cargarPrevisualizacion = useCallback(() => servicioMonitores.obtenerPrevisualizacionHorarioAulas(), []);
+  const previsualizacion = usarRecursoApi(cargarPrevisualizacion, { dashboard: { monitor_rows: [], pending_overtime: [], recent_annotations: [], notifications: [] } as DashboardApi, schedules: [], monitors: [] }, modoHorarioAulas);
+  const datosTablero = modoHorarioAulas ? previsualizacion.datos.dashboard : tablero.datos;
+  const error = modoHorarioAulas ? previsualizacion.error : tablero.error;
   return <div className={estilos.dashboardMonitores}>
-    <section className={`page-heading ${estilos.encabezado}`}><div><span className={estilos.etiqueta}>Gestión de monitores</span><h1>Panel de monitores</h1><p>Resumen operativo del periodo académico actual.</p></div><SelectorDependenciaAdmin visible={esAdministrador} value={dependencia} onChange={setDependencia} /></section>
-    {tablero.error && <div className={`${estilos.aviso} ${estilos.avisoError}`}>{tablero.error}</div>}
-    <div className={estilos.contenidoDashboardMonitores}><CalendarioHorariosDashboard dependencia={dependencia || undefined} /><TarjetasSeguimiento tablero={tablero.datos} /></div>
+    <section className={`page-heading ${estilos.encabezado}`}><div><span className={estilos.etiqueta}>Gestión de monitores</span><h1>{modoHorarioAulas ? "Horario de monitores" : "Panel de monitores"}</h1><p>{modoHorarioAulas ? "Consulta operativa de Monitores Aulas de Software." : "Resumen operativo del periodo académico actual."}</p></div><SelectorDependenciaAdmin visible={esAdministrador} value={dependencia} onChange={setDependencia} /></section>
+    {error && <div className={`${estilos.aviso} ${estilos.avisoError}`}>{error}</div>}
+    <div className={estilos.contenidoDashboardMonitores}><CalendarioHorariosDashboard dependencia={dependencia || undefined} horarios={modoHorarioAulas ? previsualizacion.datos.schedules : undefined} monitores={modoHorarioAulas ? previsualizacion.datos.monitors : undefined} />{!modoHorarioAulas && <TarjetasSeguimiento tablero={datosTablero} />}</div>
   </div>;
 }
 
-export function PanelMonitoresDependencias() {
+export function PanelMonitoresDependencias({ modoHorarioAulas = false }: { modoHorarioAulas?: boolean }) {
   const perfil = usarRecursoApi(servicioMonitores.obtenerPerfilMonitores, { role: "" });
+  if (modoHorarioAulas) return <PanelGestionMonitores modoHorarioAulas />;
   if (perfil.cargando) return <div className={estilos.dashboardMonitores}><p className={estilos.vacio}>Cargando panel…</p></div>;
   return String(perfil.datos.role).trim().toLowerCase() === "monitor" ? <PanelPersonalMonitor /> : <PanelGestionMonitores />;
 }

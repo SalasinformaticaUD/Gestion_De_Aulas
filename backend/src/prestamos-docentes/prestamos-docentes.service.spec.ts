@@ -153,6 +153,33 @@ describe('PrestamosDocentesService', () => {
     );
   });
 
+  it('registra un profesor externo sin exigir proyecto curricular', async () => {
+    prisma.docente.findUnique.mockResolvedValue(null);
+    prisma.docente.create.mockResolvedValue({ id: 'docente-externo-id' });
+
+    await expect(
+      service.create(
+        {
+          aulaId: dto.aulaId,
+          docenteNuevoNombre: 'Profesora invitada',
+          docenteNuevoDocumento: '90000002',
+          inicio: dto.inicio,
+          fin: dto.fin,
+        },
+        '00000000-0000-4000-8000-000000000003',
+      ),
+    ).resolves.toMatchObject({ estado: EstadoPrestamo.SOLICITADO });
+
+    expect(prisma.docente.create).toHaveBeenCalledWith({
+      data: {
+        documento: '90000002',
+        nombre: 'Profesora invitada',
+        proyecto: undefined,
+      },
+      select: { id: true },
+    });
+  });
+
   it('rechaza la solicitud cuando disponibilidad reporta ocupación', async () => {
     disponibilidad.findOne.mockResolvedValue({
       estadoCalculado: 'ocupada',
