@@ -167,6 +167,96 @@ export function TasksView() {
     const rows = visibleTasks.map((task) => ({ Código: task.code, Tarea: task.title, Descripción: task.description ?? "", Aula: task.roomCode ?? "", Responsables: responsibleNames(task), Creada: formatExportDate(task.createdAt), Finalizada: formatExportDate(task.completedAt ?? task.canceledAt), Estado: task.status, "Motivo de cancelación": task.cancellationReason ?? "" }));
     const book = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book, XLSX.utils.json_to_sheet(rows), historyStatus === "COMPLETADA" ? "Completadas" : "Canceladas"); XLSX.writeFile(book, `historial-tareas-${historyStatus.toLocaleLowerCase()}.xlsx`);
   };
+  const exportPersonReport = () => {
+    const person = users.find((user) => user.id === responsibleFilter);
+    if (!person) {
+      setNotice({ tone: "error", text: "Seleccione una persona para generar su informe individual." });
+      return;
+    }
+    const belongsToPerson = (report: NonNullable<OperationalTask["reports"]>[number]) =>
+      report.autor.id === person.id || Boolean(report.responsables?.some((item) => item.id === person.id));
+    const personTasks = tasks.filter((task) => {
+      const responsibleIds = task.responsibles?.map((item) => item.usuarioId) ?? (task.responsibleId ? [task.responsibleId] : []);
+      return responsibleIds.includes(person.id) || task.reports?.some(belongsToPerson);
+    });
+    const personReports = personTasks.flatMap((task) =>
+      (task.reports ?? []).filter(belongsToPerson).map((report) => ({ task, report })),
+    ).sort((left, right) => new Date(left.report.creadoEn).getTime() - new Date(right.report.creadoEn).getTime());
+    const completed = personTasks.filter((task) => task.status === "COMPLETADA").length;
+    const closed = personTasks.filter((task) => ["COMPLETADA", "CANCELADA"].includes(task.status)).length;
+    const tasksWithReports = new Set(personReports.map(({ task }) => task.id)).size;
+    const summary = [{
+      Persona: person.nombreCompleto,
+      "Tareas asignadas": personTasks.length,
+      "Tareas con informe": tasksWithReports,
+      "Tareas sin informe": personTasks.length - tasksWithReports,
+      "Informes de la persona": personReports.length,
+      "Informes con pendientes": personReports.filter(({ report }) => Boolean(report.accionesPendientes?.trim())).length,
+      Completadas: completed,
+      Canceladas: personTasks.filter((task) => task.status === "CANCELADA").length,
+      "En curso": personTasks.filter((task) => !["COMPLETADA", "CANCELADA"].includes(task.status)).length,
+      "Cumplimiento sobre tareas cerradas": closed ? `${Math.round((completed / closed) * 100)}%` : "Sin tareas cerradas",
+      "Generado el": formatShortDate(new Date().toISOString()),
+    }];
+    const taskDetail = personTasks.map((task) => {
+      const reports = task.reports?.filter(belongsToPerson) ?? [];
+      const assignment = task.responsibles?.find((item) => item.usuarioId === person.id);
+      return {
+        Código: task.code,
+        Tarea: task.title,
+        Descripción: task.description ?? "",
+        Tipo: task.type ?? "Sin especificar",
+        Prioridad: task.priority ?? "Sin especificar",
+        Aula: task.roomCode ?? "Sin aula",
+        Estado: task.status.replaceAll("_", " "),
+        Cumplimiento: task.status === "COMPLETADA" ? "Cumplida" : task.status === "CANCELADA" ? "No cumplida" : "En curso",
+        "Afectó disponibilidad": task.affectsAvailability ? "Sí" : "No",
+        "Creada por": task.creator?.nombreCompleto ?? "No disponible",
+        "Responsables actuales": responsibleNames(task, users),
+        "Asignación de la persona": formatExportDate(assignment?.agregadoEn ?? task.createdAt),
+        Inicio: formatExportDate(task.start),
+        "Fin programado": formatExportDate(task.end),
+        "Fecha de cierre": formatExportDate(task.completedAt ?? task.canceledAt),
+        "Informes totales de la tarea": task.reports?.length ?? 0,
+        "Informes de la persona": reports.length,
+        "Último informe de la persona": formatExportDate(reports.at(-1)?.creadoEn),
+        Observaciones: task.observations ?? "",
+        "Motivo de cancelación": task.cancellationReason ?? "",
+        "Cancelada por": task.canceledBy?.nombreCompleto ?? "",
+      };
+    });
+    const reportDetail = personReports.map(({ task, report }, index) => ({
+      "N.º": index + 1,
+      "ID del informe": report.id,
+      "Fecha del informe": formatExportDate(report.creadoEn),
+      "Código de tarea": task.code,
+      Tarea: task.title,
+      Aula: task.roomCode ?? "Sin aula",
+      "Estado de la tarea": task.status.replaceAll("_", " "),
+      "Autor del informe": report.autor.nombreCompleto,
+      "Participación de la persona": report.autor.id === person.id ? "Autor" : "Responsable reportado",
+      "Responsables del informe": report.responsables?.map((item) => item.nombreCompleto).join(", ") || report.autor.nombreCompleto,
+      "Actividades realizadas": report.actividadesRealizadas,
+      "Acciones pendientes": report.accionesPendientes?.trim() || "Sin acciones pendientes",
+      "Estado del informe": report.accionesPendientes?.trim() ? "Con pendientes" : "Finalizado sin pendientes",
+      "Cierre de la tarea": formatExportDate(task.completedAt ?? task.canceledAt),
+      "Motivo de cancelación": task.cancellationReason ?? "",
+    }));
+    const summarySheet = XLSX.utils.json_to_sheet(summary);
+    summarySheet["!cols"] = [{ wch: 32 }, ...Array.from({ length: 10 }, () => ({ wch: 23 }))];
+    const taskSheet = XLSX.utils.json_to_sheet(taskDetail.length ? taskDetail : [{ Información: "La persona no tiene tareas operativas asociadas." }]);
+    taskSheet["!cols"] = [{ wch: 15 }, { wch: 32 }, { wch: 46 }, { wch: 20 }, { wch: 16 }, { wch: 14 }, { wch: 18 }, { wch: 18 }, { wch: 20 }, { wch: 26 }, { wch: 32 }, { wch: 23 }, { wch: 21 }, { wch: 21 }, { wch: 21 }, { wch: 23 }, { wch: 22 }, { wch: 22 }, { wch: 42 }, { wch: 42 }, { wch: 26 }];
+    if (taskDetail.length) taskSheet["!autofilter"] = { ref: taskSheet["!ref"] ?? "A1:U1" };
+    const reportSheet = XLSX.utils.json_to_sheet(reportDetail.length ? reportDetail : [{ Información: "La persona no tiene informes de seguimiento registrados." }]);
+    reportSheet["!cols"] = [{ wch: 7 }, { wch: 38 }, { wch: 22 }, { wch: 17 }, { wch: 32 }, { wch: 14 }, { wch: 20 }, { wch: 28 }, { wch: 25 }, { wch: 42 }, { wch: 60 }, { wch: 60 }, { wch: 25 }, { wch: 22 }, { wch: 42 }];
+    if (reportDetail.length) reportSheet["!autofilter"] = { ref: reportSheet["!ref"] ?? "A1:O1" };
+    const book = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(book, summarySheet, "Resumen");
+    XLSX.utils.book_append_sheet(book, taskSheet, "Tareas asignadas");
+    XLSX.utils.book_append_sheet(book, reportSheet, "Informes detallados");
+    XLSX.writeFile(book, `cumplimiento-${fileNamePart(person.nombreCompleto)}.xlsx`);
+    setNotice({ tone: "success", text: `Informe detallado de ${person.nombreCompleto} generado con ${personReports.length} informe(s).` });
+  };
   const historicalCount = tasks.filter((task) => isHistorical(task, now)).length;
 
   return <>
@@ -174,7 +264,7 @@ export function TasksView() {
     <nav className={styles.taskTabs} aria-label="Vistas de tareas"><button type="button" className={view === "actual" ? styles.activeTab : ""} onClick={() => setView("actual")}>Gestión actual <span>{tasks.length - historicalCount}</span></button><button type="button" className={view === "historial" ? styles.activeTab : ""} onClick={() => setView("historial")}>Historial <span>{historicalCount}</span></button></nav>
     <section className={styles.metrics}>{columns.map((column) => <Metric key={column.status} label={column.label} detail={column.detail} tone={column.status.toLocaleLowerCase()} value={tasks.filter((task) => !isHistorical(task, now) && task.status === column.status).length} />)}</section>
     {notice && <div className={`${styles.notice} ${notice.tone === "error" ? styles.noticeError : ""}`} role="status"><span>{notice.text}</span><button type="button" onClick={() => setNotice(null)}>×</button></div>}
-    <section className={styles.filters}><label className={styles.search}><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por tarea, aula o responsable..." /></label><label><span>Responsable</span><select value={responsibleFilter} onChange={(event) => setResponsibleFilter(event.target.value)}><option value="todos">Todos</option>{users.map((user) => <option key={user.id} value={user.id}>{user.nombreCompleto}</option>)}</select></label><label><span>Aula</span><select value={roomFilter} onChange={(event) => setRoomFilter(event.target.value)}><option value="todas">Todas</option>{rooms.map((room) => <option key={room.id} value={room.id}>Aula {room.code}</option>)}</select></label>{view === "historial" && <><label><span>Desde</span><input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} /></label><label><span>Hasta</span><input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} /></label><label><span>Disponibilidad</span><select value={impactFilter} onChange={(event) => setImpactFilter(event.target.value)}><option value="todas">Todas</option><option value="si">Bloqueó aula</option><option value="no">No bloqueó aula</option></select></label></>}<span>{visibleTasks.length} tarea(s)</span></section>
+    <section className={styles.filters}><label className={styles.search}><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por tarea, aula o responsable..." /></label><label><span>Responsable</span><select value={responsibleFilter} onChange={(event) => setResponsibleFilter(event.target.value)}><option value="todos">Todos</option>{users.map((user) => <option key={user.id} value={user.id}>{user.nombreCompleto}</option>)}</select></label><button type="button" className={styles.personReportButton} disabled={responsibleFilter === "todos"} onClick={exportPersonReport}>Informe por persona</button><label><span>Aula</span><select value={roomFilter} onChange={(event) => setRoomFilter(event.target.value)}><option value="todas">Todas</option>{rooms.map((room) => <option key={room.id} value={room.id}>Aula {room.code}</option>)}</select></label>{view === "historial" && <><label><span>Desde</span><input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} /></label><label><span>Hasta</span><input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} /></label><label><span>Disponibilidad</span><select value={impactFilter} onChange={(event) => setImpactFilter(event.target.value)}><option value="todas">Todas</option><option value="si">Bloqueó aula</option><option value="no">No bloqueó aula</option></select></label></>}<span>{visibleTasks.length} tarea(s)</span></section>
     {view === "actual" ? <section className={styles.kanban}>{columns.map((column) => { const items = boardItems.filter((item) => item.status === column.status); return <section key={column.status} className={`${styles.column} ${styles[`column_${column.status.toLocaleLowerCase()}`]} ${dragTarget === column.status ? styles.dropReady : ""}`} onDragOver={(event) => { event.preventDefault(); setDragTarget(column.status); }} onDragLeave={() => setDragTarget(null)} onDrop={() => dropTask(column.status)}><header><div><i /><span><strong>{column.label}</strong><small>{column.detail}</small></span></div><b>{items.length}</b></header><div className={styles.cardStack}>{items.map((item) => item.task ? <TaskCard key={item.id} task={item.task} groupTasks={[]} users={users} currentUserId={currentUser?.id} dragging={draggedId === item.task.id} onDragStart={() => setDraggedId(item.task!.id)} onDragEnd={() => { setDraggedId(null); setDragTarget(null); }} onAccept={() => setAcceptTask(item.task!)} onCancel={() => setCancelTask(item.task!)} onComplete={() => requestCompletion(item.task!)} onReport={() => setReportTask(item.task!)} onView={() => setDetailTask(item.task!)} /> : <GroupTaskCard key={item.id} tasks={item.group!} onManage={() => setManageGroup(item.group!)} />)}{!items.length && <div className={styles.emptyColumn}>Sin tareas</div>}</div></section>; })}</section> : <HistoryPanel tasks={visibleTasks} status={historyStatus} onStatus={setHistoryStatus} onView={setDetailTask} />}
     {newTask && <TaskDialog rooms={rooms} onClose={() => setNewTask(false)} onSave={async (payload) => { try { await crearTarea(payload); setNewTask(false); await reload(); setNotice({ tone: "success", text: "Tarea creada como pendiente y disponible para ser aceptada." }); } catch (error) { showError(error, "No fue posible crear la tarea."); } }} />}
     {acceptTask && currentUser && <AcceptDialog task={acceptTask} users={users} currentUserId={currentUser.id} currentUserName={currentUser.nombreCompleto} onClose={() => setAcceptTask(null)} onConfirm={accept} />}
@@ -315,3 +405,4 @@ function isHistorical(task: OperationalTask, now: number) { const value = finalD
 function transitionMessage(from: TaskStatus, to: TaskStatus) { if (from === "PENDIENTE" && to === "COMPLETADA") return "Una tarea pendiente no puede completarse directamente; primero debe aceptarse."; if (to === "PENDIENTE") return "Una tarea que salió de Pendientes no puede regresar a ese estado."; if (["COMPLETADA", "CANCELADA"].includes(from)) return "Las tareas completadas o canceladas no pueden cambiar de estado."; return `No se permite mover una tarea de ${from} a ${to}.`; }
 function formatShortDate(value?: string) { if (!value) return "—"; return new Intl.DateTimeFormat("es-CO", { dateStyle: "short", timeStyle: "short", timeZone: "America/Bogota" }).format(new Date(value)); }
 function formatExportDate(value?: string) { return value ? formatShortDate(value) : ""; }
+function fileNamePart(value: string) { return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/(^-|-$)/g, "").toLocaleLowerCase("es"); }

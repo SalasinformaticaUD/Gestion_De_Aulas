@@ -125,7 +125,7 @@ html[data-theme="dark"] { --ink:#f1f3f5; --muted:#aab0ba; --line:#383b43; --surf
 .equipment-picker>div { max-height:216px; display:grid; grid-template-columns:1fr 1fr; gap:6px; overflow-y:auto; }
 .equipment-picker label { min-width:0; display:flex; align-items:center; gap:8px; padding:8px 9px; border:1px solid var(--line); border-radius:6px; background:#fff; cursor:pointer; }
 .equipment-picker label.is-selected { border-color:rgba(165,16,34,.55); background:#fff5f6; }
-.equipment-picker label[data-cooling="true"]{position:relative;opacity:1;filter:none;cursor:not-allowed;border-color:#8ca5bb;background:#eaf2f8}.equipment-picker label[data-cooling="true"]>span{color:#405468}.equipment-picker label[data-cooling="true"]>span small{color:#52697e}.equipment-picker label[data-cooling="true"]::after{content:"Enfriamiento · disponible a las " attr(data-cooling-until);position:absolute;right:7px;bottom:6px;padding:2px 5px;border-radius:3px;color:#fff;background:#315a7d;font-size:9px;font-weight:800;white-space:nowrap}.equipment-picker label[data-cooling="true"] input{cursor:not-allowed}
+.equipment-picker label.is-cooling{position:relative;padding-top:25px;opacity:1;filter:none;cursor:not-allowed;border:2px solid #f59e0b;background:linear-gradient(135deg,#fffbeb,#fef3c7);box-shadow:0 2px 8px rgba(180,83,9,.14)}.equipment-picker label.is-cooling::before{content:"◷ ENFRIAMIENTO";position:absolute;top:5px;left:8px;padding:2px 6px;border-radius:4px;color:#78350f;background:#fde68a;font-size:9px;font-weight:900;letter-spacing:.06em}.equipment-picker label.is-cooling>span{color:#78350f}.equipment-picker label.is-cooling>span small{color:#92400e;font-weight:750}.equipment-picker label.is-cooling input{cursor:not-allowed}
 .equipment-picker input { flex:0 0 auto; accent-color:var(--primary); }
 .equipment-picker label>span { min-width:0; overflow:hidden; font-size:13px; text-overflow:ellipsis; white-space:nowrap; }
 .equipment-picker strong { margin-right:6px; color:var(--primary); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
@@ -385,10 +385,10 @@ html[data-theme="dark"] :is(.room-badge-mantenimiento,.software-status-inactivo,
 html[data-theme="dark"] :is(.equipment-status-fuera-de-servicio,.loan-status-cancelado) { color:#c2c6ce; background:#30333a; }
 html[data-theme="dark"] .equipment-status-cooling { color:#bfe3ff; background:#163957; }
 html[data-theme="dark"] .equipment-status-cooling small { color:#bfe3ff; }
-html[data-theme="dark"] .equipment-picker label[data-cooling="true"] { border-color:#52718d; background:#1d3042; }
-html[data-theme="dark"] .equipment-picker label[data-cooling="true"]>span { color:#e6f1fb; }
-html[data-theme="dark"] .equipment-picker label[data-cooling="true"]>span small { color:#bfd1e1; }
-html[data-theme="dark"] .equipment-picker label[data-cooling="true"]::after { color:#fff; background:#3174a8; }
+html[data-theme="dark"] .equipment-picker label.is-cooling { border-color:#d97706; background:#422d12; box-shadow:none; }
+html[data-theme="dark"] .equipment-picker label.is-cooling::before { color:#fef3c7; background:#92400e; }
+html[data-theme="dark"] .equipment-picker label.is-cooling>span { color:#fef3c7; }
+html[data-theme="dark"] .equipment-picker label.is-cooling>span small { color:#fde68a; }
 
 /* Contraste reforzado de préstamos audiovisuales en modo claro. */
 .audiovisual-search { border-color:#cbd0d8; }
@@ -1455,7 +1455,7 @@ html[data-theme="dark"] .metrics > .metric { background:linear-gradient(135deg,c
   [class*="barraHerramientas"],
   .filters,
   .audiovisual-toolbar
-):has(input[placeholder*="buscar" i]) {
+):has(input[placeholder*="buscar" i]):not(:has(input[aria-label="Buscar prácticas"])) {
   display: grid !important;
   grid-template-columns: minmax(190px, 260px) repeat(auto-fit, minmax(170px, 1fr));
   align-items: end !important;
@@ -1472,7 +1472,7 @@ html[data-theme="dark"] .metrics > .metric { background:linear-gradient(135deg,c
   [class*="barraHerramientas"],
   .filters,
   .audiovisual-toolbar
-):has(input[placeholder*="buscar" i]) > :is(label, div):has(input[placeholder*="buscar" i]) {
+):has(input[placeholder*="buscar" i]):not(:has(input[aria-label="Buscar prácticas"])) > :is(label, div):has(input[placeholder*="buscar" i]) {
   width: 100% !important;
   min-width: 0 !important;
   max-width: 260px !important;
@@ -1486,7 +1486,7 @@ html[data-theme="dark"] .metrics > .metric { background:linear-gradient(135deg,c
   [class*="barraHerramientas"],
   .filters,
   .audiovisual-toolbar
-):has(input[placeholder*="buscar" i]) > label:not(:has(input[placeholder*="buscar" i])) {
+):has(input[placeholder*="buscar" i]):not(:has(input[aria-label="Buscar prácticas"])) > label:not(:has(input[placeholder*="buscar" i])) {
   width: 100% !important;
   min-width: 0 !important;
 }
@@ -1498,7 +1498,7 @@ html[data-theme="dark"] .metrics > .metric { background:linear-gradient(135deg,c
   [class*="barraHerramientas"],
   .filters,
   .audiovisual-toolbar
-):has(input[placeholder*="buscar" i]) :is(input:not([type="checkbox"]):not([type="radio"]), select) {
+):has(input[placeholder*="buscar" i]):not(:has(input[aria-label="Buscar prácticas"])) :is(input:not([type="checkbox"]):not([type="radio"]):not([placeholder*="buscar" i]), select) {
   min-height: 38px !important;
   border: 1px solid var(--line) !important;
   border-radius: 7px !important;
@@ -1526,7 +1526,7 @@ html[data-theme="dark"] .metrics > .metric { background:linear-gradient(135deg,c
     [class*="barraHerramientas"],
     .filters,
     .audiovisual-toolbar
-  ):has(input[placeholder*="buscar" i]) {
+  ):has(input[placeholder*="buscar" i]):not(:has(input[aria-label="Buscar prácticas"])) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1544,7 +1544,7 @@ html[data-theme="dark"] .metrics > .metric { background:linear-gradient(135deg,c
     [class*="barraHerramientas"],
     .filters,
     .audiovisual-toolbar
-  ):has(input[placeholder*="buscar" i]) {
+  ):has(input[placeholder*="buscar" i]):not(:has(input[aria-label="Buscar prácticas"])) {
     grid-template-columns: 1fr;
     align-items: stretch !important;
     padding: 11px !important;
@@ -1557,7 +1557,7 @@ html[data-theme="dark"] .metrics > .metric { background:linear-gradient(135deg,c
     [class*="barraHerramientas"],
     .filters,
     .audiovisual-toolbar
-  ):has(input[placeholder*="buscar" i]) > :is(label, div):has(input[placeholder*="buscar" i]),
+  ):has(input[placeholder*="buscar" i]):not(:has(input[aria-label="Buscar prácticas"])) > :is(label, div):has(input[placeholder*="buscar" i]),
   :where(main) header:has(> input[placeholder*="buscar" i]) > input[placeholder*="buscar" i] {
     width: 100% !important;
     max-width: none !important;

@@ -59,7 +59,7 @@
 
 /* El panel conserva la altura del viewport: solo la lista se desplaza. */
 .operationalPanel{height:calc(100dvh - 28px);min-height:0;display:flex;flex-direction:column}
-.alertList{min-height:0;flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.alertList{min-height:0;flex:1 1 auto;grid-auto-rows:max-content;align-content:start;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
 @media(max-width:1120px){.operationalPanel{height:auto;display:block}.alertList{max-height:360px}}
 
 /* El descarte es personal: la X conserva el lenguaje compacto del panel. */

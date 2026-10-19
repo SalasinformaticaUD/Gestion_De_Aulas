@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { adaptarMonitor } from "@/features/monitores/api/adaptadoresMonitores";
 import { servicioMonitores } from "@/features/monitores/api/servicioMonitores";
 import type {
@@ -182,6 +182,7 @@ export function MonitoresApiView() {
   const [resultadoReenvio, setResultadoReenvio] = useState<{ id: string; tipo: "exito" | "error"; mensaje: string } | null>(null);
   const [reenviandoId, setReenviandoId] = useState<string | null>(null);
   const [selectorSemestreAbierto, setSelectorSemestreAbierto] = useState(false);
+  const [semestres, setSemestres] = useState<Array<{ name: string; is_active: boolean }>>([]);
   const [crearModal, setCrearModal] = useState(false);
   const [cargaModal, setCargaModal] = useState(false);
   const [alertasPorMonitor, setAlertasPorMonitor] = useState<
@@ -221,11 +222,15 @@ export function MonitoresApiView() {
   const [totalRegistros, setTotalRegistros] = useState(0);
   const fallo = (e: unknown, fallback: string) =>
     setError(e instanceof Error ? e.message : fallback);
-  async function cargar(paginaSolicitada = pagina) {
+  const cargar = useCallback(async (paginaSolicitada = pagina) => {
     setCargando(true);
     setError("");
     try {
-      const respuesta = await servicioMonitores.listarPaginaMonitores(paginaSolicitada);
+      const respuesta = await servicioMonitores.listarPaginaMonitores(paginaSolicitada, {
+        buscar,
+        dependencia: dependenciaFiltro,
+        semestre: semestreFiltro,
+      });
       setRows(respuesta.results);
       setTotalRegistros(respuesta.count);
       setAlertasPorMonitor({});
@@ -234,10 +239,13 @@ export function MonitoresApiView() {
     } finally {
       setCargando(false);
     }
-  }
+  }, [buscar, dependenciaFiltro, pagina, semestreFiltro]);
   useEffect(() => {
-    void cargar(pagina);
-  }, [pagina]);
+    void cargar();
+  }, [cargar]);
+  useEffect(() => {
+    void servicioMonitores.listarSemestresMonitores().then(setSemestres).catch(() => setSemestres([]));
+  }, []);
   useEffect(() => {
     void servicioMonitores.obtenerPerfilMonitores().then((perfil) => {
       setPerfilMonitores(perfil);
@@ -246,25 +254,10 @@ export function MonitoresApiView() {
     }).catch(() => setPerfilMonitores(null));
   }, []);
   const dependenciaLider = perfilMonitores?.role === "leader" ? perfilMonitores.department : null;
-  const visibles = useMemo(() => {
-    return rows.filter((item) => {
-        const texto =
-          `${item.full_name} ${item.codigo_estudiante} ${item.user_email ?? ""}`.toLocaleLowerCase(
-            "es",
-          );
-        return (
-          (!buscar || texto.includes(buscar.toLocaleLowerCase("es"))) &&
-          (!dependenciaFiltro || item.department === dependenciaFiltro) &&
-          (semestreFiltro === "ACTUAL"
-            ? item.semester_is_active === true
-            : item.semester === semestreFiltro)
-        );
-      }).sort((a, b) => a.full_name.localeCompare(b.full_name, "es"));
-  }, [rows, buscar, semestreFiltro, dependenciaFiltro]);
-  const semestres = useMemo(() => [...new Set(rows.map((item) => item.semester).filter((item): item is string => Boolean(item)))], [rows]);
+  const visibles = rows;
   const semestresHistoricos = useMemo(
-    () => semestres.filter((semestre) => !rows.some((item) => item.semester === semestre && item.semester_is_active === true)),
-    [rows, semestres],
+    () => semestres.filter((semestre) => !semestre.is_active).map((semestre) => semestre.name),
+    [semestres],
   );
   async function crear(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -516,12 +509,12 @@ export function MonitoresApiView() {
               <p>Gestione cada cuenta y su activación.</p>
             </div>
           </header>
-          <div className={`${estilos.barraHerramientas} ${estilos.filtrosRegistros}`}><SelectorDependenciaAdmin visible={perfilMonitores?.role === "admin"} value={dependenciaFiltro} onChange={setDependenciaFiltro} />
+          <div className={`${estilos.barraHerramientas} ${estilos.filtrosRegistros}`}><SelectorDependenciaAdmin visible={perfilMonitores?.role === "admin"} value={dependenciaFiltro} onChange={(valor) => { setDependenciaFiltro(valor); setPagina(1); }} />
             <label className={`${estilos.campoAncho} ${estilos.buscadorRegistros}`}>
               <span>Buscar</span>
               <input
                 value={buscar}
-                onChange={(e) => setBuscar(e.target.value)}
+                onChange={(e) => { setBuscar(e.target.value); setPagina(1); }}
                 placeholder="Nombre, código o correo"
               />
             </label>
@@ -531,7 +524,7 @@ export function MonitoresApiView() {
                 {semestreFiltro === "ACTUAL" ? "Semestre actual" : semestreFiltro}<span aria-hidden="true">{selectorSemestreAbierto ? "▴" : "▾"}</span>
               </button>
               {selectorSemestreAbierto && <div className={estilos.opcionesSemestreMonitor} role="listbox" aria-label="Semestre">
-                {[{ value: "ACTUAL", label: "Semestre actual" }, ...semestresHistoricos.map((semestre) => ({ value: semestre, label: semestre }))].map((opcion) => <button key={opcion.value} type="button" role="option" aria-selected={semestreFiltro === opcion.value} className={semestreFiltro === opcion.value ? estilos.opcionSemestreActiva : undefined} onClick={() => { setSemestreFiltro(opcion.value); setSelectorSemestreAbierto(false); }}>{opcion.label}</button>)}
+                {[{ value: "ACTUAL", label: "Semestre actual" }, ...semestresHistoricos.map((semestre) => ({ value: semestre, label: semestre }))].map((opcion) => <button key={opcion.value} type="button" role="option" aria-selected={semestreFiltro === opcion.value} className={semestreFiltro === opcion.value ? estilos.opcionSemestreActiva : undefined} onClick={() => { setSemestreFiltro(opcion.value); setPagina(1); setSelectorSemestreAbierto(false); }}>{opcion.label}</button>)}
               </div>}
             </div>
           </div>

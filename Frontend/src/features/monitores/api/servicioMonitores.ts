@@ -5,7 +5,14 @@ import type { AnotacionApi, ConciliacionApi, ConsultaPublicaApi, DashboardApi, D
 export const servicioMonitores = {
   obtenerPrevisualizacionHorarioAulas: () => solicitarAulas<{ dashboard: DashboardApi; schedules: HorarioApi[]; monitors: Array<{ id: string; department?: string; is_active?: boolean }> }>("/integraciones/monitores/previsualizacion-horario-aulas", obtenerSesion()?.tokenAcceso),
   listarMonitores: () => solicitarMonitores<MonitorApi[]>("/api/v1/monitors/"),
-  listarPaginaMonitores: (pagina = 1) => solicitarMonitores<PaginaApi<MonitorApi>>(`/api/v1/monitors/?page=${pagina}&page_size=20`),
+  listarPaginaMonitores: (pagina = 1, filtros: { buscar?: string; dependencia?: string; semestre?: string } = {}) => {
+    const parametros = new URLSearchParams({ page: String(pagina), page_size: "20" });
+    if (filtros.buscar?.trim()) parametros.set("search", filtros.buscar.trim());
+    if (filtros.dependencia) parametros.set("department", filtros.dependencia);
+    if (filtros.semestre) parametros.set("semester", filtros.semestre);
+    return solicitarMonitores<PaginaApi<MonitorApi>>(`/api/v1/monitors/?${parametros.toString()}`);
+  },
+  listarSemestresMonitores: () => solicitarMonitores<Array<{ name: string; is_active: boolean }>>("/api/v1/monitors/semesters/"),
   provisionarMonitor: (payload: { full_name: string; codigo_estudiante: string; email: string; username?: string; department: string; numero_documento?: string; proyecto_curricular?: string; telefono?: string; confirm_repeating_monitor: boolean }) =>
     solicitarMonitores<MonitorApi>("/api/v1/monitors/provision/", { method: "POST", body: JSON.stringify({ ...payload, username: payload.username?.trim() || undefined }) }),
   actualizarMonitor: (id: string, payload: Partial<Pick<MonitorApi, "codigo_estudiante" | "full_name" | "department" | "is_active">>) =>
@@ -33,7 +40,13 @@ export const servicioMonitores = {
   obtenerMiDashboardMonitor: (monitorId?: string) => solicitarMonitores<PanelMonitorApi>(`/api/v1/reports/dashboard/me/${monitorId ? `?monitor_id=${encodeURIComponent(monitorId)}` : ""}`),
   obtenerMisRegistros: (monitorId?: string) => solicitarMonitores<RegistrosPersonalesApi>(`/api/v1/reports/monitor-records/me/${monitorId ? `?monitor_id=${encodeURIComponent(monitorId)}` : ""}`),
   listarHorarios: () => solicitarMonitores<HorarioApi[]>("/api/v1/schedules/"),
-  listarPaginaHorarios: (pagina = 1) => solicitarMonitores<PaginaApi<HorarioApi>>(`/api/v1/schedules/?page=${pagina}&page_size=20`),
+  listarPaginaHorarios: (pagina = 1, filtros: { buscar?: string; dependencia?: string; estadoMonitor?: string } = {}) => {
+    const parametros = new URLSearchParams({ page: String(pagina), page_size: "20" });
+    if (filtros.buscar?.trim()) parametros.set("search", filtros.buscar.trim());
+    if (filtros.dependencia) parametros.set("department", filtros.dependencia);
+    if (filtros.estadoMonitor && filtros.estadoMonitor !== "TODOS") parametros.set("monitor_status", filtros.estadoMonitor);
+    return solicitarMonitores<PaginaApi<HorarioApi>>(`/api/v1/schedules/?${parametros.toString()}`);
+  },
   crearHorario: (payload: Pick<HorarioApi, "monitor" | "weekday" | "start_time" | "end_time" | "asignatura" | "grupo" | "docente" | "proyecto_curricular" | "location" | "is_active">) =>
     solicitarMonitores<HorarioApi>("/api/v1/schedules/", { method: "POST", body: JSON.stringify(payload) }),
   actualizarHorario: (id: string, payload: Partial<Pick<HorarioApi, "is_active" | "weekday" | "start_time" | "end_time" | "asignatura" | "grupo" | "docente" | "proyecto_curricular" | "location">>) =>

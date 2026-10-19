@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { servicioMonitores } from "@/features/monitores/api/servicioMonitores";
 import type { HorarioApi, MonitorApi } from "@/features/monitores/api/contratosMonitores";
 import estilos from "./SistemaVisualMonitores.module.css";
@@ -34,32 +34,31 @@ export function HorariosApiView() {
   const [totalRegistros, setTotalRegistros] = useState(0);
   const fallo = (e: unknown, mensaje: string) => setError(e instanceof Error ? e.message : mensaje);
 
-  async function cargar(paginaSolicitada = pagina) {
+  const cargar = useCallback(async (paginaSolicitada = pagina) => {
     setCargando(true); setError("");
     try {
-      const [horarios, monitoresApi] = await Promise.all([servicioMonitores.listarPaginaHorarios(paginaSolicitada), servicioMonitores.listarMonitores()]);
+      const [horarios, monitoresApi] = await Promise.all([
+        servicioMonitores.listarPaginaHorarios(paginaSolicitada, { buscar, dependencia, estadoMonitor: estado }),
+        servicioMonitores.listarMonitores(),
+      ]);
       setRows(horarios.results); setTotalRegistros(horarios.count); setMonitores(monitoresApi);
       setForm((actual) => ({ ...actual, monitor: actual.monitor || monitoresApi.find((item) => item.semester_is_active === true)?.id || "" }));
     } catch (e) { fallo(e, "No fue posible cargar los horarios."); }
     finally { setCargando(false); }
-  }
+  }, [buscar, dependencia, estado, pagina]);
 
-  useEffect(() => { void cargar(pagina); }, [pagina]);
+  useEffect(() => { setPagina(1); }, [buscar, dependencia, estado]);
+  useEffect(() => { void cargar(pagina); }, [pagina, cargar]);
   useEffect(() => {
     const monitor = monitores.find((item) => item.id === form.monitor);
     if (monitor && form.proyecto_curricular !== (monitor.proyecto_curricular ?? "")) setForm((actual) => ({ ...actual, proyecto_curricular: monitor.proyecto_curricular ?? "" }));
   }, [form.monitor, form.proyecto_curricular, monitores]);
 
   const monitoresActuales = useMemo(() => monitores.filter((item) => item.semester_is_active === true && item.is_active && (!dependencia || item.department === dependencia)), [monitores, dependencia]);
-  const visibles = useMemo(() => {
-    const estadoPorMonitor = new Map(monitores.map((monitor) => [monitor.id, monitor.is_active]));
-    const textoBuscado = buscar.toLocaleLowerCase("es").trim();
-    return rows.filter((item) => {
-      const texto = `${item.monitor_name} ${item.location} ${item.asignatura} ${item.docente}`.toLocaleLowerCase("es");
-      const activo = estadoPorMonitor.get(item.monitor) ?? false;
-      return (!dependencia || monitores.find((monitor) => monitor.id === item.monitor)?.department === dependencia) && (!textoBuscado || texto.includes(textoBuscado)) && (estado === "TODOS" || (estado === "ACTIVOS" ? activo : !activo));
-    }).sort((a, b) => a.monitor_name.localeCompare(b.monitor_name, "es") || a.weekday - b.weekday || a.start_time.localeCompare(b.start_time));
-  }, [rows, monitores, buscar, estado, dependencia]);
+  const visibles = useMemo(
+    () => [...rows].sort((a, b) => a.monitor_name.localeCompare(b.monitor_name, "es") || a.weekday - b.weekday || a.start_time.localeCompare(b.start_time)),
+    [rows],
+  );
   const activosEnPagina = visibles.filter((item) => item.is_active).length;
   const inactivosEnPagina = visibles.length - activosEnPagina;
 

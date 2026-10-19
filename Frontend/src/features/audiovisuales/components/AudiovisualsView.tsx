@@ -85,24 +85,16 @@ function LoanDialog({ initial, equipment, responsibles, initialRoom, onClose, on
   const projectors = equipment.filter((item) => {
     const type = item.type.toLocaleLowerCase("es");
     return type.includes("video") || type.includes("proyector");
-  }).sort(byRecommendation);
+  });
   const allAvailable = projectors.filter(isAvailableProjector);
-  const available = normalizedEquipmentCode ? projectors.filter((item) => item.inventoryCode.toLocaleLowerCase("es").includes(normalizedEquipmentCode)) : projectors;
-  const recommendedId = allAvailable[0]?.id;
+  const recommendedId = allAvailable.sort(byRecommendation)[0]?.id;
+  const candidates = projectors.filter((item) => item.status === "DISPONIBLE").sort((first, second) => {
+    const priority = (item: AudiovisualEquipment) => isCooling(item) ? 0 : item.id === recommendedId ? 1 : 2;
+    return priority(first) - priority(second) || byRecommendation(first, second);
+  });
+  const available = normalizedEquipmentCode ? candidates.filter((item) => item.inventoryCode.toLocaleLowerCase("es").includes(normalizedEquipmentCode)) : candidates;
   const searchedEquipment = normalizedEquipmentCode ? equipment.find((item) => item.inventoryCode.toLocaleLowerCase("es") === normalizedEquipmentCode) : undefined;
   const matchingEquipment = searchedEquipment && allAvailable.some((item) => item.id === searchedEquipment.id) ? searchedEquipment : undefined;
-  useEffect(() => {
-    document.querySelectorAll<HTMLLabelElement>(".equipment-picker label").forEach((label) => {
-      const item = projectors.find((projector) => label.textContent?.includes(projector.inventoryCode));
-      const checkbox = label.querySelector<HTMLInputElement>('input[type="checkbox"]');
-      if (!item || !checkbox) return;
-      const cooling = isCooling(item);
-      checkbox.disabled = cooling;
-      label.dataset.cooling = cooling ? "true" : "false";
-      if (cooling) label.dataset.coolingUntil = formatTime(item.availableFrom!);
-      else delete label.dataset.coolingUntil;
-    });
-  }, [projectors]);
   useEffect(() => {
     const query = teacherQuery.trim();
     if (!query || teacher?.nombre === teacherQuery) { setTeacherOptions([]); setSearchingTeacher(false); setCompletedTeacherQuery(""); setTeacherSearchError(null); return; }
@@ -146,7 +138,7 @@ function LoanDialog({ initial, equipment, responsibles, initialRoom, onClose, on
         <Field label="Usuario que entrega *" wide><select value={deliveredById} onChange={(e) => setDeliveredById(e.target.value)} required><option value="">Seleccione un usuario</option>{responsibles.map((person) => <option key={person.id} value={person.id}>{person.name}{person.role ? ` · ${person.role}` : ""}</option>)}</select></Field>
       </div>
       <label className="option-toggle"><input type="checkbox" checked={includeProjector} onChange={(e) => { setIncludeProjector(e.target.checked); if (!e.target.checked) setSelected([]); }} /><span><strong>Incluir videobeam</strong><small>También puede registrar un préstamo compuesto únicamente por accesorios.</small></span></label>
-      {includeProjector && <fieldset className="equipment-picker"><legend>Videobeams disponibles <b>{selected.length}</b></legend><label className="scanner-field"><input value={code} onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addByCode(); } }} placeholder="Escanee o escriba el número interno" /></label><div>{available.map((item) => <label key={item.id} className={selected.includes(item.id) ? "is-selected" : ""}><input type="checkbox" checked={selected.includes(item.id)} onChange={(e) => setSelected((current) => e.target.checked ? [...current, item.id] : current.filter((id) => id !== item.id))} /><span><strong>{item.inventoryCode}</strong>{item.brand} {item.model}<small>{item.usageHours} h de uso {item.id === recommendedId ? "· Recomendado por menor uso" : ""}</small></span>{item.id === recommendedId && <em>Recomendado</em>}</label>)}</div></fieldset>}
+      {includeProjector && <fieldset className="equipment-picker"><legend>Videobeams disponibles <b>{selected.length}</b></legend><label className="scanner-field"><input value={code} onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addByCode(); } }} placeholder="Escanee o escriba el número interno" /></label><div>{available.map((item) => { const cooling = isCooling(item); return <label key={item.id} className={`${selected.includes(item.id) ? "is-selected" : ""} ${cooling ? "is-cooling" : ""}`}><input type="checkbox" checked={selected.includes(item.id)} disabled={cooling} onChange={(e) => { if (cooling) return; setSelected((current) => e.target.checked ? [...current, item.id] : current.filter((id) => id !== item.id)); }} /><span><strong>{item.inventoryCode}</strong>{item.brand} {item.model}<small>{cooling ? `En enfriamiento · Disponible a las ${formatTime(item.availableFrom!)}` : `${item.usageHours} h de uso ${item.id === recommendedId ? "· Recomendado por menor uso" : ""}`}</small></span>{item.id === recommendedId && <em>Recomendado</em>}</label>; })}</div></fieldset>}
       <fieldset className="accessory-picker"><legend>Otros elementos prestados</legend><div>{accessoryOptions.map((item) => <label key={item}><input type="checkbox" checked={extras.includes(item)} onChange={(e) => toggleExtra(item, e.target.checked)} /><span>{item}</span></label>)}</div>{extras.includes("Otro") && <Field label="¿Qué otro elemento?"><input value={other} onChange={(e) => setOther(e.target.value)} required /></Field>}</fieldset>
       <Field label="Observaciones del préstamo"><textarea rows={3} value={observations} onChange={(e) => setObservations(e.target.value)} placeholder="Información adicional o estado de entrega" /></Field>
       {error && <p className="dialog-error">{error}</p>}

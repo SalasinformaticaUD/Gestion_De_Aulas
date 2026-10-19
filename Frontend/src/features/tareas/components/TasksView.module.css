@@ -44,6 +44,9 @@ html[data-theme="dark"] .historyExportButton:hover { color:#fff; background:#a51
 .filters input[type="date"] { min-width:142px; height:37px; padding:0 9px; border:1px solid #cdd3dc; border-radius:7px; color:#273142; background:#fff; font:inherit; font-size:13px; color-scheme:light; }
 .filters input[type="date"]:focus { border-color:var(--primary); outline:2px solid color-mix(in srgb,var(--primary) 18%,transparent); outline-offset:1px; }
 .filters>span { margin:0 0 10px auto; color:var(--muted); font-size:13px; white-space:nowrap; }
+.personReportButton { min-height:37px; padding:0 11px; border:1px solid var(--primary); border-radius:7px; color:var(--primary); background:#fff; font:inherit; font-size:12.5px; font-weight:800; white-space:nowrap; cursor:pointer; }
+.personReportButton:hover:not(:disabled) { color:#fff; background:var(--primary); }
+.personReportButton:disabled { cursor:not-allowed; opacity:.45; }
 .kanban { min-width:0; display:grid; grid-template-columns:repeat(4,minmax(240px,1fr)); gap:10px; align-items:start; overflow-x:auto; padding:1px 1px 8px; }
 .column { --column-color:#737984; min-height:450px; overflow:hidden; border:1px solid var(--line); border-radius:9px; background:#eef0f3; transition:border-color .16s ease,background .16s ease; }
 .column_pendiente { --column-color:#d97706; }
@@ -412,6 +415,7 @@ html[data-theme="dark"] .historyExportButton:hover { color:#fff; background:#a51
   .filters { align-items:stretch; padding:10px; }
   .filters>label:not(.search) { width:100%; }
   .filters select { width:100%; }
+  .personReportButton { width:100%; }
   .filters>span { margin:0; }
   .kanban { grid-template-columns:repeat(4,85vw); }
   .column { min-height:420px; }
