@@ -16,3 +16,14 @@ uvicorn app.main:app --host 127.0.0.1 --port 8001
 ```
 
 El backend NestJS debe tener `PDF_RENDERER_URL=http://127.0.0.1:8001`.
+
+## Ejecución recomendada con Docker
+
+Si LibreOffice no está instalado en Windows, ejecute desde la carpeta `backend`:
+
+```bash
+docker compose -f python-renderer/docker-compose.yml up -d --build
+```
+
+La imagen instala LibreOffice y publica el renderizador únicamente en
+`http://127.0.0.1:8001`.

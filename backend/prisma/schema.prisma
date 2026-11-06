@@ -151,50 +151,70 @@ enum EstadoNormalizacionSolicitud {
 
 // Identidad, autorización y auditoría
 model Usuario {
-  id                                String                            @id @default(uuid()) @db.Uuid
+  id                                String                                @id @default(uuid()) @db.Uuid
   nombreCompleto                    String
-  nombreUsuario                     String                            @unique
-  correo                            String                            @unique
+  nombreUsuario                     String                                @unique
+  correo                            String                                @unique
   passwordHash                      String
-  fotoPerfil                        String?                           @db.Text
+  fotoPerfil                        String?                               @db.Text
   cargo                             String?
-  estado                            EstadoCuenta                      @default(ACTIVA)
+  estado                            EstadoCuenta                          @default(ACTIVA)
   perfilMonitores                   PerfilMonitores?
   dependenciaMonitores              DependenciaMonitores?
-  dependenciaId                     String?                           @db.Uuid
-  dependencia                       Dependencia?                      @relation(fields: [dependenciaId], references: [id])
+  dependenciaId                     String?                               @db.Uuid
+  dependencia                       Dependencia?                          @relation(fields: [dependenciaId], references: [id])
   roles                             UsuarioRol[]
-  asistencias                       AsistenciaDocente[]               @relation("RegistroAsistencia")
-  tareasAsignadas                   Tarea[]                           @relation("ResponsableTarea")
-  tareasOperativasCreadas           Tarea[]                           @relation("CreadorTareaOperativa")
-  tareasOperativasCanceladas        Tarea[]                           @relation("CanceladorTareaOperativa")
-  decisionesTarea                   DecisionTareaOperativa[]          @relation("DecisionTareaUsuario")
-  informesTarea                     InformeSeguimientoTarea[]         @relation("InformeTareaUsuario")
-  observacionesCreadas              Observacion[]                     @relation("AutorObservacion")
-  responsabilidadesTarea            ResponsableTareaOperativa[]       @relation("ResponsableOperativoUsuario")
-  responsablesTareaAgregados        ResponsableTareaOperativa[]       @relation("ResponsableOperativoAgregadoPor")
+  asistencias                       AsistenciaDocente[]                   @relation("RegistroAsistencia")
+  tareasAsignadas                   Tarea[]                               @relation("ResponsableTarea")
+  tareasOperativasCreadas           Tarea[]                               @relation("CreadorTareaOperativa")
+  tareasOperativasCanceladas        Tarea[]                               @relation("CanceladorTareaOperativa")
+  decisionesTarea                   DecisionTareaOperativa[]              @relation("DecisionTareaUsuario")
+  informesTarea                     InformeSeguimientoTarea[]             @relation("InformeTareaUsuario")
+  observacionesCreadas              Observacion[]                         @relation("AutorObservacion")
+  responsabilidadesTarea            ResponsableTareaOperativa[]           @relation("ResponsableOperativoUsuario")
+  responsablesTareaAgregados        ResponsableTareaOperativa[]           @relation("ResponsableOperativoAgregadoPor")
   auditorias                        Auditoria[]
   accesosCredencial                 AccesoCredencial[]
   secretosCredencial                SecretoCredencial[]
-  credencialesCreadas               CredencialOperativa[]             @relation("CreadorCredencialOperativa")
-  prestamosAudiovisualesEntregados  PrestamoAudiovisual[]             @relation("EntregaPrestamoAudiovisual")
-  prestamosAudiovisualesRecibidos   PrestamoAudiovisual[]             @relation("RecepcionPrestamoAudiovisual")
-  prestamosAudiovisualesCancelados  PrestamoAudiovisual[]             @relation("CancelacionPrestamoAudiovisual")
+  credencialesCreadas               CredencialOperativa[]                 @relation("CreadorCredencialOperativa")
+  prestamosAudiovisualesEntregados  PrestamoAudiovisual[]                 @relation("EntregaPrestamoAudiovisual")
+  prestamosAudiovisualesRecibidos   PrestamoAudiovisual[]                 @relation("RecepcionPrestamoAudiovisual")
+  prestamosAudiovisualesCancelados  PrestamoAudiovisual[]                 @relation("CancelacionPrestamoAudiovisual")
   importacionesSoftware             ImportacionSoftware[]
   importacionesSolicitudes          ImportacionSolicitudInstalacion[]
   solicitudesInstalacionRevisadas   SolicitudInstalacion[]
   softwareSolicitadoRevisado        SoftwareSolicitado[]
-  confirmacionesInventarioSolicitud SolicitudSoftwareTarea[]          @relation("ConfirmacionInventarioSolicitud")
-  multasImpuestas                   Multa[]                           @relation("MultaImpuestaPor")
-  multasCumplidas                   Multa[]                           @relation("MultaCumplidaPor")
-  multasAnuladas                    Multa[]                           @relation("MultaAnuladaPor")
-  prestamosDocentesCreados          PrestamoDocente[]                 @relation("PrestamoDocenteEncargado")
-  practicasLibresAtendidas          PracticaLibre[]                   @relation("AtencionPracticaLibre")
-  limpiezasRegistradas              Limpieza[]                        @relation("RegistroLimpieza")
-  aulasResponsable                  Aula[]                            @relation("ResponsableAula")
+  confirmacionesInventarioSolicitud SolicitudSoftwareTarea[]              @relation("ConfirmacionInventarioSolicitud")
+  multasImpuestas                   Multa[]                               @relation("MultaImpuestaPor")
+  multasCumplidas                   Multa[]                               @relation("MultaCumplidaPor")
+  multasAnuladas                    Multa[]                               @relation("MultaAnuladaPor")
+  prestamosDocentesCreados          PrestamoDocente[]                     @relation("PrestamoDocenteEncargado")
+  practicasLibresAtendidas          PracticaLibre[]                       @relation("AtencionPracticaLibre")
+  limpiezasRegistradas              Limpieza[]                            @relation("RegistroLimpieza")
+  aulasResponsable                  Aula[]                                @relation("ResponsableAula")
   notificacionesPanelDescartadas    NotificacionPanelDescartada[]
-  creadoEn                          DateTime                          @default(now())
-  actualizadoEn                     DateTime                          @updatedAt
+  seleccionesDistribucionPdf        ConfiguracionDistribucionPdfUsuario[]
+  creadoEn                          DateTime                              @default(now())
+  actualizadoEn                     DateTime                              @updatedAt
+}
+
+model ConfiguracionDistribucionPdf {
+  id            Int                                   @id @default(1)
+  activa        Boolean                               @default(false)
+  usuarios      ConfiguracionDistribucionPdfUsuario[]
+  actualizadoEn DateTime                              @updatedAt
+}
+
+model ConfiguracionDistribucionPdfUsuario {
+  configuracionId Int
+  usuarioId       String                       @db.Uuid
+  orden           Int
+  configuracion   ConfiguracionDistribucionPdf @relation(fields: [configuracionId], references: [id], onDelete: Cascade)
+  usuario         Usuario                      @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@id([configuracionId, usuarioId])
+  @@unique([configuracionId, orden])
+  @@index([usuarioId])
 }
 
 model Dependencia {

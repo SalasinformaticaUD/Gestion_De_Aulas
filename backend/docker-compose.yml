@@ -28,6 +28,8 @@ services:
     environment:
       REPORT_TEMPLATES_DIR: /app/templates/reportes
       SOFFICE_PATH: /usr/bin/soffice
+    ports:
+      - "127.0.0.1:${PDF_RENDERER_HOST_PORT:-8001}:8001"
     expose:
       - "8001"
     healthcheck:

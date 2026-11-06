@@ -8,6 +8,11 @@ import styles from "./ProfileView.module.css";
 import { nombreDependencia } from "@/features/monitores/api/adaptadoresMonitores";
 import { servicioMonitores } from "@/features/monitores/api/servicioMonitores";
 import type { RegistrosPersonalesApi } from "@/features/monitores/api/contratosMonitores";
+import {
+  guardarConfiguracionDistribucionPdf,
+  obtenerConfiguracionDistribucionPdf,
+  type ConfiguracionDistribucionPdf,
+} from "@/features/perfil/api/configuracionDistribucionPdfApi";
 
 export function ProfileView({ mostrarDatosMonitor = false }: { mostrarDatosMonitor?: boolean }) {
   const [profile, setProfile] = useState<UserProfile>(defaultProfile);
@@ -34,6 +39,7 @@ export function ProfileView({ mostrarDatosMonitor = false }: { mostrarDatosMonit
     return () => { activo = false; };
   }, [mostrarDatosMonitor]);
   const dependenciaVisible = monitorData ? nombreDependencia(monitorData.department) : profile.department;
+  const esAdministradorAulas = session?.aplicacion === "aulas" && session.usuario.roles.some((rol) => rol.trim().toLocaleUpperCase("es") === "ADMINISTRADOR");
   const updatePhoto = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -77,11 +83,92 @@ export function ProfileView({ mostrarDatosMonitor = false }: { mostrarDatosMonit
       </aside>
       <div className={styles.sections}>
         <section className={styles.profileSection}><header><div><span>01</span><div><h2>Información personal</h2><p>{monitorData ? "Datos institucionales y académicos asociados a su monitoría." : "Datos asociados a su cuenta institucional."}</p></div></div><b>Solo lectura</b></header><div className={styles.dataGrid}><DataItem label="Nombre completo" value={profile.fullName} /><DataItem label="Correo institucional" value={profile.email} /><DataItem label="Nombre de usuario" value={profile.username} mono /><DataItem label="Cargo" value={profile.role} />{monitorData && <><DataItem label="Código estudiantil" value={monitorData.codigo_estudiante || "Sin código registrado"} mono /><DataItem label="Semestre académico" value={monitorData.semester || "Sin semestre asociado"} /><DataItem label="Número de documento" value={monitorData.numero_documento || "Sin documento registrado"} mono /><DataItem label="Proyecto curricular" value={monitorData.proyecto_curricular_label || "Sin proyecto registrado"} /><DataItem label="Teléfono" value={monitorData.telefono || "Sin teléfono registrado"} /><DataItem label="Dependencia de monitoría" value={nombreDependencia(monitorData.department)} /></>}</div><aside className={styles.backendNote}><span>i</span><p><strong>Perfil centralizado.</strong> La foto, el nombre de usuario y la contraseña se comparten en Gestión de Aulas y Gestión de Monitores.</p></aside>{monitorData && <aside className={`${styles.backendNote} ${styles.monitorEditNote}`}><span>i</span><p><strong>Datos de monitoría protegidos.</strong> Para corregir o actualizar sus datos de monitor, comuníquese con su líder de área.</p></aside>}</section>
+        {esAdministradorAulas && <PdfDistributionSection />}
         <UsernameSection username={profile.username} onChanged={(nombreUsuario) => setProfile((current) => ({ ...current, username: nombreUsuario }))} />
         <section className={styles.profileSection}><header><div><span>04</span><div><h2>Accesos asignados</h2><p>Roles, módulos y permisos entregados por la plataforma central.</p></div></div><b>Gestionado por administración</b></header><div className={styles.accessGrid}><DataItem label="Roles" value={session?.usuario.roles.join(", ") || "Sin roles"} /><AccessList label="Módulos" values={session?.usuario.modulos ?? []} empty="Sin módulos" /><AccessList label="Permisos" values={session?.usuario.permisos ?? []} empty="Sin permisos" wide /></div></section>
         <PasswordSection notice={passwordNotice} onNotice={setPasswordNotice} />
       </div>
     </div>
+  </>;
+}
+
+function PdfDistributionSection() {
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const [configuracion, setConfiguracion] = useState<ConfiguracionDistribucionPdf | null>(null);
+  const [activa, setActiva] = useState(false);
+  const [seleccionados, setSeleccionados] = useState<string[]>([]);
+  const [cargando, setCargando] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [mensaje, setMensaje] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let vigente = true;
+    void obtenerConfiguracionDistribucionPdf()
+      .then((datos) => {
+        if (!vigente) return;
+        setConfiguracion(datos);
+        setActiva(datos.activa);
+        setSeleccionados(datos.usuarioIds);
+      })
+      .catch(() => undefined);
+    return () => { vigente = false; };
+  }, []);
+
+  const abrir = async () => {
+    setModalAbierto(true);
+    setCargando(true);
+    setError(null);
+    setMensaje(null);
+    try {
+      const datos = await obtenerConfiguracionDistribucionPdf();
+      setConfiguracion(datos);
+      setActiva(datos.activa);
+      setSeleccionados(datos.usuarioIds);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No fue posible cargar la configuración.");
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const alternarUsuario = (id: string) => {
+    setSeleccionados((actuales) => actuales.includes(id) ? actuales.filter((actual) => actual !== id) : [...actuales, id]);
+    setError(null);
+  };
+
+  const guardar = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (activa && !seleccionados.length) {
+      setError("Seleccione al menos un usuario para activar la distribución.");
+      return;
+    }
+    setGuardando(true);
+    setError(null);
+    try {
+      const actualizada = await guardarConfiguracionDistribucionPdf(activa, seleccionados);
+      setConfiguracion(actualizada);
+      setActiva(actualizada.activa);
+      setSeleccionados(actualizada.usuarioIds);
+      setMensaje(actualizada.activa ? `Distribución activa entre ${actualizada.usuarioIds.length} usuario(s).` : "Distribución desactivada. Los PDFs conservarán el responsable original.");
+      setModalAbierto(false);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No fue posible guardar la configuración.");
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return <>
+    <section className={styles.profileSection}>
+      <header><div><span>PDF</span><div><h2>Distribución de atenciones en PDF</h2><p>Configuración exclusiva para Préstamos de Videobeam y Prácticas Libres.</p></div></div><b>{configuracion?.activa ? "Activa" : "Opcional"}</b></header>
+      <div className={styles.pdfDistributionSummary}>
+        <div><strong>{configuracion?.activa ? "Reparto equitativo activado" : "Responsables originales"}</strong><p>{configuracion?.activa ? `${configuracion.usuarioIds.length} usuario(s) participan en la distribución.` : "Los documentos muestran a la persona registrada originalmente."}</p></div>
+        <button type="button" className="button-primary" onClick={() => void abrir()}>Configurar reparto de PDFs</button>
+      </div>
+      {mensaje && <p className={styles.pdfDistributionNotice} role="status">{mensaje}</p>}
+    </section>
+    {modalAbierto && <div className={styles.modalBackdrop} role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setModalAbierto(false)}><section className={styles.pdfDistributionModal} role="dialog" aria-modal="true" aria-labelledby="titulo-distribucion-pdf"><header><div><span>GENERACIÓN DE DOCUMENTOS</span><h2 id="titulo-distribucion-pdf">Distribuir atenciones en los PDFs</h2><p>El cambio solo afecta el nombre mostrado y las carpetas del ZIP. Los registros originales no se modifican.</p></div><button type="button" onClick={() => setModalAbierto(false)} aria-label="Cerrar">×</button></header><form onSubmit={(event) => void guardar(event)}><label className={styles.pdfDistributionToggle}><input type="checkbox" checked={activa} onChange={(event) => { setActiva(event.target.checked); setError(null); }} /><span><strong>Activar distribución equitativa</strong><small>El sobrante se asignará de uno en uno, con una diferencia máxima de un PDF.</small></span></label>{cargando ? <p className={styles.pdfDistributionEmpty}>Cargando usuarios…</p> : <fieldset className={`${styles.pdfUsers} ${!activa ? styles.pdfUsersDisabled : ""}`} disabled={!activa}><legend>{activa ? <>Usuarios que participan <b>{seleccionados.length}</b></> : "Active la distribución para seleccionar usuarios"}</legend>{configuracion?.usuariosDisponibles.length ? configuracion.usuariosDisponibles.map((usuario) => <label key={usuario.id} className={seleccionados.includes(usuario.id) ? styles.pdfUserSelected : ""}><input type="checkbox" checked={seleccionados.includes(usuario.id)} onChange={() => alternarUsuario(usuario.id)} /><span><strong>{usuario.nombreCompleto}</strong><small>@{usuario.nombreUsuario}{usuario.cargo ? ` · ${usuario.cargo}` : ""}</small></span></label>) : <p className={styles.pdfDistributionEmpty}>No hay usuarios operativos disponibles.</p>}</fieldset>}{error && <p className={styles.pdfDistributionError} role="alert">{error}</p>}<footer><button type="button" className={styles.cancelButton} onClick={() => setModalAbierto(false)}>Cancelar</button><button type="submit" className="button-primary" disabled={cargando || guardando || (activa && !seleccionados.length)}>{guardando ? "Guardando…" : "Guardar configuración"}</button></footer></form></section></div>}
   </>;
 }
 

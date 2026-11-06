@@ -1362,6 +1362,9 @@
 .horariosApi .accionesTabla button:first-child {
   font-size: 0;
 }
+.metricasHorarios {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .horariosApi .accionesTabla button:first-child::after {
   content: "Editar";
   font-size: 13px;

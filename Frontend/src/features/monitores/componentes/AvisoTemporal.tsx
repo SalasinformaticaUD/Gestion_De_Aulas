@@ -17,7 +17,10 @@ export function AvisoTemporal({ mensaje, tipo, alCerrar }: Props) {
   const pausado = useRef(false);
   const cerrarActual = useRef(alCerrar);
   const [desvaneciendo, setDesvaneciendo] = useState(false);
-  cerrarActual.current = alCerrar;
+
+  useEffect(() => {
+    cerrarActual.current = alCerrar;
+  }, [alCerrar]);
 
   const cancelar = () => { if (temporizador.current) { clearTimeout(temporizador.current); temporizador.current = null; } if (avisoDesvanecer.current) { clearTimeout(avisoDesvanecer.current); avisoDesvanecer.current = null; } };
   const salidaEnTresSegundos = () => {

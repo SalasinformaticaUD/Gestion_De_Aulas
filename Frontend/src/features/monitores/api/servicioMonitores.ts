@@ -81,7 +81,11 @@ export const servicioMonitores = {
   importarAsistencia: (archivo: File) => {
     const datos = new FormData();
     datos.append("source_file", archivo);
-    return solicitarMonitores<ImportacionAsistenciaApi>("/api/v1/attendance/imports/", { method: "POST", body: datos });
+    return solicitarMonitores<ImportacionAsistenciaApi>("/api/v1/attendance/imports/", {
+      method: "POST",
+      body: datos,
+      signal: AbortSignal.timeout(300000),
+    });
   },
   consultarImportacion: (id: string) => solicitarMonitores<ImportacionAsistenciaApi>(`/api/v1/attendance/imports/${id}/`),
   consultaPublica: (codigo: string) => solicitarMonitores<ConsultaPublicaApi>(`/api/v1/reports/public-monitor-lookup/?codigo_estudiante=${encodeURIComponent(codigo)}`),

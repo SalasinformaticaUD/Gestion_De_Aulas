@@ -8,8 +8,59 @@
 .cancelButton { padding:0 12px; border:1px solid var(--line); border-radius:6px; color:var(--ink); background:var(--surface); font-weight:700; }
 .monitorEditNote { border-color:#f5d8a8; color:#8a5300; background:#fff8e8; }
 .monitorEditNote>span { background:#b36b00; }
+.pdfDistributionSummary { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:15px; }
+.pdfDistributionSummary strong,.pdfDistributionSummary p { display:block; margin:0; }
+.pdfDistributionSummary strong { color:var(--ink); font-size:14.3px; }
+.pdfDistributionSummary p { margin-top:5px; color:var(--muted); font-size:11.7px; line-height:1.45; }
+.pdfDistributionSummary button { min-height:37px; flex:0 0 auto; }
+.pdfDistributionNotice { margin:0 15px 15px; padding:9px 11px; border:1px solid #b6e9d1; border-radius:6px; color:#07684f; background:#eafaf2; font-size:12px; font-weight:700; }
+.modalBackdrop { position:fixed; z-index:100; inset:0; display:grid; place-items:center; padding:20px; background:rgba(9,10,12,.62); }
+.pdfDistributionModal { width:min(620px,100%); max-height:calc(100vh - 40px); overflow:auto; border-radius:11px; color:var(--ink); background:var(--surface); box-shadow:0 24px 70px rgba(0,0,0,.3); }
+.pdfDistributionModal>header { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; padding:18px 20px; color:#fff; background:#18191c; }
+.pdfDistributionModal>header span { color:#d9919b; font-size:10.4px; font-weight:800; letter-spacing:.08em; }
+.pdfDistributionModal>header h2 { margin:4px 0 0; font-size:20.8px; }
+.pdfDistributionModal>header p { margin:5px 0 0; color:#b5bac3; font-size:12px; line-height:1.45; }
+.pdfDistributionModal>header button { width:31px; height:31px; flex:0 0 auto; border:0; border-radius:5px; color:#d7d9dd; background:#303238; font-size:24px; }
+.pdfDistributionModal form { display:grid; gap:13px; padding:18px; }
+.pdfDistributionToggle { display:flex; align-items:flex-start; gap:10px; padding:12px; border:1px solid #c9d9f3; border-radius:7px; background:#eef5ff; cursor:pointer; }
+.pdfDistributionToggle input { margin-top:2px; accent-color:var(--primary); }
+.pdfDistributionToggle strong,.pdfDistributionToggle small { display:block; }
+.pdfDistributionToggle strong { font-size:14.3px; }
+.pdfDistributionToggle small { margin-top:4px; color:#315e9d; font-size:11.7px; line-height:1.4; }
+.pdfUsers { display:grid; grid-template-columns:1fr 1fr; gap:7px; max-height:330px; overflow:auto; padding:10px; border:1px solid var(--line); border-radius:7px; }
+.pdfUsers legend { padding:0 6px; color:var(--muted); font-size:11.7px; font-weight:800; }
+.pdfUsers legend b { color:var(--primary); }
+.pdfUsers>label { min-width:0; display:flex; align-items:center; gap:9px; padding:9px 10px; border:1px solid var(--line); border-radius:6px; background:var(--surface-soft); cursor:pointer; }
+.pdfUsers>label.pdfUserSelected { border-color:#d997a0; background:#fff3f4; }
+.pdfUsersDisabled { cursor:not-allowed; opacity:.52; }
+.pdfUsersDisabled>label { cursor:not-allowed; }
+.pdfUsers input { flex:0 0 auto; accent-color:var(--primary); }
+.pdfUsers span,.pdfUsers strong,.pdfUsers small { min-width:0; display:block; }
+.pdfUsers strong { overflow:hidden; font-size:13px; text-overflow:ellipsis; white-space:nowrap; }
+.pdfUsers small { margin-top:3px; overflow:hidden; color:var(--muted); font-size:10.4px; text-overflow:ellipsis; white-space:nowrap; }
+.pdfDistributionEmpty { grid-column:1/-1; margin:0; padding:22px 10px; color:var(--muted); font-size:13px; text-align:center; }
+.pdfDistributionError { margin:0; padding:9px 11px; border:1px solid #fecaca; border-radius:6px; color:#b42318; background:#fff1f2; font-size:12px; font-weight:700; }
+.pdfDistributionModal form>footer { display:flex; justify-content:flex-end; gap:8px; }
+.pdfDistributionModal form>footer button { min-height:37px; }
+.pdfDistributionModal form>footer button:disabled { cursor:not-allowed; opacity:.5; }
+:global(html[data-theme="dark"]) .profileSection>header>b { color:#d7dae0; background:#343841; }
+:global(html[data-theme="dark"]) .pdfDistributionNotice { border-color:#23784b; color:#b7efca; background:#132a1e; }
+:global(html[data-theme="dark"]) .pdfDistributionModal { border:1px solid #454952; color:#f1f3f5; background:#202329; }
+:global(html[data-theme="dark"]) .pdfDistributionModal>header { border-bottom:1px solid #454952; background:#15171b; }
+:global(html[data-theme="dark"]) .pdfDistributionModal>header p { color:#c7cbd3; }
+:global(html[data-theme="dark"]) .pdfDistributionModal>header button { color:#f1f3f5; background:#343841; }
+:global(html[data-theme="dark"]) .pdfDistributionToggle { border-color:#365f9c; color:#eef4ff; background:#192942; }
+:global(html[data-theme="dark"]) .pdfDistributionToggle small { color:#c0d7f7; }
+:global(html[data-theme="dark"]) .pdfUsers { border-color:#454952; background:#1c1e23; }
+:global(html[data-theme="dark"]) .pdfUsers>label { border-color:#454952; color:#f1f3f5; background:#272a31; }
+:global(html[data-theme="dark"]) .pdfUsers>label.pdfUserSelected { border-color:#b85f6d; background:#3a2228; }
+:global(html[data-theme="dark"]) .pdfUsersDisabled { background:#181a1f; }
+:global(html[data-theme="dark"]) .pdfUsers small { color:#b8bec8; }
+:global(html[data-theme="dark"]) .pdfDistributionError { border-color:#97484a; color:#ffc0c5; background:#311d20; }
+:global(html[data-theme="dark"]) .pdfDistributionModal .cancelButton { border-color:#50545e; color:#f1f3f5; background:#343841; }
+:global(html[data-theme="dark"]) .pdfDistributionModal .cancelButton:hover { border-color:#676c77; background:#414650; }
 .accessGrid { display:grid; grid-template-columns:minmax(180px,.65fr) minmax(0,1fr); gap:9px; padding:14px; }.accessGrid>div,.accessList { min-width:0; padding:11px 12px; border:1px solid var(--line); border-radius:7px; background:var(--surface-soft,#f8f9fb); }.accessGrid span,.accessList>span { display:block; color:var(--muted); font-size:10.4px; font-weight:800; letter-spacing:.05em; text-transform:uppercase; }.accessListWide { grid-column:1/-1; }.accessList ul { display:grid; grid-template-columns:repeat(auto-fit,minmax(205px,1fr)); gap:6px; padding:0; margin:9px 0 0; list-style:none; }.accessList li { min-width:0; padding:6px 8px; border-left:3px solid var(--primary); border-radius:4px; color:var(--ink); background:var(--surface); font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px; font-weight:700; overflow-wrap:anywhere; }.accessList p { margin:8px 0 0; color:var(--muted); font-size:13px; }
-@media(max-width:560px){.accessGrid{grid-template-columns:1fr}.accessListWide{grid-column:auto}.accessList ul{grid-template-columns:1fr}}
+@media(max-width:560px){.accessGrid{grid-template-columns:1fr}.accessListWide{grid-column:auto}.accessList ul{grid-template-columns:1fr}.pdfDistributionSummary{align-items:stretch;flex-direction:column}.pdfDistributionSummary button{width:100%}.modalBackdrop{padding:10px}.pdfDistributionModal{max-height:calc(100vh - 20px)}.pdfUsers{grid-template-columns:1fr}.pdfDistributionModal form>footer{align-items:stretch;flex-direction:column-reverse}.pdfDistributionModal form>footer button{width:100%}}
 
 /* En móviles, los listados de acceso se consultan bajo demanda para evitar un perfil excesivamente largo. */
 .accessDetails { margin-top:9px; }

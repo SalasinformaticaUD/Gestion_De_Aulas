@@ -8,6 +8,7 @@ import {
   type FormEvent,
 } from "react";
 import Link from "next/link";
+import * as XLSX from "xlsx";
 import {
   adaptarMonitor,
   adaptarResumenDashboard,
@@ -48,20 +49,22 @@ const historialVacio = {
   results: [] as ConciliacionApi[],
 };
 
-function descargar(nombre: string, filas: string[][]) {
-  const contenido = filas
-    .map((fila) =>
-      fila.map((valor) => `"${valor.replaceAll('"', '""')}"`).join(";"),
-    )
-    .join("\
-");
-  const enlace = document.createElement("a");
-  enlace.href = URL.createObjectURL(
-    new Blob([contenido], { type: "text/csv;charset=utf-8;" }),
-  );
-  enlace.download = `${nombre}.csv`;
-  enlace.click();
-  URL.revokeObjectURL(enlace.href);
+type ValorCelda = string | number;
+
+function descargar(nombre: string, filas: ValorCelda[][]) {
+  const hoja = XLSX.utils.aoa_to_sheet(filas);
+  hoja["!cols"] = filas[0].map((_, indice) => ({
+    wch: Math.min(
+      40,
+      Math.max(
+        12,
+        ...filas.map((fila) => String(fila[indice] ?? "").length + 2),
+      ),
+    ),
+  }));
+  const libro = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(libro, hoja, "Registros");
+  XLSX.writeFile(libro, `${nombre}.xlsx`);
 }
 
 export function ImportarRegistros() {
@@ -202,7 +205,7 @@ export function ImportarRegistros() {
         total: trabajo.total_rows,
       });
       setConfirmacion(
-        "Archivo recibido correctamente. El procesamiento continuará en segundo plano.",
+        `Importación finalizada: ${trabajo.imported_rows} registro(s) importado(s) y ${trabajo.failed_rows} con error.`,
       );
       await recientes.recargar();
     } catch (problema) {
@@ -234,12 +237,12 @@ export function ImportarRegistros() {
           (resumen?.horasAnotaciones ?? 0);
         return [
           monitor.nombre,
-          (resumen?.horasNormales ?? 0).toFixed(1),
-          (resumen?.horasExtraAprobadas ?? 0).toFixed(1),
-          (resumen?.horasExtraPendientes ?? 0).toFixed(1),
-          (resumen?.horasAnotaciones ?? 0).toFixed(1),
-          total.toFixed(1),
-          Math.max(0, 192 - total).toFixed(1),
+          resumen?.horasNormales ?? 0,
+          resumen?.horasExtraAprobadas ?? 0,
+          resumen?.horasExtraPendientes ?? 0,
+          resumen?.horasAnotaciones ?? 0,
+          total,
+          Math.max(0, 192 - total),
         ];
       }),
     ]);
@@ -620,13 +623,16 @@ export function ImportarRegistros() {
               {resultado && (
                 <div className={estilos.resultadoImportacion}>
                   <span>
+                    <b>{resultado.total}</b>Total de filas
+                  </span>
+                  <span>
                     <b>{resultado.procesados}</b>Importados
                   </span>
                   <span>
-                    <b>{resultado.pendientes}</b>Con error
+                    <b>{Math.max(0, resultado.total - resultado.procesados - resultado.pendientes)}</b>Omitidos
                   </span>
                   <span>
-                    <b>{resultado.total}</b>Total
+                    <b>{resultado.pendientes}</b>Con error
                   </span>
                 </div>
               )}
