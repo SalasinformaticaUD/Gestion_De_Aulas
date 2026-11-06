@@ -35,6 +35,7 @@ export const environment = {
     requiredInProduction('MONITORES_SERVICE_TOKEN');
     requiredInProduction('FORMS_INTEGRATION_KEY');
     requiredInProduction('CREDENTIALS_ENCRYPTION_KEY');
+    requiredInProduction('SOFTRACKER_DATABASE_URL');
     secureSecretInProduction('JWT_SECRET');
     secureSecretInProduction('MONITORES_SERVICE_TOKEN');
     secureSecretInProduction('FORMS_INTEGRATION_KEY');

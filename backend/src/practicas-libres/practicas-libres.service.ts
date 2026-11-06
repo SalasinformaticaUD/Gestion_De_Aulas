@@ -365,9 +365,7 @@ export class PracticasLibresService {
       [EstadoSoftware.INACTIVO]: `El software ${software.nombre} está inactivo y no puede usarse para prestar un aula.`,
     };
 
-    throw new ConflictException(
-      mensajes[software.estado as keyof typeof mensajes],
-    );
+    throw new ConflictException(mensajes[software.estado]);
   }
 
   private esAulaExcluida(codigo?: string) {

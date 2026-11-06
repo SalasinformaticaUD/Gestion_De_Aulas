@@ -51,21 +51,42 @@ export class SoftwareService {
   }
 
   async findAll(query?: string, page?: number, limit?: number) {
-    const where = query ? { OR: [{ nombre: { contains: query, mode: 'insensitive' as const } }, { version: { contains: query, mode: 'insensitive' as const } }, { descripcion: { contains: query, mode: 'insensitive' as const } }] } : undefined;
+    const where = query
+      ? {
+          OR: [
+            { nombre: { contains: query, mode: 'insensitive' as const } },
+            { version: { contains: query, mode: 'insensitive' as const } },
+            { descripcion: { contains: query, mode: 'insensitive' as const } },
+          ],
+        }
+      : undefined;
     const include = {
       aulas: {
         include: { aula: true },
         orderBy: { instaladoEn: 'desc' as const },
       },
     };
-    if (!page) return this.prisma.software.findMany({
-      where,
-      orderBy: [{ nombre: 'asc' }, { version: 'asc' }],
-      include,
-    });
+    if (!page)
+      return this.prisma.software.findMany({
+        where,
+        orderBy: [{ nombre: 'asc' }, { version: 'asc' }],
+        include,
+      });
     const take = Math.min(Math.max(limit ?? 25, 1), 100);
-    const [data, total] = await this.prisma.$transaction([this.prisma.software.findMany({ where, orderBy: [{ nombre: 'asc' }, { version: 'asc' }], include, skip: (page - 1) * take, take }), this.prisma.software.count({ where })]);
-    return { data, meta: { page, limit: take, total, totalPages: Math.ceil(total / take) } };
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.software.findMany({
+        where,
+        orderBy: [{ nombre: 'asc' }, { version: 'asc' }],
+        include,
+        skip: (page - 1) * take,
+        take,
+      }),
+      this.prisma.software.count({ where }),
+    ]);
+    return {
+      data,
+      meta: { page, limit: take, total, totalPages: Math.ceil(total / take) },
+    };
   }
 
   async findOne(id: string) {
@@ -262,212 +283,229 @@ export class SoftwareService {
       }
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const errores: ImportacionSoftwareError[] = [];
-      const asociacionesCargadas = new Map<
-        string,
-        { aulaId: string; softwareId: string }
-      >();
-      let registrosProcesados = 0;
-      const aulas = await tx.aula.findMany({
-        where: { eliminadoEn: null },
-        select: { id: true, codigo: true },
-      });
-      const aulasPorCodigo = new Map<string, string>();
-      aulas.forEach((aula) => {
-        aulasPorCodigo.set(this.normalizarCodigoAula(aula.codigo), aula.id);
-        if (/^\d+[A-Z]?$/i.test(aula.codigo.trim())) {
-          aulasPorCodigo.set(
-            this.normalizarCodigoAula(`Aula ${aula.codigo}`),
-            aula.id,
-          );
-        }
-      });
-      const asociacionesExistentes = await tx.aulaSoftware.findMany({
-        include: { software: { select: { nombre: true } } },
-      });
-      const asociacionesPorAulaYNombre = new Map<
-        string,
-        { aulaId: string; softwareId: string; software: { nombre: string } }
-      >(
-        asociacionesExistentes.map((asociacion) => [
-          this.claveAsociacionAulaSoftware(
-            asociacion.aulaId,
-            asociacion.software.nombre,
-          ),
-          asociacion,
-        ]),
-      );
-
-      for (const [index, fila] of filas.entries()) {
-        const normalized = this.normalizeImportRow(fila);
-        // `filas` no incluye la fila de encabezados que XLSX elimina al
-        // convertir la hoja a objetos. Excel, en cambio, numera la primera
-        // fila de datos como la fila 2.
-        const filaExcel = index + 2;
-
-        try {
-          if (!normalized.aulaCodigo || !normalized.nombre || !normalized.version) {
-            errores.push({
-              fila: filaExcel,
-              aulaCodigo: normalized.aulaCodigo,
-              nombre: normalized.nombre,
-              version: normalized.version,
-              error: 'Aula, Software y Software Versión son obligatorios.',
-            });
-            continue;
+    return this.prisma.$transaction(
+      async (tx) => {
+        const errores: ImportacionSoftwareError[] = [];
+        const asociacionesCargadas = new Map<
+          string,
+          { aulaId: string; softwareId: string }
+        >();
+        let registrosProcesados = 0;
+        const aulas = await tx.aula.findMany({
+          where: { eliminadoEn: null },
+          select: { id: true, codigo: true },
+        });
+        const aulasPorCodigo = new Map<string, string>();
+        aulas.forEach((aula) => {
+          aulasPorCodigo.set(this.normalizarCodigoAula(aula.codigo), aula.id);
+          if (/^\d+[A-Z]?$/i.test(aula.codigo.trim())) {
+            aulasPorCodigo.set(
+              this.normalizarCodigoAula(`Aula ${aula.codigo}`),
+              aula.id,
+            );
           }
-          const aulaId = aulasPorCodigo.get(
-            this.normalizarCodigoAula(normalized.aulaCodigo),
-          );
+        });
+        const asociacionesExistentes = await tx.aulaSoftware.findMany({
+          include: { software: { select: { nombre: true } } },
+        });
+        const asociacionesPorAulaYNombre = new Map<
+          string,
+          { aulaId: string; softwareId: string; software: { nombre: string } }
+        >(
+          asociacionesExistentes.map((asociacion) => [
+            this.claveAsociacionAulaSoftware(
+              asociacion.aulaId,
+              asociacion.software.nombre,
+            ),
+            asociacion,
+          ]),
+        );
 
-          if (!aulaId) {
-            errores.push({
-              fila: filaExcel,
-              aulaCodigo: normalized.aulaCodigo,
-              nombre: normalized.nombre,
-              version: normalized.version,
-              error: 'No existe un aula con el codigo indicado.',
-            });
-            continue;
-          }
+        for (const [index, fila] of filas.entries()) {
+          const normalized = this.normalizeImportRow(fila);
+          // `filas` no incluye la fila de encabezados que XLSX elimina al
+          // convertir la hoja a objetos. Excel, en cambio, numera la primera
+          // fila de datos como la fila 2.
+          const filaExcel = index + 2;
 
-          const software = await tx.software.upsert({
-            where: {
-              nombre_version: {
+          try {
+            if (
+              !normalized.aulaCodigo ||
+              !normalized.nombre ||
+              !normalized.version
+            ) {
+              errores.push({
+                fila: filaExcel,
+                aulaCodigo: normalized.aulaCodigo,
                 nombre: normalized.nombre,
                 version: normalized.version,
+                error: 'Aula, Software y Software Versión son obligatorios.',
+              });
+              continue;
+            }
+            const aulaId = aulasPorCodigo.get(
+              this.normalizarCodigoAula(normalized.aulaCodigo),
+            );
+
+            if (!aulaId) {
+              errores.push({
+                fila: filaExcel,
+                aulaCodigo: normalized.aulaCodigo,
+                nombre: normalized.nombre,
+                version: normalized.version,
+                error: 'No existe un aula con el codigo indicado.',
+              });
+              continue;
+            }
+
+            const software = await tx.software.upsert({
+              where: {
+                nombre_version: {
+                  nombre: normalized.nombre,
+                  version: normalized.version,
+                },
               },
-            },
-            create: {
-              nombre: normalized.nombre,
-              version: normalized.version,
-              descripcion: normalized.descripcion,
-            },
-            update: {
-              descripcion: normalized.descripcion,
-            },
-          });
+              create: {
+                nombre: normalized.nombre,
+                version: normalized.version,
+                descripcion: normalized.descripcion,
+              },
+              update: {
+                descripcion: normalized.descripcion,
+              },
+            });
 
-          const claveAsociacion = this.claveAsociacionAulaSoftware(
-            aulaId,
-            normalized.nombre,
-          );
-          const asociacionExistente = asociacionesPorAulaYNombre.get(
-            claveAsociacion,
-          );
+            const claveAsociacion = this.claveAsociacionAulaSoftware(
+              aulaId,
+              normalized.nombre,
+            );
+            const asociacionExistente =
+              asociacionesPorAulaYNombre.get(claveAsociacion);
 
-          // La identidad de una instalación es Aula + nombre del software.
-          // Si el archivo trae otra versión, se reemplaza esa asociación en
-          // lugar de dejar ambas versiones instaladas en la misma aula.
-          if (
-            asociacionExistente &&
-            asociacionExistente.softwareId !== software.id
-          ) {
-            await tx.aulaSoftware.delete({
+            // La identidad de una instalación es Aula + nombre del software.
+            // Si el archivo trae otra versión, se reemplaza esa asociación en
+            // lugar de dejar ambas versiones instaladas en la misma aula.
+            if (
+              asociacionExistente &&
+              asociacionExistente.softwareId !== software.id
+            ) {
+              await tx.aulaSoftware.delete({
+                where: {
+                  aulaId_softwareId: {
+                    aulaId,
+                    softwareId: asociacionExistente.softwareId,
+                  },
+                },
+              });
+            }
+
+            await tx.aulaSoftware.upsert({
               where: {
                 aulaId_softwareId: {
                   aulaId,
-                  softwareId: asociacionExistente.softwareId,
+                  softwareId: software.id,
                 },
               },
-            });
-          }
-
-          await tx.aulaSoftware.upsert({
-            where: {
-              aulaId_softwareId: {
+              create: {
                 aulaId,
                 softwareId: software.id,
               },
-            },
-            create: {
+              update: {},
+            });
+
+            asociacionesPorAulaYNombre.set(claveAsociacion, {
               aulaId,
               softwareId: software.id,
-            },
-            update: {},
-          });
-
-          asociacionesPorAulaYNombre.set(claveAsociacion, {
-            aulaId,
-            softwareId: software.id,
-            software: { nombre: normalized.nombre },
-          });
-          asociacionesCargadas.set(claveAsociacion, { aulaId, softwareId: software.id });
-          registrosProcesados += 1;
-        } catch (error: unknown) {
-          errores.push({
-            fila: filaExcel,
-            aulaCodigo: normalized.aulaCodigo,
-            nombre: normalized.nombre,
-            version: normalized.version,
-            error: this.getErrorMessage(error),
-          });
+              software: { nombre: normalized.nombre },
+            });
+            asociacionesCargadas.set(claveAsociacion, {
+              aulaId,
+              softwareId: software.id,
+            });
+            registrosProcesados += 1;
+          } catch (error: unknown) {
+            errores.push({
+              fila: filaExcel,
+              aulaCodigo: normalized.aulaCodigo,
+              nombre: normalized.nombre,
+              version: normalized.version,
+              error: this.getErrorMessage(error),
+            });
+          }
         }
-      }
 
-      let asociacionesReemplazadas = 0;
-      const asociacionesFinales = [...asociacionesCargadas.values()];
-      if (reemplazarAnterior && errores.length === 0 && asociacionesFinales.length > 0) {
-        const eliminacion = await tx.aulaSoftware.deleteMany({
-          where: {
-            NOT: {
-              OR: asociacionesFinales.map((asociacion) => ({
-                aulaId: asociacion.aulaId,
-                softwareId: asociacion.softwareId,
-              })),
+        let asociacionesReemplazadas = 0;
+        const asociacionesFinales = [...asociacionesCargadas.values()];
+        if (
+          reemplazarAnterior &&
+          errores.length === 0 &&
+          asociacionesFinales.length > 0
+        ) {
+          const eliminacion = await tx.aulaSoftware.deleteMany({
+            where: {
+              NOT: {
+                OR: asociacionesFinales.map((asociacion) => ({
+                  aulaId: asociacion.aulaId,
+                  softwareId: asociacion.softwareId,
+                })),
+              },
             },
+          });
+          asociacionesReemplazadas = eliminacion.count;
+        }
+
+        const resultado = this.getImportResult(
+          filas.length,
+          registrosProcesados,
+        );
+
+        const importacion = await tx.importacionSoftware.create({
+          data: {
+            usuarioId,
+            nombreArchivo,
+            totalRegistros: filas.length,
+            registrosProcesados,
+            registrosConError: errores.length,
+            resultado,
+            ...(errores.length > 0 && { errores }),
           },
+          include: { usuario: true },
         });
-        asociacionesReemplazadas = eliminacion.count;
-      }
 
-      const resultado = this.getImportResult(filas.length, registrosProcesados);
-
-      const importacion = await tx.importacionSoftware.create({
-        data: {
-          usuarioId,
-          nombreArchivo,
-          totalRegistros: filas.length,
-          registrosProcesados,
-          registrosConError: errores.length,
-          resultado,
-          ...(errores.length > 0 && { errores }),
-        },
-        include: { usuario: true },
-      });
-
-      return {
-        importacion,
-        resumen: {
-          totalRegistros: filas.length,
-          registrosProcesados,
-          registrosConError: errores.length,
-          resultado,
-          asociacionesReemplazadas,
-          reemplazoAplicado: reemplazarAnterior && errores.length === 0,
-        },
-        errores,
-      };
-    }, {
-      // Un inventario institucional puede contener miles de instalaciones.
-      // El valor predeterminado de Prisma (5 s) finaliza antes de completar
-      // un archivo grande aunque sus filas sean válidas.
-      maxWait: 30_000,
-      timeout: 1_800_000,
-    });
+        return {
+          importacion,
+          resumen: {
+            totalRegistros: filas.length,
+            registrosProcesados,
+            registrosConError: errores.length,
+            resultado,
+            asociacionesReemplazadas,
+            reemplazoAplicado: reemplazarAnterior && errores.length === 0,
+          },
+          errores,
+        };
+      },
+      {
+        // Un inventario institucional puede contener miles de instalaciones.
+        // El valor predeterminado de Prisma (5 s) finaliza antes de completar
+        // un archivo grande aunque sus filas sean válidas.
+        maxWait: 30_000,
+        timeout: 1_800_000,
+      },
+    );
   }
 
   async importInventoryExcel(
     archivo:
-      | { buffer: Buffer; originalname: string; mimetype: string }
-      | undefined,
+      { buffer: Buffer; originalname: string; mimetype: string } | undefined,
   ) {
     if (!archivo?.buffer.length) {
       throw new BadRequestException('Debe adjuntar un archivo Excel.');
     }
     if (!/\.(xlsx|xls)$/i.test(archivo.originalname)) {
-      throw new BadRequestException('El archivo debe tener extensión .xlsx o .xls.');
+      throw new BadRequestException(
+        'El archivo debe tener extensión .xlsx o .xls.',
+      );
     }
 
     let workbook: XLSX.WorkBook;
@@ -477,12 +515,15 @@ export class SoftwareService {
       throw new BadRequestException('No fue posible leer el archivo Excel.');
     }
     const hoja = workbook.Sheets[workbook.SheetNames[0] ?? ''];
-    if (!hoja) throw new BadRequestException('El archivo Excel no contiene hojas.');
+    if (!hoja)
+      throw new BadRequestException('El archivo Excel no contiene hojas.');
     const registros = XLSX.utils.sheet_to_json<Record<string, unknown>>(hoja, {
       defval: '',
     });
     if (!registros.length) {
-      throw new BadRequestException('El archivo Excel no contiene filas de software.');
+      throw new BadRequestException(
+        'El archivo Excel no contiene filas de software.',
+      );
     }
 
     const filas = registros.map((fila) => ({
@@ -494,7 +535,9 @@ export class SoftwareService {
         this.valorExcel(fila, 'VERSION'),
     }));
     if (!filas.some((fila) => fila.aulaCodigo || fila.nombre || fila.version)) {
-      throw new BadRequestException('El archivo Excel no contiene datos válidos.');
+      throw new BadRequestException(
+        'El archivo Excel no contiene datos válidos.',
+      );
     }
     return this.importInventory(
       { filas, nombreArchivo: archivo.originalname },
@@ -567,7 +610,10 @@ export class SoftwareService {
     };
   }
 
-  private valorExcel(fila: Record<string, unknown>, encabezado: string): string {
+  private valorExcel(
+    fila: Record<string, unknown>,
+    encabezado: string,
+  ): string {
     const clave = this.normalizarEncabezado(encabezado);
     const encontrada = Object.entries(fila).find(
       ([nombre]) => this.normalizarEncabezado(nombre) === clave,

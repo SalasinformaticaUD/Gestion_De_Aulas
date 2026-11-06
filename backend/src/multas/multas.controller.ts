@@ -48,7 +48,15 @@ export class MultasController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
-    return this.multasService.findAll({ estado, estudianteId, codigo, q, scope, page: page ? Math.max(Number(page) || 1, 1) : undefined, limit: limit ? Number(limit) : undefined });
+    return this.multasService.findAll({
+      estado,
+      estudianteId,
+      codigo,
+      q,
+      scope,
+      page: page ? Math.max(Number(page) || 1, 1) : undefined,
+      limit: limit ? Number(limit) : undefined,
+    });
   }
 
   @Get('motivos')
@@ -59,16 +67,24 @@ export class MultasController {
 
   @Post('busqueda-masiva')
   @RequirePermissions('MULTAS_LEER')
-  @UseInterceptors(FileInterceptor('archivo', { limits: { fileSize: 20_000_000 } }))
-  buscarMasivo(@UploadedFile() archivo: { buffer: Buffer; originalname: string } | undefined) {
+  @UseInterceptors(
+    FileInterceptor('archivo', { limits: { fileSize: 20_000_000 } }),
+  )
+  buscarMasivo(
+    @UploadedFile()
+    archivo: { buffer: Buffer; originalname: string } | undefined,
+  ) {
     return this.multasService.buscarMasivo(archivo);
   }
 
   @Post('cargar-excel')
   @RequirePermissions('MULTAS_CREAR')
-  @UseInterceptors(FileInterceptor('archivo', { limits: { fileSize: 20_000_000 } }))
+  @UseInterceptors(
+    FileInterceptor('archivo', { limits: { fileSize: 20_000_000 } }),
+  )
   cargarExcel(
-    @UploadedFile() archivo: { buffer: Buffer; originalname: string } | undefined,
+    @UploadedFile()
+    archivo: { buffer: Buffer; originalname: string } | undefined,
     @CurrentUser() usuario?: UsuarioAutenticado,
   ) {
     return this.multasService.cargarExcel(archivo, usuario?.id);

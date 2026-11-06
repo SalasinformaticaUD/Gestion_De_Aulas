@@ -55,10 +55,15 @@ export class HorarioController {
         dto.passwordConfirmacion,
       ))
     ) {
-      throw new UnauthorizedException('La contraseña de confirmación es incorrecta.');
+      throw new UnauthorizedException(
+        'La contraseña de confirmación es incorrecta.',
+      );
     }
     const { passwordConfirmacion: _passwordConfirmacion, ...periodo } = dto;
-    return this.horarioService.createPeriodo({ ...periodo, activo: true }, usuario.id);
+    return this.horarioService.createPeriodo(
+      { ...periodo, activo: true },
+      usuario.id,
+    );
   }
 
   @Get('periodos/:id')

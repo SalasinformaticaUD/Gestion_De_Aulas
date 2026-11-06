@@ -14,7 +14,12 @@ describe('UsuariosService', () => {
   const passwords = new PasswordHashService();
   const service = new UsuariosService(prisma as never, passwords);
   const monitores = { sincronizarUsuario: jest.fn() };
-  const synchronizedService = new UsuariosService(prisma as never, passwords, undefined, monitores as never);
+  const synchronizedService = new UsuariosService(
+    prisma as never,
+    passwords,
+    undefined,
+    monitores as never,
+  );
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -77,12 +82,14 @@ describe('UsuariosService', () => {
       dependenciaMonitores: 'INFORMATICS_LABS',
     });
 
-    expect(monitores.sincronizarUsuario).toHaveBeenCalledWith(expect.objectContaining({
-      externalUserId: 'usuario-id',
-      role: 'LIDER',
-      department: 'INFORMATICS_LABS',
-      isActive: true,
-    }));
+    expect(monitores.sincronizarUsuario).toHaveBeenCalledWith(
+      expect.objectContaining({
+        externalUserId: 'usuario-id',
+        role: 'LIDER',
+        department: 'INFORMATICS_LABS',
+        isActive: true,
+      }),
+    );
   });
 });
 

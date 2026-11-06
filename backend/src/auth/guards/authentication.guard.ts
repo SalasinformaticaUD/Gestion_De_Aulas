@@ -72,6 +72,8 @@ export class AuthenticationGuard implements CanActivate {
   }
 
   private arePermissionsStrict(): boolean {
-    return (process.env.PERMISSIONS_MODE ?? 'strict').toLowerCase() === 'strict';
+    return (
+      (process.env.PERMISSIONS_MODE ?? 'strict').toLowerCase() === 'strict'
+    );
   }
 }

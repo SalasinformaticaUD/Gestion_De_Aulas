@@ -13,7 +13,10 @@ import { RolesService } from '../src/roles/roles.service';
 import { UsuariosController } from '../src/usuarios/usuarios.controller';
 import { UsuariosService } from '../src/usuarios/usuarios.service';
 import { PrismaService } from '../src/prisma/prisma.service';
-import { attachTestAdministrator, testAdministrator } from './helpers/authenticated-user';
+import {
+  attachTestAdministrator,
+  testAdministrator,
+} from './helpers/authenticated-user';
 
 describe('Administración (e2e)', () => {
   const id = '00000000-0000-4000-8000-000000000001';

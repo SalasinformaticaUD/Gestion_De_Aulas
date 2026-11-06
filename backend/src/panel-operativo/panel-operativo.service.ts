@@ -58,10 +58,12 @@ export class PanelOperativoService {
       }
     }
 
-    const valor = this.calcularResumen(query, usuarioId).catch((error: unknown) => {
-      this.resumenCache.delete(clave);
-      throw error;
-    });
+    const valor = this.calcularResumen(query, usuarioId).catch(
+      (error: unknown) => {
+        this.resumenCache.delete(clave);
+        throw error;
+      },
+    );
     this.resumenCache.set(clave, {
       expiraEn: Date.now() + this.resumenCacheTtlMs,
       valor,
@@ -160,9 +162,7 @@ export class PanelOperativoService {
         contexto.bloque,
       )),
       ...this.construirAlertasRecientes(contexto),
-      ...(usuarioId
-        ? await this.construirAlertasCredenciales(usuarioId)
-        : []),
+      ...(usuarioId ? await this.construirAlertasCredenciales(usuarioId) : []),
       ...this.construirAlertas(
         contexto.aulas,
         contexto.asistencias,
@@ -214,11 +214,19 @@ export class PanelOperativoService {
   async tareasOperativas() {
     const ahora = new Date();
     const fecha = new Date(ahora.getTime() - 5 * 60 * 60 * 1000)
-      .toISOString().slice(0, 10);
-    const horaActual = Number(new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'America/Bogota', hour: '2-digit', hour12: false,
-    }).format(ahora));
-    const horaInicio = Math.min(20, Math.max(6, Math.floor(horaActual / 2) * 2));
+      .toISOString()
+      .slice(0, 10);
+    const horaActual = Number(
+      new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'America/Bogota',
+        hour: '2-digit',
+        hour12: false,
+      }).format(ahora),
+    );
+    const horaInicio = Math.min(
+      20,
+      Math.max(6, Math.floor(horaActual / 2) * 2),
+    );
     const bloque = {
       horaInicio: `${String(horaInicio).padStart(2, '0')}:00`,
       horaFin: `${String(horaInicio + 2).padStart(2, '0')}:00`,
@@ -398,7 +406,8 @@ export class PanelOperativoService {
         tipo: 'nueva-observacion',
         mensaje: `${observacion.autor?.nombreCompleto ?? 'Un usuario'} agregó una nueva observación.`,
         aulaId: observacion.aula?.id,
-        aulaCodigo: observacion.aula?.codigo ?? observacion.ubicacionTexto ?? undefined,
+        aulaCodigo:
+          observacion.aula?.codigo ?? observacion.ubicacionTexto ?? undefined,
         origenId: observacion.id,
         fechaHora: observacion.creadoEn,
         enlace: '/observaciones',
@@ -528,8 +537,9 @@ export class PanelOperativoService {
       ['estado', 'el estado'],
     ];
     const modificados = campos
-      .filter(([campo]) =>
-        JSON.stringify(previo[campo]) !== JSON.stringify(nuevo[campo]),
+      .filter(
+        ([campo]) =>
+          JSON.stringify(previo[campo]) !== JSON.stringify(nuevo[campo]),
       )
       .map(([, etiqueta]) => etiqueta);
     if (!modificados.length) return 'actualizó la información';
@@ -625,91 +635,89 @@ export class PanelOperativoService {
           .filter((dia) => dia >= 1 && dia <= 6),
       ),
     ];
-    const [
-      aulas,
-      restricciones,
-      clases,
-      prestamos,
-      tareas,
-      limpiezas,
-    ] = await Promise.all([
-      this.prisma.aula.findMany({
-        where: { id: { in: aulaIds }, eliminadoEn: null },
-        select: { id: true, estado: true },
-      }),
-      this.prisma.observacion.findMany({
-        where: {
-          aulaId: { in: aulaIds },
-          tipo: TipoObservacion.RESTRICCION,
-          OR: [{ vigenteDesde: null }, { vigenteDesde: { lt: rangoFin } }],
-          AND: [
-            {
-              OR: [
-                { vigenteHasta: null },
-                { vigenteHasta: { gt: rangoInicio } },
-              ],
+    const [aulas, restricciones, clases, prestamos, tareas, limpiezas] =
+      await Promise.all([
+        this.prisma.aula.findMany({
+          where: { id: { in: aulaIds }, eliminadoEn: null },
+          select: { id: true, estado: true },
+        }),
+        this.prisma.observacion.findMany({
+          where: {
+            aulaId: { in: aulaIds },
+            tipo: TipoObservacion.RESTRICCION,
+            OR: [{ vigenteDesde: null }, { vigenteDesde: { lt: rangoFin } }],
+            AND: [
+              {
+                OR: [
+                  { vigenteHasta: null },
+                  { vigenteHasta: { gt: rangoInicio } },
+                ],
+              },
+            ],
+          },
+          select: { aulaId: true, vigenteDesde: true, vigenteHasta: true },
+        }),
+        this.prisma.claseProgramada.findMany({
+          where: {
+            aulaId: { in: aulaIds },
+            diaSemana: { in: diasSemana },
+            periodo: {
+              activo: true,
+              fechaInicio: { lte: rangoFin },
+              fechaFin: { gte: rangoInicio },
             },
-          ],
-        },
-        select: { aulaId: true, vigenteDesde: true, vigenteHasta: true },
-      }),
-      this.prisma.claseProgramada.findMany({
-        where: {
-          aulaId: { in: aulaIds },
-          diaSemana: { in: diasSemana },
-          periodo: {
-            activo: true,
-            fechaInicio: { lte: rangoFin },
-            fechaFin: { gte: rangoInicio },
           },
-        },
-        select: {
-          id: true,
-          aulaId: true,
-          diaSemana: true,
-          horaInicio: true,
-          horaFin: true,
-          periodo: {
-            select: { fechaInicio: true, fechaFin: true },
+          select: {
+            id: true,
+            aulaId: true,
+            diaSemana: true,
+            horaInicio: true,
+            horaFin: true,
+            periodo: {
+              select: { fechaInicio: true, fechaFin: true },
+            },
+            asistencias: {
+              where: {
+                fecha: {
+                  gte: new Date(`${bloques[0].fecha}T00:00:00.000Z`),
+                  lte: new Date(
+                    `${bloques[bloques.length - 1].fecha}T00:00:00.000Z`,
+                  ),
+                },
+              },
+              select: { fecha: true, estado: true },
+            },
           },
-          asistencias: {
-            where: { fecha: {
-              gte: new Date(`${bloques[0].fecha}T00:00:00.000Z`),
-              lte: new Date(`${bloques[bloques.length - 1].fecha}T00:00:00.000Z`),
-            } },
-            select: { fecha: true, estado: true },
+        }),
+        this.prisma.prestamoDocente.findMany({
+          where: {
+            aulaId: { in: aulaIds },
+            estado: { in: [EstadoPrestamo.APROBADO, EstadoPrestamo.ACTIVO] },
+            inicio: { lt: rangoFin },
+            fin: { gt: rangoInicio },
           },
-        },
-      }),
-      this.prisma.prestamoDocente.findMany({
-        where: {
-          aulaId: { in: aulaIds },
-          estado: { in: [EstadoPrestamo.APROBADO, EstadoPrestamo.ACTIVO] },
-          inicio: { lt: rangoFin },
-          fin: { gt: rangoInicio },
-        },
-        select: { aulaId: true, inicio: true, fin: true },
-      }),
-      this.prisma.tarea.findMany({
-        where: {
-          aulaId: { in: aulaIds },
-          afectaDisponibilidad: true,
-          estado: EstadoTarea.EN_PROCESO,
-          AND: [
-            { OR: [{ inicio: null }, { inicio: { lt: rangoFin } }] },
-            { OR: [{ fin: null }, { fin: { gt: rangoInicio } }] },
-          ],
-        },
-        select: { aulaId: true, inicio: true, fin: true },
-      }),
-      this.prisma.limpieza.findMany({
-        where: {
-          aulaId: { in: aulaIds },
-          realizadaEn: { gte: rangoInicio, lt: rangoFin },
-        },
-        select: { aulaId: true, realizadaEn: true },
-      }),
-    ]);
+          select: { aulaId: true, inicio: true, fin: true },
+        }),
+        this.prisma.tarea.findMany({
+          where: {
+            aulaId: { in: aulaIds },
+            afectaDisponibilidad: true,
+            estado: EstadoTarea.EN_PROCESO,
+            AND: [
+              { OR: [{ inicio: null }, { inicio: { lt: rangoFin } }] },
+              { OR: [{ fin: null }, { fin: { gt: rangoInicio } }] },
+            ],
+          },
+          select: { aulaId: true, inicio: true, fin: true },
+        }),
+        this.prisma.limpieza.findMany({
+          where: {
+            aulaId: { in: aulaIds },
+            realizadaEn: { gte: rangoInicio, lt: rangoFin },
+          },
+          select: { aulaId: true, realizadaEn: true },
+        }),
+      ]);
 
     const estadoPorAula = new Map(aulas.map((aula) => [aula.id, aula.estado]));
     for (const aulaId of aulaIds) {
@@ -742,12 +750,20 @@ export class PanelOperativoService {
           const fin =
             item.horaFin.getUTCHours() * 60 + item.horaFin.getUTCMinutes();
           const asistencia = item.asistencias?.find(
-            (registro) => registro.fecha.toISOString().slice(0, 10) === candidato.fecha,
+            (registro) =>
+              registro.fecha.toISOString().slice(0, 10) === candidato.fecha,
           )?.estado;
           if (asistencia === EstadoAsistencia.AUSENTE) return false;
-          if (asistencia !== EstadoAsistencia.ASISTIO && desde && candidato.fecha === fecha) {
-            const inicioClase = new Date(`${candidato.fecha}T${String(Math.floor(inicio / 60)).padStart(2, '0')}:${String(inicio % 60).padStart(2, '0')}:00.000-05:00`);
-            if (desde.getTime() >= inicioClase.getTime() + 20 * 60 * 1000) return false;
+          if (
+            asistencia !== EstadoAsistencia.ASISTIO &&
+            desde &&
+            candidato.fecha === fecha
+          ) {
+            const inicioClase = new Date(
+              `${candidato.fecha}T${String(Math.floor(inicio / 60)).padStart(2, '0')}:${String(inicio % 60).padStart(2, '0')}:00.000-05:00`,
+            );
+            if (desde.getTime() >= inicioClase.getTime() + 20 * 60 * 1000)
+              return false;
           }
           return inicio < candidato.minutoFin && fin > candidato.minutoInicio;
         });

@@ -5,17 +5,23 @@ import { MultasService } from './multas.service';
 describe('MultasService', () => {
   it('registra una multa sin exigir una práctica libre activa', async () => {
     const prisma = {
-      estudiante: { findFirst: jest.fn().mockResolvedValue({ id: 'estudiante-1' }) },
-      motivoMulta: { findUnique: jest.fn().mockResolvedValue({ id: 'motivo-1' }) },
+      estudiante: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'estudiante-1' }),
+      },
+      motivoMulta: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'motivo-1' }),
+      },
       multa: { create: jest.fn().mockResolvedValue({ id: 'multa-1' }) },
     };
     const service = new MultasService(prisma as never);
 
-    await expect(service.create({
-      codigoEstudiante: '20261001',
-      motivoId: 'motivo-1',
-      multaSugerida: 'Presentar compromiso escrito.',
-    })).resolves.toEqual({ id: 'multa-1' });
+    await expect(
+      service.create({
+        codigoEstudiante: '20261001',
+        motivoId: 'motivo-1',
+        multaSugerida: 'Presentar compromiso escrito.',
+      }),
+    ).resolves.toEqual({ id: 'multa-1' });
 
     expect(prisma.multa.create).toHaveBeenCalled();
   });
@@ -175,7 +181,12 @@ describe('MultasService', () => {
         buffer: XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' }),
         originalname: 'multas-historicas.xlsx',
       }),
-    ).resolves.toEqual({ procesadas: 1, creadas: 1, actualizadas: 0, errores: [] });
+    ).resolves.toEqual({
+      procesadas: 1,
+      creadas: 1,
+      actualizadas: 0,
+      errores: [],
+    });
     expect(prisma.estudiante.create).toHaveBeenCalledWith({
       data: { codigo: '2023999999', nombre: '(INACTIVO) ESTUDIANTE HISTÓRICO' },
       select: { id: true },

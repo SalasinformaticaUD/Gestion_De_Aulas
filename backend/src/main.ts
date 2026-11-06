@@ -13,6 +13,7 @@ async function bootstrap() {
   app.use(json({ limit: '5mb' }));
   app.use(urlencoded({ extended: true, limit: '5mb' }));
   configureApp(app);
+  app.enableShutdownHooks();
   await app.listen(environment.port);
 }
 void bootstrap().catch((error: unknown) => {

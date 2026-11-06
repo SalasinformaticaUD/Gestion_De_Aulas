@@ -16,8 +16,17 @@ describe('TareasOperativasService', () => {
     responsables: [],
   };
   const prisma = {
-    tarea: { findUnique: jest.fn(), findFirst: jest.fn(), update: jest.fn(), create: jest.fn() },
-    informeSeguimientoTarea: { create: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
+    tarea: {
+      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
+      create: jest.fn(),
+    },
+    informeSeguimientoTarea: {
+      create: jest.fn(),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
     aula: { findUnique: jest.fn() },
     prestamoDocente: { findFirst: jest.fn() },
     practicaLibre: { findFirst: jest.fn() },
@@ -26,20 +35,28 @@ describe('TareasOperativasService', () => {
     $transaction: jest.fn(),
   } as unknown as ConstructorParameters<typeof TareasOperativasService>[0];
   const registrar = jest.fn();
-  const auditoria = { registrar } as unknown as ConstructorParameters<typeof TareasOperativasService>[1];
+  const auditoria = { registrar } as unknown as ConstructorParameters<
+    typeof TareasOperativasService
+  >[1];
   const service = new TareasOperativasService(prisma, auditoria);
 
   beforeEach(() => jest.clearAllMocks());
 
   it('no permite completar una tarea pendiente', async () => {
     (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValue(tarea);
-    await expect(service.cambiarEstado(tarea.id, EstadoTarea.COMPLETADA)).rejects.toBeInstanceOf(ConflictException);
+    await expect(
+      service.cambiarEstado(tarea.id, EstadoTarea.COMPLETADA),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('expone responsables activos con datos mínimos para el módulo', async () => {
-    (prisma.usuario.findMany as jest.Mock<any>).mockResolvedValue([{ id: 'usuario-1', nombreCompleto: 'Persona activa' }]);
+    (prisma.usuario.findMany as jest.Mock<any>).mockResolvedValue([
+      { id: 'usuario-1', nombreCompleto: 'Persona activa' },
+    ]);
 
-    await expect(service.listarResponsables()).resolves.toEqual([{ id: 'usuario-1', nombreCompleto: 'Persona activa' }]);
+    await expect(service.listarResponsables()).resolves.toEqual([
+      { id: 'usuario-1', nombreCompleto: 'Persona activa' },
+    ]);
     expect(prisma.usuario.findMany).toHaveBeenCalledWith({
       where: { estado: 'ACTIVA' },
       select: { id: true, nombreCompleto: true },
@@ -48,51 +65,119 @@ describe('TareasOperativasService', () => {
   });
 
   it('no permite devolver una tarea en proceso a pendiente', async () => {
-    (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValue({ ...tarea, estado: EstadoTarea.EN_PROCESO });
-    await expect(service.cambiarEstado(tarea.id, EstadoTarea.PENDIENTE)).rejects.toBeInstanceOf(ConflictException);
+    (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValue({
+      ...tarea,
+      estado: EstadoTarea.EN_PROCESO,
+    });
+    await expect(
+      service.cambiarEstado(tarea.id, EstadoTarea.PENDIENTE),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('mantiene completadas y canceladas como estados terminales', async () => {
-    (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValue({ ...tarea, estado: EstadoTarea.COMPLETADA });
-    await expect(service.cambiarEstado(tarea.id, EstadoTarea.CANCELADA, undefined, false, 'Cambio')).rejects.toBeInstanceOf(ConflictException);
+    (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValue({
+      ...tarea,
+      estado: EstadoTarea.COMPLETADA,
+    });
+    await expect(
+      service.cambiarEstado(
+        tarea.id,
+        EstadoTarea.CANCELADA,
+        undefined,
+        false,
+        'Cambio',
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('exige un motivo para cancelar', async () => {
     (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValue(tarea);
-    await expect(service.cambiarEstado(tarea.id, EstadoTarea.CANCELADA)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.cambiarEstado(tarea.id, EstadoTarea.CANCELADA),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('no permite completar si el último informe tiene acciones pendientes', async () => {
-    (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValue({ ...tarea, estado: EstadoTarea.EN_PROCESO, informes: [{ accionesPendientes: 'Revisar un equipo' }] });
-    await expect(service.cambiarEstado(tarea.id, EstadoTarea.COMPLETADA)).rejects.toBeInstanceOf(ConflictException);
+    (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValue({
+      ...tarea,
+      estado: EstadoTarea.EN_PROCESO,
+      informes: [{ accionesPendientes: 'Revisar un equipo' }],
+    });
+    await expect(
+      service.cambiarEstado(tarea.id, EstadoTarea.COMPLETADA),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('no permite completar una tarea en proceso sin informe de seguimiento', async () => {
-    (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValue({ ...tarea, estado: EstadoTarea.EN_PROCESO, informes: [] });
-    await expect(service.cambiarEstado(tarea.id, EstadoTarea.COMPLETADA)).rejects.toThrow('Debe registrar un informe de seguimiento antes de completar la tarea.');
+    (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValue({
+      ...tarea,
+      estado: EstadoTarea.EN_PROCESO,
+      informes: [],
+    });
+    await expect(
+      service.cambiarEstado(tarea.id, EstadoTarea.COMPLETADA),
+    ).rejects.toThrow(
+      'Debe registrar un informe de seguimiento antes de completar la tarea.',
+    );
   });
 
   it('completa una tarea en proceso sin acciones pendientes y registra auditoría', async () => {
-    const enProceso = { ...tarea, estado: EstadoTarea.EN_PROCESO, informes: [{ accionesPendientes: null }] };
+    const enProceso = {
+      ...tarea,
+      estado: EstadoTarea.EN_PROCESO,
+      informes: [{ accionesPendientes: null }],
+    };
     (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValue(enProceso);
-    (prisma.tarea.update as jest.Mock<any>).mockResolvedValue({ ...enProceso, estado: EstadoTarea.COMPLETADA });
+    (prisma.tarea.update as jest.Mock<any>).mockResolvedValue({
+      ...enProceso,
+      estado: EstadoTarea.COMPLETADA,
+    });
     await service.cambiarEstado(tarea.id, EstadoTarea.COMPLETADA, 'usuario');
-    expect(registrar).toHaveBeenCalledWith(expect.objectContaining({ entidad: 'Tarea', accion: 'UPDATE' }));
+    expect(registrar).toHaveBeenCalledWith(
+      expect.objectContaining({ entidad: 'Tarea', accion: 'UPDATE' }),
+    );
   });
 
   it('completa solo la sala elegida de un grupo y conserva intacta su tarea hermana', async () => {
     const grupoId = '33333333-3333-4333-8333-333333333333';
-    const salaA = { ...tarea, id: '11111111-1111-4111-8111-111111111111', aulaId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', grupoId, estado: EstadoTarea.EN_PROCESO, informes: [{ accionesPendientes: null }] };
-    const salaB = { ...tarea, id: '22222222-2222-4222-8222-222222222222', aulaId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', grupoId, estado: EstadoTarea.EN_PROCESO, informes: [] };
+    const salaA = {
+      ...tarea,
+      id: '11111111-1111-4111-8111-111111111111',
+      aulaId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      grupoId,
+      estado: EstadoTarea.EN_PROCESO,
+      informes: [{ accionesPendientes: null }],
+    };
+    const salaB = {
+      ...tarea,
+      id: '22222222-2222-4222-8222-222222222222',
+      aulaId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      grupoId,
+      estado: EstadoTarea.EN_PROCESO,
+      informes: [],
+    };
     (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValue(salaA);
-    (prisma.tarea.update as jest.Mock<any>).mockResolvedValue({ ...salaA, estado: EstadoTarea.COMPLETADA });
+    (prisma.tarea.update as jest.Mock<any>).mockResolvedValue({
+      ...salaA,
+      estado: EstadoTarea.COMPLETADA,
+    });
 
-    await service.cambiarEstado(salaA.id, EstadoTarea.COMPLETADA, 'usuario-prueba');
+    await service.cambiarEstado(
+      salaA.id,
+      EstadoTarea.COMPLETADA,
+      'usuario-prueba',
+    );
 
     expect(prisma.tarea.update).toHaveBeenCalledTimes(1);
-    expect(prisma.tarea.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: salaA.id } }));
-    expect(prisma.tarea.update).not.toHaveBeenCalledWith(expect.objectContaining({ where: { id: salaB.id } }));
-    expect(registrar).toHaveBeenCalledWith(expect.objectContaining({ entidadId: salaA.id, accion: 'UPDATE' }));
+    expect(prisma.tarea.update).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: salaA.id } }),
+    );
+    expect(prisma.tarea.update).not.toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: salaB.id } }),
+    );
+    expect(registrar).toHaveBeenCalledWith(
+      expect.objectContaining({ entidadId: salaA.id, accion: 'UPDATE' }),
+    );
   });
 
   it('crea una tarea independiente por cada aula seleccionada', async () => {
@@ -100,24 +185,39 @@ describe('TareasOperativasService', () => {
       '11111111-1111-4111-8111-111111111111',
       '22222222-2222-4222-8222-222222222222',
     ];
-    (prisma.aula.findUnique as jest.Mock<any>).mockResolvedValue({ id: aulaIds[0] });
-    (prisma.prestamoDocente.findFirst as jest.Mock<any>).mockResolvedValue(null);
+    (prisma.aula.findUnique as jest.Mock<any>).mockResolvedValue({
+      id: aulaIds[0],
+    });
+    (prisma.prestamoDocente.findFirst as jest.Mock<any>).mockResolvedValue(
+      null,
+    );
     (prisma.practicaLibre.findFirst as jest.Mock<any>).mockResolvedValue(null);
-    (prisma.claseProgramada.findFirst as jest.Mock<any>).mockResolvedValue(null);
+    (prisma.claseProgramada.findFirst as jest.Mock<any>).mockResolvedValue(
+      null,
+    );
     (prisma.tarea.findFirst as jest.Mock<any>).mockResolvedValue(null);
-    (prisma.tarea.create as jest.Mock<any>).mockImplementation(({ data }) => Promise.resolve({ id: `tarea-${data.aulaId}`, ...data }));
-    (prisma.$transaction as jest.Mock<any>).mockImplementation((callback) => callback({ tarea: { create: prisma.tarea.create } }));
+    (prisma.tarea.create as jest.Mock<any>).mockImplementation(({ data }) =>
+      Promise.resolve({ id: `tarea-${data.aulaId}`, ...data }),
+    );
+    (prisma.$transaction as jest.Mock<any>).mockImplementation((callback) =>
+      callback({ tarea: { create: prisma.tarea.create } }),
+    );
 
-    const creadas = await service.create({ titulo: 'Revisión de equipos', aulaIds }, 'usuario-actual');
+    const creadas = await service.create(
+      { titulo: 'Revisión de equipos', aulaIds },
+      'usuario-actual',
+    );
 
     expect(Array.isArray(creadas)).toBe(true);
     expect(prisma.tarea.create).toHaveBeenCalledTimes(2);
-    const primera = (prisma.tarea.create as jest.Mock<any>).mock.calls[0][0].data;
-    const segunda = (prisma.tarea.create as jest.Mock<any>).mock.calls[1][0].data;
+    const primera = (prisma.tarea.create as jest.Mock<any>).mock.calls[0][0]
+      .data;
+    const segunda = (prisma.tarea.create as jest.Mock<any>).mock.calls[1][0]
+      .data;
     expect(primera.aulaId).toBe(aulaIds[0]);
     expect(segunda.aulaId).toBe(aulaIds[1]);
-      expect(primera.grupoId).toEqual(expect.any(String));
-      expect(segunda.grupoId).toBe(primera.grupoId);
+    expect(primera.grupoId).toEqual(expect.any(String));
+    expect(segunda.grupoId).toBe(primera.grupoId);
     expect(primera).not.toHaveProperty('aulaIds');
     expect(registrar).toHaveBeenCalledTimes(2);
   });
@@ -127,20 +227,33 @@ describe('TareasOperativasService', () => {
       ...tarea,
       estado: EstadoTarea.EN_PROCESO,
       responsable: { nombreCompleto: 'Responsable asignado' },
-      responsables: [{ usuarioId: 'usuario-responsable', usuario: { nombreCompleto: 'Responsable asignado' } }],
+      responsables: [
+        {
+          usuarioId: 'usuario-responsable',
+          usuario: { nombreCompleto: 'Responsable asignado' },
+        },
+      ],
       decisiones: [],
     };
     (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValue(enProceso);
-    (prisma.informeSeguimientoTarea.create as jest.Mock<any>).mockResolvedValue({
-      id: 'informe-1',
-      autor: { id: 'usuario-lector', nombreCompleto: 'Usuario lector' },
-    });
+    (prisma.informeSeguimientoTarea.create as jest.Mock<any>).mockResolvedValue(
+      {
+        id: 'informe-1',
+        autor: { id: 'usuario-lector', nombreCompleto: 'Usuario lector' },
+      },
+    );
 
     await expect(
-      service.crearInforme(tarea.id, { actividadesRealizadas: 'Se revisó el aula' }, 'usuario-responsable'),
+      service.crearInforme(
+        tarea.id,
+        { actividadesRealizadas: 'Se revisó el aula' },
+        'usuario-responsable',
+      ),
     ).resolves.toEqual(expect.objectContaining({ id: 'informe-1' }));
     expect(prisma.informeSeguimientoTarea.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ autorId: 'usuario-responsable' }) }),
+      expect.objectContaining({
+        data: expect.objectContaining({ autorId: 'usuario-responsable' }),
+      }),
     );
   });
 
@@ -152,30 +265,96 @@ describe('TareasOperativasService', () => {
     });
 
     await expect(
-      service.crearInforme(tarea.id, { actividadesRealizadas: 'Se revisó el aula' }, 'usuario-ajeno'),
-    ).rejects.toThrow('Solo un responsable asignado a la tarea puede registrar el informe de seguimiento.');
+      service.crearInforme(
+        tarea.id,
+        { actividadesRealizadas: 'Se revisó el aula' },
+        'usuario-ajeno',
+      ),
+    ).rejects.toThrow(
+      'Solo un responsable asignado a la tarea puede registrar el informe de seguimiento.',
+    );
   });
 
   it('permite editar el último informe únicamente a su autor', async () => {
-    const informe = { id: 'informe-1', tareaId: tarea.id, autorId: 'autor-1', actividadesRealizadas: 'Inicial', accionesPendientes: null, autor: { id: 'autor-1', nombreCompleto: 'Autor' } };
-    (prisma.informeSeguimientoTarea.findUnique as jest.Mock<any>).mockResolvedValue(informe);
-    (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValue({ ...tarea, estado: EstadoTarea.EN_PROCESO, informes: [informe] });
-    (prisma.informeSeguimientoTarea.update as jest.Mock<any>).mockResolvedValue({ ...informe, accionesPendientes: 'Revisar cableado' });
+    const informe = {
+      id: 'informe-1',
+      tareaId: tarea.id,
+      autorId: 'autor-1',
+      actividadesRealizadas: 'Inicial',
+      accionesPendientes: null,
+      autor: { id: 'autor-1', nombreCompleto: 'Autor' },
+    };
+    (
+      prisma.informeSeguimientoTarea.findUnique as jest.Mock<any>
+    ).mockResolvedValue(informe);
+    (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValue({
+      ...tarea,
+      estado: EstadoTarea.EN_PROCESO,
+      informes: [informe],
+    });
+    (prisma.informeSeguimientoTarea.update as jest.Mock<any>).mockResolvedValue(
+      { ...informe, accionesPendientes: 'Revisar cableado' },
+    );
 
-    await expect(service.editarInforme(tarea.id, informe.id, { actividadesRealizadas: 'Inicial', accionesPendientes: 'Revisar cableado' }, 'autor-1')).resolves.toEqual(expect.objectContaining({ accionesPendientes: 'Revisar cableado' }));
-    await expect(service.editarInforme(tarea.id, informe.id, { actividadesRealizadas: 'Cambio ajeno' }, 'otro-usuario')).rejects.toThrow('Solo el usuario que creó el informe puede editarlo.');
+    await expect(
+      service.editarInforme(
+        tarea.id,
+        informe.id,
+        {
+          actividadesRealizadas: 'Inicial',
+          accionesPendientes: 'Revisar cableado',
+        },
+        'autor-1',
+      ),
+    ).resolves.toEqual(
+      expect.objectContaining({ accionesPendientes: 'Revisar cableado' }),
+    );
+    await expect(
+      service.editarInforme(
+        tarea.id,
+        informe.id,
+        { actividadesRealizadas: 'Cambio ajeno' },
+        'otro-usuario',
+      ),
+    ).rejects.toThrow('Solo el usuario que creó el informe puede editarlo.');
   });
 
   it('permite retomar una tarea completada cuando el informe vuelve a tener pendientes', async () => {
-    const completada = { ...tarea, estado: EstadoTarea.COMPLETADA, completadaEn: new Date(), informes: [{ accionesPendientes: 'Terminar configuración' }] };
-    const retomada = { ...completada, estado: EstadoTarea.EN_PROCESO, completadaEn: null };
-    (prisma.tarea.findUnique as jest.Mock<any>).mockResolvedValueOnce(completada).mockResolvedValueOnce(retomada);
-    (prisma.usuario.findMany as jest.Mock<any>).mockResolvedValue([{ id: 'autor-1', nombreCompleto: 'Autor' }]);
-    const tx = { decisionTareaOperativa: { create: jest.fn() }, responsableTareaOperativa: { upsert: jest.fn() }, tarea: { update: jest.fn() } };
-    (prisma.$transaction as jest.Mock<any>).mockImplementation((callback) => callback(tx));
+    const completada = {
+      ...tarea,
+      estado: EstadoTarea.COMPLETADA,
+      completadaEn: new Date(),
+      informes: [{ accionesPendientes: 'Terminar configuración' }],
+    };
+    const retomada = {
+      ...completada,
+      estado: EstadoTarea.EN_PROCESO,
+      completadaEn: null,
+    };
+    (prisma.tarea.findUnique as jest.Mock<any>)
+      .mockResolvedValueOnce(completada)
+      .mockResolvedValueOnce(retomada);
+    (prisma.usuario.findMany as jest.Mock<any>).mockResolvedValue([
+      { id: 'autor-1', nombreCompleto: 'Autor' },
+    ]);
+    const tx = {
+      decisionTareaOperativa: { create: jest.fn() },
+      responsableTareaOperativa: { upsert: jest.fn() },
+      tarea: { update: jest.fn() },
+    };
+    (prisma.$transaction as jest.Mock<any>).mockImplementation((callback) =>
+      callback(tx),
+    );
 
-    await service.decidir(tarea.id, 'ACEPTADA' as never, 'autor-1');
+    await service.decidir(tarea.id, 'ACEPTADA', 'autor-1');
 
-    expect(tx.tarea.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ estado: EstadoTarea.EN_PROCESO, completadaEn: null }) }));
+    expect(tx.tarea.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          estado: EstadoTarea.EN_PROCESO,
+          completadaEn: null,
+        }),
+      }),
+    );
   });
 });

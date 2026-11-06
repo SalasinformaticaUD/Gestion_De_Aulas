@@ -9,7 +9,9 @@ describe('CredencialesService', () => {
   const secreto = new CredencialesCifradoService();
   const prisma = {
     usuario: {
-      findUnique: jest.fn<() => Promise<unknown>>().mockResolvedValue({ roles: [] }),
+      findUnique: jest
+        .fn<() => Promise<unknown>>()
+        .mockResolvedValue({ roles: [] }),
     },
     credencialOperativa: {
       findMany: jest.fn<() => Promise<unknown[]>>(),
@@ -126,10 +128,13 @@ describe('CredencialesService', () => {
     prisma.usuario.findUnique
       .mockResolvedValueOnce({ roles: [{ rol: { nombre: 'ADMINISTRADOR' } }] })
       .mockResolvedValueOnce({ roles: [{ rol: { nombre: 'ADMINISTRADOR' } }] });
-    prisma.credencialOperativa.delete.mockResolvedValue({ id: credencial().id });
+    prisma.credencialOperativa.delete.mockResolvedValue({
+      id: credencial().id,
+    });
 
-    await expect(service.remove(credencial().id, 'clave-de-cuenta', usuarioId))
-      .resolves.toMatchObject({ eliminado: true });
+    await expect(
+      service.remove(credencial().id, 'clave-de-cuenta', usuarioId),
+    ).resolves.toMatchObject({ eliminado: true });
     expect(prisma.credencialOperativa.delete).toHaveBeenCalledWith({
       where: { id: credencial().id },
     });

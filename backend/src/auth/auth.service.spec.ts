@@ -83,31 +83,45 @@ describe('AuthService', () => {
     const foto = 'data:image/png;base64,aGVsbG8=';
     prisma.usuario.update.mockResolvedValue({ fotoPerfil: foto });
 
-    await expect(service.actualizarFotoPerfil(usuario.id, foto)).resolves.toEqual({ fotoPerfil: foto });
+    await expect(
+      service.actualizarFotoPerfil(usuario.id, foto),
+    ).resolves.toEqual({ fotoPerfil: foto });
     expect(prisma.usuario.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: { fotoPerfil: foto } }),
     );
   });
 
   it('acepta un GIF animado como foto de perfil', async () => {
-    const gif = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+    const gif =
+      'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
     prisma.usuario.update.mockResolvedValue({ fotoPerfil: gif });
 
-    await expect(service.actualizarFotoPerfil(usuario.id, gif)).resolves.toEqual({ fotoPerfil: gif });
+    await expect(
+      service.actualizarFotoPerfil(usuario.id, gif),
+    ).resolves.toEqual({ fotoPerfil: gif });
   });
 
   it('rechaza una foto que no sea una data URL de imagen', async () => {
-    await expect(service.actualizarFotoPerfil(usuario.id, 'https://ejemplo.test/foto.png')).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.actualizarFotoPerfil(usuario.id, 'https://ejemplo.test/foto.png'),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('cambia el nombre de usuario solo después de validar la contraseña actual', async () => {
     prisma.usuario.findUnique
-      .mockResolvedValueOnce({ estado: EstadoCuenta.ACTIVA, passwordHash: usuario.passwordHash })
+      .mockResolvedValueOnce({
+        estado: EstadoCuenta.ACTIVA,
+        passwordHash: usuario.passwordHash,
+      })
       .mockResolvedValueOnce(usuario)
       .mockResolvedValueOnce(null);
     prisma.usuario.update.mockResolvedValue({ nombreUsuario: 'prueba.nueva' });
 
-    await expect(service.cambiarNombreUsuario(usuario.id, 'prueba.nueva', password)).resolves.toEqual({ nombreUsuario: 'prueba.nueva' });
-    expect(prisma.usuario.update).toHaveBeenCalledWith(expect.objectContaining({ data: { nombreUsuario: 'prueba.nueva' } }));
+    await expect(
+      service.cambiarNombreUsuario(usuario.id, 'prueba.nueva', password),
+    ).resolves.toEqual({ nombreUsuario: 'prueba.nueva' });
+    expect(prisma.usuario.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { nombreUsuario: 'prueba.nueva' } }),
+    );
   });
 });

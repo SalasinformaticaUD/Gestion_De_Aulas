@@ -44,8 +44,16 @@ export class SoftwareController {
 
   @Get()
   @RequirePermissions('SOFTWARE_LEER')
-  findAll(@Query('q') q?: string, @Query('page') page?: string, @Query('limit') limit?: string) {
-    return this.softwareService.findAll(q, page ? Math.max(Number(page) || 1, 1) : undefined, limit ? Number(limit) : undefined);
+  findAll(
+    @Query('q') q?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.softwareService.findAll(
+      q,
+      page ? Math.max(Number(page) || 1, 1) : undefined,
+      limit ? Number(limit) : undefined,
+    );
   }
 
   @Post('aulas/buscar-por-software')
@@ -100,8 +108,7 @@ export class SoftwareController {
   importarInventarioExcel(
     @UploadedFile()
     archivo:
-      | { buffer: Buffer; originalname: string; mimetype: string }
-      | undefined,
+      { buffer: Buffer; originalname: string; mimetype: string } | undefined,
   ) {
     return this.softwareService.importInventoryExcel(archivo);
   }

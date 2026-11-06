@@ -11,13 +11,19 @@ describe('EstudiantesService', () => {
       },
     };
     const prisma = {
-      $transaction: jest.fn(async (callback: (client: typeof tx) => unknown) => callback(tx)),
+      $transaction: jest.fn(async (callback: (client: typeof tx) => unknown) =>
+        callback(tx),
+      ),
     };
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(
       workbook,
       XLSX.utils.json_to_sheet([
-        { Codigo: '2023999999', Nombre: '(INACTIVO) ESTUDIANTE HISTÓRICO', Correo: 'historico@udistrital.edu.co' },
+        {
+          Codigo: '2023999999',
+          Nombre: '(INACTIVO) ESTUDIANTE HISTÓRICO',
+          Correo: 'historico@udistrital.edu.co',
+        },
       ]),
       'Estudiantes',
     );
@@ -31,7 +37,10 @@ describe('EstudiantesService', () => {
     ).resolves.toMatchObject({ total: 1, creados: 0, actualizados: 1 });
     expect(tx.estudiante.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        update: { nombre: 'ESTUDIANTE HISTÓRICO', correo: 'historico@udistrital.edu.co' },
+        update: {
+          nombre: 'ESTUDIANTE HISTÓRICO',
+          correo: 'historico@udistrital.edu.co',
+        },
       }),
     );
   });

@@ -115,7 +115,9 @@ export class ObservacionesService {
       where: { id },
       data: {
         ...(input.aulaId !== undefined && { aulaId: input.aulaId }),
-        ...(input.ubicacionTexto !== undefined && { ubicacionTexto: input.ubicacionTexto?.trim() || null }),
+        ...(input.ubicacionTexto !== undefined && {
+          ubicacionTexto: input.ubicacionTexto?.trim() || null,
+        }),
         ...(input.tipo !== undefined && { tipo: input.tipo }),
         ...(input.contenido !== undefined && {
           contenido: input.contenido.trim(),

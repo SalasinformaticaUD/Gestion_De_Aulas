@@ -13,7 +13,13 @@ export class CargosService {
 
   async create(dto: CreateCargoDto, usuarioId?: string) {
     const cargo = await this.prisma.cargo.create({ data: dto });
-    await this.auditoria?.registrar({ usuarioId, entidad: 'Cargo', entidadId: cargo.id, accion: 'CREATE', datosNuevos: cargo });
+    await this.auditoria?.registrar({
+      usuarioId,
+      entidad: 'Cargo',
+      entidadId: cargo.id,
+      accion: 'CREATE',
+      datosNuevos: cargo,
+    });
     return cargo;
   }
 
@@ -30,14 +36,27 @@ export class CargosService {
   async update(id: string, dto: UpdateCargoDto, usuarioId?: string) {
     const previo = await this.findOne(id);
     const cargo = await this.prisma.cargo.update({ where: { id }, data: dto });
-    await this.auditoria?.registrar({ usuarioId, entidad: 'Cargo', entidadId: id, accion: 'UPDATE', datosPrevios: previo, datosNuevos: cargo });
+    await this.auditoria?.registrar({
+      usuarioId,
+      entidad: 'Cargo',
+      entidadId: id,
+      accion: 'UPDATE',
+      datosPrevios: previo,
+      datosNuevos: cargo,
+    });
     return cargo;
   }
 
   async remove(id: string, usuarioId?: string) {
     const previo = await this.findOne(id);
     const cargo = await this.prisma.cargo.delete({ where: { id } });
-    await this.auditoria?.registrar({ usuarioId, entidad: 'Cargo', entidadId: id, accion: 'DELETE', datosPrevios: previo });
+    await this.auditoria?.registrar({
+      usuarioId,
+      entidad: 'Cargo',
+      entidadId: id,
+      accion: 'DELETE',
+      datosPrevios: previo,
+    });
     return cargo;
   }
 }

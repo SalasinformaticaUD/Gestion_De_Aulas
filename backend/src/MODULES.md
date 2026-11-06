@@ -22,6 +22,7 @@ se comunican mediante controladores REST.
 | `reportes`                | `/reportes`                | RF-143 a RF-155 | Generación y exportación de formatos, reportes e indicadores.                                                                                     |
 | `panel-operativo`         | `/panel-operativo`         | RF-156 a RF-165 | Vista consolidada de lectura, aulas paginadas y alertas calculadas en tiempo real.                                                                |
 | `solicitudes-instalacion` | `/solicitudes-instalacion` | Plan del módulo | Importación y normalización trazable, revisión, aprobación, generación de tareas, seguimiento, historial y exportación de solicitudes de software. |
+| `monitoreo-software`      | `/monitoreo-software`      | Plan del módulo | Consulta de monitoreo de software con módulo de permisos `MONITOREO_SOFTWARE` (lectura con `MONITOREO_SOFTWARE_LEER`). Depende de Softracker_DB en solo lectura. |
 
 ## Módulos transversales
 
@@ -35,6 +36,7 @@ se comunican mediante controladores REST.
 | `docentes` | `/docentes` | Catálogo administrativo reutilizado por horarios, préstamos docentes y préstamos audiovisuales. Permite `GET`, `GET /:id`, `POST` y `PATCH /:id`; la búsqueda usa `?q=`. |
 | `estudiantes` | `/estudiantes` | Catálogo administrativo reutilizado por prácticas libres y multas. Permite `GET`, `GET /:id`, `POST` y `PATCH /:id`; la búsqueda usa `?q=`. |
 | `auditoria`    | `/auditoria`    | Consulta de trazabilidad de operaciones críticas.                                                                                                        |
+| `softracker-db` | — (sin ruta HTTP) | Pool `pg` perezoso, global y de solo lectura hacia la base de Softracker. No expone controladores; otros módulos lo consumen mediante `SoftrackerDbService`. |
 
 ## Reglas arquitectónicas
 
@@ -44,6 +46,9 @@ se comunican mediante controladores REST.
 - Gestión de Aulas no debe acceder directamente a la base de datos de Gestión de
   Monitores. La integración futura debe realizarse mediante API e identificadores
   externos.
+- Gestión de Aulas solo LEE la base de Softracker mediante el rol `softracker_readonly`
+  y las vistas `vista_uso_software`, `resumen_diario_uso` y `software_catalogo`; nunca
+  escribe en ella.
 - Las credenciales de inicio de sesión y las credenciales operativas son dominios
   distintos. Los secretos nunca deben exponerse sin autorización ni almacenarse en
   texto plano.

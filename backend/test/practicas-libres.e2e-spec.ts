@@ -64,20 +64,28 @@ describe('PracticasLibresController (e2e)', () => {
       estudiantes.push(estudiante);
       return Promise.resolve(estudiante);
     }),
-    upsert: jest.fn(({ where, create, update }: {
-      where: { codigo: string };
-      create: Omit<EstudianteRecord, 'id'>;
-      update: Partial<EstudianteRecord>;
-    }) => {
-      const existente = estudiantes.find((item) => item.codigo === where.codigo);
-      if (existente) {
-        Object.assign(existente, update);
-        return Promise.resolve(existente);
-      }
-      const estudiante = { id: estudianteId, ...create };
-      estudiantes.push(estudiante);
-      return Promise.resolve(estudiante);
-    }),
+    upsert: jest.fn(
+      ({
+        where,
+        create,
+        update,
+      }: {
+        where: { codigo: string };
+        create: Omit<EstudianteRecord, 'id'>;
+        update: Partial<EstudianteRecord>;
+      }) => {
+        const existente = estudiantes.find(
+          (item) => item.codigo === where.codigo,
+        );
+        if (existente) {
+          Object.assign(existente, update);
+          return Promise.resolve(existente);
+        }
+        const estudiante = { id: estudianteId, ...create };
+        estudiantes.push(estudiante);
+        return Promise.resolve(estudiante);
+      },
+    ),
   };
 
   const practicaRepository = {

@@ -44,10 +44,14 @@ export class CredencialesController {
   ) {
     return this.service.findAll(dto, u.id);
   }
-  @Get('usuarios-autorizables') @RequirePermissions('CREDENCIALES_LEER') usuariosAutorizables() {
+  @Get('usuarios-autorizables')
+  @RequirePermissions('CREDENCIALES_LEER')
+  usuariosAutorizables() {
     return this.service.listarUsuariosAutorizables();
   }
-  @Post('verificar-acceso') @RequirePermissions('CREDENCIALES_LEER') verificarAcceso(
+  @Post('verificar-acceso')
+  @RequirePermissions('CREDENCIALES_LEER')
+  verificarAcceso(
     @Body() dto: ConsultarSecretoCredencialDto,
     @CurrentUser() u: UsuarioAutenticado,
   ) {
@@ -59,7 +63,9 @@ export class CredencialesController {
   ) {
     return this.service.revelar(id, u.id);
   }
-  @Post(':id/secreto') @RequirePermissions('CREDENCIALES_ACTUALIZAR') guardarSecreto(
+  @Post(':id/secreto')
+  @RequirePermissions('CREDENCIALES_ACTUALIZAR')
+  guardarSecreto(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: GuardarSecretoCredencialDto,
     @CurrentUser() u: UsuarioAutenticado,

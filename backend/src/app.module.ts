@@ -27,6 +27,8 @@ import { DocentesModule } from './docentes/docentes.module';
 import { EstudiantesModule } from './estudiantes/estudiantes.module';
 import { CargosModule } from './cargos/cargos.module';
 import { SolicitudesInstalacionModule } from './solicitudes-instalacion/solicitudes-instalacion.module';
+import { SoftrackerDbModule } from './softracker-db/softracker-db.module';
+import { MonitoreoSoftwareModule } from './monitoreo-software/monitoreo-software.module';
 
 @Module({
   imports: [
@@ -58,6 +60,8 @@ import { SolicitudesInstalacionModule } from './solicitudes-instalacion/solicitu
     EstudiantesModule,
     CargosModule,
     SolicitudesInstalacionModule,
+    SoftrackerDbModule,
+    MonitoreoSoftwareModule,
   ],
 })
 export class AppModule {}

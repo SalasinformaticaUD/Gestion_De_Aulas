@@ -62,5 +62,4 @@ export class CreateUsuarioDto {
   @IsOptional()
   @IsIn(['PHYSICS', 'INFORMATICS_LABS', 'ELECTRICAL'])
   dependenciaMonitores?: 'PHYSICS' | 'INFORMATICS_LABS' | 'ELECTRICAL' | null;
-
 }

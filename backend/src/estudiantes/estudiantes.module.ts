@@ -1,1 +1,12 @@
-import { Module } from '@nestjs/common'; import { PrismaModule } from '../prisma/prisma.module'; import { AuditoriaModule } from '../auditoria/auditoria.module'; import { EstudiantesController } from './estudiantes.controller'; import { EstudiantesService } from './estudiantes.service'; @Module({ imports: [PrismaModule, AuditoriaModule], controllers: [EstudiantesController], providers: [EstudiantesService], exports: [EstudiantesService] }) export class EstudiantesModule {}
+import { Module } from '@nestjs/common';
+import { PrismaModule } from '../prisma/prisma.module';
+import { AuditoriaModule } from '../auditoria/auditoria.module';
+import { EstudiantesController } from './estudiantes.controller';
+import { EstudiantesService } from './estudiantes.service';
+@Module({
+  imports: [PrismaModule, AuditoriaModule],
+  controllers: [EstudiantesController],
+  providers: [EstudiantesService],
+  exports: [EstudiantesService],
+})
+export class EstudiantesModule {}

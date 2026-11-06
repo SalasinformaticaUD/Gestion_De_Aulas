@@ -54,7 +54,11 @@ export class CredencialesService {
             { usuarioId, puedeVer: true, puedeEditar: true },
             ...(dto.accesos ?? [])
               .filter((acceso) => acceso.usuarioId !== usuarioId)
-              .map((acceso) => ({ usuarioId: acceso.usuarioId, puedeVer: acceso.puedeVer ?? true, puedeEditar: acceso.puedeEditar ?? false })),
+              .map((acceso) => ({
+                usuarioId: acceso.usuarioId,
+                puedeVer: acceso.puedeVer ?? true,
+                puedeEditar: acceso.puedeEditar ?? false,
+              })),
           ],
         },
       },
@@ -93,7 +97,12 @@ export class CredencialesService {
         estado: 'ACTIVA',
         roles: { none: { rol: { nombre: 'ADMINISTRADOR' } } },
       },
-      select: { id: true, nombreCompleto: true, nombreUsuario: true, correo: true },
+      select: {
+        id: true,
+        nombreCompleto: true,
+        nombreUsuario: true,
+        correo: true,
+      },
       orderBy: { nombreCompleto: 'asc' },
     });
   }
@@ -176,9 +185,16 @@ export class CredencialesService {
   async remove(id: string, contrasenaUsuario: string, usuarioId: string) {
     await this.verificarContrasenaUsuario(usuarioId, contrasenaUsuario);
     const previo = await this.access(id, usuarioId);
-    if (previo.creadorId !== usuarioId && !(await this.esAdministrador(usuarioId)))
-      throw new ForbiddenException('Solo quien creó la credencial o un administrador puede eliminarla.');
-    const eliminado = await this.prisma.credencialOperativa.delete({ where: { id } });
+    if (
+      previo.creadorId !== usuarioId &&
+      !(await this.esAdministrador(usuarioId))
+    )
+      throw new ForbiddenException(
+        'Solo quien creó la credencial o un administrador puede eliminarla.',
+      );
+    const eliminado = await this.prisma.credencialOperativa.delete({
+      where: { id },
+    });
     await this.audit(usuarioId, id, 'DELETE', previo, undefined);
     return { id: eliminado.id, eliminado: true };
   }
@@ -229,12 +245,17 @@ export class CredencialesService {
   async revelar(id: string, usuarioId: string) {
     const credencial = await this.access(id, usuarioId);
     if ((this.desbloqueos.get(usuarioId) ?? 0) < Date.now())
-      throw new ForbiddenException('El módulo está bloqueado. Vuelve a ingresar tu contraseña.');
+      throw new ForbiddenException(
+        'El módulo está bloqueado. Vuelve a ingresar tu contraseña.',
+      );
     const propio = await this.prisma.secretoCredencial.findUnique({
       where: { credencialId_usuarioId: { credencialId: id, usuarioId } },
     });
     const cifrado = propio?.secretoCifrado ?? credencial.secretoCifrado;
-    if (!cifrado) throw new NotFoundException('Aún no ha registrado una contraseña para esta credencial.');
+    if (!cifrado)
+      throw new NotFoundException(
+        'Aún no ha registrado una contraseña para esta credencial.',
+      );
     await this.audit(usuarioId, id, 'LOGIN', undefined, {
       consultaSecreto: true,
     });
@@ -256,15 +277,26 @@ export class CredencialesService {
   }
   private async gestionarPermisos(id: string, usuarioId: string) {
     const credencial = await this.access(id, usuarioId);
-    if (credencial.creadorId !== usuarioId && !(await this.esAdministrador(usuarioId)))
-      throw new ForbiddenException('Solo quien creó la credencial puede modificar sus permisos.');
+    if (
+      credencial.creadorId !== usuarioId &&
+      !(await this.esAdministrador(usuarioId))
+    )
+      throw new ForbiddenException(
+        'Solo quien creó la credencial puede modificar sus permisos.',
+      );
     return credencial;
   }
   private async validarAccesos(accesos: Array<{ usuarioId: string }>) {
     const usuariosIds = [...new Set(accesos.map((acceso) => acceso.usuarioId))];
     if (usuariosIds.length) {
-      const usuarios = await this.prisma.usuario.findMany({ where: { id: { in: usuariosIds } }, select: { id: true } });
-      if (usuarios.length !== usuariosIds.length) throw new NotFoundException('Uno o más usuarios autorizados no existen.');
+      const usuarios = await this.prisma.usuario.findMany({
+        where: { id: { in: usuariosIds } },
+        select: { id: true },
+      });
+      if (usuarios.length !== usuariosIds.length)
+        throw new NotFoundException(
+          'Uno o más usuarios autorizados no existen.',
+        );
     }
   }
   private async verificarContrasenaUsuario(
@@ -277,9 +309,14 @@ export class CredencialesService {
   }
   private async esAdministrador(usuarioId: string) {
     const usuario = await this.prisma.usuario.findUnique({
-      where: { id: usuarioId }, select: { roles: { select: { rol: { select: { nombre: true } } } } },
+      where: { id: usuarioId },
+      select: { roles: { select: { rol: { select: { nombre: true } } } } },
     });
-    return usuario?.roles.some(({ rol }) => rol.nombre.trim().toUpperCase() === 'ADMINISTRADOR') ?? false;
+    return (
+      usuario?.roles.some(
+        ({ rol }) => rol.nombre.trim().toUpperCase() === 'ADMINISTRADOR',
+      ) ?? false
+    );
   }
   private publica(
     c: CredencialConAccesos,

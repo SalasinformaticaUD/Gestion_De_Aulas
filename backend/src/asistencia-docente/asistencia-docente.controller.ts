@@ -57,7 +57,11 @@ export class AsistenciaDocenteController {
     @Body() updateAsistenciaDocenteDto: UpdateAsistenciaDocenteDto,
     @CurrentUser() usuario: UsuarioAutenticado,
   ) {
-    return this.asistenciaDocenteService.update(id, updateAsistenciaDocenteDto, usuario.id);
+    return this.asistenciaDocenteService.update(
+      id,
+      updateAsistenciaDocenteDto,
+      usuario.id,
+    );
   }
 
   @Put('registrar')

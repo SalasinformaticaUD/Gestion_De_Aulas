@@ -13,7 +13,11 @@ import { PrioridadTarea } from '@prisma/client';
 export class CreateTareasOperativaDto {
   @IsOptional() @IsUUID() aulaId?: string;
   /** Se crea una tarea independiente por cada aula; las múltiples comparten grupo para el tablero. */
-  @IsOptional() @IsArray() @ArrayMaxSize(100) @IsUUID('4', { each: true }) aulaIds?: string[];
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(100)
+  @IsUUID('4', { each: true })
+  aulaIds?: string[];
   @IsOptional() @IsUUID() responsableId?: string;
   @IsString() @MaxLength(200) titulo!: string;
   @IsOptional() @IsString() @MaxLength(2000) descripcion?: string;

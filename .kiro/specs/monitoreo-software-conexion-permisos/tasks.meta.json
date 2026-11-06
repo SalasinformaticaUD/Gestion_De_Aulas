@@ -1,0 +1,659 @@
+{
+  "pbtResults": {
+    "2.3 Escribir prueba de propiedad para `esErrorDeDisponibilidad`": {
+      "status": "passed",
+      "lastRunTimestamp": 1791559551339
+    },
+    "5.3 Escribir prueba de propiedad: software deduplicado y ordenado": {
+      "status": "passed",
+      "lastRunTimestamp": 1791559554057
+    },
+    "3.5 Escribir prueba de propiedad: transporte de sentencia, parámetros y filas": {
+      "status": "passed",
+      "lastRunTimestamp": 1791559563245
+    },
+    "3.4 Escribir prueba de propiedad: traducción de errores sin exponer datos": {
+      "status": "passed",
+      "lastRunTimestamp": 1791571043780
+    },
+    "5.2 Escribir prueba de propiedad: normalización de aulas/categorías y forma de la respuesta": {
+      "status": "passed",
+      "lastRunTimestamp": 1791571092641
+    },
+    "3.6 Escribir prueba de propiedad: creación única y perezosa del pool": {
+      "status": "passed",
+      "lastRunTimestamp": 1791571244518
+    },
+    "3.7 Escribir prueba de propiedad: sin URL nunca se abre el pool": {
+      "status": "passed",
+      "lastRunTimestamp": 1791571245399
+    },
+    "9.5 Escribir prueba de propiedad del preflight": {
+      "status": "passed",
+      "lastRunTimestamp": 1791572796516
+    }
+  },
+  "executionHistory": {
+    "1. Agregar `fast-check` a las dependencias de desarrollo": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556789436
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556801677
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556912452
+      }
+    ],
+    "2.1 Crear `softracker-db.constants.ts`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556791275
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556803084
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556913896
+      }
+    ],
+    "2.2 Implementar `softracker-db.errors.ts`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556791467
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556920213
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791557093255
+      }
+    ],
+    "3.1 Crear `monitoreo-software.types.ts` con las filas crudas de Softracker": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556791646
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556921609
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791557094528
+      }
+    ],
+    "3.2 Implementar `softracker-db.service.ts`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556791863
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791557220686
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791557865984
+      }
+    ],
+    "3.3 Crear `softracker-db.module.ts` global": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556792012
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791557870251
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791558039213
+      }
+    ],
+    "4. Checkpoint — Asegurar que las pruebas pasan": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556792189
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791578600401
+      }
+    ],
+    "5.1 Implementar `filtros.mapper.ts`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556792348
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791557222115
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791557864862
+      }
+    ],
+    "6.1 Crear `monitoreo-software.constants.ts`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556792535
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791557223001
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791557864034
+      }
+    ],
+    "6.2 Implementar `monitoreo-software.service.ts`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556792645
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791557871021
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791558040092
+      }
+    ],
+    "6.3 Crear `monitoreo-software.controller.ts`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556792780
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791558043839
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791559231091
+      }
+    ],
+    "6.4 Crear `monitoreo-software.module.ts`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556792904
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791558048722
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791559230205
+      }
+    ],
+    "7.1 Registrar los módulos en `app.module.ts`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556793030
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791559235358
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791559315564
+      }
+    ],
+    "7.2 Habilitar `enableShutdownHooks` en `main.ts`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556793177
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791559236140
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791559316377
+      }
+    ],
+    "8.1 Agregar `MONITOREO_SOFTWARE` a `MODULOS`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556793323
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556804559
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556914797
+      }
+    ],
+    "8.3 Actualizar el seed con el módulo y las acciones": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556793445
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556923001
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791557095481
+      }
+    ],
+    "8.4 Crear la migración idempotente de permisos": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556793565
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556923960
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791557096869
+      }
+    ],
+    "9.1 Documentar la variable en `.env.example` y `docker-compose.yml`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556793671
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556805406
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556915983
+      }
+    ],
+    "9.2 Exigir la variable en producción en `environment.ts`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556793775
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556925100
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791557097768
+      }
+    ],
+    "9.4 Extender el preflight con `validarSoftrackerUrl`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556793866
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791557101952
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791557200083
+      }
+    ],
+    "10. Checkpoint — Asegurar que las pruebas pasan": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556793962
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791578601758
+      }
+    ],
+    "12.1 Actualizar `src/MODULES.md`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556794061
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791578603796
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791578829569
+      }
+    ],
+    "13.1 Ejecutar build, lint y pruebas": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791556794213
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791578833479
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791581085145
+      }
+    ],
+    "2. Crear las piezas puras del módulo `softracker-db`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791557093376
+      }
+    ],
+    "8. Registrar el módulo y los permisos en Gestión de Aulas": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791557096958
+      }
+    ],
+    "9. Configurar y validar `SOFTRACKER_DATABASE_URL`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791557200300
+      }
+    ],
+    "5. Implementar el mapper puro de filtros": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791557864959
+      }
+    ],
+    "3. Implementar el servicio y el módulo global `softracker-db`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791558039356
+      }
+    ],
+    "6. Implementar el servicio, el controller y el módulo de `monitoreo-software`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791559231183
+      }
+    ],
+    "7. Cablear los módulos y los hooks de apagado": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791559316526
+      }
+    ],
+    "2.3 Escribir prueba de propiedad para `esErrorDeDisponibilidad`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791559404133
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791571112032
+      }
+    ],
+    "3.4 Escribir prueba de propiedad: traducción de errores sin exponer datos": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791559405032
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791571114582
+      }
+    ],
+    "3.5 Escribir prueba de propiedad: transporte de sentencia, parámetros y filas": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791559406533
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791571116818
+      }
+    ],
+    "5.2 Escribir prueba de propiedad: normalización de aulas/categorías y forma de la respuesta": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791559407873
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791571115920
+      }
+    ],
+    "5.3 Escribir prueba de propiedad: software deduplicado y ordenado": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791559409099
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791571113233
+      }
+    ],
+    "3.6 Escribir prueba de propiedad: creación única y perezosa del pool": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791571123785
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791571261322
+      }
+    ],
+    "8.2 Escribir prueba del valor de la constante": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791571124153
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791571265431
+      }
+    ],
+    "9.3 Agregar los casos de `environment.spec.ts`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791571125067
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791571266168
+      }
+    ],
+    "3.7 Escribir prueba de propiedad: sin URL nunca se abre el pool": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791571262572
+      }
+    ],
+    "3.8 Escribir pruebas de ejemplo del servicio y la configuración del pool": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791571263968
+      }
+    ],
+    "6.5 Escribir prueba de propiedad: caché secuencial conforme al modelo": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791571271515
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791578591260
+      }
+    ],
+    "9.5 Escribir prueba de propiedad del preflight": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791571272579
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791578590133
+      }
+    ],
+    "6.6 Escribir prueba de propiedad: solicitudes simultáneas comparten una consulta": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791571276238
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791578592617
+      }
+    ],
+    "6.7 Escribir pruebas de ejemplo del servicio de monitoreo": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791571277273
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791578593622
+      }
+    ],
+    "11.1 Escribir `backend/test/monitoreo-software.e2e-spec.ts`": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791578602782
+      },
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791578828654
+      }
+    ],
+    "11. Pruebas E2E del endpoint de filtros": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791578828812
+      }
+    ],
+    "12. Actualizar la documentación técnica": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791578829684
+      }
+    ],
+    "13. Verificación automatizada final": [
+      {
+        "executionId": "db4465f6-cf86-4f60-9e5d-41320c86e51f",
+        "chatSessionId": "sess_b1f701dc-9a9d-4f0d-bdf4-d0a21b705aaf",
+        "timestamp": 1791581085303
+      }
+    ]
+  }
+}

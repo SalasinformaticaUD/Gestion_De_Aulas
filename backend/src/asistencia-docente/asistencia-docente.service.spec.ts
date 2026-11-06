@@ -72,9 +72,20 @@ describe('AsistenciaDocenteService', () => {
 
     expect(prisma.asistenciaDocente.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { claseId_fecha: { claseId, fecha: new Date('2026-08-20T00:00:00.000Z') } },
-        update: expect.objectContaining({ estado: EstadoAsistencia.ASISTIO, registradoPorId: usuarioId }),
-        create: expect.objectContaining({ estado: EstadoAsistencia.ASISTIO, registradoPorId: usuarioId }),
+        where: {
+          claseId_fecha: {
+            claseId,
+            fecha: new Date('2026-08-20T00:00:00.000Z'),
+          },
+        },
+        update: expect.objectContaining({
+          estado: EstadoAsistencia.ASISTIO,
+          registradoPorId: usuarioId,
+        }),
+        create: expect.objectContaining({
+          estado: EstadoAsistencia.ASISTIO,
+          registradoPorId: usuarioId,
+        }),
       }),
     );
   });

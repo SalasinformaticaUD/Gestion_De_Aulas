@@ -185,11 +185,19 @@ describe('HorarioController (e2e)', () => {
       findUnique: jest.fn(({ where }: { where: { id: string } }) =>
         Promise.resolve(clases.find((clase) => clase.id === where.id)),
       ),
-      update: jest.fn(({ where, data }: { where: { id: string }; data: Partial<ClaseRecord> }) => {
-        const clase = clases.find((item) => item.id === where.id)!;
-        Object.assign(clase, data);
-        return Promise.resolve(clase);
-      }),
+      update: jest.fn(
+        ({
+          where,
+          data,
+        }: {
+          where: { id: string };
+          data: Partial<ClaseRecord>;
+        }) => {
+          const clase = clases.find((item) => item.id === where.id)!;
+          Object.assign(clase, data);
+          return Promise.resolve(clase);
+        },
+      ),
       delete: jest.fn(({ where }: { where: { id: string } }) => {
         const indice = clases.findIndex((item) => item.id === where.id);
         const [eliminada] = clases.splice(indice, 1);
@@ -323,8 +331,14 @@ describe('HorarioController (e2e)', () => {
       .expect(400));
 
   it('no expone las rutas antiguas de creación e importación JSON', async () => {
-    await request(app.getHttpServer()).post('/horario/clases').send({}).expect(404);
-    await request(app.getHttpServer()).post('/horario/importar').send({}).expect(404);
+    await request(app.getHttpServer())
+      .post('/horario/clases')
+      .send({})
+      .expect(404);
+    await request(app.getHttpServer())
+      .post('/horario/importar')
+      .send({})
+      .expect(404);
   });
 
   it('rechaza campos no permitidos mediante la validacion global', async () => {

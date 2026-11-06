@@ -31,6 +31,7 @@ const modulos = [
   ['ESTUDIANTES', 'Gestión de estudiantes'],
   ['DOCENTES', 'Gestión de docentes'],
   ['SOLICITUDES_INSTALACION', 'Solicitudes de instalación'],
+  ['MONITOREO_SOFTWARE', 'Monitoreo de software'],
 ] as const;
 
 const acciones = [
@@ -58,6 +59,7 @@ const accionesPorModulo: Record<string, readonly AccionPermiso[]> = {
   REPORTES: ['LEER'],
   ADMINISTRACION: ['LEER', 'CREAR', 'ACTUALIZAR', 'ELIMINAR'],
   SOLICITUDES_INSTALACION: ['LEER', 'IMPORTAR', 'ACTUALIZAR', 'APROBAR', 'RECHAZAR', 'EXPORTAR'],
+  MONITOREO_SOFTWARE: ['LEER', 'EXPORTAR'],
 };
 const dependencias = ['Aulas de Software', 'Electrica y Electronica', 'Fisica'];
 const cargos = ['ADMINISTRADOR', 'COORDINADOR', 'DOCENTE', 'MONITOR', 'ESTUDIANTE', 'TÉCNICO', 'AUXILIAR ADMINISTRATIVO'];

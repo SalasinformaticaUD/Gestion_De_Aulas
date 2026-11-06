@@ -14,10 +14,7 @@ export class MonitoresProvisioningService {
   async provision(dto: ProvisionMonitorUserDto) {
     const existing = await this.prisma.usuario.findMany({
       where: {
-        OR: [
-          { nombreUsuario: dto.nombreUsuario },
-          { correo: dto.correo },
-        ],
+        OR: [{ nombreUsuario: dto.nombreUsuario }, { correo: dto.correo }],
       },
       select: { id: true, nombreUsuario: true, correo: true, estado: true },
     });

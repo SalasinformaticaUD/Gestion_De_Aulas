@@ -30,10 +30,22 @@ export class ResponsableSolicitudPracticaDto {
   @IsEnum(TipoSolicitantePracticaLibre) tipo!: TipoSolicitantePracticaLibre;
   @IsString() @Length(3, 50) documento!: string;
   @IsString() @Length(3, 160) nombre!: string;
-  @ValidateIf((item: ResponsableSolicitudPracticaDto) => item.tipo === TipoSolicitantePracticaLibre.ESTUDIANTE)
-  @IsEmail() @IsNotEmpty() @MaxLength(160) correo?: string;
-  @ValidateIf((item: ResponsableSolicitudPracticaDto) => item.tipo === TipoSolicitantePracticaLibre.DOCENTE)
-  @IsString() @IsNotEmpty() @MaxLength(160) proyecto?: string;
+  @ValidateIf(
+    (item: ResponsableSolicitudPracticaDto) =>
+      item.tipo === TipoSolicitantePracticaLibre.ESTUDIANTE,
+  )
+  @IsEmail()
+  @IsNotEmpty()
+  @MaxLength(160)
+  correo?: string;
+  @ValidateIf(
+    (item: ResponsableSolicitudPracticaDto) =>
+      item.tipo === TipoSolicitantePracticaLibre.DOCENTE,
+  )
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(160)
+  proyecto?: string;
 }
 
 export class CreatePracticasLibreDto {

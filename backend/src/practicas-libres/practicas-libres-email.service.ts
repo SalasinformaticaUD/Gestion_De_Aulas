@@ -13,12 +13,23 @@ type ConfirmacionPractica = {
 export class PracticasLibresEmailService {
   private readonly logger = new Logger(PracticasLibresEmailService.name);
 
-  async enviarConfirmacion(datos: ConfirmacionPractica): Promise<{ enviado: boolean; motivo?: string }> {
-    if (!datos.correo) return { enviado: false, motivo: 'El estudiante no tiene correo registrado.' };
+  async enviarConfirmacion(
+    datos: ConfirmacionPractica,
+  ): Promise<{ enviado: boolean; motivo?: string }> {
+    if (!datos.correo)
+      return {
+        enviado: false,
+        motivo: 'El estudiante no tiene correo registrado.',
+      };
     const webhook = process.env.EMAIL_WEBHOOK_URL?.trim();
     if (!webhook) {
-      this.logger.warn(`No se envió confirmación a ${datos.correo}: EMAIL_WEBHOOK_URL no está configurado.`);
-      return { enviado: false, motivo: 'El servicio de correo no está configurado.' };
+      this.logger.warn(
+        `No se envió confirmación a ${datos.correo}: EMAIL_WEBHOOK_URL no está configurado.`,
+      );
+      return {
+        enviado: false,
+        motivo: 'El servicio de correo no está configurado.',
+      };
     }
 
     const contenido = [
@@ -34,11 +45,20 @@ export class PracticasLibresEmailService {
     const respuesta = await fetch(webhook, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ to: datos.correo, subject: 'Confirmación de práctica libre', text: contenido }),
+      body: JSON.stringify({
+        to: datos.correo,
+        subject: 'Confirmación de práctica libre',
+        text: contenido,
+      }),
     });
     if (!respuesta.ok) {
-      this.logger.error(`El servicio de correo rechazó la confirmación para ${datos.correo}.`);
-      return { enviado: false, motivo: 'El servicio de correo rechazó la solicitud.' };
+      this.logger.error(
+        `El servicio de correo rechazó la confirmación para ${datos.correo}.`,
+      );
+      return {
+        enviado: false,
+        motivo: 'El servicio de correo rechazó la solicitud.',
+      };
     }
     return { enviado: true };
   }

@@ -11,7 +11,10 @@ describe('HorarioController', () => {
       controllers: [HorarioController],
       providers: [
         { provide: HorarioService, useValue: {} },
-        { provide: AuthService, useValue: { verifyCurrentPassword: jest.fn() } },
+        {
+          provide: AuthService,
+          useValue: { verifyCurrentPassword: jest.fn() },
+        },
       ],
     }).compile();
 

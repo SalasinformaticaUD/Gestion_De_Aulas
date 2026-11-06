@@ -17,7 +17,12 @@ import type { UsuarioAutenticado } from '../auth/auth.types';
 import { TareasOperativasService } from './tareas-operativas.service';
 import { CreateTareasOperativaDto } from './dto/create-tareas-operativa.dto';
 import { UpdateTareasOperativaDto } from './dto/update-tareas-operativa.dto';
-import { CambiarEstadoTareaDto, CrearInformeSeguimientoDto, DecidirTareaDto, FindTareasDto } from './dto/tareas.dto';
+import {
+  CambiarEstadoTareaDto,
+  CrearInformeSeguimientoDto,
+  DecidirTareaDto,
+  FindTareasDto,
+} from './dto/tareas.dto';
 
 @RequireModule(MODULOS.TAREAS)
 @Controller('tareas-operativas')
@@ -52,7 +57,9 @@ export class TareasOperativasController {
 
   @Get('indicadores/resumen')
   @RequirePermissions('TAREAS_LEER')
-  indicadores(@Query() dto: FindTareasDto) { return this.tareasOperativasService.indicadores(dto); }
+  indicadores(@Query() dto: FindTareasDto) {
+    return this.tareasOperativasService.indicadores(dto);
+  }
 
   @Get(':id')
   @RequirePermissions('TAREAS_LEER')
@@ -62,7 +69,9 @@ export class TareasOperativasController {
 
   @Get(':id/historial')
   @RequirePermissions('TAREAS_LEER')
-  historial(@Param('id', ParseUUIDPipe) id: string) { return this.tareasOperativasService.historial(id); }
+  historial(@Param('id', ParseUUIDPipe) id: string) {
+    return this.tareasOperativasService.historial(id);
+  }
 
   @Patch(':id')
   @RequirePermissions('TAREAS_ACTUALIZAR')
@@ -105,12 +114,26 @@ export class TareasOperativasController {
 
   @Post(':id/decision')
   @RequirePermissions('TAREAS_APROBAR')
-  decidir(@Param('id', ParseUUIDPipe) id: string, @Body() dto: DecidirTareaDto, @CurrentUser() usuario?: UsuarioAutenticado) {
-    return this.tareasOperativasService.decidir(id, dto.decision, usuario?.id, usuario?.roles.includes('ADMINISTRADOR') ?? false, dto.responsableIds);
+  decidir(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: DecidirTareaDto,
+    @CurrentUser() usuario?: UsuarioAutenticado,
+  ) {
+    return this.tareasOperativasService.decidir(
+      id,
+      dto.decision,
+      usuario?.id,
+      usuario?.roles.includes('ADMINISTRADOR') ?? false,
+      dto.responsableIds,
+    );
   }
 
   @Post(':id/informes-seguimiento')
-  crearInforme(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CrearInformeSeguimientoDto, @CurrentUser() usuario?: UsuarioAutenticado) {
+  crearInforme(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CrearInformeSeguimientoDto,
+    @CurrentUser() usuario?: UsuarioAutenticado,
+  ) {
     return this.tareasOperativasService.crearInforme(id, dto, usuario?.id);
   }
 
@@ -121,6 +144,11 @@ export class TareasOperativasController {
     @Body() dto: CrearInformeSeguimientoDto,
     @CurrentUser() usuario?: UsuarioAutenticado,
   ) {
-    return this.tareasOperativasService.editarInforme(id, informeId, dto, usuario?.id);
+    return this.tareasOperativasService.editarInforme(
+      id,
+      informeId,
+      dto,
+      usuario?.id,
+    );
   }
 }

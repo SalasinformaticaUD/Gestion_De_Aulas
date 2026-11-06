@@ -295,7 +295,9 @@ describe('SoftwareService', () => {
       aulaId: 'aula-id',
       softwareId: 'software-nuevo',
     });
-    prisma.importacionSoftware.create.mockResolvedValue({ id: 'importacion-id' });
+    prisma.importacionSoftware.create.mockResolvedValue({
+      id: 'importacion-id',
+    });
 
     await service.importInventory({
       filas: [{ aulaCodigo: '404', nombre: 'MATLAB', version: 'R2026a' }],
@@ -328,7 +330,9 @@ describe('SoftwareService', () => {
       aulaId: 'aula-306',
       softwareId: 'software-id',
     });
-    prisma.importacionSoftware.create.mockResolvedValue({ id: 'importacion-id' });
+    prisma.importacionSoftware.create.mockResolvedValue({
+      id: 'importacion-id',
+    });
     const hoja = XLSX.utils.json_to_sheet([
       { Aula: 'Aula 306', Software: '7-Zip', 'Software Versión': '25.00' },
     ]);

@@ -264,8 +264,10 @@ export class HorarioService {
 
   async findClases(filters: FindClasesDto = {}) {
     await this.cerrarAsistenciasVencidas(filters.fecha);
-    const fecha = filters.fecha ? new Date(`${filters.fecha}T00:00:00.000Z`) : undefined;
-    const diaSemana = fecha ? (fecha.getUTCDay() || 7) : filters.diaSemana;
+    const fecha = filters.fecha
+      ? new Date(`${filters.fecha}T00:00:00.000Z`)
+      : undefined;
+    const diaSemana = fecha ? fecha.getUTCDay() || 7 : filters.diaSemana;
     const where: Prisma.ClaseProgramadaWhereInput = {
       aula: { eliminadoEn: null },
       ...(filters.aulaId && { aulaId: filters.aulaId }),
@@ -273,7 +275,9 @@ export class HorarioService {
       ...(diaSemana !== undefined && {
         diaSemana,
       }),
-      ...(fecha && { periodo: { fechaInicio: { lte: fecha }, fechaFin: { gte: fecha } } }),
+      ...(fecha && {
+        periodo: { fechaInicio: { lte: fecha }, fechaFin: { gte: fecha } },
+      }),
     };
 
     return this.prisma.claseProgramada.findMany({
@@ -510,103 +514,107 @@ export class HorarioService {
       }
     });
 
-    const resultado = await this.prisma.$transaction(async (tx) => {
-      const idsConservados: string[] = [];
-      let creados = 0;
-      let actualizados = 0;
+    const resultado = await this.prisma.$transaction(
+      async (tx) => {
+        const idsConservados: string[] = [];
+        let creados = 0;
+        let actualizados = 0;
 
-      for (const entrada of entradas) {
-        try {
-          const proyectoCurricular = entrada.clase.proyectoCurricularNombre
-            ? await tx.proyectoCurricular.upsert({
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-                where: { nombre: entrada.clase.proyectoCurricularNombre },
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-                create: { nombre: entrada.clase.proyectoCurricularNombre },
-                update: {},
-                select: { id: true },
-              })
-            : undefined;
-          const catalogos = await this.resolveImportCatalogs(
-            entrada.clase,
-            'JSON_V2',
-            tx,
-          );
-          const clase = this.normalizeClase({
-            ...entrada.clase,
-            periodoId: dto.periodoId,
-            proyectoCurricularId: proyectoCurricular?.id,
-            docenteId: catalogos.docenteId,
-            asignaturaId: catalogos.asignaturaId,
-          });
-          this.validateTimeRange(clase.horaInicio, clase.horaFin);
-          await this.validateReferences(clase, tx);
-          const existente = await tx.claseProgramada.findFirst({
-            where: {
+        for (const entrada of entradas) {
+          try {
+            const proyectoCurricular = entrada.clase.proyectoCurricularNombre
+              ? await tx.proyectoCurricular.upsert({
+                  where: { nombre: entrada.clase.proyectoCurricularNombre },
+
+                  create: { nombre: entrada.clase.proyectoCurricularNombre },
+                  update: {},
+                  select: { id: true },
+                })
+              : undefined;
+            const catalogos = await this.resolveImportCatalogs(
+              entrada.clase,
+              'JSON_V2',
+              tx,
+            );
+            const clase = this.normalizeClase({
+              ...entrada.clase,
               periodoId: dto.periodoId,
-              aulaId: clase.aulaId,
-              diaSemana: clase.diaSemana,
-              horaInicio: clase.horaInicio,
-              horaFin: clase.horaFin,
-            },
-            select: { id: true },
-          });
-          await this.ensureNoOverlap(clase, existente?.id, tx);
-          const data = {
-            ...clase,
-            grupo: entrada.clase.grupo.trim(),
-            ...(entrada.clase.inscritos !== undefined && {
-              inscritos: entrada.clase.inscritos,
-            }),
-          };
-          if (existente) {
-            await tx.claseProgramada.update({
-              where: { id: existente.id },
-              data,
+              proyectoCurricularId: proyectoCurricular?.id,
+              docenteId: catalogos.docenteId,
+              asignaturaId: catalogos.asignaturaId,
             });
-            idsConservados.push(existente.id);
-            actualizados += 1;
-          } else {
-            const creada = await tx.claseProgramada.create({ data });
-            idsConservados.push(creada.id);
-            creados += 1;
+            this.validateTimeRange(clase.horaInicio, clase.horaFin);
+            await this.validateReferences(clase, tx);
+            const existente = await tx.claseProgramada.findFirst({
+              where: {
+                periodoId: dto.periodoId,
+                aulaId: clase.aulaId,
+                diaSemana: clase.diaSemana,
+                horaInicio: clase.horaInicio,
+                horaFin: clase.horaFin,
+              },
+              select: { id: true },
+            });
+            await this.ensureNoOverlap(clase, existente?.id, tx);
+            const data = {
+              ...clase,
+              grupo: entrada.clase.grupo.trim(),
+              ...(entrada.clase.inscritos !== undefined && {
+                inscritos: entrada.clase.inscritos,
+              }),
+            };
+            if (existente) {
+              await tx.claseProgramada.update({
+                where: { id: existente.id },
+                data,
+              });
+              idsConservados.push(existente.id);
+              actualizados += 1;
+            } else {
+              const creada = await tx.claseProgramada.create({ data });
+              idsConservados.push(creada.id);
+              creados += 1;
+            }
+          } catch (error: unknown) {
+            rechazadas.push({
+              fila: entrada.fila,
+              motivo: this.mensajeError(error),
+            });
           }
-        } catch (error: unknown) {
-          rechazadas.push({
-            fila: entrada.fila,
-            motivo: this.mensajeError(error),
-          });
         }
-      }
 
-      let eliminados = 0;
-      if (dto.reemplazarAnterior) {
-        await tx.asistenciaDocente?.deleteMany({
-          where: {
-            clase: {
+        let eliminados = 0;
+        if (dto.reemplazarAnterior) {
+          await tx.asistenciaDocente?.deleteMany({
+            where: {
+              clase: {
+                periodoId: dto.periodoId,
+                ...(idsConservados.length > 0 && {
+                  id: { notIn: idsConservados },
+                }),
+              },
+            },
+          });
+          const eliminacion = await tx.claseProgramada.deleteMany({
+            where: {
               periodoId: dto.periodoId,
               ...(idsConservados.length > 0 && {
                 id: { notIn: idsConservados },
               }),
             },
-          },
-        });
-        const eliminacion = await tx.claseProgramada.deleteMany({
-          where: {
-            periodoId: dto.periodoId,
-            ...(idsConservados.length > 0 && { id: { notIn: idsConservados } }),
-          },
-        });
-        eliminados = eliminacion.count;
-      }
-      return { creados, actualizados, eliminados };
-    }, {
-      // La importación oficial puede tener miles de filas y resuelve catálogos,
-      // cruces y actualizaciones por cada una. Se conserva una única
-      // transacción atómica, ampliando solo su ventana de ejecución.
-      maxWait: 10_000,
-      timeout: 120_000,
-    });
+          });
+          eliminados = eliminacion.count;
+        }
+        return { creados, actualizados, eliminados };
+      },
+      {
+        // La importación oficial puede tener miles de filas y resuelve catálogos,
+        // cruces y actualizaciones por cada una. Se conserva una única
+        // transacción atómica, ampliando solo su ventana de ejecución.
+        maxWait: 10_000,
+        timeout: 120_000,
+      },
+    );
 
     return {
       formato: 'EXCEL_OFICIAL_V1',
@@ -967,9 +975,11 @@ export class HorarioService {
           });
           const existenteConNombreNormalizado = docentesConDocumento.find(
             (docente) =>
-              this.normalizarNombreDocente(docente.nombre) === nombreNormalizado,
+              this.normalizarNombreDocente(docente.nombre) ===
+              nombreNormalizado,
           );
-          if (existenteConNombreNormalizado) return existenteConNombreNormalizado.id;
+          if (existenteConNombreNormalizado)
+            return existenteConNombreNormalizado.id;
           const existenteSinDocumento = await database.docente.findFirst({
             where: { nombre: { equals: nombre, mode: 'insensitive' } },
             select: { id: true },
@@ -1366,14 +1376,15 @@ export class HorarioService {
       let meridianoFin = rango[6] ?? rango[3];
       // En un rango sin AM/PM, 12-2 representa el bloque de mediodía, no
       // 12:00-02:00. No se altera la interpretación de rangos como 10-12.
-      if (!meridianoFin && !rango[3] && Number(rango[1]) >= 12 && Number(rango[4]) < Number(rango[1])) {
+      if (
+        !meridianoFin &&
+        !rango[3] &&
+        Number(rango[1]) >= 12 &&
+        Number(rango[4]) < Number(rango[1])
+      ) {
         meridianoFin = 'PM';
       }
-      const fin = this.normalizarHora(
-        rango[4],
-        rango[5] ?? '00',
-        meridianoFin,
-      );
+      const fin = this.normalizarHora(rango[4], rango[5] ?? '00', meridianoFin);
       return [inicio, fin];
     }
     const inicio = texto.match(/^(\d{1,2})(?::(\d{2}))?([AP]M)?$/);
@@ -1425,7 +1436,15 @@ export class HorarioService {
       periodo: { fechaInicio: { lte: fecha }, fechaFin: { gte: fecha } },
       ...(fechaTexto === hoyTexto && {
         horaInicio: {
-          lte: new Date(Date.UTC(1970, 0, 1, Math.floor(minutosLimite / 60), minutosLimite % 60)),
+          lte: new Date(
+            Date.UTC(
+              1970,
+              0,
+              1,
+              Math.floor(minutosLimite / 60),
+              minutosLimite % 60,
+            ),
+          ),
         },
       }),
     };
@@ -1444,19 +1463,42 @@ export class HorarioService {
     });
     if (clases.length) {
       await this.prisma.asistenciaDocente.createMany({
-        data: clases.map((clase) => ({ claseId: clase.id, fecha, estado: EstadoAsistencia.AUSENTE, registradaEn })),
+        data: clases.map((clase) => ({
+          claseId: clase.id,
+          fecha,
+          estado: EstadoAsistencia.AUSENTE,
+          registradaEn,
+        })),
         skipDuplicates: true,
       });
     }
   }
 
-  private partesBogota(referencia = new Date()): { anio: number; mes: number; dia: number; hora: number; minuto: number } {
+  private partesBogota(referencia = new Date()): {
+    anio: number;
+    mes: number;
+    dia: number;
+    hora: number;
+    minuto: number;
+  } {
     const partes = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+      timeZone: 'America/Bogota',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
     }).formatToParts(referencia);
-    const valor = (tipo: Intl.DateTimeFormatPartTypes) => Number(partes.find((parte) => parte.type === tipo)?.value ?? 0);
-    return { anio: valor('year'), mes: valor('month'), dia: valor('day'), hora: valor('hour'), minuto: valor('minute') };
+    const valor = (tipo: Intl.DateTimeFormatPartTypes) =>
+      Number(partes.find((parte) => parte.type === tipo)?.value ?? 0);
+    return {
+      anio: valor('year'),
+      mes: valor('month'),
+      dia: valor('day'),
+      hora: valor('hour'),
+      minuto: valor('minute'),
+    };
   }
 
   private calcularSemanaSemestre(

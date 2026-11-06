@@ -1,4 +1,13 @@
-import { IsArray, IsDateString, IsEnum, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import {
+  IsArray,
+  IsDateString,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 import { EstadoTarea, DecisionTarea } from '@prisma/client';
 export class FindTareasDto {
   @IsOptional() @IsEnum(EstadoTarea) estado?: EstadoTarea;
@@ -11,11 +20,18 @@ export class FindTareasDto {
 }
 export class CambiarEstadoTareaDto {
   @IsEnum(EstadoTarea) estado!: EstadoTarea;
-  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(2000) motivoCancelacion?: string;
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(2000)
+  motivoCancelacion?: string;
 }
 export class DecidirTareaDto {
   @IsEnum(DecisionTarea) decision!: DecisionTarea;
-  @IsOptional() @IsArray() @IsUUID('4', { each: true }) responsableIds?: string[];
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  responsableIds?: string[];
 }
 export class CrearInformeSeguimientoDto {
   @IsString() @IsNotEmpty() actividadesRealizadas!: string;

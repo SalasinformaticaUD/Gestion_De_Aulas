@@ -30,7 +30,11 @@ type PrismaMock = {
     delete: jest.Mock;
     deleteMany: jest.Mock;
   };
-  asistenciaDocente: { updateMany: jest.Mock; createMany: jest.Mock; deleteMany: jest.Mock };
+  asistenciaDocente: {
+    updateMany: jest.Mock;
+    createMany: jest.Mock;
+    deleteMany: jest.Mock;
+  };
   $transaction: jest.Mock;
 };
 
@@ -76,7 +80,11 @@ describe('HorarioService', () => {
         delete: jest.fn(),
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
-      asistenciaDocente: { updateMany: jest.fn(), createMany: jest.fn(), deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
+      asistenciaDocente: {
+        updateMany: jest.fn(),
+        createMany: jest.fn(),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
       $transaction: jest.fn(),
     };
     prisma.$transaction.mockImplementation(
@@ -102,8 +110,14 @@ describe('HorarioService', () => {
     expect(prisma.asistenciaDocente.createMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.arrayContaining([
-          expect.objectContaining({ claseId: 'clase-1', estado: EstadoAsistencia.AUSENTE }),
-          expect.objectContaining({ claseId: 'clase-2', estado: EstadoAsistencia.AUSENTE }),
+          expect.objectContaining({
+            claseId: 'clase-1',
+            estado: EstadoAsistencia.AUSENTE,
+          }),
+          expect.objectContaining({
+            claseId: 'clase-2',
+            estado: EstadoAsistencia.AUSENTE,
+          }),
         ]),
         skipDuplicates: true,
       }),
@@ -131,7 +145,12 @@ describe('HorarioService', () => {
     );
     expect(prisma.asistenciaDocente.createMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: [expect.objectContaining({ claseId: 'clase-1', estado: EstadoAsistencia.AUSENTE })],
+        data: [
+          expect.objectContaining({
+            claseId: 'clase-1',
+            estado: EstadoAsistencia.AUSENTE,
+          }),
+        ],
       }),
     );
     jest.useRealTimers();

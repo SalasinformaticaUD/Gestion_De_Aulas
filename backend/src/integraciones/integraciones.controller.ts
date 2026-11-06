@@ -55,15 +55,23 @@ export class IntegracionesController {
   }
 
   @Get('usuario/:usuarioExternoId')
-  async usuario(@CurrentUser() usuario: UsuarioAutenticado, @Param('usuarioExternoId', ParseUUIDPipe) usuarioExternoId: string) {
+  async usuario(
+    @CurrentUser() usuario: UsuarioAutenticado,
+    @Param('usuarioExternoId', ParseUUIDPipe) usuarioExternoId: string,
+  ) {
     await this.exigirAccesoMonitores(usuario.id);
     return this.monitores.buscarUsuario(usuarioExternoId);
   }
 
   private async exigirAccesoMonitores(usuarioId: string) {
-    const cuenta = await this.prisma.usuario.findUnique({ where: { id: usuarioId }, select: { perfilMonitores: true, estado: true } });
+    const cuenta = await this.prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: { perfilMonitores: true, estado: true },
+    });
     if (!cuenta?.perfilMonitores || cuenta.estado !== EstadoCuenta.ACTIVA) {
-      throw new ForbiddenException('Su usuario no tiene acceso a Gestión de Monitores.');
+      throw new ForbiddenException(
+        'Su usuario no tiene acceso a Gestión de Monitores.',
+      );
     }
   }
 }

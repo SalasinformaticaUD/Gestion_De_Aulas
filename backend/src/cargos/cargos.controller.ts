@@ -1,4 +1,12 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequireModule } from '../auth/decorators/require-module.decorator';
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
@@ -16,17 +24,32 @@ export class CargosController {
 
   @Get()
   @RequirePermissions('ADMINISTRACION_LEER')
-  findAll() { return this.cargosService.findAll(); }
+  findAll() {
+    return this.cargosService.findAll();
+  }
 
   @Post()
   @RequirePermissions('ADMINISTRACION_CREAR')
-  create(@Body() dto: CreateCargoDto, @CurrentUser() usuario?: UsuarioAutenticado) { return this.cargosService.create(dto, usuario?.id); }
+  create(
+    @Body() dto: CreateCargoDto,
+    @CurrentUser() usuario?: UsuarioAutenticado,
+  ) {
+    return this.cargosService.create(dto, usuario?.id);
+  }
 
   @Patch(':id')
   @RequirePermissions('ADMINISTRACION_ACTUALIZAR')
-  update(@Param('id') id: string, @Body() dto: UpdateCargoDto, @CurrentUser() usuario?: UsuarioAutenticado) { return this.cargosService.update(id, dto, usuario?.id); }
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateCargoDto,
+    @CurrentUser() usuario?: UsuarioAutenticado,
+  ) {
+    return this.cargosService.update(id, dto, usuario?.id);
+  }
 
   @Delete(':id')
   @RequirePermissions('ADMINISTRACION_ELIMINAR')
-  remove(@Param('id') id: string, @CurrentUser() usuario?: UsuarioAutenticado) { return this.cargosService.remove(id, usuario?.id); }
+  remove(@Param('id') id: string, @CurrentUser() usuario?: UsuarioAutenticado) {
+    return this.cargosService.remove(id, usuario?.id);
+  }
 }

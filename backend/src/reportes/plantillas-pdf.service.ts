@@ -1,9 +1,7 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 
 export type PlantillaPdf =
-  | 'SIGUD'
-  | 'Ficha - Practicas libres'
-  | 'Ficha SIGUD audiovisuales';
+  'SIGUD' | 'Ficha - Practicas libres' | 'Ficha SIGUD audiovisuales';
 
 const ARCHIVOS: Record<PlantillaPdf, string> = {
   SIGUD: 'SIGUD.xlsx',
@@ -26,16 +24,19 @@ export class PlantillasPdfService {
     const timer = setTimeout(() => controller.abort(), timeout);
 
     try {
-      const response = await fetch(`${baseUrl.replace(/\/$/, '')}/render/xlsx`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          plantilla: ARCHIVOS[plantilla],
-          valores,
-          nombreArchivo,
-        }),
-        signal: controller.signal,
-      });
+      const response = await fetch(
+        `${baseUrl.replace(/\/$/, '')}/render/xlsx`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            plantilla: ARCHIVOS[plantilla],
+            valores,
+            nombreArchivo,
+          }),
+          signal: controller.signal,
+        },
+      );
 
       if (!response.ok) {
         const detalle = await response.text().catch(() => '');

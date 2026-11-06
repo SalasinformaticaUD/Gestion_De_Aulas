@@ -239,15 +239,31 @@ export class PrestamosDocentesService {
     return normalizado === '508' || normalizado === 'AULA508';
   }
 
-  private async resolverDocente(dto: CreatePrestamosDocenteDto): Promise<string> {
-    if (dto.docenteId) { await this.validarDocente(dto.docenteId); return dto.docenteId; }
+  private async resolverDocente(
+    dto: CreatePrestamosDocenteDto,
+  ): Promise<string> {
+    if (dto.docenteId) {
+      await this.validarDocente(dto.docenteId);
+      return dto.docenteId;
+    }
     const documento = dto.docenteNuevoDocumento?.trim();
     const nombre = dto.docenteNuevoNombre?.trim();
     const proyecto = dto.docenteNuevoProyecto?.trim();
-    if (!documento || !nombre || !proyecto || !/^\d+$/.test(documento)) throw new BadRequestException('Para registrar otro profesor, ingrese nombre, cédula numérica y proyecto.');
-    const existente = await this.prisma.docente.findUnique({ where: { documento }, select: { id: true } });
+    if (!documento || !nombre || !proyecto || !/^\d+$/.test(documento))
+      throw new BadRequestException(
+        'Para registrar otro profesor, ingrese nombre, cédula numérica y proyecto.',
+      );
+    const existente = await this.prisma.docente.findUnique({
+      where: { documento },
+      select: { id: true },
+    });
     if (existente) return existente.id;
-    return (await this.prisma.docente.create({ data: { documento, nombre, proyecto }, select: { id: true } })).id;
+    return (
+      await this.prisma.docente.create({
+        data: { documento, nombre, proyecto },
+        select: { id: true },
+      })
+    ).id;
   }
 
   private async validarSoftwareParaPrestamo(
@@ -271,7 +287,9 @@ export class PrestamosDocentesService {
           : software.estado === EstadoSoftware.EN_REVISION
             ? `El software ${software.nombre} está en revisión o mantenimiento.`
             : `El software ${software.nombre} está inactivo.`;
-      throw new ConflictException(`${mensaje} No puede usarse para prestar un aula.`);
+      throw new ConflictException(
+        `${mensaje} No puede usarse para prestar un aula.`,
+      );
     }
     const instalacion = await this.prisma.aulaSoftware.findUnique({
       where: { aulaId_softwareId: { aulaId, softwareId } },

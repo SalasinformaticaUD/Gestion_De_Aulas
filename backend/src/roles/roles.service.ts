@@ -24,16 +24,28 @@ export class RolesService {
       },
       include: includeRol,
     });
-    await this.auditoria?.registrar({ usuarioId, entidad: 'Rol', entidadId: rol.id, accion: 'CREATE', datosNuevos: rol });
+    await this.auditoria?.registrar({
+      usuarioId,
+      entidad: 'Rol',
+      entidadId: rol.id,
+      accion: 'CREATE',
+      datosNuevos: rol,
+    });
     return rol;
   }
 
   findAll() {
-    return this.prisma.rol.findMany({ include: includeRol, orderBy: { nombre: 'asc' } });
+    return this.prisma.rol.findMany({
+      include: includeRol,
+      orderBy: { nombre: 'asc' },
+    });
   }
 
   async findOne(id: string) {
-    const rol = await this.prisma.rol.findUnique({ where: { id }, include: includeRol });
+    const rol = await this.prisma.rol.findUnique({
+      where: { id },
+      include: includeRol,
+    });
     if (!rol) throw new NotFoundException('Rol no encontrado.');
     return rol;
   }
@@ -45,21 +57,38 @@ export class RolesService {
       where: { id },
       data: {
         ...data,
-        ...(permisoIds === undefined ? {} : {
-          permisos: { deleteMany: {}, create: permisoIds.map((permisoId) => ({ permisoId })) },
-        }),
+        ...(permisoIds === undefined
+          ? {}
+          : {
+              permisos: {
+                deleteMany: {},
+                create: permisoIds.map((permisoId) => ({ permisoId })),
+              },
+            }),
       },
       include: includeRol,
     });
-    await this.auditoria?.registrar({ usuarioId, entidad: 'Rol', entidadId: id, accion: 'UPDATE', datosPrevios: previo, datosNuevos: rol });
+    await this.auditoria?.registrar({
+      usuarioId,
+      entidad: 'Rol',
+      entidadId: id,
+      accion: 'UPDATE',
+      datosPrevios: previo,
+      datosNuevos: rol,
+    });
     return rol;
   }
 
   async remove(id: string, usuarioId?: string) {
     const previo = await this.findOne(id);
     const rol = await this.prisma.rol.delete({ where: { id } });
-    await this.auditoria?.registrar({ usuarioId, entidad: 'Rol', entidadId: id, accion: 'DELETE', datosPrevios: previo });
+    await this.auditoria?.registrar({
+      usuarioId,
+      entidad: 'Rol',
+      entidadId: id,
+      accion: 'DELETE',
+      datosPrevios: previo,
+    });
     return rol;
   }
-
 }

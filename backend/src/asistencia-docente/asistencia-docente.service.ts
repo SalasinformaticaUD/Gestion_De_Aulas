@@ -98,7 +98,11 @@ export class AsistenciaDocenteService {
     });
   }
 
-  async update(id: string, dto: UpdateAsistenciaDocenteDto, registradoPorId?: string) {
+  async update(
+    id: string,
+    dto: UpdateAsistenciaDocenteDto,
+    registradoPorId?: string,
+  ) {
     const asistencia = await this.prisma.asistenciaDocente.findUnique({
       where: { id },
       include: { clase: { include: { periodo: true } } },
@@ -134,10 +138,18 @@ export class AsistenciaDocenteService {
     }
   }
 
-  private async ensureClaseExists(id: string): Promise<{ diaSemana: number; horaInicio: Date; periodo: { fechaInicio: Date; fechaFin: Date } }> {
+  private async ensureClaseExists(id: string): Promise<{
+    diaSemana: number;
+    horaInicio: Date;
+    periodo: { fechaInicio: Date; fechaFin: Date };
+  }> {
     const clase = await this.prisma.claseProgramada.findUnique({
       where: { id },
-      select: { diaSemana: true, horaInicio: true, periodo: { select: { fechaInicio: true, fechaFin: true } } },
+      select: {
+        diaSemana: true,
+        horaInicio: true,
+        periodo: { select: { fechaInicio: true, fechaFin: true } },
+      },
     });
 
     if (!clase) {
@@ -153,7 +165,8 @@ export class AsistenciaDocenteService {
     this.ensureAttendanceWindow(clase, fecha);
 
     const estado = dto.estado ?? EstadoAsistencia.PENDIENTE;
-    const registradaEn = estado === EstadoAsistencia.PENDIENTE ? null : new Date();
+    const registradaEn =
+      estado === EstadoAsistencia.PENDIENTE ? null : new Date();
 
     return this.prisma.asistenciaDocente.upsert({
       where: { claseId_fecha: { claseId: dto.claseId, fecha } },
@@ -179,31 +192,58 @@ export class AsistenciaDocenteService {
     });
   }
 
-  private ensureAttendanceWindow(clase: { diaSemana: number; horaInicio: Date; periodo: { fechaInicio: Date; fechaFin: Date } }, fecha: Date): void {
+  private ensureAttendanceWindow(
+    clase: {
+      diaSemana: number;
+      horaInicio: Date;
+      periodo: { fechaInicio: Date; fechaFin: Date };
+    },
+    fecha: Date,
+  ): void {
     // La relación siempre está presente en producción; esta tolerancia conserva
     // compatibilidad con integraciones antiguas que solo devuelven el id.
     if (!clase?.periodo || !clase?.diaSemana) return;
     const ahora = new Date();
-    const hoy = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), ahora.getUTCDate()));
+    const hoy = new Date(
+      Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), ahora.getUTCDate()),
+    );
     const ayer = new Date(hoy);
     ayer.setUTCDate(ayer.getUTCDate() - 1);
-    if (fecha < clase.periodo.fechaInicio || fecha > clase.periodo.fechaFin || fecha < ayer || fecha > hoy) {
-      throw new ConflictException('La asistencia solo puede modificarse el día anterior o el día actual.');
+    if (
+      fecha < clase.periodo.fechaInicio ||
+      fecha > clase.periodo.fechaFin ||
+      fecha < ayer ||
+      fecha > hoy
+    ) {
+      throw new ConflictException(
+        'La asistencia solo puede modificarse el día anterior o el día actual.',
+      );
     }
     const dia = fecha.getUTCDay() === 0 ? 7 : fecha.getUTCDay();
     if (dia !== clase.diaSemana) {
-      throw new ConflictException('La fecha no corresponde al día de la semana de la clase.');
+      throw new ConflictException(
+        'La fecha no corresponde al día de la semana de la clase.',
+      );
     }
     if (fecha.getTime() === hoy.getTime()) {
       const partes = new Intl.DateTimeFormat('en-GB', {
-        timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+        timeZone: 'America/Bogota',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
       }).formatToParts(new Date());
       // horaInicio representa la hora local del horario (aunque Prisma la
       // entregue como Date con fecha técnica 1970-01-01).
-      const minutosActuales = Number(partes.find((parte) => parte.type === 'hour')?.value ?? '0') * 60 + Number(partes.find((parte) => parte.type === 'minute')?.value ?? '0');
-      const minutosInicio = clase.horaInicio.getUTCHours() * 60 + clase.horaInicio.getUTCMinutes();
+      const minutosActuales =
+        Number(partes.find((parte) => parte.type === 'hour')?.value ?? '0') *
+          60 +
+        Number(partes.find((parte) => parte.type === 'minute')?.value ?? '0');
+      const minutosInicio =
+        clase.horaInicio.getUTCHours() * 60 + clase.horaInicio.getUTCMinutes();
       if (minutosActuales < minutosInicio - 15) {
-        throw new ConflictException('La asistencia solo puede registrarse desde 15 minutos antes del inicio del bloque.');
+        throw new ConflictException(
+          'La asistencia solo puede registrarse desde 15 minutos antes del inicio del bloque.',
+        );
       }
     }
   }

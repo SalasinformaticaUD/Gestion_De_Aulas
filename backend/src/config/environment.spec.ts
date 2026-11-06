@@ -16,6 +16,8 @@ describe('environment', () => {
       FORMS_INTEGRATION_KEY: 'forms-key-aleatoria-con-mas-de-32-caracteres',
       CREDENTIALS_ENCRYPTION_KEY:
         'encryption-key-aleatoria-con-mas-de-32-caracteres',
+      SOFTRACKER_DATABASE_URL:
+        'postgresql://softracker_readonly:clave@softracker-db:5432/softracker',
     };
   });
 
@@ -39,5 +41,30 @@ describe('environment', () => {
     expect(() => environment.validate()).toThrow(
       'MONITORES_SERVICE_TOKEN debe ser un secreto aleatorio',
     );
+  });
+
+  it('acepta SOFTRACKER_DATABASE_URL con un valor PostgreSQL válido en producción', () => {
+    expect(() => environment.validate()).not.toThrow();
+  });
+
+  it('rechaza SOFTRACKER_DATABASE_URL ausente en producción', () => {
+    delete process.env.SOFTRACKER_DATABASE_URL;
+    expect(() => environment.validate()).toThrow('SOFTRACKER_DATABASE_URL');
+  });
+
+  it('rechaza SOFTRACKER_DATABASE_URL vacía en producción', () => {
+    process.env.SOFTRACKER_DATABASE_URL = '';
+    expect(() => environment.validate()).toThrow('SOFTRACKER_DATABASE_URL');
+  });
+
+  it('rechaza SOFTRACKER_DATABASE_URL compuesta solo por espacios en producción', () => {
+    process.env.SOFTRACKER_DATABASE_URL = '   ';
+    expect(() => environment.validate()).toThrow('SOFTRACKER_DATABASE_URL');
+  });
+
+  it('no exige SOFTRACKER_DATABASE_URL cuando NODE_ENV no es producción', () => {
+    process.env.NODE_ENV = 'development';
+    delete process.env.SOFTRACKER_DATABASE_URL;
+    expect(() => environment.validate()).not.toThrow();
   });
 });

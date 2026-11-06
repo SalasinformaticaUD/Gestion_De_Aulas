@@ -28,5 +28,4 @@ export class CreateRoleDto {
   @ArrayUnique()
   @IsUUID('4', { each: true })
   permisoIds?: string[];
-
 }
