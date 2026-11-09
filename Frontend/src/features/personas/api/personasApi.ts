@@ -14,6 +14,20 @@ type TipoPersona = "estudiantes" | "docentes";
 type DatosPersona = { codigo?: string; documento?: string; nombre: string; correo?: string; proyecto?: string };
 type ResultadoImportacion = { total: number; procesados?: number; omitidasDuplicadas?: number; creados: number; actualizados: number; eliminados: number; conservadosPorHistorial: number };
 export type Pagina<T> = { data: T[]; meta: { page: number; limit: number; total: number; totalPages: number } };
+export type ResultadoBusquedaMasivaEstudiantes = {
+  totalFilas: number;
+  procesados: number;
+  duplicados: number;
+  activos: number;
+  inactivos: number;
+  noEncontrados: number;
+  resultados: Array<{
+    codigo: string | null;
+    nombre: string | null;
+    correo: string;
+    estado: "ACTIVO" | "INACTIVO" | "NO_ENCONTRADO";
+  }>;
+};
 
 function token() {
   const value = obtenerSesion()?.tokenAcceso;
@@ -66,4 +80,10 @@ export function importarDocentesExcel(archivo: File) {
   const formData = new FormData();
   formData.append("archivo", archivo);
   return solicitarAulas<ResultadoImportacion>("/docentes/importar/excel", token(), { method: "POST", body: formData });
+}
+
+export function buscarEstudiantesMasivo(archivo: File) {
+  const formData = new FormData();
+  formData.append("archivo", archivo);
+  return solicitarAulas<ResultadoBusquedaMasivaEstudiantes>("/estudiantes/busqueda-masiva", token(), { method: "POST", body: formData });
 }

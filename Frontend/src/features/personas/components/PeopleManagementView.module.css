@@ -90,6 +90,27 @@ html[data-theme="dark"] .headerActions .secondaryAction:hover { color:#ff9eaa; b
 }
 .noticeError { border-color:#fecaca; color:#b42318; background:#fff1f1; }
 
+.bulkDialog { width:min(760px,calc(100vw - 28px)); }
+.selectedFile { margin:14px 20px 0; color:var(--ink); font-weight:700; overflow-wrap:anywhere; }
+.formatNotice { display:grid; gap:4px; margin:16px 20px 0; padding:12px 14px; border:1px solid #f0cf83; border-radius:7px; color:#714c00; background:#fff8e7; }
+.formatNotice span { font-size:13px; }
+.bulkResultBody { display:grid; gap:16px; padding:20px; }
+.bulkSummary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.bulkSummary button { display:grid; gap:3px; min-height:72px; padding:10px; border:1px solid var(--line); border-radius:8px; color:var(--muted); background:var(--surface-muted); font-weight:750; text-align:left; }
+.bulkSummary button strong { color:var(--ink); font-size:24px; }
+.bulkSummary button:hover,
+.bulkSummary .bulkFilterActive { border-color:var(--primary); box-shadow:0 0 0 2px rgba(165,16,34,.1); }
+.bulkList { display:grid; max-height:390px; overflow:auto; border:1px solid var(--line); border-radius:8px; }
+.bulkList article { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:12px 14px; border-bottom:1px solid var(--line); }
+.bulkList article:last-child { border-bottom:0; }
+.bulkList article div { min-width:0; }
+.bulkList article strong,
+.bulkList article span { display:block; }
+.bulkList article span { margin-top:4px; color:var(--muted); font-size:13px; overflow-wrap:anywhere; }
+.bulkList article > b { flex-shrink:0; padding:5px 8px; border-radius:999px; color:#087036; background:#ecfdf3; font-size:12px; }
+.bulkList article[data-status="INACTIVO"] > b { color:#8a5700; background:#fff4d6; }
+.bulkList article[data-status="NO_ENCONTRADO"] > b { color:#b42318; background:#fff1f1; }
+
 .layout { display:grid; grid-template-columns:minmax(280px,.8fr) minmax(0,1.2fr); gap:18px; }
 .card form { display:grid; gap:14px; padding:18px 20px; }
 .formFields { display:grid; gap:13px; }
@@ -124,4 +145,6 @@ html[data-theme="dark"] .headerActions .secondaryAction:hover { color:#ff9eaa; b
   .search { width:100%; }
   .list article { align-items:flex-start; flex-direction:column; }
   .pagination { align-items:flex-start; flex-direction:column; }
+  .bulkSummary { grid-template-columns:1fr; }
+  .bulkList article { align-items:flex-start; flex-direction:column; }
 }
