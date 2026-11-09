@@ -12,7 +12,9 @@ const nextConfig: NextConfig = {
   // Las fichas mensuales agrupan varios PDFs y pueden superar el valor
   // predeterminado de 30 segundos del proxy de rewrites.
   experimental: {
-    proxyTimeout: 180_000,
+    // Las importaciones semestrales de estudiantes pueden superar los 26.000
+    // registros. El cliente conserva límites cortos para las consultas normales.
+    proxyTimeout: 1_800_000,
   },
   async rewrites() {
     const aulas = (process.env.NEXT_PUBLIC_AULAS_API_URL ?? "http://localhost:3000").replace(/\/$/, "");

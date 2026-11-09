@@ -106,14 +106,26 @@ async function interpretarRespuesta<T>(respuesta: Response, notificarAutorizacio
   return cuerpo as T;
 }
 
-type OpcionesSolicitudAulas = RequestInit & { notificarAutorizacion?: boolean };
+type OpcionesSolicitudAulas = RequestInit & {
+  notificarAutorizacion?: boolean;
+  tiempoEsperaMs?: number;
+};
 
 export async function solicitarAulas<T>(ruta: string, token?: string, opciones: OpcionesSolicitudAulas = {}) {
-  const cabeceras = new Headers(opciones.headers);
-  if (!(opciones.body instanceof FormData)) cabeceras.set("Content-Type", "application/json");
+  const {
+    notificarAutorizacion = true,
+    tiempoEsperaMs = tiempoEsperaConsultaMs,
+    ...opcionesFetch
+  } = opciones;
+  const cabeceras = new Headers(opcionesFetch.headers);
+  if (!(opcionesFetch.body instanceof FormData)) cabeceras.set("Content-Type", "application/json");
   if (token) cabeceras.set("Authorization", `Bearer ${token}`);
-  const respuesta = await solicitarConRecuperacion(`${baseAulas}${ruta}`, { ...opciones, headers: cabeceras });
-  return interpretarRespuesta<T>(respuesta, Boolean(token) && opciones.notificarAutorizacion !== false);
+  const respuesta = await solicitarConRecuperacion(
+    `${baseAulas}${ruta}`,
+    { ...opcionesFetch, headers: cabeceras },
+    tiempoEsperaMs,
+  );
+  return interpretarRespuesta<T>(respuesta, Boolean(token) && notificarAutorizacion);
 }
 
 /** Descarga un archivo binario desde la API de Aulas conservando la sesión actual. */

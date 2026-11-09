@@ -339,7 +339,9 @@ export class EstudiantesService {
           conservadosPorHistorial: anteriores.length - eliminados,
         };
       },
-      { maxWait: 15_000, timeout: 120_000 },
+      // La carga semestral puede contener más de 26.000 estudiantes y ejecuta
+      // validaciones y conciliación con registros históricos en una transacción.
+      { maxWait: 30_000, timeout: 1_800_000 },
     );
     await this.auditoria?.registrar({
       usuarioId,

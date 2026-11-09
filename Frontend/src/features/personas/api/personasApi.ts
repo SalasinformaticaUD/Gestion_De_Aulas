@@ -1,6 +1,8 @@
 import { obtenerSesion } from "@/features/auth/lib/sesion";
 import { solicitarAulas } from "@/features/monitores/api/clienteMonitores";
 
+const TIEMPO_ESPERA_IMPORTACION_ESTUDIANTES_MS = 30 * 60 * 1000;
+
 export type Persona = {
   id: string;
   codigo?: string;
@@ -73,7 +75,11 @@ export function eliminarPersona(tipo: TipoPersona, id: string) {
 export function importarEstudiantesExcel(archivo: File) {
   const formData = new FormData();
   formData.append("archivo", archivo);
-  return solicitarAulas<ResultadoImportacion>("/estudiantes/importar/excel", token(), { method: "POST", body: formData });
+  return solicitarAulas<ResultadoImportacion>("/estudiantes/importar/excel", token(), {
+    method: "POST",
+    body: formData,
+    tiempoEsperaMs: TIEMPO_ESPERA_IMPORTACION_ESTUDIANTES_MS,
+  });
 }
 
 export function importarDocentesExcel(archivo: File) {
