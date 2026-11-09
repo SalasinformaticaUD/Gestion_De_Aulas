@@ -102,6 +102,118 @@ export class EstudiantesService {
     });
     return estudiante;
   }
+
+  async buscarMasivo(
+    archivo: { buffer: Buffer; originalname: string } | undefined,
+  ) {
+    if (
+      !archivo?.buffer?.length ||
+      !/\.(xlsx|xls)$/i.test(archivo.originalname)
+    )
+      throw new BadRequestException(
+        'Debe adjuntar un archivo Excel .xlsx o .xls.',
+      );
+    let filas: Array<Record<string, unknown>>;
+    try {
+      const libro = XLSX.read(archivo.buffer, { type: 'buffer' });
+      const hoja = libro.Sheets[libro.SheetNames[0]];
+      filas = XLSX.utils.sheet_to_json<Record<string, unknown>>(hoja, {
+        defval: '',
+        blankrows: true,
+      });
+    } catch {
+      throw new BadRequestException('No fue posible leer el archivo Excel.');
+    }
+    const normalizar = (valor: string) =>
+      valor
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toUpperCase();
+    const filasConDatos = filas.filter((fila) =>
+      Object.values(fila).some((celda) => String(celda).trim() !== ''),
+    );
+    if (!filasConDatos.length)
+      throw new BadRequestException(
+        'El Excel debe contener al menos un correo estudiantil.',
+      );
+    if (filasConDatos.length > 5_000)
+      throw new BadRequestException(
+        'El Excel supera el máximo de 5.000 filas.',
+      );
+    const encabezados = Object.keys(filasConDatos[0]).map(normalizar);
+    if (!encabezados.includes('CORREO'))
+      throw new BadRequestException('Falta la columna requerida: CORREO.');
+    const correos = new Set<string>();
+    let duplicados = 0;
+    const datos = filasConDatos.flatMap((fila, indice) => {
+      const clave = Object.keys(fila).find(
+        (item) => normalizar(item) === 'CORREO',
+      );
+      const celda = clave ? fila[clave] : '';
+      const correo =
+        typeof celda === 'string' ? celda.trim().toLowerCase() : '';
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo))
+        throw new BadRequestException(
+          `Fila ${indice + 2}: el correo debe tener un formato válido.`,
+        );
+      if (correos.has(correo)) {
+        duplicados++;
+        return [];
+      }
+      correos.add(correo);
+      return [{ correo }];
+    });
+    const estudiantes = await this.prisma.estudiante.findMany({
+      where: { correo: { in: datos.map((dato) => dato.correo) } },
+      select: { codigo: true, nombre: true, correo: true },
+    });
+    const porCorreo = new Map<string, typeof estudiantes>();
+    for (const estudiante of estudiantes) {
+      if (!estudiante.correo) continue;
+      const correo = estudiante.correo.toLowerCase();
+      porCorreo.set(correo, [...(porCorreo.get(correo) ?? []), estudiante]);
+    }
+    type ResultadoBusqueda = {
+      codigo: string | null;
+      nombre: string | null;
+      correo: string;
+      estado: 'ACTIVO' | 'INACTIVO' | 'NO_ENCONTRADO';
+    };
+    const resultados = datos.flatMap<ResultadoBusqueda>(({ correo }) => {
+      const coincidencias = porCorreo.get(correo) ?? [];
+      if (!coincidencias.length)
+        return [
+          {
+            codigo: null,
+            nombre: null,
+            correo,
+            estado: 'NO_ENCONTRADO' as const,
+          },
+        ];
+      return coincidencias.map((estudiante) => {
+        const inactivo = /^\s*\(INACTIVO\)\s*/i.test(estudiante.nombre);
+        return {
+          codigo: estudiante.codigo,
+          nombre: sinEtiquetaInactivo(estudiante.nombre),
+          correo,
+          estado: inactivo ? ('INACTIVO' as const) : ('ACTIVO' as const),
+        };
+      });
+    });
+    return {
+      totalFilas: filasConDatos.length,
+      procesados: datos.length,
+      duplicados,
+      activos: resultados.filter((item) => item.estado === 'ACTIVO').length,
+      inactivos: resultados.filter((item) => item.estado === 'INACTIVO').length,
+      noEncontrados: resultados.filter(
+        (item) => item.estado === 'NO_ENCONTRADO',
+      ).length,
+      resultados,
+    };
+  }
+
   async importarExcel(
     archivo: { buffer: Buffer; originalname: string } | undefined,
     usuarioId?: string,
@@ -141,7 +253,13 @@ export class EstudiantesService {
       const clave = Object.keys(fila).find(
         (item) => normalizar(item) === normalizar(encabezado),
       );
-      const contenido = String(clave ? (fila[clave] ?? '') : '');
+      const celda = clave ? fila[clave] : '';
+      const contenido =
+        typeof celda === 'string'
+          ? celda
+          : typeof celda === 'number'
+            ? String(celda)
+            : '';
       return conservarContenido ? contenido : contenido.trim();
     };
     const encabezados = Object.keys(filas[0]).map(normalizar);
@@ -190,7 +308,8 @@ export class EstudiantesService {
             update: { nombre: dato.nombre, correo: dato.correo },
             create: dato,
           });
-          existe ? actualizados++ : creados++;
+          if (existe) actualizados++;
+          else creados++;
         }
         const anteriores = await tx.estudiante.findMany({
           where: { codigo: { notIn: datos.map((dato) => dato.codigo) } },

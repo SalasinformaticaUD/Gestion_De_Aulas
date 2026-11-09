@@ -156,7 +156,10 @@ export class DocentesService {
       const clave = Object.keys(fila).find(
         (item) => normalizar(item) === encabezado,
       );
-      return String(clave ? (fila[clave] ?? '') : '').trim();
+      const celda = clave ? fila[clave] : '';
+      if (typeof celda === 'string') return celda.trim();
+      if (typeof celda === 'number') return String(celda);
+      return '';
     };
     const encabezados = Object.keys(filas[0].datos).map(normalizar);
     const faltantes = ['CEDULA', 'NOMBRE', 'PROYECTO'].filter(
@@ -171,6 +174,7 @@ export class DocentesService {
     const datos = filas.flatMap(({ datos: fila, filaExcel }) => {
       const documento = valor(fila, 'CEDULA');
       const nombre = valor(fila, 'NOMBRE');
+      const correo = valor(fila, 'CORREO').toLowerCase();
       const proyecto = valor(fila, 'PROYECTO');
       if (!/^\d{3,50}$/.test(documento))
         throw new BadRequestException(
@@ -184,12 +188,16 @@ export class DocentesService {
         throw new BadRequestException(
           `Fila ${filaExcel}: el proyecto es obligatorio y no puede superar 160 caracteres.`,
         );
+      if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo))
+        throw new BadRequestException(
+          `Fila ${filaExcel}: el correo debe tener un formato válido.`,
+        );
       if (documentos.has(documento)) {
         omitidasDuplicadas++;
         return [];
       }
       documentos.add(documento);
-      return [{ documento, nombre, proyecto }];
+      return [{ documento, nombre, correo: correo || undefined, proyecto }];
     });
     const resultado = await this.prisma.$transaction(
       async (tx) => {
@@ -202,10 +210,15 @@ export class DocentesService {
           });
           await tx.docente.upsert({
             where: { documento: dato.documento },
-            update: { nombre: dato.nombre, proyecto: dato.proyecto },
+            update: {
+              nombre: dato.nombre,
+              correo: dato.correo,
+              proyecto: dato.proyecto,
+            },
             create: dato,
           });
-          existe ? actualizados++ : creados++;
+          if (existe) actualizados++;
+          else creados++;
         }
         const anteriores = await tx.docente.findMany({
           where: {

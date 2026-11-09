@@ -49,6 +49,18 @@ export class EstudiantesController {
     return this.service.importarExcel(archivo, user?.id);
   }
 
+  @Post('busqueda-masiva')
+  @RequirePermissions('ESTUDIANTES_LEER')
+  @UseInterceptors(
+    FileInterceptor('archivo', { limits: { fileSize: 20_000_000 } }),
+  )
+  buscarMasivo(
+    @UploadedFile()
+    archivo: { buffer: Buffer; originalname: string } | undefined,
+  ) {
+    return this.service.buscarMasivo(archivo);
+  }
+
   @Get()
   @RequirePermissions('ESTUDIANTES_LEER')
   findAll(
