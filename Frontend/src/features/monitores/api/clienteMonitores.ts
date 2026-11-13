@@ -122,7 +122,11 @@ export async function solicitarAulas<T>(ruta: string, token?: string, opciones: 
   if (token) cabeceras.set("Authorization", `Bearer ${token}`);
   const respuesta = await solicitarConRecuperacion(
     `${baseAulas}${ruta}`,
-    { ...opcionesFetch, headers: cabeceras },
+    {
+      ...opcionesFetch,
+      cache: opcionesFetch.cache ?? "no-store",
+      headers: cabeceras,
+    },
     tiempoEsperaMs,
   );
   return interpretarRespuesta<T>(respuesta, Boolean(token) && notificarAutorizacion);

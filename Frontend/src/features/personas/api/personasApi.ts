@@ -10,6 +10,7 @@ export type Persona = {
   nombre: string;
   correo?: string | null;
   proyecto?: string | null;
+  proyectoCurricular?: string | null;
 };
 
 type TipoPersona = "estudiantes" | "docentes";
@@ -22,12 +23,12 @@ export type ResultadoBusquedaMasivaEstudiantes = {
   duplicados: number;
   activos: number;
   inactivos: number;
-  noEncontrados: number;
   resultados: Array<{
     codigo: string | null;
     nombre: string | null;
     correo: string;
-    estado: "ACTIVO" | "INACTIVO" | "NO_ENCONTRADO";
+    proyectoCurricular: string | null;
+    estado: "ACTIVO" | "INACTIVO";
   }>;
 };
 

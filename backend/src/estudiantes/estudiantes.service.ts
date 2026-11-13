@@ -36,6 +36,12 @@ export class EstudiantesService {
             { codigo: { contains: query, mode: 'insensitive' as const } },
             { nombre: { contains: query, mode: 'insensitive' as const } },
             { correo: { contains: query, mode: 'insensitive' as const } },
+            {
+              proyectoCurricular: {
+                contains: query,
+                mode: 'insensitive' as const,
+              },
+            },
           ],
         }
       : undefined;
@@ -166,7 +172,12 @@ export class EstudiantesService {
     });
     const estudiantes = await this.prisma.estudiante.findMany({
       where: { correo: { in: datos.map((dato) => dato.correo) } },
-      select: { codigo: true, nombre: true, correo: true },
+      select: {
+        codigo: true,
+        nombre: true,
+        correo: true,
+        proyectoCurricular: true,
+      },
     });
     const porCorreo = new Map<string, typeof estudiantes>();
     for (const estudiante of estudiantes) {
@@ -178,7 +189,8 @@ export class EstudiantesService {
       codigo: string | null;
       nombre: string | null;
       correo: string;
-      estado: 'ACTIVO' | 'INACTIVO' | 'NO_ENCONTRADO';
+      proyectoCurricular: string | null;
+      estado: 'ACTIVO' | 'INACTIVO';
     };
     const resultados = datos.flatMap<ResultadoBusqueda>(({ correo }) => {
       const coincidencias = porCorreo.get(correo) ?? [];
@@ -188,7 +200,8 @@ export class EstudiantesService {
             codigo: null,
             nombre: null,
             correo,
-            estado: 'NO_ENCONTRADO' as const,
+            proyectoCurricular: null,
+            estado: 'INACTIVO' as const,
           },
         ];
       return coincidencias.map((estudiante) => {
@@ -197,6 +210,7 @@ export class EstudiantesService {
           codigo: estudiante.codigo,
           nombre: sinEtiquetaInactivo(estudiante.nombre),
           correo,
+          proyectoCurricular: estudiante.proyectoCurricular,
           estado: inactivo ? ('INACTIVO' as const) : ('ACTIVO' as const),
         };
       });
@@ -207,9 +221,6 @@ export class EstudiantesService {
       duplicados,
       activos: resultados.filter((item) => item.estado === 'ACTIVO').length,
       inactivos: resultados.filter((item) => item.estado === 'INACTIVO').length,
-      noEncontrados: resultados.filter(
-        (item) => item.estado === 'NO_ENCONTRADO',
-      ).length,
       resultados,
     };
   }
@@ -270,11 +281,17 @@ export class EstudiantesService {
       throw new BadRequestException(
         `Faltan columnas requeridas: ${faltantes.join(', ')}.`,
       );
+    const incluyeProyectoCurricular =
+      encabezados.includes('PROYECTO CURRICULAR') ||
+      encabezados.includes('PROYECTO');
     const codigos = new Set<string>();
     const datos = filas.map((fila, indice) => {
       const codigo = valor(fila, 'CODIGO');
       const nombre = sinEtiquetaInactivo(valor(fila, 'NOMBRE', true));
       const correo = valor(fila, 'CORREO').toLowerCase();
+      const proyectoCurricular = incluyeProyectoCurricular
+        ? valor(fila, 'PROYECTO CURRICULAR') || valor(fila, 'PROYECTO')
+        : undefined;
       if (!/^\d{3,50}$/.test(codigo))
         throw new BadRequestException(
           `Fila ${indice + 2}: el código debe contener solo números.`,
@@ -292,7 +309,13 @@ export class EstudiantesService {
           `Fila ${indice + 2}: código duplicado dentro del archivo.`,
         );
       codigos.add(codigo);
-      return { codigo, nombre, correo };
+      return {
+        codigo,
+        nombre,
+        correo,
+        proyectoCurricular:
+          proyectoCurricular === undefined ? undefined : proyectoCurricular || null,
+      };
     });
     const resultado = await this.prisma.$transaction(
       async (tx) => {
@@ -305,7 +328,13 @@ export class EstudiantesService {
           });
           await tx.estudiante.upsert({
             where: { codigo: dato.codigo },
-            update: { nombre: dato.nombre, correo: dato.correo },
+            update: {
+              nombre: dato.nombre,
+              correo: dato.correo,
+              ...(dato.proyectoCurricular !== undefined && {
+                proyectoCurricular: dato.proyectoCurricular,
+              }),
+            },
             create: dato,
           });
           if (existe) actualizados++;
