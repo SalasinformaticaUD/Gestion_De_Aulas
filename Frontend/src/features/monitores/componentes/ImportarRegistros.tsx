@@ -51,6 +51,15 @@ const historialVacio = {
 
 type ValorCelda = string | number;
 
+function normalizarTexto(valor: unknown) {
+  return String(valor ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("es")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function descargar(nombre: string, filas: ValorCelda[][]) {
   const hoja = XLSX.utils.aoa_to_sheet(filas);
   hoja["!cols"] = filas[0].map((_, indice) => ({
@@ -104,6 +113,7 @@ export function ImportarRegistros() {
   );
   const [historicos, setHistoricos] = useState<FilaHistorica[]>([]);
   const [cargandoHistorico, setCargandoHistorico] = useState(false);
+  const [buscarActual, setBuscarActual] = useState("");
   const [buscar, setBuscar] = useState("");
   const [dependencia, setDependencia] = useState("");
   const [dependenciaActual, setDependenciaActual] = useState("");
@@ -112,9 +122,19 @@ export function ImportarRegistros() {
   const monitores = useMemo(
     () =>
       recursoMonitores.datos
-        .filter((item) => item.is_active && item.semester_is_active === true && (!dependenciaActual || item.department === dependenciaActual))
+        .filter((item) => {
+          const coincideBusqueda = normalizarTexto(
+            `${item.full_name} ${item.codigo_estudiante}`,
+          ).includes(normalizarTexto(buscarActual));
+          return (
+            item.is_active &&
+            item.semester_is_active === true &&
+            (!dependenciaActual || item.department === dependenciaActual) &&
+            coincideBusqueda
+          );
+        })
         .map(adaptarMonitor),
-    [recursoMonitores.datos, dependenciaActual],
+    [recursoMonitores.datos, dependenciaActual, buscarActual],
   );
   const resumenes = useMemo(
     () =>
@@ -173,12 +193,11 @@ export function ImportarRegistros() {
   const historicosVisibles = useMemo(
     () =>
       unicos.filter((fila) => {
-        const texto =
-          `${fila.monitor_name} ${fila.codigo_estudiante}`.toLocaleLowerCase(
-            "es",
-          );
+        const texto = normalizarTexto(
+          `${fila.monitor_name} ${fila.codigo_estudiante}`,
+        );
         return (
-          (!buscar || texto.includes(buscar.toLocaleLowerCase("es"))) &&
+          (!buscar || texto.includes(normalizarTexto(buscar))) &&
           (!dependencia || fila.department === dependencia) &&
           (!semestre || fila.semester === semestre)
         );
@@ -363,10 +382,24 @@ export function ImportarRegistros() {
             </div>
           </header>
           <div className={`${estilos.barraHerramientas} ${estilos.filtrosRegistros} ${estilos.controlesPeriodoActual}`}>
+            <label className={`${estilos.campoAncho} ${estilos.buscadorRegistros}`}>
+              <span>Buscar monitor</span>
+              <input
+                value={buscarActual}
+                onChange={(evento) => {
+                  setBuscarActual(evento.target.value);
+                  paginacionActual.reiniciar();
+                }}
+                placeholder="Nombre o código estudiantil"
+              />
+            </label>
             <SelectorDependenciaAdmin
               visible={perfil.datos.role === "admin"}
               value={dependenciaActual}
-              onChange={setDependenciaActual}
+              onChange={(valor) => {
+                setDependenciaActual(valor);
+                paginacionActual.reiniciar();
+              }}
             />
             <button
               type="button"
@@ -470,7 +503,10 @@ export function ImportarRegistros() {
               <span>Monitor</span>
               <input
                 value={buscar}
-                onChange={(e) => setBuscar(e.target.value)}
+                onChange={(e) => {
+                  setBuscar(e.target.value);
+                  paginacionHistorica.reiniciar();
+                }}
                 placeholder="Nombre o código"
               />
             </label>
