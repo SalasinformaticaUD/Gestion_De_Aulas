@@ -10,12 +10,15 @@ import { AuthenticationGuard } from './guards/authentication.guard';
 import { ModulePermissionsGuard } from './guards/module-permissions.guard';
 import { PermissionsGuard } from './guards/permissions.guard';
 import { AdministratorGuard } from './guards/administrator.guard';
+import { InventariosAutorizacionController } from './inventarios-autorizacion.controller';
+import { InventariosServiceTokenGuard } from './guards/inventarios-service-token.guard';
 
 @Module({
   imports: [PrismaModule, JwtModule.register({})],
-  controllers: [AuthController],
+  controllers: [AuthController, InventariosAutorizacionController],
   providers: [
     AuthService,
+    InventariosServiceTokenGuard,
     AuthTokenService,
     PasswordHashService,
     { provide: APP_GUARD, useClass: AuthenticationGuard },

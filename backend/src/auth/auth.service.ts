@@ -234,6 +234,8 @@ export class AuthService {
     const modulos = new Set<string>();
     for (const { rol } of usuario.roles) {
       for (const { permiso } of rol.permisos) {
+        if (permiso.modulo.codigo === 'INVENTARIOS' && !permiso.modulo.activo)
+          continue;
         permisos.add(permiso.codigo);
         if (permiso.modulo.activo) modulos.add(permiso.modulo.codigo);
       }
