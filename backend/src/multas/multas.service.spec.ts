@@ -57,6 +57,7 @@ describe('MultasService', () => {
       XLSX.utils.json_to_sheet([
         { Codigo: '20261001' },
         { Codigo: '20261002' },
+        { Codigo: '20261003' },
       ]),
       'Codigos',
     );
@@ -77,6 +78,12 @@ describe('MultasService', () => {
               },
             ],
           },
+          {
+            id: 'estudiante-3',
+            codigo: '20261003',
+            nombre: 'Estudiante sin multas activas',
+            multas: [],
+          },
         ]),
       },
     };
@@ -87,13 +94,23 @@ describe('MultasService', () => {
       originalname: 'codigos.xlsx',
     });
 
+    expect(prisma.estudiante.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          multas: expect.objectContaining({
+            where: { estado: EstadoMulta.ACTIVA },
+          }),
+        }),
+      }),
+    );
     expect(result).toMatchObject({
       conMulta: 1,
-      sinMulta: 0,
+      sinMulta: 1,
       noEncontradas: 1,
       resultados: [
         { codigo: '20261001', estado: 'CON_MULTA' },
         { codigo: '20261002', estado: 'NO_ENCONTRADO' },
+        { codigo: '20261003', estado: 'SIN_MULTA', multas: [] },
       ],
     });
   });

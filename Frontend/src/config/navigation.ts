@@ -8,6 +8,7 @@ export const operationNavigation = [
   { href: "/audiovisuales", label: "Préstamos Audiovisuales" },
   { href: "/software", label: "Software Instalado" },
   { href: "/solicitudes-instalacion", label: "Solicitudes de instalación" },
+  { href: "/verificador-documental", label: "Verificador documental" },
   { href: "/credenciales", label: "Credenciales" },
   { href: "/usuarios", label: "Usuarios" },
   { href: "/estudiantes", label: "Estudiantes" },

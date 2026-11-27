@@ -28,18 +28,25 @@ export function PeopleManagementView({ tipo }: { tipo: Tipo }) {
   const [bulkSearchResult, setBulkSearchResult] = useState<ResultadoBusquedaMasivaEstudiantes | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const cache = useRef(new Map<string, Pagina<Persona>>());
+  const loadSequence = useRef(0);
   const content = titles[tipo];
   const isStudent = tipo === "estudiantes";
 
   const load = useCallback(async (targetPage = page, force = false) => {
-    const key = `${tipo}:${targetPage}:${query.trim().toLowerCase()}`;
+    const sequence = ++loadSequence.current;
+    const searchKey = tipo === "docentes" ? query.normalize("NFD").replace(/[\u0300-\u036f]/g, "") : query;
+    const key = `${tipo}:${targetPage}:${searchKey.trim().toLowerCase()}`;
     try {
       const result = !force && cache.current.get(key) || await listarPersonasPaginadas(tipo, targetPage, query);
       if (!cache.current.has(key) || force) cache.current.set(key, result);
+      if (sequence !== loadSequence.current) return;
       setItems(result.data); setMeta(result.meta);
-    } catch (error) { setNotice({ error: true, text: error instanceof Error ? error.message : "No fue posible cargar los registros." }); }
+    } catch (error) { if (sequence === loadSequence.current) setNotice({ error: true, text: error instanceof Error ? error.message : "No fue posible cargar los registros." }); }
   }, [page, query, tipo]);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void load(); }, tipo === "docentes" && query.trim() ? 250 : 0);
+    return () => { window.clearTimeout(timer); ++loadSequence.current; };
+  }, [load, tipo, query]);
   useEffect(() => {
     if (!notice) return;
     const timer = window.setTimeout(() => setNotice(null), 15000);

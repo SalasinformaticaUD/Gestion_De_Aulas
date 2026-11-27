@@ -151,6 +151,7 @@ enum EstadoNormalizacionSolicitud {
 
 // Identidad, autorización y auditoría
 model Usuario {
+  verificacionesDocumentales        VerificacionDocumental[]
   id                                String                                @id @default(uuid()) @db.Uuid
   nombreCompleto                    String
   nombreUsuario                     String                                @unique
@@ -989,4 +990,122 @@ model SecretoCredencial {
 
   @@unique([credencialId, usuarioId])
   @@index([usuarioId])
+}
+
+// Verificador documental: los resultados se poblarán en la fase de procesamiento.
+enum EstadoVerificacionDocumental {
+  BORRADOR
+  PENDIENTE
+  PROCESANDO
+  SATISFACTORIA
+  CON_INCONSISTENCIAS
+  INCOMPLETA
+  FALLIDA
+}
+
+enum ModalidadCargaDocumental {
+  PDF_UNIFICADO
+  PDF_SEPARADOS
+}
+
+enum TipoIdentificacionContratista {
+  CC
+  CE
+  TI
+  PASAPORTE
+  PEP
+  PPT
+  OTRO
+}
+
+enum TipoDocumentoContratista {
+  PERSONERIA
+  PROCURADURIA
+  CONTRALORIA
+  POLICIA_JUDICIAL
+  MEDIDAS_CORRECTIVAS
+  DELITOS_SEXUALES
+  REDAM
+  DECLARACION_VERACIDAD
+  SEGURIDAD_SOCIAL
+  NO_RECONOCIDO
+}
+
+model VerificacionDocumental {
+  versionComparacion String? @db.VarChar(30)
+  resultadoComparacion Json?
+  versionClasificacion String? @db.VarChar(30)
+  id                    String @id @default(uuid()) @db.Uuid
+  tipoIdentificacion    TipoIdentificacionContratista
+  numeroIdentificacion  String @db.VarChar(40)
+  nombreCompleto        String @db.VarChar(200)
+  fechaSolicitud        DateTime @db.Date
+  modalidadCarga        ModalidadCargaDocumental
+  estado                EstadoVerificacionDocumental @default(BORRADOR)
+  creadoPorId           String @db.Uuid
+  creadoPor             Usuario @relation(fields: [creadoPorId], references: [id], onDelete: Restrict)
+  archivos              ArchivoVerificacionDocumental[]
+  hallazgos             HallazgoVerificacionDocumental[]
+  creadoEn              DateTime @default(now())
+  actualizadoEn         DateTime @updatedAt
+  finalizadoEn          DateTime?
+
+  @@index([creadoEn, id])
+  @@index([numeroIdentificacion])
+  @@index([estado, creadoEn])
+}
+
+model ArchivoVerificacionDocumental {
+  id                String @id @default(uuid()) @db.Uuid
+  verificacionId    String @db.Uuid
+  verificacion      VerificacionDocumental @relation(fields: [verificacionId], references: [id], onDelete: Cascade)
+  nombreOriginal    String @db.VarChar(255)
+  mimeType          String @default("application/pdf")
+  tamanoBytes       Int
+  sha256            String @db.VarChar(64)
+  ordenCarga        Int
+  numeroPaginas     Int?
+  documentos        DocumentoVerificacionDocumental[]
+  creadoEn          DateTime @default(now())
+
+  @@unique([verificacionId, ordenCarga])
+  @@index([verificacionId, sha256])
+}
+
+model DocumentoVerificacionDocumental {
+  estadoClasificacion String @default("PENDIENTE") @db.VarChar(30)
+  puntajeClasificacion Int @default(0)
+  evidenciasClasificacion Json?
+  requiereRevisionManual Boolean @default(true)
+  id                String @id @default(uuid()) @db.Uuid
+  archivoId         String @db.Uuid
+  archivo           ArchivoVerificacionDocumental @relation(fields: [archivoId], references: [id], onDelete: Cascade)
+  tipo              TipoDocumentoContratista
+  paginaInicio      Int
+  paginaFin         Int
+  requiereOcr       Boolean @default(false)
+  hallazgos         HallazgoVerificacionDocumental[]
+
+  @@index([archivoId])
+}
+
+model HallazgoVerificacionDocumental {
+  pagina Int?
+  evidencia Json?
+  id                String @id @default(uuid()) @db.Uuid
+  verificacionId    String @db.Uuid
+  verificacion      VerificacionDocumental @relation(fields: [verificacionId], references: [id], onDelete: Cascade)
+  documentoId       String? @db.Uuid
+  documento         DocumentoVerificacionDocumental? @relation(fields: [documentoId], references: [id], onDelete: SetNull)
+  codigo            String @db.VarChar(80)
+  campo             String @db.VarChar(100)
+  valorEncontrado   String? @db.Text
+  valorReferencia   String? @db.Text
+  observacion       String @db.Text
+  accionSugerida    String @db.Text
+  requiereRevisionManual Boolean @default(true)
+  creadoEn          DateTime @default(now())
+
+  @@index([verificacionId])
+  @@index([documentoId])
 }

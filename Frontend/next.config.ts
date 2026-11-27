@@ -15,6 +15,9 @@ const nextConfig: NextConfig = {
     // Las importaciones semestrales de estudiantes pueden superar los 26.000
     // registros. El cliente conserva límites cortos para las consultas normales.
     proxyTimeout: 1_800_000,
+    // El verificador admite 60 MB de PDF más el encabezado multipart.
+    // NestJS conserva los límites de 20 MB por archivo y 60 MB por envío.
+    proxyClientMaxBodySize: '64mb',
   },
   async rewrites() {
     const aulas = (process.env.NEXT_PUBLIC_AULAS_API_URL ?? "http://localhost:3000").replace(/\/$/, "");

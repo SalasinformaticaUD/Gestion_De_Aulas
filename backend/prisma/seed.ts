@@ -12,6 +12,7 @@ const prisma = new PrismaClient({
 });
 
 const modulos = [
+  ['VERIFICADOR_DOCUMENTAL', 'Verificador documental de contratistas'],
   ['DASHBOARD', 'Dashboard'],
   ['HORARIOS', 'Horarios'],
   ['AULAS', 'Aulas'],
@@ -44,6 +45,7 @@ const acciones = [
 ] as const;
 type AccionPermiso = (typeof acciones)[number] | 'IMPORTAR' | 'RECHAZAR' | 'VER_HORARIO_MONITORES';
 const accionesPorModulo: Record<string, readonly AccionPermiso[]> = {
+  VERIFICADOR_DOCUMENTAL: ['LEER', 'CREAR', 'ELIMINAR'],
   DASHBOARD: ['LEER', 'VER_HORARIO_MONITORES'],
   AULAS: ['LEER', 'CREAR', 'ACTUALIZAR', 'ELIMINAR'],
   DISPONIBILIDAD: ['LEER'],

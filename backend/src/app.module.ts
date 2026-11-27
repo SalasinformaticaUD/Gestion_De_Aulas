@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { VerificadorDocumentalModule } from './verificador-documental/verificador-documental.module';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { HorarioModule } from './horario/horario.module';
@@ -32,6 +33,7 @@ import { MonitoreoSoftwareModule } from './monitoreo-software/monitoreo-software
 
 @Module({
   imports: [
+    VerificadorDocumentalModule,
     ConfigModule.forRoot({ isGlobal: true }),
     AuthModule,
     HorarioModule,

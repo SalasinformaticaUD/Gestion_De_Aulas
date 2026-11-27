@@ -5,6 +5,7 @@ export const REQUIRED_PERMISSIONS_KEY = 'auth:required-permissions';
 export const REQUIRE_ADMINISTRATOR_KEY = 'auth:require-administrator';
 
 export const MODULOS = {
+  VERIFICADOR_DOCUMENTAL: 'VERIFICADOR_DOCUMENTAL',
   AULAS: 'AULAS',
   HORARIOS: 'HORARIOS',
   DISPONIBILIDAD_AULAS: 'DISPONIBILIDAD',

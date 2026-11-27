@@ -31,6 +31,7 @@ describe('PrestamosAudiovisualesService', () => {
   };
   const prisma = {
     ...tx,
+    $queryRaw: jest.fn(),
     $transaction: jest.fn((callback: (client: typeof tx) => unknown) =>
       callback(tx),
     ),
@@ -129,27 +130,26 @@ describe('PrestamosAudiovisualesService', () => {
   });
 
   it('busca docentes por nombre y limita el autocompletado', async () => {
-    tx.docente.findMany.mockResolvedValue([
+    prisma.$queryRaw.mockResolvedValue([
       { id: ids.docente, nombre: 'Laura Gómez', documento: '10203040' },
     ]);
 
-    const resultado = await service.findDocentes('  lau  ');
+    const resultado = await service.findDocentes('  gómez LAU  ');
 
     expect(resultado).toHaveLength(1);
-    expect(tx.docente.findMany).toHaveBeenCalledWith({
-      where: {
-        nombre: { contains: 'lau', mode: 'insensitive' },
-        documento: { not: null },
-      },
-      select: { id: true, nombre: true, documento: true, correo: true },
-      orderBy: { nombre: 'asc' },
-      take: 8,
-    });
+    const sql = prisma.$queryRaw.mock.calls[0][0] as {
+      text: string;
+      values: string[];
+    };
+    expect(sql.values).toEqual(['%gomez%', '%lau%']);
+    expect(sql.text).toContain('"documento" IS NOT NULL');
+    expect(sql.text).toContain('LIMIT 8');
   });
 
   it('no consulta la base de datos si el nombre está vacío', async () => {
     await expect(service.findDocentes('   ')).resolves.toEqual([]);
     expect(tx.docente.findMany).not.toHaveBeenCalled();
+    expect(prisma.$queryRaw).not.toHaveBeenCalled();
   });
 
   it('bloquea un segundo préstamo activo para el mismo profesor', async () => {

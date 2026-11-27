@@ -6,6 +6,8 @@ import {
   Optional,
 } from '@nestjs/common';
 import * as XLSX from 'xlsx';
+import { Prisma, type Docente } from '@prisma/client';
+import { filtroBusquedaDocente } from './docente-search';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import { CreateDocenteDto } from './dto/create-docente.dto';
@@ -29,16 +31,30 @@ export class DocentesService {
     return docente;
   }
   async findAll(query?: string, page?: number, limit?: number) {
-    const where = query
-      ? {
-          OR: [
-            { nombre: { contains: query, mode: 'insensitive' as const } },
-            { documento: { contains: query, mode: 'insensitive' as const } },
-            { correo: { contains: query, mode: 'insensitive' as const } },
-            { proyecto: { contains: query, mode: 'insensitive' as const } },
-          ],
-        }
-      : undefined;
+    if (query?.trim()) {
+      const where = filtroBusquedaDocente(query.trim());
+      if (!page) {
+        return this.prisma.$queryRaw<Docente[]>(Prisma.sql`
+          SELECT * FROM "Docente" WHERE ${where} ORDER BY "nombre", "id"
+        `);
+      }
+      const take = Math.min(Math.max(limit ?? 25, 1), 100);
+      const [data, counts] = await this.prisma.$transaction([
+        this.prisma.$queryRaw<Docente[]>(Prisma.sql`
+          SELECT * FROM "Docente" WHERE ${where}
+          ORDER BY "nombre", "id" LIMIT ${take} OFFSET ${(page - 1) * take}
+        `),
+        this.prisma.$queryRaw<Array<{ total: number }>>(Prisma.sql`
+          SELECT count(*)::integer AS total FROM "Docente" WHERE ${where}
+        `),
+      ]);
+      const total = counts[0].total;
+      return {
+        data,
+        meta: { page, limit: take, total, totalPages: Math.ceil(total / take) },
+      };
+    }
+    const where = undefined;
     if (!page)
       return this.prisma.docente.findMany({
         where,

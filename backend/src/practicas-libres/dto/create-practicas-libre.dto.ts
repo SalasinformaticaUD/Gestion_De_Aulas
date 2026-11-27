@@ -40,7 +40,9 @@ export class ResponsableSolicitudPracticaDto {
   correo?: string;
   @ValidateIf(
     (item: ResponsableSolicitudPracticaDto) =>
-      item.tipo === TipoSolicitantePracticaLibre.DOCENTE,
+      item.tipo === TipoSolicitantePracticaLibre.DOCENTE &&
+      item.proyecto !== undefined &&
+      item.proyecto !== null,
   )
   @IsString()
   @IsNotEmpty()

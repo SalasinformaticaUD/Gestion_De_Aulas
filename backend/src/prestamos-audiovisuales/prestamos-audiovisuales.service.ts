@@ -5,7 +5,13 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
-import { EstadoEquipo, EstadoPrestamo, type Prisma } from '@prisma/client';
+import {
+  EstadoEquipo,
+  EstadoPrestamo,
+  Prisma,
+  type Docente,
+} from '@prisma/client';
+import { filtroNombreDocente } from '../docentes/docente-search';
 import * as XLSX from 'xlsx';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -156,15 +162,13 @@ export class PrestamosAudiovisualesService {
   findDocentes(nombre?: string) {
     const query = nombre?.trim();
     if (!query) return Promise.resolve([]);
-    return this.prisma.docente.findMany({
-      where: {
-        nombre: { contains: query, mode: 'insensitive' },
-        documento: { not: null },
-      },
-      select: { id: true, nombre: true, documento: true, correo: true },
-      orderBy: { nombre: 'asc' },
-      take: 8,
-    });
+    return this.prisma.$queryRaw<
+      Array<Pick<Docente, 'id' | 'nombre' | 'documento' | 'correo'>>
+    >(Prisma.sql`
+      SELECT "id", "nombre", "documento", "correo" FROM "Docente"
+      WHERE "documento" IS NOT NULL AND (${filtroNombreDocente(query)})
+      ORDER BY "nombre", "id" LIMIT 8
+    `);
   }
 
   findResponsables() {

@@ -278,6 +278,7 @@ export class MultasService {
         codigo: true,
         nombre: true,
         multas: {
+          where: { estado: EstadoMulta.ACTIVA },
           orderBy: { fecha: 'desc' },
           select: {
             id: true,

@@ -14,6 +14,7 @@ import { cerrarSesion, eventoSesion, obtenerSesion } from "@/features/auth/lib/s
 type AppShellProps = { children: React.ReactNode };
 
 const moduleByRoute: Record<string, string> = {
+  "/verificador-documental": "VERIFICADOR_DOCUMENTAL",
   "/gestion-aulas": "DASHBOARD",
   "/horarios": "HORARIOS",
   "/aulas": "AULAS",
