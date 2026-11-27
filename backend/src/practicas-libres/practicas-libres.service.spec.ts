@@ -35,6 +35,7 @@ describe('PracticasLibresService', () => {
     ),
     practicaLibre: {
       findMany: jest.fn(),
+      groupBy: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn(),
       updateMany: jest.fn(),
@@ -323,6 +324,41 @@ describe('PracticasLibresService', () => {
         // Jest expone este matcher asimétrico con tipo público `any`.
         // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         where: expect.objectContaining({ estado: EstadoPrestamo.VENCIDO }),
+      }),
+    );
+  });
+
+  it('pagina el historial y retorna contadores sin descargar todos los registros', async () => {
+    prisma.practicaLibre.findMany.mockResolvedValue([{ id: 'historial-1' }]);
+    prisma.practicaLibre.groupBy.mockResolvedValue([
+      { estado: EstadoPrestamo.ACTIVO, _count: { _all: 2 } },
+      { estado: EstadoPrestamo.VENCIDO, _count: { _all: 1 } },
+      { estado: EstadoPrestamo.DEVUELTO, _count: { _all: 75 } },
+      { estado: EstadoPrestamo.CANCELADO, _count: { _all: 5 } },
+    ]);
+
+    await expect(
+      service.findAll({ vista: 'historial', pagina: 2, limite: 50 }),
+    ).resolves.toMatchObject({
+      datos: [{ id: 'historial-1' }],
+      meta: { pagina: 2, limite: 50, total: 80, totalPaginas: 2 },
+      resumen: {
+        activos: 2,
+        vencidos: 1,
+        finalizados: 75,
+        cancelados: 5,
+        total: 83,
+      },
+    });
+    expect(prisma.practicaLibre.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 50,
+        take: 50,
+        where: {
+          estado: {
+            in: [EstadoPrestamo.DEVUELTO, EstadoPrestamo.CANCELADO],
+          },
+        },
       }),
     );
   });

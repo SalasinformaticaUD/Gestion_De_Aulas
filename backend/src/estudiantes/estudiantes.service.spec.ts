@@ -10,11 +10,13 @@ describe('EstudiantesService', () => {
             codigo: '2026000001',
             nombre: 'ESTUDIANTE ACTIVO',
             correo: 'activo@udistrital.edu.co',
+            proyectoCurricular: 'INGENIERÍA DE SISTEMAS',
           },
           {
             codigo: '2025000002',
             nombre: '(INACTIVO) ESTUDIANTE HISTÓRICO',
             correo: 'historico@udistrital.edu.co',
+            proyectoCurricular: 'INGENIERÍA INDUSTRIAL',
           },
         ]),
       },
@@ -45,24 +47,26 @@ describe('EstudiantesService', () => {
       procesados: 3,
       duplicados: 1,
       activos: 1,
-      inactivos: 1,
-      noEncontrados: 1,
+      inactivos: 2,
       resultados: [
         {
           correo: 'activo@udistrital.edu.co',
           codigo: '2026000001',
+          proyectoCurricular: 'INGENIERÍA DE SISTEMAS',
           estado: 'ACTIVO',
         },
         {
           correo: 'historico@udistrital.edu.co',
           codigo: '2025000002',
           nombre: 'ESTUDIANTE HISTÓRICO',
+          proyectoCurricular: 'INGENIERÍA INDUSTRIAL',
           estado: 'INACTIVO',
         },
         {
           correo: 'noexiste@udistrital.edu.co',
           codigo: null,
-          estado: 'NO_ENCONTRADO',
+          proyectoCurricular: null,
+          estado: 'INACTIVO',
         },
       ],
     });

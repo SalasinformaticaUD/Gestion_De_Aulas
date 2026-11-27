@@ -654,12 +654,13 @@ model AliasAula {
 
 // Usuarios externos, préstamos y sanciones
 model Estudiante {
-  id        String          @id @default(uuid()) @db.Uuid
-  codigo    String          @unique
-  nombre    String
-  correo    String?
-  practicas PracticaLibre[]
-  multas    Multa[]
+  id                  String          @id @default(uuid()) @db.Uuid
+  codigo              String          @unique
+  nombre              String
+  correo              String?
+  proyectoCurricular  String?
+  practicas           PracticaLibre[]
+  multas              Multa[]
 }
 
 model PracticaLibre {

@@ -81,9 +81,9 @@ export function PeopleManagementView({ tipo }: { tipo: Tipo }) {
     catch (error) { setNotice({ error: true, text: error instanceof Error ? error.message : "No fue posible eliminar el registro." }); }
   };
   const downloadTemplate = () => {
-    const headers = isStudent ? ["Código", "Nombre", "Correo"] : ["CÉDULA", "NOMBRE", "CORREO", "PROYECTO"];
+    const headers = isStudent ? ["Código", "Nombre", "Correo", "Proyecto Curricular"] : ["CÉDULA", "NOMBRE", "CORREO", "PROYECTO"];
     const sheet = XLSX.utils.aoa_to_sheet([headers]);
-    sheet["!cols"] = isStudent ? [{ wch: 18 }, { wch: 32 }, { wch: 38 }] : [{ wch: 18 }, { wch: 32 }, { wch: 38 }, { wch: 32 }];
+    sheet["!cols"] = isStudent ? [{ wch: 18 }, { wch: 32 }, { wch: 38 }, { wch: 34 }] : [{ wch: 18 }, { wch: 32 }, { wch: 38 }, { wch: 32 }];
     const book = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book, sheet, content.plural);
     XLSX.writeFile(book, isStudent ? "plantilla_estudiantes.xlsx" : "plantilla_docentes.xlsx");
   };
@@ -118,8 +118,12 @@ function BulkStudentSearchDialog({ onClose, onResult }: { onClose: () => void; o
 }
 
 function BulkStudentSearchResultDialog({ result, onClose }: { result: ResultadoBusquedaMasivaEstudiantes; onClose: () => void }) {
-  const [filter, setFilter] = useState<"ACTIVO" | "INACTIVO" | "NO_ENCONTRADO" | null>(null);
-  const visible = filter ? result.resultados.filter((item) => item.estado === filter) : result.resultados;
-  const toggle = (next: "ACTIVO" | "INACTIVO" | "NO_ENCONTRADO") => setFilter((current) => current === next ? null : next);
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className={`audiovisual-dialog ${styles.bulkDialog}`} role="dialog" aria-modal="true" aria-labelledby="bulk-student-result-title"><header><div><h2 id="bulk-student-result-title">Resultado de búsqueda masiva</h2><p>{result.procesados} correo(s) consultado(s){result.duplicados ? ` · ${result.duplicados} duplicado(s) omitido(s)` : ""}.</p></div><button type="button" onClick={onClose} aria-label="Cerrar">×</button></header><div className={styles.bulkResultBody}><div className={styles.bulkSummary}><button type="button" className={filter === "ACTIVO" ? styles.bulkFilterActive : ""} onClick={() => toggle("ACTIVO")} aria-pressed={filter === "ACTIVO"}><strong>{result.activos}</strong>Activos</button><button type="button" className={filter === "INACTIVO" ? styles.bulkFilterActive : ""} onClick={() => toggle("INACTIVO")} aria-pressed={filter === "INACTIVO"}><strong>{result.inactivos}</strong>Inactivos</button><button type="button" className={filter === "NO_ENCONTRADO" ? styles.bulkFilterActive : ""} onClick={() => toggle("NO_ENCONTRADO")} aria-pressed={filter === "NO_ENCONTRADO"}><strong>{result.noEncontrados}</strong>No encontrados</button></div><div className={styles.bulkList}>{visible.map((item, index) => <article key={`${item.correo}-${item.codigo ?? index}`} data-status={item.estado}><div><strong>{item.correo}</strong><span>{item.estado === "NO_ENCONTRADO" ? "No existe un estudiante con este correo." : `${item.codigo} · ${item.nombre}`}</span></div><b>{item.estado === "NO_ENCONTRADO" ? "No encontrado" : item.estado === "ACTIVO" ? "Activo" : "Inactivo"}</b></article>)}{!visible.length && <p className={styles.empty}>No hay resultados en esta categoría.</p>}</div></div><footer><button type="button" className="button-primary" onClick={onClose}>Entendido</button></footer></section></div>;
+  const [filter, setFilter] = useState<"TODOS" | "ACTIVO" | "INACTIVO">("TODOS");
+  const visible = filter === "TODOS" ? result.resultados : result.resultados.filter((item) => item.estado === filter);
+  const filters = [
+    { value: "TODOS" as const, label: "Todos", count: result.resultados.length },
+    { value: "ACTIVO" as const, label: "Activos", count: result.activos },
+    { value: "INACTIVO" as const, label: "Inactivos", count: result.inactivos },
+  ];
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className={`audiovisual-dialog ${styles.bulkDialog}`} role="dialog" aria-modal="true" aria-labelledby="bulk-student-result-title"><header><div><h2 id="bulk-student-result-title">Resultado de búsqueda masiva</h2><p>{result.procesados} correo(s) consultado(s){result.duplicados ? ` · ${result.duplicados} duplicado(s) omitido(s)` : ""}.</p></div><button type="button" onClick={onClose} aria-label="Cerrar">×</button></header><div className={styles.bulkResultBody}><div className={styles.bulkSummary}>{filters.map((item) => <button type="button" key={item.value} className={filter === item.value ? styles.bulkFilterActive : ""} onClick={() => setFilter(item.value)} aria-pressed={filter === item.value}><strong>{item.count}</strong>{item.label}</button>)}</div><div className={styles.bulkTableWrap}><table className={styles.bulkTable}><thead><tr><th>Correo</th><th>Código y nombre</th><th>Proyecto curricular</th><th>Estado</th></tr></thead><tbody>{visible.map((item, index) => <tr key={`${item.correo}-${item.codigo ?? index}`} data-status={item.estado}><td>{item.correo}</td><td>{item.codigo ? <><strong>{item.codigo}</strong><span>{item.nombre}</span></> : "Estudiante no registrado"}</td><td>{item.proyectoCurricular || "Sin registrar"}</td><td><b>{item.estado === "ACTIVO" ? "Activo" : "Inactivo"}</b></td></tr>)}{!visible.length && <tr><td colSpan={4} className={styles.empty}>No hay resultados en esta categoría.</td></tr>}</tbody></table></div></div><footer><button type="button" className="button-primary" onClick={onClose}>Entendido</button></footer></section></div>;
 }

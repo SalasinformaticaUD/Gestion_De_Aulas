@@ -296,23 +296,81 @@ export class PracticasLibresService {
       ? new Date(`${filters.fecha}T23:59:59.999-05:00`)
       : undefined;
 
-    return this.prisma.practicaLibre.findMany({
-      where: {
-        ...(filters.estado && { estado: filters.estado }),
-        ...(filters.aulaId && { aulaId: filters.aulaId }),
-        ...(inicioDia &&
-          finDia && {
-            inicio: { gte: inicioDia, lte: finDia },
-          }),
+    const estadosVista =
+      filters.vista === 'actuales'
+        ? [EstadoPrestamo.ACTIVO, EstadoPrestamo.VENCIDO]
+        : filters.vista === 'historial'
+          ? [EstadoPrestamo.DEVUELTO, EstadoPrestamo.CANCELADO]
+          : undefined;
+    const where = {
+      ...(filters.estado
+        ? { estado: filters.estado }
+        : estadosVista && { estado: { in: estadosVista } }),
+      ...(filters.aulaId && { aulaId: filters.aulaId }),
+      ...(inicioDia &&
+        finDia && {
+          inicio: { gte: inicioDia, lte: finDia },
+        }),
+    };
+    const include = {
+      estudiante: true,
+      docente: true,
+      aula: true,
+      atendidoPor: true,
+    };
+
+    if (!filters.vista) {
+      return this.prisma.practicaLibre.findMany({
+        where,
+        include,
+        orderBy: { inicio: 'desc' },
+      });
+    }
+
+    const pagina = filters.vista === 'historial' ? (filters.pagina ?? 1) : 1;
+    const limite = filters.vista === 'historial' ? (filters.limite ?? 50) : 100;
+    const [datos, conteos] = await Promise.all([
+      this.prisma.practicaLibre.findMany({
+        where,
+        include,
+        orderBy: { inicio: 'desc' },
+        ...(filters.vista === 'historial' && {
+          skip: (pagina - 1) * limite,
+          take: limite,
+        }),
+      }),
+      this.prisma.practicaLibre.groupBy({
+        by: ['estado'],
+        _count: { _all: true },
+      }),
+    ]);
+    const cantidad = (estado: EstadoPrestamo) =>
+      conteos.find((item) => item.estado === estado)?._count._all ?? 0;
+    const activos = cantidad(EstadoPrestamo.ACTIVO);
+    const vencidos = cantidad(EstadoPrestamo.VENCIDO);
+    const finalizados = cantidad(EstadoPrestamo.DEVUELTO);
+    const cancelados = cantidad(EstadoPrestamo.CANCELADO);
+    const totalVista =
+      filters.vista === 'actuales'
+        ? activos + vencidos
+        : finalizados + cancelados;
+
+    return {
+      datos,
+      meta: {
+        pagina,
+        limite,
+        total: totalVista,
+        totalPaginas: Math.max(1, Math.ceil(totalVista / limite)),
       },
-      include: {
-        estudiante: true,
-        docente: true,
-        aula: true,
-        atendidoPor: true,
+      resumen: {
+        activos,
+        vencidos,
+        finalizados,
+        cancelados,
+        total: activos + vencidos + finalizados + cancelados,
       },
-      orderBy: { inicio: 'desc' },
-    });
+    };
   }
 
   findResponsables() {
